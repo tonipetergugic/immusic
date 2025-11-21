@@ -6,10 +6,39 @@ import Link from "next/link";
 
 export default function Topbar() {
   const [email, setEmail] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
-  // TEMPORARY — replace later with real Supabase session
   useEffect(() => {
-    setEmail("user@example.com"); 
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    async function loadUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      setEmail(user.email ?? null);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, display_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.role) {
+        setRole(profile.role);
+      }
+
+      if (profile?.display_name) {
+        setEmail(profile.display_name);
+      }
+    }
+
+    loadUser();
   }, []);
 
   const handleLogout = async () => {
@@ -24,26 +53,28 @@ export default function Topbar() {
 
   return (
     <div className="w-full h-14 bg-[#0B0B0D] border-b border-[#1A1A1C] flex items-center justify-between px-6">
-      
-      {/* Left: Dashboard Title */}
       <span className="text-white font-medium tracking-wide">
         ImMusic Dashboard
       </span>
 
-      {/* Right: User Info */}
       <div className="flex items-center gap-4">
-
-        {/* Avatar Placeholder - später echtes Profilbild */}
         <div className="w-8 h-8 rounded-full bg-[#1F1F22] flex items-center justify-center text-xs text-[#00FFC6]">
           {email ? email.charAt(0).toUpperCase() : "?"}
         </div>
 
-        {/* Username/Email */}
         <span className="text-white text-sm">
           {email}
         </span>
 
-        {/* Logout Button */}
+        {role === "admin" && (
+          <Link
+            href="/admin/applications"
+            className="text-[#B3B3B3] hover:text-[#00FFC6] transition text-sm"
+          >
+            Admin Panel
+          </Link>
+        )}
+
         <button
           onClick={handleLogout}
           className="text-[#B3B3B3] hover:text-[#00FFC6] transition text-sm"

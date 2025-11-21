@@ -8,59 +8,50 @@ import { createBrowserClient } from "@supabase/ssr";
 export default function Sidebar() {
   const [role, setRole] = useState<string | null>(null);
 
-  // TEMPORARY until we implement real user loading
-  // Later: replace with real Supabase user.role load
   useEffect(() => {
-    setRole("artist"); // simulate logged-in artist
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    async function loadRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (data?.role) setRole(data.role);
+    }
+
+    loadRole();
   }, []);
 
   return (
     <div className="w-60 h-full bg-[#0B0B0D] border-r border-[#1A1A1C] p-4 flex flex-col gap-2">
 
-      {/* Home */}
-      <SidebarItem 
-        href="/dashboard"
-        icon={<Home size={20} />}
-        label="Home"
-      />
+      <SidebarItem href="/dashboard" icon={<Home size={20} />} label="Home" />
+      <SidebarItem href="/dashboard/library" icon={<Library size={20} />} label="Library" />
+      <SidebarItem href="/dashboard/create" icon={<PlusCircle size={20} />} label="Create" />
 
-      {/* Library */}
-      <SidebarItem 
-        href="/dashboard/library"
-        icon={<Library size={20} />}
-        label="Library"
-      />
-
-      {/* Create */}
-      <SidebarItem 
-        href="/dashboard/create"
-        icon={<PlusCircle size={20} />}
-        label="Create"
-      />
-
-      {/* Artist (only visible if user is artist) */}
-      {role === "artist" && (
-        <SidebarItem 
-          href="/dashboard/artist"
-          icon={<Mic size={20} />}
-          label="Artist"
-        />
+      {/* Artist Bereich */}
+      {role === "artist" || role === "admin" ? (
+        <SidebarItem href="/artist/dashboard" icon={<Mic size={20} />} label="Artist" />
+      ) : (
+        <SidebarItem href="/artist/become" icon={<Mic size={20} />} label="Become Artist" />
       )}
 
     </div>
   );
 }
 
-/* Reusable component */
-function SidebarItem({
-  href,
-  icon,
-  label
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-}) {
+function SidebarItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
     <Link
       href={href}
