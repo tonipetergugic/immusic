@@ -72,27 +72,48 @@ export default function PlayerBar() {
   }
 
   return (
-    <div className="player-bar">
-      {/* Linker Bereich: Track-Infos */}
-      <div className="player-bar__track-info">
-        <div className="player-bar__title">{currentTrack.title}</div>
-        <div className="player-bar__artist">{currentTrack.artist}</div>
+    <div
+      className="
+        w-full h-24 
+        bg-[#0B0B0D]/80 
+        backdrop-blur-xl 
+        border-t border-[#1A1A1C] 
+        shadow-[0_-2px_25px_rgba(0,255,198,0.06)]
+        px-6 
+        flex items-center justify-between
+      "
+    >
+      <div className="flex flex-col min-w-[200px]">
+        <span className="text-white/90 text-sm font-medium truncate">
+          {currentTrack.title}
+        </span>
+        <span className="text-white/50 text-xs truncate">
+          {currentTrack.artist}
+        </span>
       </div>
 
-      {/* Mitte: Play/Pause + Seek */}
-      <div className="player-bar__center">
+      <div className="flex flex-col items-center gap-2 w-[40%]">
         <button
           type="button"
-          className="player-bar__play-button"
           onClick={togglePlay}
+          className="
+            w-10 h-10 rounded-full 
+            flex items-center justify-center 
+            bg-[#1A1A1C] 
+            text-white 
+            hover:bg-[#00FFC6]/20 
+            hover:text-[#00FFC6] 
+            transition-colors
+          "
         >
           {isPlaying ? <Pause size={18} /> : <Play size={18} />}
         </button>
 
-        <div className="player-bar__seek">
-          <span className="player-bar__time">
+        <div className="flex items-center w-full gap-3">
+          <span className="text-white/50 text-xs w-10 text-right">
             {formatTime(progress)}
           </span>
+
           <input
             type="range"
             min={0}
@@ -100,23 +121,36 @@ export default function PlayerBar() {
             step={0.1}
             value={progress}
             onChange={handleSeek}
-            className="player-bar__seek-input"
+            className="
+              w-full h-1 rounded-lg 
+              accent-[#00FFC6] 
+              bg-[#1A1A1C] 
+              cursor-pointer
+            "
           />
-          <span className="player-bar__time">
+
+          <span className="text-white/50 text-xs w-10">
             {formatTime(duration)}
           </span>
         </div>
       </div>
 
-      {/* Rechts: Volume */}
-      <div className="player-bar__right">
+      <div className="flex items-center gap-3 min-w-[200px] justify-end">
         <button
           type="button"
-          className="player-bar__volume-button"
           onClick={toggleMute}
+          className="
+            text-white/70 hover:text-[#00FFC6] 
+            transition-colors
+          "
         >
-          {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          {isMuted || volume === 0 ? (
+            <VolumeX size={18} />
+          ) : (
+            <Volume2 size={18} />
+          )}
         </button>
+
         <input
           type="range"
           min={0}
@@ -124,7 +158,12 @@ export default function PlayerBar() {
           step={0.01}
           value={volume}
           onChange={handleVolumeChange}
-          className="player-bar__volume-input"
+          className="
+            w-24 h-1 rounded-lg 
+            accent-[#00FFC6] 
+            bg-[#1A1A1C] 
+            cursor-pointer
+          "
         />
       </div>
     </div>

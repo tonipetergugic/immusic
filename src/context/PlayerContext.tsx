@@ -70,22 +70,35 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // PLAY TRACK
   const playTrack = useCallback(
-    (track: Track) => {
+    async (track: Track) => {
       if (!audioRef.current) return;
 
       const audio = audioRef.current;
 
-      // Neues Audio setzen
-      if (!currentTrack || currentTrack.id !== track.id) {
+      const isNewTrack = !currentTrack || currentTrack.id !== track.id;
+
+      if (isNewTrack) {
         setCurrentTrack(track);
         audio.src = track.audio_url;
         audio.currentTime = 0;
+
+        audio.load();
+
+        await new Promise((resolve) => {
+          const onLoaded = () => {
+            audio.removeEventListener("loadedmetadata", onLoaded);
+            resolve(true);
+          };
+          audio.addEventListener("loadedmetadata", onLoaded);
+        });
       }
 
-      audio
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch((err) => console.error("Audio play error:", err));
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.error("Audio play error:", err);
+      }
     },
     [currentTrack]
   );
