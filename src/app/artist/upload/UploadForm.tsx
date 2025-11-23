@@ -1,65 +1,86 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { uploadToStorage } from "@/lib/supabase/client";
-import { uploadTrackAction } from "./actions";
+import AudioDropzone from "@/components/AudioDropzone";
+import TrackCoverDropzone from "@/components/TrackCoverDropzone";
 
 export default function UploadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [resetCounter, setResetCounter] = useState(0);
 
-  async function handleClientUpload(formData: FormData) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // Extract fields
-      const title = formData.get("title") as string;
-      const bpm = formData.get("bpm") as string;
-      const key = formData.get("key") as string;
-      const audio = formData.get("audio") as File;
-      const cover = formData.get("cover") as File;
+      const formEl = e.currentTarget;
+      const baseForm = new FormData(formEl);
+      const clientForm = new FormData();
 
-      if (!audio || !(audio instanceof File)) {
-        throw new Error("Audio file missing");
-      }
-      if (!cover || !(cover instanceof File)) {
-        throw new Error("Cover file missing");
-      }
+      clientForm.append("title", (baseForm.get("title") as string) ?? "");
+      clientForm.append("bpm", (baseForm.get("bpm") as string) ?? "");
+      clientForm.append("key", (baseForm.get("key") as string) ?? "");
 
-      const timestamp = Date.now();
-      const audioPath = `client-${timestamp}-${audio.name}`;
-      const coverPath = `client-${timestamp}-${cover.name}`;
+      const { audioUrl, coverUrl } = await handleClientUpload();
 
-      // Upload directly from Client → Supabase Storage
-      const audioUrl = await uploadToStorage(
-        "tracks-audio",
-        audioPath,
-        audio
-      );
-      const coverUrl = await uploadToStorage(
-        "tracks-cover",
-        coverPath,
-        cover
-      );
+      clientForm.append("audioUrl", audioUrl);
+      clientForm.append("coverUrl", coverUrl);
 
-      // Server Action for DB insert
-      await uploadTrackAction({
-        title,
-        bpm: Number(bpm),
-        key,
-        audioUrl,
-        coverUrl,
+      const response = await fetch("/artist/upload/action", {
+        method: "POST",
+        body: clientForm,
+        credentials: "include",
       });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      setAudioFile(null);
+      setCoverFile(null);
+      setResetCounter((prev) => prev + 1);
+      formEl.reset();
     } catch (err: any) {
       console.error(err);
       setError(err?.message || "Unknown upload error");
+    } finally {
       setIsSubmitting(false);
     }
   }
 
+  async function handleClientUpload() {
+    if (!audioFile) throw new Error("Audio file missing");
+    if (!coverFile) throw new Error("Cover file missing");
+
+    const audioUrl = await uploadAudio();
+    const coverUrl = await uploadCover();
+
+    return { audioUrl, coverUrl };
+  }
+
+  async function uploadAudio() {
+    if (!audioFile) throw new Error("Audio file missing");
+    const ts = Date.now();
+    const path = `client-${ts}-${audioFile.name}`;
+    const url = await uploadToStorage("tracks-audio", path, audioFile);
+    return url;
+  }
+
+  async function uploadCover() {
+    if (!coverFile) throw new Error("Cover file missing");
+    const ts = Date.now();
+    const path = `client-${ts}-${coverFile.name}`;
+    const url = await uploadToStorage("tracks-cover", path, coverFile);
+    return url;
+  }
+
   return (
-    <form action={handleClientUpload} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Error Panel */}
       {error && (
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 px-4 py-3 text-sm">
@@ -68,70 +89,84 @@ export default function UploadForm() {
         </div>
       )}
 
-      {/* Track Title */}
-      <div>
-        <label className="block text-sm mb-1">Track Title</label>
-        <input
-          type="text"
-          name="title"
-          required
-          className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white"
-        />
+      {isSubmitting && (
+        <div className="rounded-xl border border-blue-500/40 bg-blue-500/10 text-blue-400 px-4 py-3 text-sm">
+          Uploading your track — please wait…
+        </div>
+      )}
+
+      <h2 className="text-lg font-semibold mb-2 mt-6">Track Details</h2>
+      <div className="space-y-4">
+        {/* Track Title */}
+        <div>
+          <label className="block text-sm mb-1">Track Title</label>
+          <input
+            type="text"
+            name="title"
+            required
+            className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white focus:outline-none focus:ring-0"
+          />
+        </div>
+
+        {/* BPM */}
+        <div>
+          <label className="block text-sm mb-1">BPM</label>
+          <input
+            type="number"
+            name="bpm"
+            min="60"
+            max="200"
+            required
+            className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white focus:outline-none focus:ring-0"
+          />
+        </div>
+
+        {/* Key */}
+        <div>
+          <label className="block text-sm mb-1">Key</label>
+          <input
+            type="text"
+            name="key"
+            placeholder="e.g. A minor"
+            required
+            className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white focus:outline-none focus:ring-0"
+          />
+        </div>
       </div>
 
-      {/* BPM */}
-      <div>
-        <label className="block text-sm mb-1">BPM</label>
-        <input
-          type="number"
-          name="bpm"
-          min="60"
-          max="200"
-          required
-          className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white"
-        />
+      <h2 className="text-lg font-semibold mb-2 mt-6">Audio Upload</h2>
+      <div className="space-y-4">
+        {/* Audio File */}
+        <div>
+          <label className="block text-sm mb-1">Audio File (MP3/WAV)</label>
+          <AudioDropzone
+            onFileSelected={setAudioFile}
+            resetSignal={resetCounter}
+          />
+        </div>
       </div>
 
-      {/* Key */}
-      <div>
-        <label className="block text-sm mb-1">Key</label>
-        <input
-          type="text"
-          name="key"
-          placeholder="e.g. A minor"
-          required
-          className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-white"
-        />
-      </div>
-
-      {/* Audio File */}
-      <div>
-        <label className="block text-sm mb-1">Audio File (MP3)</label>
-        <input
-          type="file"
-          name="audio"
-          accept="audio/mpeg"
-          required
-          className="w-full text-sm text-zinc-300"
-        />
-      </div>
-
-      {/* Cover Image */}
-      <div>
-        <label className="block text-sm mb-1">Cover Image (JPG/PNG)</label>
-        <input
-          type="file"
-          name="cover"
-          accept="image/*"
-          required
-          className="w-full text-sm text-zinc-300"
-        />
+      <h2 className="text-lg font-semibold mb-2 mt-6">Cover Upload</h2>
+      <div className="space-y-4">
+        {/* Cover Image */}
+        <div>
+          <label className="block text-sm mb-1">Cover Image (JPG/PNG)</label>
+          <TrackCoverDropzone
+            onFileSelected={setCoverFile}
+            resetSignal={resetCounter}
+          />
+        </div>
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full rounded-xl bg-[#00FFC6] hover:bg-[#00E0B0] text-black font-semibold py-2 transition disabled:opacity-50"
+        className={`w-full rounded-xl font-semibold py-3 transition
+    ${
+      isSubmitting
+        ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+        : "bg-[#00FFC6] hover:bg-[#00E0B0] text-black"
+    }`}
       >
         {isSubmitting ? "Uploading…" : "Upload Track"}
       </button>

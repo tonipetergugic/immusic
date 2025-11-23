@@ -17,6 +17,7 @@ src/app/admin/applications
 src/app/logout
 src/app/logout/action.ts
 src/app/dashboard
+src/app/dashboard/library
 src/app/dashboard/components
 src/app/dashboard/layout.tsx
 src/app/dashboard/become-artist
@@ -27,6 +28,7 @@ src/app/globals.css
 src/app/artist
 src/app/artist/dashboard
 src/app/artist/become
+src/app/artist/[id]
 src/app/artist/upload
 src/app/login
 src/app/login/page.tsx
@@ -34,10 +36,12 @@ src/components
 src/components/PlayerBar.tsx
 src/components/TrackCard.tsx
 src/components/AddTrackModal.tsx
+src/components/ArtistCard.tsx
 src/components/PlaylistRow.tsx
 src/components/LogoutButton.tsx
 src/components/CreatePlaylistModal.tsx
 src/components/BecomeArtistButton.tsx
+src/components/ArtistTrackList.tsx
 src/components/CoverDropzone.tsx
 src/components/AddTrackButton.tsx
 src/components/PlayOverlayButton.tsx

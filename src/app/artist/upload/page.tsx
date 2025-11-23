@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import UploadForm from "./UploadForm";
 
@@ -33,17 +35,26 @@ export default async function ArtistUploadPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] px-6 py-8 text-white bg-[#0E0E10]">
+    <div className="min-h-screen px-8 py-10 text-white bg-[#0E0E10]">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-2">
+        <h1 className="text-3xl font-semibold tracking-tight mb-2">
           Upload a new track
         </h1>
-        <p className="text-sm text-zinc-400 mb-6">
-          Only artists can upload tracks on ImMusic.
+        <p className="text-sm text-neutral-400 mb-8">
+          Upload your track and cover image to ImMusic.
         </p>
 
-        {/* Hier kommt im nächsten Schritt das UploadForm hin */}
-        <UploadForm />
+        <Link
+          href="/artist/dashboard"
+          className="flex items-center gap-2 text-zinc-400 hover:text-[#00FFC6] transition mb-8"
+        >
+          <ArrowLeft size={18} />
+          <span>Back to Dashboard</span>
+        </Link>
+
+        <section className="rounded-xl bg-[#1A1A1A] p-8 mb-12 space-y-6">
+          <UploadForm />
+        </section>
       </div>
     </div>
   );
