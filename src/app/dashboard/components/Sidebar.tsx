@@ -40,7 +40,12 @@ export default function Sidebar() {
     <div className="w-60 h-full bg-[#0B0B0D] border-r border-[#1A1A1C] p-4 flex flex-col gap-2">
 
       <SidebarItem href="/dashboard" icon={<Home size={20} />} label="Home" />
-      <SidebarItem href="/dashboard/library" icon={<Library size={20} />} label="Library" />
+      <SidebarItem
+        href="/dashboard/library"
+        icon={<Library size={20} />}
+        label="Library"
+        matchPrefix
+      />
       <div className="relative group">
         <SidebarItem
           icon={<PlusCircle size={20} />}
@@ -79,9 +84,19 @@ export default function Sidebar() {
 
       {/* Artist Bereich */}
       {role === "artist" || role === "admin" ? (
-        <SidebarItem href="/artist/dashboard" icon={<Mic size={20} />} label="Artist" />
+        <SidebarItem
+          href="/artist/dashboard"
+          icon={<Mic size={20} />}
+          label="Artist"
+          matchPrefix
+        />
       ) : (
-        <SidebarItem href="/artist/become" icon={<Mic size={20} />} label="Become Artist" />
+        <SidebarItem
+          href="/artist/become"
+          icon={<Mic size={20} />}
+          label="Become Artist"
+          matchPrefix
+        />
       )}
 
       <CreatePlaylistModal
@@ -98,15 +113,21 @@ function SidebarItem({
   icon,
   label,
   onClick,
+  matchPrefix = false,
 }: {
   href?: string;
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
+  matchPrefix?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isActive = href ? pathname.startsWith(href) : false;
+  const isActive = href
+    ? matchPrefix
+      ? pathname === href || pathname.startsWith(`${href}/`)
+      : pathname === href
+    : false;
 
   const clickHandler =
     onClick ??

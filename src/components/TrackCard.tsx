@@ -3,10 +3,14 @@
 import Image from "next/image";
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
-import { Track } from "@/types/database";
+import type { Track as PlayerTrack } from "@/context/PlayerContext";
 
 type Props = {
-  track: Track;
+  track: PlayerTrack & {
+    profiles?: {
+      display_name: string | null;
+    } | null;
+  };
 };
 
 export default function TrackCard({ track }: Props) {
@@ -82,7 +86,9 @@ export default function TrackCard({ track }: Props) {
       <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
         {track.title}
       </h3>
-      <p className="text-xs text-white/50 truncate">{track.artist}</p>
+      <p className="text-xs text-white/50 truncate">
+        {track.profiles?.display_name ?? "Unknown Artist"}
+      </p>
     </div>
   );
 }

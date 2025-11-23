@@ -1,5 +1,6 @@
 src
 src/types
+src/types/database.ts
 src/types/supabase.ts
 src/context
 src/context/PlayerContext.tsx
@@ -32,10 +33,13 @@ src/app/login/page.tsx
 src/components
 src/components/PlayerBar.tsx
 src/components/TrackCard.tsx
+src/components/AddTrackModal.tsx
+src/components/PlaylistRow.tsx
 src/components/LogoutButton.tsx
 src/components/CreatePlaylistModal.tsx
 src/components/BecomeArtistButton.tsx
 src/components/CoverDropzone.tsx
+src/components/AddTrackButton.tsx
 src/components/PlayOverlayButton.tsx
 src/components/PlaylistCard.tsx
 src/lib
