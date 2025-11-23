@@ -4,6 +4,8 @@ src/types/supabase.ts
 src/context
 src/context/PlayerContext.tsx
 src/app
+src/app/playlist
+src/app/playlist/[id]
 src/app/favicon.ico
 src/app/track
 src/app/track/[id]
@@ -31,7 +33,11 @@ src/components
 src/components/PlayerBar.tsx
 src/components/TrackCard.tsx
 src/components/LogoutButton.tsx
+src/components/CreatePlaylistModal.tsx
 src/components/BecomeArtistButton.tsx
+src/components/CoverDropzone.tsx
+src/components/PlayOverlayButton.tsx
+src/components/PlaylistCard.tsx
 src/lib
 src/lib/supabase
 src/lib/supabase/getUser.ts

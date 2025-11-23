@@ -1,0 +1,33 @@
+// src/types/database.ts
+
+export type Track = {
+    id: string;
+    title: string;
+    cover_url: string | null;
+    audio_url: string | null;
+    created_at: string;
+    artist_id: string | null;
+    bpm: number | null;
+    key: string | null;
+    artist?: {
+      display_name: string | null;
+    } | null;
+    artist_profile?: {
+      display_name: string | null;
+    } | null;
+  };
+  
+  export type Playlist = {
+    id: string;
+    title: string;
+    description: string | null;
+    cover_url: string | null;
+    created_by: string | null;
+    created_at: string;
+  };
+  
+  export type PlaylistTrack = {
+    position: number;
+    tracks: Track;
+  };
+  

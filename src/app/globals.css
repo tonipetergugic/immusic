@@ -18,3 +18,15 @@
     --foreground: #ededed;
   }
 }
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 45px rgba(0, 255, 198, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 70px rgba(0, 255, 198, 0.18);
+  }
+  100% {
+    box-shadow: 0 0 45px rgba(0, 255, 198, 0.12);
+  }
+}

@@ -19,13 +19,13 @@ export default function PlayOverlayButton({ track }: { track: any }) {
   return (
     <button
       onClick={handleClick}
-      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+      className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
     >
-      <div className="h-16 w-16 rounded-full bg-[#00FFC6] hover:bg-[#00E0B0] flex items-center justify-center shadow-xl">
+      <div className="h-10 w-10 rounded-full bg-[#00FFC6] hover:bg-[#00E0B0] flex items-center justify-center shadow-md transition">
         {isCurrent && isPlaying ? (
-          <Pause className="text-black" size={30} />
+          <Pause className="text-black" size={20} />
         ) : (
-          <Play className="text-black" size={30} />
+          <Play className="text-black" size={20} />
         )}
       </div>
     </button>

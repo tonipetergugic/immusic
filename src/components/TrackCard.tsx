@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
-import { Database } from "@/types/supabase";
+import { Track } from "@/types/database";
 
-type Track = Database["public"]["Tables"]["tracks"]["Row"];
+type Props = {
+  track: Track;
+};
 
-export default function TrackCard({ track }: { track: Track }) {
+export default function TrackCard({ track }: Props) {
   const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
 
   const isThisTrackActive = currentTrack?.id === track.id;
