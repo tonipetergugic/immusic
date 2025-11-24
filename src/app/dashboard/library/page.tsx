@@ -15,7 +15,8 @@ type LibraryPageProps = {
   };
 };
 
-export default async function LibraryPage({ searchParams }: LibraryPageProps) {
+export default async function LibraryPage(props: LibraryPageProps) {
+  const searchParams = await props.searchParams;
   const currentTab = searchParams?.tab || "playlists";
 
   const tabs = [

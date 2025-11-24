@@ -6,7 +6,8 @@ type ArtistPageProps = {
   params: { id: string };
 };
 
-export default async function ArtistPage({ params }: ArtistPageProps) {
+export default async function ArtistPage(props: ArtistPageProps) {
+  const params = await props.params;
   const supabase = await createSupabaseServerClient();
 
   // Artist laden
@@ -49,6 +50,7 @@ export default async function ArtistPage({ params }: ArtistPageProps) {
             alt={artist.display_name || "Artist"}
             fill
             className="object-cover blur-3xl scale-125 opacity-35"
+            unoptimized
           />
         ) : (
           // Fallback Hintergrund ohne Avatar
@@ -73,6 +75,7 @@ export default async function ArtistPage({ params }: ArtistPageProps) {
                 alt={artist.display_name || "Artist"}
                 fill
                 className="object-cover"
+                unoptimized
               />
             ) : (
               <div className="w-full h-full bg-neutral-800" />
