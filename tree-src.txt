@@ -48,6 +48,7 @@ src/components/AddTrackButton.tsx
 src/components/ArtistTracksTable.tsx
 src/components/PlayOverlayButton.tsx
 src/components/AudioDropzone.tsx
+src/components/AvatarDropzone.tsx
 src/components/TrackCoverDropzone.tsx
 src/components/PlaylistCard.tsx
 src/lib

@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, DragEvent } from "react";
+import { useState, DragEvent, useEffect } from "react";
 
 export default function AvatarDropzone({
   onFileSelected,
   avatarUrl,
 }: {
-  onFileSelected: (file: File | null) => void;
+  onFileSelected: (file: File | null) => void | Promise<void>;
   avatarUrl: string | null;
 }) {
   const [preview, setPreview] = useState<string | null>(avatarUrl);
   const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    setPreview(avatarUrl);
+  }, [avatarUrl]);
 
   function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -35,10 +39,12 @@ export default function AvatarDropzone({
   return (
     <div
       className={`
-        w-40 h-40 rounded-xl overflow-hidden border
+        w-30 h-30 rounded-xl overflow-hidden border border-[#00FFC622]
         flex items-center justify-center cursor-pointer
         transition-all duration-150
-        ${dragActive ? "border-[#00FFC6] bg-[#00FFC620]" : "border-white/20 bg-[#1A1A1A]"}
+        hover:shadow-[0_0_10px_2px_rgba(0,255,198,0.3)]
+        bg-[#1A1A1A]
+        ${dragActive ? "border-[#00FFC6] bg-[#00FFC620]" : ""}
       `}
       onDragEnter={() => setDragActive(true)}
       onDragOver={(e) => e.preventDefault()}
