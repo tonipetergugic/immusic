@@ -5,6 +5,8 @@ src/types/supabase.ts
 src/context
 src/context/PlayerContext.tsx
 src/app
+src/app/settings
+src/app/settings/page.tsx
 src/app/playlist
 src/app/playlist/[id]
 src/app/favicon.ico
@@ -22,7 +24,12 @@ src/app/dashboard/components
 src/app/dashboard/layout.tsx
 src/app/dashboard/become-artist
 src/app/dashboard/page.tsx
+src/app/profile
+src/app/profile/actions.ts
+src/app/profile/page.tsx
 src/app/layout.tsx
+src/app/account
+src/app/account/page.tsx
 src/app/page.tsx
 src/app/globals.css
 src/app/artist

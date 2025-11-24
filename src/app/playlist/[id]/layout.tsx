@@ -1,25 +1,19 @@
-import ArtistSidebar from "@/components/ArtistSidebar";
+"use client";
+
 import { PlayerProvider } from "@/context/PlayerContext";
 import PlayerBar from "@/components/PlayerBar";
 
-export default function ArtistDashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function PlaylistLayout({ children }: { children: React.ReactNode }) {
   return (
     <PlayerProvider>
-      <div className="flex flex-col min-h-screen bg-[#0E0E10] text-white">
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <ArtistSidebar />
+      <div className="min-h-screen bg-[#0E0E10] text-white flex flex-col">
 
-          {/* Page Content */}
-          <div className="flex-1 overflow-y-auto px-10 py-8">
-            <div className="max-w-5xl mx-auto">{children}</div>
-          </div>
+        {/* Page Content */}
+        <div className="flex-1">
+          {children}
         </div>
 
+        {/* Global Player */}
         <div
           className="
             h-24
@@ -34,6 +28,7 @@ export default function ArtistDashboardLayout({
         >
           <PlayerBar />
         </div>
+
       </div>
     </PlayerProvider>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { usePlayer } from "@/context/PlayerContext";
 import type { Database } from "@/types/database";
 
 type TrackRow = Database["public"]["Tables"]["tracks"]["Row"];
@@ -22,6 +22,8 @@ export default function ArtistTracksTable({ tracks }: ArtistTracksTableProps) {
         : [],
     [tracks, hasTracks]
   );
+
+  const { setQueueList, togglePlay, currentTrack, isPlaying } = usePlayer();
 
   return (
     <section className="rounded-xl bg-[#1A1A1A] p-6">
@@ -70,18 +72,34 @@ export default function ArtistTracksTable({ tracks }: ArtistTracksTableProps) {
                         <div className="h-full w-full bg-zinc-700" />
                       )}
 
-                      <PlayOverlayButton
-                        track={{
-                          id: track.id,
-                          title: track.title ?? "Untitled Track",
-                          cover_url: track.cover_url,
-                          audio_url: track.audio_url,
-                          artist_id: track.artist_id,
-                          bpm: track.bpm,
-                          key: track.key,
-                          created_at: track.created_at,
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const index = sortedTracks.findIndex((t) => t.id === track.id);
+                          if (currentTrack?.id === track.id) {
+                            togglePlay();
+                          } else {
+                            const fullList = sortedTracks.map((t) => ({
+                              ...t,
+                              title: t.title ?? "Untitled Track",
+                            })) as any[];
+                            setQueueList(fullList, index);
+                          }
                         }}
-                      />
+                        className="
+                          absolute inset-0 m-auto w-12 h-12 rounded-full
+                          flex items-center justify-center
+                          bg-[#00FFC6] hover:bg-[#00E0B0]
+                          text-black opacity-0 group-hover:opacity-100
+                          transition-all duration-300 shadow-[0_0_20px_rgba(0,255,198,0.4)]
+                        "
+                      >
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <svg width='20' height='20' viewBox='0 0 24 24' fill='currentColor'><rect x='6' y='4' width='4' height='16'/><rect x='14' y='4' width='4' height='16'/></svg>
+                        ) : (
+                          <svg width='20' height='20' viewBox='0 0 24 24' fill='currentColor'><path d='M8 5v14l11-7z'/></svg>
+                        )}
+                      </button>
                     </div>
                   </td>
 

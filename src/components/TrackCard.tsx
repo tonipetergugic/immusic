@@ -11,10 +11,12 @@ type Props = {
       display_name: string | null;
     } | null;
   };
+  index: number;
+  tracks: PlayerTrack[];
 };
 
-export default function TrackCard({ track }: Props) {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
+export default function TrackCard({ track, index, tracks }: Props) {
+  const { currentTrack, isPlaying, playTrack, togglePlay, setQueueList } = usePlayer();
 
   const isThisTrackActive = currentTrack?.id === track.id;
 
@@ -22,7 +24,7 @@ export default function TrackCard({ track }: Props) {
     if (isThisTrackActive) {
       togglePlay();
     } else {
-      playTrack(track);
+      setQueueList(tracks, index);
     }
   };
 

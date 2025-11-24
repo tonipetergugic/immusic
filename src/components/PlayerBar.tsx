@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
 
 function formatTime(seconds: number): string {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -22,6 +22,8 @@ export default function PlayerBar() {
     togglePlay,
     seek,
     setVolume,
+    playNext,
+    playPrev,
   } = usePlayer();
 
   const [isMuted, setIsMuted] = useState(false);
@@ -60,13 +62,10 @@ export default function PlayerBar() {
     }
   };
 
-  // Wenn kein Track ausgewählt ist, kann der Player sehr schlicht sein
   if (!currentTrack) {
     return (
-      <div className="player-bar">
-        <div className="player-bar__empty">
-          <span>Select a track to start playback</span>
-        </div>
+      <div className="w-full flex items-center justify-center text-xs text-white/40 tracking-wide uppercase">
+        Select a track to start playback
       </div>
     );
   }
@@ -83,31 +82,71 @@ export default function PlayerBar() {
         flex items-center justify-between
       "
     >
-      <div className="flex flex-col min-w-[200px]">
-        <span className="text-white/90 text-sm font-medium truncate">
-          {currentTrack.title}
-        </span>
-        <span className="text-white/50 text-xs truncate">
-          {currentTrack.artist}
-        </span>
+      <div className="flex items-center gap-4 min-w-[200px]">
+        {/* Cover */}
+        <div className="w-12 h-12 rounded-md overflow-hidden bg-neutral-900">
+          {currentTrack.cover_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={currentTrack.cover_url}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[10px] text-white/40">
+              No Cover
+            </div>
+          )}
+        </div>
+
+        {/* Track Info */}
+        <div className="flex flex-col">
+          <span className="text-white/90 text-sm font-medium truncate">
+            {currentTrack.title}
+          </span>
+          <span className="text-white/50 text-xs truncate">
+            {(currentTrack as any)?.profiles?.display_name ?? "Unknown Artist"}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col items-center gap-2 w-[40%]">
-        <button
-          type="button"
-          onClick={togglePlay}
-          className="
-            w-10 h-10 rounded-full 
-            flex items-center justify-center 
-            bg-[#1A1A1C] 
-            text-white 
-            hover:bg-[#00FFC6]/20 
-            hover:text-[#00FFC6] 
-            transition-colors
-          "
-        >
-          {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Previous */}
+          <button
+            type="button"
+            onClick={playPrev}
+            className="text-white/60 hover:text-[#00FFC6] transition-colors"
+          >
+            <SkipBack size={18} />
+          </button>
+
+          {/* Play/Pause */}
+          <button
+            type="button"
+            onClick={togglePlay}
+            className="
+              w-11 h-11 rounded-full
+              flex items-center justify-center
+              bg-[#121214]
+              text-white/90
+              hover:text-[#00FFC6]
+              hover:bg-[#00FFC6]/10
+              transition-all
+            "
+          >
+            {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+          </button>
+
+          {/* Next */}
+          <button
+            type="button"
+            onClick={playNext}
+            className="text-white/60 hover:text-[#00FFC6] transition-colors"
+          >
+            <SkipForward size={18} />
+          </button>
+        </div>
 
         <div className="flex items-center w-full gap-3">
           <span className="text-white/50 text-xs w-10 text-right">
@@ -122,9 +161,10 @@ export default function PlayerBar() {
             value={progress}
             onChange={handleSeek}
             className="
-              w-full h-1 rounded-lg 
-              accent-[#00FFC6] 
-              bg-[#1A1A1C] 
+              w-full h-[3px]
+              rounded-lg
+              accent-[#00FFC6]
+              bg-[#0D0D0F]
               cursor-pointer
             "
           />
@@ -159,9 +199,10 @@ export default function PlayerBar() {
           value={volume}
           onChange={handleVolumeChange}
           className="
-            w-24 h-1 rounded-lg 
-            accent-[#00FFC6] 
-            bg-[#1A1A1C] 
+            w-24 h-[3px]
+            rounded-lg
+            accent-[#00FFC6]
+            bg-[#0D0D0F]
             cursor-pointer
           "
         />

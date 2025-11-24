@@ -134,8 +134,13 @@ export default async function LibraryPage(props: LibraryPageProps) {
             <div className="pt-6">
               {data.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  {data.map((track: any) => (
-                    <TrackCard key={track.id} track={track} />
+                  {data.map((track: any, index: number) => (
+                    <TrackCard
+                      key={track.id}
+                      track={track}
+                      index={index}
+                      tracks={data}
+                    />
                   ))}
                 </div>
               ) : (

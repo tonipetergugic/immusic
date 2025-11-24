@@ -21,13 +21,13 @@ const menu = [
   { label: "Analytics", href: "/artist/dashboard/analytics", icon: BarChart3 },
 ];
 
-const secondaryMenu = [{ label: "Back to Listener", href: "/dashboard", icon: Home }];
+const secondaryMenu = [{ label: "Back to Home", href: "/dashboard", icon: Home }];
 
 export default function ArtistSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="h-screen w-64 bg-[#0E0E10] border-r border-zinc-800 flex flex-col justify-between p-6">
+    <aside className="h-screen w-64 bg-[#0E0E10] border-r border-zinc-800 flex flex-col justify-between p-6 pb-24">
       {/* Main Navigation */}
       <nav className="space-y-1">
         {menu.map((item) => {

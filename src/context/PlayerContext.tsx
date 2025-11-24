@@ -27,6 +27,11 @@ type PlayerContextType = {
   pause: () => void;
   seek: (seconds: number) => void;
   setVolume: (v: number) => void;
+  playNext: () => void;
+  playPrev: () => void;
+  setQueueList: (tracks: Track[], startIndex: number) => void;
+  queue: Track[];
+  queueIndex: number;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -40,6 +45,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(1);
+  const [queue, setQueue] = useState<Track[]>([]);
+  const [queueIndex, setQueueIndex] = useState<number>(0);
 
   // INIT AUDIO ONLY ON CLIENT
   useEffect(() => {
@@ -54,7 +61,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const handleLoaded = () => setDuration(audio.duration || 0);
     const handleEnded = () => {
       setIsPlaying(false);
-      // später: nextTrack();
+      playNext();
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
@@ -149,6 +156,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setQueueList = useCallback(
+    (tracks: Track[], startIndex: number) => {
+      setQueue(tracks);
+      setQueueIndex(startIndex);
+      playTrack(tracks[startIndex]);
+    },
+    [playTrack]
+  );
+
+  const playNext = useCallback(() => {
+    if (queue.length === 0) return;
+    const nextIndex = (queueIndex + 1) % queue.length;
+    setQueueIndex(nextIndex);
+    playTrack(queue[nextIndex]);
+  }, [queue, queueIndex, playTrack]);
+
+  const playPrev = useCallback(() => {
+    if (queue.length === 0) return;
+    const prevIndex = (queueIndex - 1 + queue.length) % queue.length;
+    setQueueIndex(prevIndex);
+    playTrack(queue[prevIndex]);
+  }, [queue, queueIndex, playTrack]);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -162,6 +192,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         pause,
         seek,
         setVolume,
+        playNext,
+        playPrev,
+        setQueueList,
+        queue,
+        queueIndex,
       }}
     >
       {children}
