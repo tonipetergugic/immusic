@@ -3,20 +3,16 @@
 import Image from "next/image";
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
-import type { Track as PlayerTrack } from "@/context/PlayerContext";
+import type { PlayerTrack } from "@/types/playerTrack";
 
 type Props = {
-  track: PlayerTrack & {
-    profiles?: {
-      display_name: string | null;
-    } | null;
-  };
+  track: PlayerTrack;
   index: number;
   tracks: PlayerTrack[];
 };
 
 export default function TrackCard({ track, index, tracks }: Props) {
-  const { currentTrack, isPlaying, playTrack, togglePlay, setQueueList } = usePlayer();
+  const { currentTrack, isPlaying, togglePlay, playQueue } = usePlayer();
 
   const isThisTrackActive = currentTrack?.id === track.id;
 
@@ -24,7 +20,7 @@ export default function TrackCard({ track, index, tracks }: Props) {
     if (isThisTrackActive) {
       togglePlay();
     } else {
-      setQueueList(tracks, index);
+      playQueue(tracks, index);
     }
   };
 
@@ -75,7 +71,7 @@ export default function TrackCard({ track, index, tracks }: Props) {
             shadow-[0_0_20px_rgba(0,255,198,0.4)]
             backdrop-blur-md
           "
-          style={{ pointerEvents: 'auto' }}
+          style={{ pointerEvents: "auto" }}
         >
           {isThisTrackActive && isPlaying ? (
             <Pause size={22} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
 
@@ -28,11 +28,6 @@ export default function PlayerBar() {
 
   const [isMuted, setIsMuted] = useState(false);
   const [lastVolumeBeforeMute, setLastVolumeBeforeMute] = useState(1);
-
-  const progressPercent = useMemo(() => {
-    if (!duration || duration === 0) return 0;
-    return Math.min(100, Math.max(0, (progress / duration) * 100));
-  }, [progress, duration]);
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
@@ -105,7 +100,7 @@ export default function PlayerBar() {
             {currentTrack.title}
           </span>
           <span className="text-white/50 text-xs truncate">
-            {(currentTrack as any)?.profiles?.display_name ?? "Unknown Artist"}
+            {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
           </span>
         </div>
       </div>

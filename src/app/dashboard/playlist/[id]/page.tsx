@@ -1,29 +1,30 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import PlaylistSidebar from "@/components/PlaylistSidebar";
 import { Playlist, PlaylistTrack } from "@/types/database";
-import PlaylistClient from "./PlaylistClient";
-import PlaylistHeaderClient from "./PlaylistHeaderClient";
+import type { PlayerTrack } from "@/types/playerTrack";
+import { toPlayerTrack } from "@/lib/playerTrack";
 
-export default async function PlaylistPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+import PlaylistHeaderClient from "./PlaylistHeaderClient";
+import PlaylistClient from "./PlaylistClient";
+
+export default async function PlaylistPage(
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
   const supabase = await createSupabaseServerClient();
 
   // Playlist laden
   const { data: playlist } = await supabase
     .from("playlists")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single<Playlist>();
 
-  // Falls Playlist nicht existiert → 404
   if (!playlist) {
     return <div className="p-6 text-white">Playlist not found.</div>;
   }
 
-  // Tracks laden (JOIN)
+  // Playlist-Tracks laden
   const { data: playlistTracks } = await supabase
     .from("playlist_tracks")
     .select(`
@@ -36,27 +37,35 @@ export default async function PlaylistPage({
         )
       )
     `)
-    .eq("playlist_id", params.id)
+    .eq("playlist_id", id)
     .order("position", { ascending: true })
     .returns<PlaylistTrack[]>();
 
-  return (
-    <div className="flex">
-      <PlaylistSidebar />
+  const convertedTracks: PlayerTrack[] =
+    playlistTracks?.map((pt) => toPlayerTrack(pt.tracks)) ?? [];
 
-      <div className="flex-1 p-2 sm:p-4 lg:p-6 text-white">
-        <div className="max-w-5xl mx-auto space-y-10">
-          {/* PLAYLIST HEADER */}
+  return (
+    <div className="flex w-full">  
+      {/* Linker Bereich */}
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-2 max-w-[1600px] mx-auto">
+
+        {/* Header (scrollt mit der Seite) */}
+        <div className="mb-8">
           <PlaylistHeaderClient
             playlist={playlist}
-            playlistTracks={playlistTracks ?? []}
+            playerTracks={convertedTracks}
           />
+        </div>
 
+        {/* Trackliste scrollt NICHT separat → gehört zum globalen Scroll */}
+        <div>
           <PlaylistClient
             playlist={playlist}
             playlistTracks={playlistTracks ?? []}
+            initialPlayerTracks={convertedTracks}
           />
         </div>
+
       </div>
     </div>
   );

@@ -19,7 +19,7 @@ export default function PlaylistCard({
 }: PlaylistCardProps) {
   return (
     <Link
-      href={`/playlist/${id}`}
+      href={`/dashboard/playlist/${id}`}
       className="
         group relative 
         bg-[#111112] 

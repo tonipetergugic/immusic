@@ -5,6 +5,9 @@ import PlaylistCard from "@/components/PlaylistCard";
 import TrackCard from "@/components/TrackCard";
 import ArtistCard from "@/components/ArtistCard";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
+import type { PlayerTrack } from "@/types/playerTrack";
+import type { Playlist, Profile } from "@/types/database";
+import { toPlayerTrackList } from "@/lib/playerTrack";
 
 export const metadata: Metadata = {
   title: "Library | ImMusic",
@@ -32,15 +35,17 @@ export default async function LibraryPage(props: LibraryPageProps) {
 
   const supabase = await createClient();
 
-  let data: any[] = [];
+  let playlists: Playlist[] = [];
+  let trackData: PlayerTrack[] = [];
+  let artists: Profile[] = [];
 
   if (currentTab === "playlists") {
-    const { data: playlists } = await supabase
+    const { data: playlistsData } = await supabase
       .from("playlists")
       .select("*")
       .order("created_at", { ascending: false });
 
-    data = playlists || [];
+    playlists = playlistsData || [];
   }
 
   if (currentTab === "tracks") {
@@ -61,17 +66,17 @@ export default async function LibraryPage(props: LibraryPageProps) {
       `)
       .order("created_at", { ascending: false });
 
-    data = tracks || [];
+    trackData = toPlayerTrackList(tracks);
   }
 
   if (currentTab === "artists") {
-    const { data: artists } = await supabase
+    const { data: artistsData } = await supabase
       .from("profiles")
       .select("*")
       .eq("role", "artist")
       .order("display_name", { ascending: true });
 
-    data = artists || [];
+    artists = artistsData || [];
   }
 
   return (
@@ -112,8 +117,8 @@ export default async function LibraryPage(props: LibraryPageProps) {
         <div className="pt-6">
           {currentTab === "playlists" && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pt-6">
-              {data.length > 0 ? (
-                data.map((playlist: any) => (
+              {playlists.length > 0 ? (
+                playlists.map((playlist) => (
                   <PlaylistCard
                     key={playlist.id}
                     id={playlist.id}
@@ -133,14 +138,14 @@ export default async function LibraryPage(props: LibraryPageProps) {
           {/* TRACKS UI */}
           {currentTab === "tracks" && (
             <div className="pt-6">
-              {data.length > 0 ? (
+              {trackData.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  {data.map((track: any, index: number) => (
+                  {trackData.map((track, index) => (
                     <TrackCard
                       key={track.id}
                       track={track}
                       index={index}
-                      tracks={data}
+                      tracks={trackData}
                     />
                   ))}
                 </div>
@@ -154,9 +159,9 @@ export default async function LibraryPage(props: LibraryPageProps) {
 
           {currentTab === "artists" && (
             <div className="pt-6">
-              {data.length > 0 ? (
+              {artists.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  {data.map((artist: any) => (
+                  {artists.map((artist) => (
                     <ArtistCard
                       key={artist.id}
                       id={artist.id}

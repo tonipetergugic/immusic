@@ -37,7 +37,22 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <div className="w-60 h-full bg-[#0B0B0D] border-r border-[#1A1A1C] p-4 flex flex-col gap-2">
+    <div
+      className="
+        fixed 
+        top-0 
+        left-0 
+        h-full 
+        w-60 
+        bg-[#0B0B0D] 
+        border-r border-[#1A1A1C] 
+        p-4 
+        flex 
+        flex-col 
+        gap-2
+        z-30
+      "
+    >
 
       <SidebarItem href="/dashboard" icon={<Home size={20} />} label="Home" />
       <SidebarItem

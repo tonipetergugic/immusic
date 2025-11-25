@@ -2,6 +2,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 import Image from "next/image";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { toPlayerTrack } from "@/lib/playerTrack";
+import type { PlayerTrack } from "@/types/playerTrack";
 
 export const metadata: Metadata = {
   title: "Track – ImMusic",
@@ -40,6 +42,10 @@ export default async function TrackPage({
     .single();
 
   const artistName = artist?.display_name ?? "Unknown Artist";
+  const playerTrack: PlayerTrack = toPlayerTrack({
+    ...track,
+    profiles: { display_name: artistName },
+  });
 
   return (
     <main className="min-h-screen bg-[#0E0E10] text-white px-6 py-10">
@@ -49,10 +55,10 @@ export default async function TrackPage({
 
           {/* COVER + PLAY */}
           <div className="relative group w-[240px] h-[240px] rounded-xl overflow-hidden shadow-xl">
-            {track.cover_url ? (
+            {playerTrack.cover_url ? (
               <Image
-                src={track.cover_url}
-                alt={track.title}
+                src={playerTrack.cover_url}
+                alt={playerTrack.title}
                 width={240}
                 height={240}
                 className="object-cover w-full h-full"
@@ -64,7 +70,7 @@ export default async function TrackPage({
             )}
 
             {/* Overlay Play Button */}
-            <PlayOverlayButton track={track} />
+            <PlayOverlayButton track={playerTrack} tracks={[playerTrack]} index={0} />
           </div>
 
           {/* INFO-BEREICH */}
@@ -73,19 +79,19 @@ export default async function TrackPage({
               TRACK
             </span>
 
-            <h1 className="text-4xl font-semibold">{track.title}</h1>
+            <h1 className="text-4xl font-semibold">{playerTrack.title}</h1>
 
             <p className="text-gray-300 text-sm">by {artistName}</p>
 
             <div className="flex gap-3 mt-2 text-xs text-gray-400">
-              {track.bpm && (
+              {playerTrack.bpm && (
                 <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">
-                  {track.bpm} BPM
+                  {playerTrack.bpm} BPM
                 </span>
               )}
-              {track.key && (
+              {playerTrack.key && (
                 <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10">
-                  Key: {track.key}
+                  Key: {playerTrack.key}
                 </span>
               )}
             </div>

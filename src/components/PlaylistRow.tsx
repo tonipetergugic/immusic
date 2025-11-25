@@ -1,15 +1,17 @@
 "use client";
 
-import { Track } from "@/types/database";
+import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 
 export default function PlaylistRow({
   index,
   track,
   onDelete,
+  tracks,
 }: {
   index: number;
-  track: Track;
+  track: PlayerTrack;
+  tracks: PlayerTrack[];
   onDelete: () => void;
 }) {
   return (
@@ -38,15 +40,15 @@ export default function PlaylistRow({
           className="w-full h-full object-cover"
         />
 
-        <PlayOverlayButton track={track} />
+        <PlayOverlayButton track={track} index={index - 1} tracks={tracks} />
       </div>
 
       {/* Title */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-white">{track.title}</span>
-        {track.artist?.display_name && (
+        {track.profiles?.display_name && (
           <span className="text-xs text-white/50">
-            · {track.artist.display_name}
+            · {track.profiles.display_name}
           </span>
         )}
       </div>

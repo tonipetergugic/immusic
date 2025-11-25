@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import Image from "next/image";
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
 import type { Track } from "@/types/database";
+import { toPlayerTrackList } from "@/lib/playerTrack";
 
 type ArtistTrackListProps = {
   tracks: Track[];
@@ -14,7 +16,8 @@ export default function ArtistTrackList({
   tracks,
   artistName,
 }: ArtistTrackListProps) {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
+  const { currentTrack, isPlaying, togglePlay, playQueue } = usePlayer();
+  const playerTracks = useMemo(() => toPlayerTrackList(tracks), [tracks]);
 
   if (!tracks || tracks.length === 0) {
     return <p className="text-neutral-400">No tracks yet.</p>;
@@ -22,14 +25,14 @@ export default function ArtistTrackList({
 
   return (
     <div className="flex flex-col gap-1">
-      {tracks.map((track) => {
+      {playerTracks.map((track, index) => {
         const isActive = currentTrack?.id === track.id;
 
         const handlePlay = () => {
           if (isActive) {
             togglePlay();
           } else {
-            playTrack(track as any);
+            playQueue(playerTracks, index);
           }
         };
 

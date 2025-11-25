@@ -1,16 +1,22 @@
 "use client";
 
 import { usePlayer } from "@/context/PlayerContext";
+import type { PlayerTrack } from "@/types/playerTrack";
+import type { Playlist } from "@/types/database";
 
-export default function PlaylistHeaderClient({ playlist, playlistTracks }) {
+export default function PlaylistHeaderClient({
+  playlist,
+  playerTracks,
+}: {
+  playlist: Playlist;
+  playerTracks: PlayerTrack[];
+}) {
   const { currentTrack, isPlaying } = usePlayer();
 
-  // Check if the current track belongs to this playlist
-  const isActive = !!(
-    currentTrack &&
+  const isActive =
+    !!currentTrack &&
     isPlaying &&
-    playlistTracks.some((pt) => pt.tracks.id === currentTrack.id)
-  );
+    playerTracks.some((track) => track.id === currentTrack.id);
 
   return (
     <div className="rounded-xl overflow-hidden relative">
@@ -80,7 +86,7 @@ export default function PlaylistHeaderClient({ playlist, playlistTracks }) {
           </p>
 
           <p className="text-white/80 text-lg font-medium mt-2">
-            {playlistTracks.length} Tracks
+            {playerTracks.length} Tracks
           </p>
         </div>
       </div>

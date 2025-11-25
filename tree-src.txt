@@ -1,5 +1,6 @@
 src
 src/types
+src/types/playerTrack.ts
 src/types/database.ts
 src/types/supabase.ts
 src/context
@@ -8,7 +9,6 @@ src/app
 src/app/settings
 src/app/settings/page.tsx
 src/app/playlist
-src/app/playlist/[id]
 src/app/favicon.ico
 src/app/track
 src/app/track/[id]
@@ -19,6 +19,7 @@ src/app/admin/applications
 src/app/logout
 src/app/logout/action.ts
 src/app/dashboard
+src/app/dashboard/playlist
 src/app/dashboard/library
 src/app/dashboard/components
 src/app/dashboard/layout.tsx
@@ -45,6 +46,7 @@ src/components/TrackCard.tsx
 src/components/ArtistSidebar.tsx
 src/components/AddTrackModal.tsx
 src/components/ArtistCard.tsx
+src/components/GlobalPlayerWrapper.tsx
 src/components/PlaylistRow.tsx
 src/components/LogoutButton.tsx
 src/components/CreatePlaylistModal.tsx
@@ -64,3 +66,4 @@ src/lib/supabase/getUser.ts
 src/lib/supabase/client.ts
 src/lib/supabase/getProfile.ts
 src/lib/supabase/server.ts
+src/lib/playerTrack.ts

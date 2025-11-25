@@ -16,7 +16,7 @@ export default function ArtistCard({
 }: ArtistCardProps) {
   return (
     <Link
-      href={`/artist/${id}`}
+      href={`/dashboard/artist/${id}`}
       className="
         group
         relative

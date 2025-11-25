@@ -1,20 +1,18 @@
+
 import Image from "next/image";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ArtistTrackList from "@/components/ArtistTrackList";
 
-type ArtistPageProps = {
-  params: { id: string };
-};
-
-export default async function ArtistPage(props: ArtistPageProps) {
-  const params = await props.params;
+export default async function ArtistPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
   // Artist laden
   const { data: artist } = await supabase
     .from("profiles")
     .select("id, display_name, avatar_url")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!artist) {
@@ -39,11 +37,9 @@ export default async function ArtistPage(props: ArtistPageProps) {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="flex flex-col">
-      {/* HERO SECTION – Apple Music Style */}
-      <div className="relative w-full h-[220px] md:h-[260px] lg:h-[300px] mb-4 overflow-hidden">
-
-        {/* Blurred Background (Falls Avatar vorhanden) */}
+    <div className="flex flex-col max-w-[1600px] mx-auto px-6 pt-12 pb-24">
+      {/* HERO SECTION */}
+      <div className="relative w-full h-[220px] md:h-[260px] lg:h-[300px] mb-16 overflow-hidden">
         {artist.avatar_url ? (
           <Image
             src={artist.avatar_url}
@@ -53,21 +49,12 @@ export default async function ArtistPage(props: ArtistPageProps) {
             unoptimized
           />
         ) : (
-          // Fallback Hintergrund ohne Avatar
           <div className="absolute inset-0 bg-gradient-to-b from-[#0f0f0f] to-[#050505]" />
         )}
 
-        {/* Dark Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b 
-          from-black/20 
-          via-black/70 
-          to-black
-        " />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/70 to-black" />
 
-        {/* Foreground: Avatar + Name */}
         <div className="absolute bottom-2 left-6 md:left-12 flex items-end gap-10">
-
-          {/* Großer Avatar (oder Fallback) */}
           <div className="relative w-44 h-44 md:w-52 md:h-52 lg:w-60 lg:h-60 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-neutral-900">
             {artist.avatar_url ? (
               <Image
@@ -82,27 +69,18 @@ export default async function ArtistPage(props: ArtistPageProps) {
             )}
           </div>
 
-          {/* Artist Name */}
-          <h1 className="text-white font-bold 
-            text-5xl md:text-6xl lg:text-7xl 
-            leading-none drop-shadow-xl
-          ">
+          <h1 className="text-white font-bold text-5xl md:text-6xl lg:text-7xl leading-none drop-shadow-xl">
             {artist.display_name}
           </h1>
         </div>
       </div>
 
-      {/* TRACK GRID */}
-      <div className="px-6 -mt-4">
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Tracks
-        </h2>
-
-        <ArtistTrackList
-          tracks={tracks ?? []}
-          artistName={artist.display_name}
-        />
+      {/* TRACKLIST */}
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-4">Tracks</h2>
+        <ArtistTrackList tracks={tracks ?? []} artistName={artist.display_name} />
       </div>
     </div>
   );
 }
+

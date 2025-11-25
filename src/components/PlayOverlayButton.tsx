@@ -2,17 +2,26 @@
 
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
+import type { PlayerTrack } from "@/types/playerTrack";
 
-export default function PlayOverlayButton({ track }: { track: any }) {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
+type PlayOverlayButtonProps = {
+  track: PlayerTrack;
+  index?: number;
+  tracks?: PlayerTrack[];
+};
+
+export default function PlayOverlayButton({ track, index, tracks }: PlayOverlayButtonProps) {
+  const { currentTrack, isPlaying, playTrack, togglePlay, playQueue } = usePlayer();
 
   const isCurrent = currentTrack?.id === track.id;
 
   const handleClick = () => {
     if (isCurrent) {
-      togglePlay();       // wenn schon läuft → Pause/Resume
+      togglePlay();
+    } else if (tracks && typeof index === "number") {
+      playQueue(tracks, index);
     } else {
-      playTrack(track);   // neuer Track → Play
+      playTrack(track);
     }
   };
 

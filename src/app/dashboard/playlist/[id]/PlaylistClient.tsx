@@ -6,18 +6,23 @@ import AddTrackButton from "@/components/AddTrackButton";
 import AddTrackModal from "@/components/AddTrackModal";
 import PlaylistRow from "@/components/PlaylistRow";
 import { Playlist, PlaylistTrack, Track } from "@/types/database";
+import type { PlayerTrack } from "@/types/playerTrack";
+import { toPlayerTrack } from "@/lib/playerTrack";
 
 export default function PlaylistClient({
   playlist,
   playlistTracks,
+  initialPlayerTracks,
 }: {
   playlist: Playlist;
   playlistTracks: PlaylistTrack[];
+  initialPlayerTracks: PlayerTrack[];
 }) {
   const [open, setOpen] = useState(false);
   const [userTracks, setUserTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
+  const [playerTracks, setPlayerTracks] = useState<PlayerTrack[]>(initialPlayerTracks);
 
   // Tracks des Users laden, sobald Modal geöffnet wird
   useEffect(() => {
@@ -54,6 +59,10 @@ export default function PlaylistClient({
     loadTracks();
   }, [open]);
 
+  useEffect(() => {
+    setPlayerTracks(initialPlayerTracks);
+  }, [initialPlayerTracks]);
+
   // Track zur Playlist hinzufügen
   async function onSelectTrack(track: Track) {
     const supabase = createBrowserClient(
@@ -82,6 +91,7 @@ export default function PlaylistClient({
       ...prev,
       { position: nextPosition, tracks: track },
     ]);
+    setPlayerTracks((prev) => [...prev, toPlayerTrack(track)]);
 
     setOpen(false);
   }
@@ -106,6 +116,7 @@ export default function PlaylistClient({
 
     // Optimistic UI update
     setLocalTracks((prev) => prev.filter((t) => t.tracks.id !== trackId));
+    setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
   return (
@@ -174,14 +185,15 @@ export default function PlaylistClient({
         </div>
 
         {/* Tracks */}
-        {localTracks.length > 0 ? (
+        {playerTracks.length > 0 ? (
           <div className="space-y-2">
-            {localTracks.map((pt, index) => (
+            {playerTracks.map((track, index) => (
               <PlaylistRow
-                key={pt.tracks.id}
+                key={track.id}
                 index={index + 1}
-                track={pt.tracks}
-                onDelete={() => onDeleteTrack(pt.tracks.id)}
+                track={track}
+                tracks={playerTracks}
+                onDelete={() => onDeleteTrack(track.id)}
               />
             ))}
           </div>

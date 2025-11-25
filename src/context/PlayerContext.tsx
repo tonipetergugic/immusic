@@ -9,29 +9,29 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { Database } from "@/types/supabase";
-
-// TYPE SAFETY ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-export type Track = Database["public"]["Tables"]["tracks"]["Row"];
+import { PlayerTrack } from "@/types/playerTrack";
 
 // PLAYER STATE ░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 type PlayerContextType = {
-  currentTrack: Track | null;
+  currentTrack: PlayerTrack | null;
   isPlaying: boolean;
   progress: number;
   duration: number;
   volume: number;
 
-  playTrack: (track: Track) => void;
+  playTrack: (
+    track: PlayerTrack,
+    options?: { queue?: PlayerTrack[]; startIndex?: number }
+  ) => void;
+  playQueue: (tracks: PlayerTrack[], startIndex: number) => void;
   togglePlay: () => void;
   pause: () => void;
   seek: (seconds: number) => void;
   setVolume: (v: number) => void;
   playNext: () => void;
   playPrev: () => void;
-  setQueueList: (tracks: Track[], startIndex: number) => void;
-  queue: Track[];
-  queueIndex: number;
+  queue: PlayerTrack[];
+  currentIndex: number;
 };
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -40,13 +40,13 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(1);
-  const [queue, setQueue] = useState<Track[]>([]);
-  const [queueIndex, setQueueIndex] = useState<number>(0);
+  const [queue, setQueue] = useState<PlayerTrack[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
 
   // INIT AUDIO ONLY ON CLIENT
   useEffect(() => {
@@ -77,12 +77,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // PLAY TRACK
   const playTrack = useCallback(
-    async (track: Track) => {
+    async (track: PlayerTrack, options?: { queue?: PlayerTrack[]; startIndex?: number }) => {
       if (!audioRef.current) return;
+      if (!track?.audio_url) return;
 
       const audio = audioRef.current;
 
       const isNewTrack = !currentTrack || currentTrack.id !== track.id;
+
+      if (options?.queue && options.queue.length) {
+        setQueue(options.queue);
+        const derivedIndex =
+          options.startIndex !== undefined
+            ? options.startIndex
+            : options.queue.findIndex((item) => item.id === track.id);
+        setCurrentIndex(derivedIndex >= 0 ? derivedIndex : 0);
+      } else {
+        setQueue([track]);
+        setCurrentIndex(0);
+      }
 
       if (isNewTrack) {
         setCurrentTrack(track);
@@ -156,28 +169,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const setQueueList = useCallback(
-    (tracks: Track[], startIndex: number) => {
-      setQueue(tracks);
-      setQueueIndex(startIndex);
-      playTrack(tracks[startIndex]);
+  const playQueue = useCallback(
+    (tracks: PlayerTrack[], startIndex: number) => {
+      if (!tracks || tracks.length === 0) return;
+      const safeIndex = Math.min(Math.max(startIndex, 0), tracks.length - 1);
+      playTrack(tracks[safeIndex], { queue: tracks, startIndex: safeIndex });
     },
     [playTrack]
   );
 
   const playNext = useCallback(() => {
     if (queue.length === 0) return;
-    const nextIndex = (queueIndex + 1) % queue.length;
-    setQueueIndex(nextIndex);
-    playTrack(queue[nextIndex]);
-  }, [queue, queueIndex, playTrack]);
+    const nextIndex = currentIndex < queue.length - 1 ? currentIndex + 1 : 0;
+    setCurrentIndex(nextIndex);
+    playTrack(queue[nextIndex], { queue, startIndex: nextIndex });
+  }, [queue, currentIndex, playTrack]);
 
   const playPrev = useCallback(() => {
     if (queue.length === 0) return;
-    const prevIndex = (queueIndex - 1 + queue.length) % queue.length;
-    setQueueIndex(prevIndex);
-    playTrack(queue[prevIndex]);
-  }, [queue, queueIndex, playTrack]);
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : queue.length - 1;
+    setCurrentIndex(prevIndex);
+    playTrack(queue[prevIndex], { queue, startIndex: prevIndex });
+  }, [queue, currentIndex, playTrack]);
 
   return (
     <PlayerContext.Provider
@@ -192,11 +205,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         pause,
         seek,
         setVolume,
+        playQueue,
         playNext,
         playPrev,
-        setQueueList,
         queue,
-        queueIndex,
+        currentIndex,
       }}
     >
       {children}
