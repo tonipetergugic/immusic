@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import PlaylistCard from "@/components/PlaylistCard";
 import TrackCard from "@/components/TrackCard";
@@ -91,7 +92,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
             {tabs.map((tab) => {
               const isActive = currentTab === tab.key;
               return (
-                <a
+                <Link
                   key={tab.key}
                   href={`/dashboard/library?tab=${tab.key}`}
                   className={`pb-3 transition-colors ${
@@ -101,7 +102,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
                   }`}
                 >
                   {tab.label}
-                </a>
+                </Link>
               );
             })}
           </nav>

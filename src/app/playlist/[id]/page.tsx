@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import PlaylistSidebar from "@/components/PlaylistSidebar";
 import { Playlist, PlaylistTrack } from "@/types/database";
 import PlaylistClient from "./PlaylistClient";
 import PlaylistHeaderClient from "./PlaylistHeaderClient";
@@ -40,20 +41,23 @@ export default async function PlaylistPage({
     .returns<PlaylistTrack[]>();
 
   return (
-    <div className="p-2 sm:p-4 lg:p-6 text-white">
-      <div className="max-w-5xl mx-auto space-y-10">
-        {/* PLAYLIST HEADER */}
-        <PlaylistHeaderClient
-          playlist={playlist}
-          playlistTracks={playlistTracks ?? []}
-        />
+    <div className="flex">
+      <PlaylistSidebar />
 
-        <PlaylistClient
-          playlist={playlist}
-          playlistTracks={playlistTracks ?? []}
-        />
+      <div className="flex-1 p-2 sm:p-4 lg:p-6 text-white">
+        <div className="max-w-5xl mx-auto space-y-10">
+          {/* PLAYLIST HEADER */}
+          <PlaylistHeaderClient
+            playlist={playlist}
+            playlistTracks={playlistTracks ?? []}
+          />
+
+          <PlaylistClient
+            playlist={playlist}
+            playlistTracks={playlistTracks ?? []}
+          />
+        </div>
       </div>
     </div>
-
   );
 }
