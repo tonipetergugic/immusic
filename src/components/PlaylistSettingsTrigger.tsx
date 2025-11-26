@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Settings, ChevronDown } from "lucide-react";
 import PlaylistSettingsMenu from "./PlaylistSettingsMenu";
 
 export default function PlaylistSettingsTrigger({
   playlist,
-  onAddTrack,
   onTogglePublic,
+  onDeletePlaylist,
+  onEditDetails,
   isOwner,
 }: {
   playlist: any;
-  onAddTrack: () => void;
   onTogglePublic: () => Promise<void>;
+  onDeletePlaylist: () => void;
+  onEditDetails: () => void;
   isOwner: boolean;
 }) {
   if (!isOwner) return null;
@@ -20,35 +22,11 @@ export default function PlaylistSettingsTrigger({
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Close on outside click
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    window.addEventListener("mousedown", handleClickOutside);
-    return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Close on ESC
-  useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, []);
-
   return (
     <div className="relative">
-      {/* Modern Settings Button */}
       <button
         ref={buttonRef}
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((prev) => !prev)}
         className="
           inline-flex items-center gap-2 px-4 py-2 rounded-xl
           bg-neutral-900/60 border border-neutral-800
@@ -65,17 +43,23 @@ export default function PlaylistSettingsTrigger({
       </button>
 
       {open && (
-        <PlaylistSettingsMenu
-          playlist={playlist}
-          onAddTrack={() => {
-            onAddTrack();
-            setOpen(false);
-          }}
-          onTogglePublic={async () => {
-            await onTogglePublic();
-            setOpen(false);
-          }}
-        />
+        <div className="absolute left-0 mt-2 z-[999999] pointer-events-auto">
+          <PlaylistSettingsMenu
+            playlist={playlist}
+            onTogglePublic={async () => {
+              await onTogglePublic();
+              setOpen(false);
+            }}
+            onEditDetails={() => {
+              onEditDetails();
+              setOpen(false);
+            }}
+            onDeletePlaylist={() => {
+              onDeletePlaylist();
+              setOpen(false);
+            }}
+          />
+        </div>
       )}
     </div>
   );

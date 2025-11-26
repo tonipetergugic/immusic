@@ -5,7 +5,6 @@ import { Playlist, PlaylistTrack } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { toPlayerTrack } from "@/lib/playerTrack";
 
-import PlaylistHeaderClient from "./PlaylistHeaderClient";
 import PlaylistClient from "./PlaylistClient";
 
 export default async function PlaylistPage(
@@ -54,14 +53,6 @@ export default async function PlaylistPage(
     <div className="flex w-full">  
       {/* Linker Bereich */}
       <div className="flex-1 flex flex-col px-6 pt-4 pb-2 max-w-[1500px] mx-auto">
-
-        {/* Header (scrollt mit der Seite) */}
-        <div className="mb-6">
-          <PlaylistHeaderClient
-            playlist={playlist}
-            playerTracks={convertedTracks}
-          />
-        </div>
 
         {/* Trackliste scrollt NICHT separat → gehört zum globalen Scroll */}
         <div>

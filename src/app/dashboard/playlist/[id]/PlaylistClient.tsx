@@ -5,6 +5,10 @@ import { createBrowserClient } from "@supabase/ssr";
 import AddTrackModal from "@/components/AddTrackModal";
 import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
+import DeletePlaylistModal from "@/components/DeletePlaylistModal";
+import PlaylistDetailsModal from "@/components/PlaylistDetailsModal";
+import PlaylistHeaderClient from "./PlaylistHeaderClient";
+
 import { Playlist, PlaylistTrack, Track } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { toPlayerTrack } from "@/lib/playerTrack";
@@ -21,28 +25,27 @@ export default function PlaylistClient({
   user: any | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [userTracks, setUserTracks] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const [localPlaylist, setLocalPlaylist] = useState(playlist);
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
   const [playerTracks, setPlayerTracks] = useState<PlayerTrack[]>(initialPlayerTracks);
 
-  // Tracks des Users laden, sobald Modal geöffnet wird
+  const [userTracks, setUserTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  // Load all tracks from this user
   useEffect(() => {
-    if (!open) return;
+    if (!open || !user) return;
 
-    async function loadTracks() {
+    async function load() {
       setLoading(true);
-
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-
-      if (!user) {
-        setUserTracks([]);
-        setLoading(false);
-        return;
-      }
 
       const { data } = await supabase
         .from("tracks")
@@ -50,31 +53,104 @@ export default function PlaylistClient({
         .eq("artist_id", user.id)
         .order("created_at", { ascending: false });
 
-      setUserTracks((data as Track[]) || []);
+      setUserTracks(data ?? []);
       setLoading(false);
     }
 
-    loadTracks();
-  }, [open, user?.id]);
+    load();
+  }, [open, user]);
 
-  useEffect(() => {
-    setPlayerTracks(initialPlayerTracks);
-  }, [initialPlayerTracks]);
+  // Toggle public/private
+  async function togglePublic() {
+    const newValue = !localPlaylist.is_public;
 
-  // Track zur Playlist hinzufügen
+    const { error } = await supabase
+      .from("playlists")
+      .update({ is_public: newValue })
+      .eq("id", localPlaylist.id);
+
+    if (error) {
+      console.error("Public update error:", error);
+      return;
+    }
+
+    setLocalPlaylist((prev) => ({ ...prev, is_public: newValue }));
+  }
+
+  function onEditDetails() {
+    setDetailsOpen(true);
+  }
+
+  // Delete playlist (with cover cleanup)
+  async function onDeletePlaylist() {
+    const { data: fresh, error: freshError } = await supabase
+      .from("playlists")
+      .select("cover_url")
+      .eq("id", localPlaylist.id)
+      .single();
+
+    // 1) Cover löschen (falls vorhanden)
+    if (fresh?.cover_url || localPlaylist.cover_url) {
+      try {
+        const bucketName = "playlist-covers";
+        const publicUrl = fresh?.cover_url ?? localPlaylist.cover_url;
+
+        let relativePath = publicUrl?.split("/object/public/playlist-covers/")[1];
+
+        if (!relativePath) {
+          console.error("❌ Could not extract relative path");
+        } else {
+          if (relativePath.includes("?")) {
+            relativePath = relativePath.split("?")[0];
+          }
+
+          console.log("Deleting cover (playlist delete):", relativePath);
+
+          const { data, error } = await supabase.storage
+            .from(bucketName)
+            .remove([relativePath]);
+
+          if (error) {
+            console.error("❌ Storage delete error:", error);
+          } else {
+            console.log("✅ Deleted from storage (playlist delete):", data);
+          }
+        }
+      } catch (err) {
+        console.error("❌ Error parsing cover delete:", err);
+      }
+    }
+
+    // 2) cover_url in DB auf NULL setzen
+    await supabase
+      .from("playlists")
+      .update({ cover_url: null })
+      .eq("id", localPlaylist.id);
+
+    // 3) Playlist löschen
+    const { error } = await supabase
+      .from("playlists")
+      .delete()
+      .eq("id", localPlaylist.id);
+
+    if (error) {
+      console.error("Error deleting playlist:", error);
+      return;
+    }
+
+    // Redirect
+    window.location.href = "/dashboard/library";
+  }
+
+  // Add Track
   async function onSelectTrack(track: Track) {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     const nextPosition =
       localTracks.length === 0
         ? 1
         : Math.max(...localTracks.map((t) => t.position)) + 1;
 
     const { error } = await supabase.from("playlist_tracks").insert({
-      playlist_id: playlist.id,
+      playlist_id: localPlaylist.id,
       track_id: track.id,
       position: nextPosition,
     });
@@ -84,27 +160,21 @@ export default function PlaylistClient({
       return;
     }
 
-    // UI direkt updaten
     setLocalTracks((prev) => [
       ...prev,
       { position: nextPosition, tracks: track },
     ]);
-    setPlayerTracks((prev) => [...prev, toPlayerTrack(track)]);
 
+    setPlayerTracks((prev) => [...prev, toPlayerTrack(track)]);
     setOpen(false);
   }
 
+  // Delete track from playlist
   async function onDeleteTrack(trackId: string) {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    // Delete row in playlist_tracks
     const { error } = await supabase
       .from("playlist_tracks")
       .delete()
-      .eq("playlist_id", playlist.id)
+      .eq("playlist_id", localPlaylist.id)
       .eq("track_id", trackId);
 
     if (error) {
@@ -112,48 +182,34 @@ export default function PlaylistClient({
       return;
     }
 
-    // Optimistic UI update
     setLocalTracks((prev) => prev.filter((t) => t.tracks.id !== trackId));
     setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
-  async function togglePublic() {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const newValue = !playlist.is_public;
-
-    await supabase
-      .from("playlists")
-      .update({ is_public: newValue })
-      .eq("id", playlist.id);
-
-    playlist.is_public = newValue;
-  }
-
   return (
     <div className="space-y-8">
-      {/* Add Track Button + Modal */}
-      <PlaylistSettingsTrigger
-        playlist={playlist}
-        isOwner={user?.id === playlist.created_by}
+      <PlaylistHeaderClient
+        playlist={localPlaylist}
+        playerTracks={playerTracks}
         onAddTrack={() => setOpen(true)}
-        onTogglePublic={togglePublic}
+        actions={
+          <PlaylistSettingsTrigger
+            playlist={localPlaylist}
+            isOwner={user?.id === localPlaylist.created_by}
+            onTogglePublic={togglePublic}
+            onDeletePlaylist={() => setDeleteOpen(true)}
+            onEditDetails={onEditDetails}
+          />
+        }
       />
 
       <AddTrackModal open={open} onClose={() => setOpen(false)}>
         {loading ? (
           <p className="text-white/60">Loading your tracks…</p>
-        ) : userTracks.length === 0 ? (
-          <p className="text-white/60">You have no tracks yet.</p>
         ) : (
           <div className="space-y-3">
             {userTracks.map((track) => {
-              const alreadyAdded = localTracks.some(
-                (t) => t.tracks.id === track.id
-              );
+              const alreadyAdded = localTracks.some((t) => t.tracks.id === track.id);
 
               return (
                 <button
@@ -167,12 +223,6 @@ export default function PlaylistClient({
                   }`}
                 >
                   <span className="font-semibold">{track.title}</span>
-                  <p className="text-xs text-white/40">BPM: {track.bpm ?? "?"}</p>
-                  {alreadyAdded && (
-                    <p className="text-xs text-[#00FFC6]/60 mt-1">
-                      Already in playlist
-                    </p>
-                  )}
                 </button>
               );
             })}
@@ -180,19 +230,13 @@ export default function PlaylistClient({
         )}
       </AddTrackModal>
 
-      {/* TRACKS TABLE — immer aus localTracks */}
+      {/* Tracks */}
       <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-4">
-        {/* Header Row */}
         <div
           className="
             grid grid-cols-[40px_60px_1fr_70px_70px_80px]
-            items-end
-            gap-4
+            text-xs text-white/50 uppercase tracking-wide
             px-4 py-2
-            text-xs
-            text-white/50
-            uppercase
-            tracking-wide
           "
         >
           <span>#</span>
@@ -203,8 +247,7 @@ export default function PlaylistClient({
           <span>Actions</span>
         </div>
 
-        {/* Tracks */}
-        {playerTracks.length > 0 ? (
+        {playerTracks.length ? (
           <div className="space-y-2">
             {playerTracks.map((track, index) => (
               <PlaylistRow
@@ -217,11 +260,23 @@ export default function PlaylistClient({
             ))}
           </div>
         ) : (
-          <p className="text-white/60 col-span-full">
-            No tracks in this playlist yet.
-          </p>
+          <p className="text-white/50">No tracks in this playlist yet.</p>
         )}
       </div>
+
+      <DeletePlaylistModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={onDeletePlaylist}
+      />
+      <PlaylistDetailsModal
+        isOpen={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        playlist={localPlaylist}
+        onUpdated={(updated) => {
+          setLocalPlaylist((prev) => ({ ...prev, ...updated }));
+        }}
+      />
     </div>
   );
 }

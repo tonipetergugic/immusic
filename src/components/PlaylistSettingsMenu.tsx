@@ -2,28 +2,35 @@
 
 export default function PlaylistSettingsMenu({
   playlist,
-  onAddTrack,
   onTogglePublic,
+  onEditDetails,
+  onDeletePlaylist,
 }: {
   playlist: any;
-  onAddTrack: () => void;
   onTogglePublic: () => void | Promise<void>;
+  onEditDetails: () => void;
+  onDeletePlaylist: () => void;
 }) {
   const menuItems = [
     {
-      label: "Add Track",
-      onClick: onAddTrack,
-    },
-    {
       label: playlist.is_public ? "Make Private" : "Make Public",
       onClick: onTogglePublic,
+    },
+    {
+      label: "Edit Details",
+      onClick: onEditDetails,
+    },
+    {
+      label: "Delete Playlist",
+      onClick: onDeletePlaylist,
+      danger: true,
     },
   ];
 
   return (
     <div
       className="
-        absolute left-0 mt-2 z-50 w-48 
+        w-48 
         bg-neutral-900 border border-neutral-800 
         rounded-lg shadow-xl p-2
       "
@@ -32,12 +39,15 @@ export default function PlaylistSettingsMenu({
         <button
           key={i}
           onClick={item.onClick}
-          className="
+          className={`
             w-full text-left px-3 py-2 text-sm 
-            text-white/80 rounded-md 
-            hover:bg-neutral-800/60 
+            rounded-md 
             transition
-          "
+            ${item.danger
+              ? "text-red-500 hover:bg-red-500/20"
+              : "text-white/80 hover:bg-neutral-800/60"
+            }
+          `}
         >
           {item.label}
         </button>
