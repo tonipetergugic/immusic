@@ -32,33 +32,113 @@ export default function PlaylistClient({
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
   const [playerTracks, setPlayerTracks] = useState<PlayerTrack[]>(initialPlayerTracks);
 
-  const [userTracks, setUserTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Track[]>([]);
+  const [artistMap, setArtistMap] = useState<Record<string, string>>({});
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Load all tracks from this user
   useEffect(() => {
     if (!open || !user) return;
 
-    async function load() {
-      setLoading(true);
+    let active = true;
 
-      const { data } = await supabase
+    async function loadArtists() {
+      const { data: tr, error } = await supabase
+        .from("tracks")
+        .select("artist_id")
+        .eq("artist_id", user.id);
+
+      if (error) {
+        console.error("Artist load error:", error);
+        return;
+      }
+
+      const artistIds = [
+        ...new Set(
+          (tr ?? [])
+            .map((t) => t.artist_id)
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+
+      if (artistIds.length === 0) {
+        if (active) setArtistMap({});
+        return;
+      }
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", artistIds);
+
+      if (profilesError) {
+        console.error("Artist profile load error:", profilesError);
+        return;
+      }
+
+      if (!active) return;
+
+      const map: Record<string, string> = {};
+      profilesData?.forEach((p) => {
+        map[p.id] = p.display_name ?? "Unknown Artist";
+      });
+
+      setArtistMap(map);
+    }
+
+    loadArtists();
+    return () => {
+      active = false;
+    };
+  }, [open, user]);
+
+  useEffect(() => {
+    if (!open || !user) return;
+
+    let active = true;
+    setLoading(true);
+
+    async function load() {
+      const { data, error } = await supabase
         .from("tracks")
         .select("*")
         .eq("artist_id", user.id)
         .order("created_at", { ascending: false });
 
-      setUserTracks(data ?? []);
+      if (error) console.error("Track load error:", error);
+
+      if (!active) return;
+
+      const tracks = data ?? [];
+      const lower = search.toLowerCase();
+
+      const filtered = tracks.filter((t) => {
+        const artistName =
+          (t.artist_id ? artistMap[t.artist_id] : undefined) ??
+          t.artist_name ??
+          "";
+
+        return (
+          t.title.toLowerCase().includes(lower) ||
+          artistName.toLowerCase().includes(lower)
+        );
+      });
+
+      setSearchResults(filtered);
+
       setLoading(false);
     }
 
     load();
-  }, [open, user]);
+    return () => {
+      active = false;
+    };
+  }, [open, search, user, artistMap]);
 
   // Toggle public/private
   async function togglePublic() {
@@ -203,32 +283,26 @@ export default function PlaylistClient({
         }
       />
 
-      <AddTrackModal open={open} onClose={() => setOpen(false)}>
-        {loading ? (
-          <p className="text-white/60">Loading your tracks…</p>
-        ) : (
-          <div className="space-y-3">
-            {userTracks.map((track) => {
-              const alreadyAdded = localTracks.some((t) => t.tracks.id === track.id);
-
-              return (
-                <button
-                  key={track.id}
-                  onClick={() => !alreadyAdded && onSelectTrack(track)}
-                  disabled={alreadyAdded}
-                  className={`w-full p-3 rounded-md border text-left transition ${
-                    alreadyAdded
-                      ? "bg-neutral-700/40 border-neutral-600 text-white/30 cursor-not-allowed"
-                      : "bg-neutral-800/60 border-neutral-700 hover:bg-neutral-700/60"
-                  }`}
-                >
-                  <span className="font-semibold">{track.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </AddTrackModal>
+      <AddTrackModal
+        open={open}
+        onClose={() => setOpen(false)}
+        search={search}
+        onSearchChange={setSearch}
+        tracks={searchResults.map((track) => ({
+          id: track.id,
+          title: track.title,
+          artist:
+            (track.artist_id ? artistMap[track.artist_id] : undefined) ??
+            "Unknown Artist",
+          cover_url: track.cover_url,
+          artist_id: track.artist_id,
+        }))}
+        localTracks={localTracks}
+        onSelectTrack={(trackId) => {
+          const track = searchResults.find((t) => t.id === trackId);
+          if (track) onSelectTrack(track);
+        }}
+      />
 
       {/* Tracks */}
       <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-4">

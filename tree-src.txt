@@ -61,6 +61,7 @@ src/components/ArtistTracksTable.tsx
 src/components/Portal.tsx
 src/components/PlayOverlayButton.tsx
 src/components/AudioDropzone.tsx
+src/components/PlaylistDetailsModal.tsx
 src/components/AvatarDropzone.tsx
 src/components/TrackCoverDropzone.tsx
 src/components/PlaylistCard.tsx

@@ -3,6 +3,7 @@
 export type Track = {
   id: string;
   title: string;
+  artist_name: string | null;
   cover_url: string | null;
   audio_url: string;
   created_at: string | null;
