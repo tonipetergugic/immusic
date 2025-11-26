@@ -25,10 +25,10 @@ export default function PlaylistHeaderClient({
         className="
     absolute inset-0
     bg-cover bg-center
-    blur-[80px]
+    blur-[40px]
     opacity-80
-    brightness-150
-    saturate-150
+    brightness-125
+    saturate-125
   "
         style={{
           backgroundImage: `url('${playlist.cover_url || ""}')`,
@@ -39,7 +39,7 @@ export default function PlaylistHeaderClient({
       <div
         className="
     absolute inset-0
-    bg-[rgba(0,0,0,0.30)]
+    bg-[rgba(0,0,0,0.40)]
   "
       />
 
@@ -49,8 +49,8 @@ export default function PlaylistHeaderClient({
     absolute inset-0
     bg-gradient-to-b
     from-[rgba(0,0,0,0.0)]
-    via-[rgba(0,0,0,0.25)]
-    to-[rgba(0,0,0,0.50)]
+    via-[rgba(0,0,0,0.30)]
+    to-[rgba(0,0,0,0.55)]
   "
       />
 
@@ -62,8 +62,8 @@ export default function PlaylistHeaderClient({
         border bg-neutral-900
         transition-all duration-500 
         ${isActive 
-          ? "shadow-[0_0_80px_rgba(0,255,198,0.35)] border-[#00FFC6]"
-          : "shadow-[0_0_40px_rgba(0,255,198,0.15)] border-[#00FFC620]"
+          ? "shadow-[0_0_60px_rgba(0,255,198,0.25)] border-[#00FFC6]"
+          : "shadow-[0_0_35px_rgba(0,255,198,0.12)] border-[#00FFC620]"
         }
         ${isActive ? "scale-[1.02]" : "scale-100"}
       `}
@@ -81,11 +81,11 @@ export default function PlaylistHeaderClient({
             {playlist.title}
           </h1>
 
-          <p className="text-white/80 text-lg font-medium max-w-lg">
+          <p className="text-white/90 text-lg font-medium max-w-lg">
             {playlist.description || "EDM Playlist"}
           </p>
 
-          <p className="text-white/80 text-lg font-medium mt-2">
+          <p className="text-white/90 text-lg font-medium mt-2">
             {playerTracks.length} Tracks
           </p>
         </div>

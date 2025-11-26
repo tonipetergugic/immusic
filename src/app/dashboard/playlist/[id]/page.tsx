@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Playlist, PlaylistTrack } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -19,6 +21,10 @@ export default async function PlaylistPage(
     .select("*")
     .eq("id", id)
     .single<Playlist>();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!playlist) {
     return <div className="p-6 text-white">Playlist not found.</div>;
@@ -47,10 +53,10 @@ export default async function PlaylistPage(
   return (
     <div className="flex w-full">  
       {/* Linker Bereich */}
-      <div className="flex-1 flex flex-col px-6 pt-6 pb-2 max-w-[1600px] mx-auto">
+      <div className="flex-1 flex flex-col px-6 pt-4 pb-2 max-w-[1500px] mx-auto">
 
         {/* Header (scrollt mit der Seite) */}
-        <div className="mb-8">
+        <div className="mb-6">
           <PlaylistHeaderClient
             playlist={playlist}
             playerTracks={convertedTracks}
@@ -63,6 +69,7 @@ export default async function PlaylistPage(
             playlist={playlist}
             playlistTracks={playlistTracks ?? []}
             initialPlayerTracks={convertedTracks}
+            user={user}
           />
         </div>
 

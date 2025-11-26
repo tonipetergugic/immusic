@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import AddTrackButton from "@/components/AddTrackButton";
 import AddTrackModal from "@/components/AddTrackModal";
+import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
 import { Playlist, PlaylistTrack, Track } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -13,10 +13,12 @@ export default function PlaylistClient({
   playlist,
   playlistTracks,
   initialPlayerTracks,
+  user,
 }: {
   playlist: Playlist;
   playlistTracks: PlaylistTrack[];
   initialPlayerTracks: PlayerTrack[];
+  user: any | null;
 }) {
   const [open, setOpen] = useState(false);
   const [userTracks, setUserTracks] = useState<Track[]>([]);
@@ -36,10 +38,6 @@ export default function PlaylistClient({
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
       if (!user) {
         setUserTracks([]);
         setLoading(false);
@@ -57,7 +55,7 @@ export default function PlaylistClient({
     }
 
     loadTracks();
-  }, [open]);
+  }, [open, user?.id]);
 
   useEffect(() => {
     setPlayerTracks(initialPlayerTracks);
@@ -119,10 +117,31 @@ export default function PlaylistClient({
     setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
+  async function togglePublic() {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const newValue = !playlist.is_public;
+
+    await supabase
+      .from("playlists")
+      .update({ is_public: newValue })
+      .eq("id", playlist.id);
+
+    playlist.is_public = newValue;
+  }
+
   return (
     <div className="space-y-8">
       {/* Add Track Button + Modal */}
-      <AddTrackButton onClick={() => setOpen(true)} />
+      <PlaylistSettingsTrigger
+        playlist={playlist}
+        isOwner={user?.id === playlist.created_by}
+        onAddTrack={() => setOpen(true)}
+        onTogglePublic={togglePublic}
+      />
 
       <AddTrackModal open={open} onClose={() => setOpen(false)}>
         {loading ? (
@@ -167,7 +186,7 @@ export default function PlaylistClient({
         <div
           className="
             grid grid-cols-[40px_60px_1fr_70px_70px_80px]
-            items-center
+            items-end
             gap-4
             px-4 py-2
             text-xs
