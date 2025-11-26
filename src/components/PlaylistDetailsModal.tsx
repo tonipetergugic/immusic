@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import CoverDropzone from "./CoverDropzone";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -136,9 +137,19 @@ export default function PlaylistDetailsModal({
           {playlist.cover_url && !file && (
             <button
               onClick={handleRemoveCover}
-              className="text-red-400 hover:text-red-300 text-sm"
+              className="
+      flex items-center gap-3 w-full 
+      bg-neutral-900/60 
+      border border-neutral-800 
+      hover:bg-neutral-800/60 
+      hover:border-red-400/40
+      transition-all duration-200
+      rounded-lg px-4 py-3 mt-1
+      text-red-400 hover:text-red-300 text-sm font-medium
+    "
             >
-              Remove current cover
+              <Trash2 size={18} className="text-red-400" />
+              <span>Remove current cover</span>
             </button>
           )}
         </div>
