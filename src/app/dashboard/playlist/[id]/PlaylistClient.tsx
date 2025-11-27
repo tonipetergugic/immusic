@@ -1,6 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { createBrowserClient } from "@supabase/ssr";
 import AddTrackModal from "@/components/AddTrackModal";
 import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
@@ -266,6 +278,12 @@ export default function PlaylistClient({
     setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+
   return (
     <div className="space-y-8">
       <PlaylistHeaderClient
@@ -322,17 +340,67 @@ export default function PlaylistClient({
         </div>
 
         {playerTracks.length ? (
-          <div className="space-y-2">
-            {playerTracks.map((track, index) => (
-              <PlaylistRow
-                key={track.id}
-                index={index + 1}
-                track={track}
-                tracks={playerTracks}
-                onDelete={() => onDeleteTrack(track.id)}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={async ({ active, over }) => {
+              if (!over || active.id === over.id) return;
+
+              // 1) PRODUCE NEW ORDER BASED ON CURRENT STATE (NO STATE MUTATION YET)
+              const oldIndex = playerTracks.findIndex((t) => t.id === active.id);
+              const newIndex = playerTracks.findIndex((t) => t.id === over.id);
+
+              const newPlayerTracks = arrayMove(playerTracks, oldIndex, newIndex);
+              const newLocalTracks = arrayMove(
+                localTracks,
+                localTracks.findIndex((t) => t.tracks.id === active.id),
+                localTracks.findIndex((t) => t.tracks.id === over.id)
+              );
+
+              // 2) UPDATE UI FIRST (SYNC, STABLE, NO JUMPING)
+              setPlayerTracks(newPlayerTracks);
+              setLocalTracks(newLocalTracks);
+
+              // 3) PREPARE DB ORDER FROM newLocalTracks (NOT old state!)
+              const updates = newLocalTracks.map((item, index) => ({
+                playlist_id: localPlaylist.id,
+                track_id: item.tracks.id,
+                position: index + 1,
+              }));
+
+              // 4) SAVE IN DATABASE
+              for (const row of updates) {
+                const { error } = await supabase
+                  .from("playlist_tracks")
+                  .update({ position: row.position })
+                  .eq("playlist_id", row.playlist_id)
+                  .eq("track_id", row.track_id);
+
+                if (error) {
+                  console.error("Position update error:", error);
+                  break;
+                }
+              }
+
+              // ❗️ NO UI SYNC AFTER THIS — UI IS ALREADY CORRECT
+            }}
+          >
+            <SortableContext
+              items={playerTracks.map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {playerTracks.map((track, index) => (
+                  <PlaylistRow
+                    key={track.id}
+                    track={track}
+                    tracks={playerTracks}
+                    onDelete={() => onDeleteTrack(track.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <p className="text-white/50">No tracks in this playlist yet.</p>
         )}
