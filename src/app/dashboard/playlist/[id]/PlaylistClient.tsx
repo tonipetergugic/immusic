@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -14,16 +14,14 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { createBrowserClient } from "@supabase/ssr";
-import AddTrackModal from "@/components/AddTrackModal";
 import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
 import DeletePlaylistModal from "@/components/DeletePlaylistModal";
 import PlaylistDetailsModal from "@/components/PlaylistDetailsModal";
 import PlaylistHeaderClient from "./PlaylistHeaderClient";
 
-import { Playlist, PlaylistTrack, Track } from "@/types/database";
+import { Playlist, PlaylistTrack } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
-import { toPlayerTrack } from "@/lib/playerTrack";
 
 export default function PlaylistClient({
   playlist,
@@ -36,7 +34,6 @@ export default function PlaylistClient({
   initialPlayerTracks: PlayerTrack[];
   user: any | null;
 }) {
-  const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -44,113 +41,10 @@ export default function PlaylistClient({
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
   const [playerTracks, setPlayerTracks] = useState<PlayerTrack[]>(initialPlayerTracks);
 
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<Track[]>([]);
-  const [artistMap, setArtistMap] = useState<Record<string, string>>({});
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-
-  useEffect(() => {
-    if (!open || !user) return;
-
-    let active = true;
-
-    async function loadArtists() {
-      const { data: tr, error } = await supabase
-        .from("tracks")
-        .select("artist_id")
-        .eq("artist_id", user.id);
-
-      if (error) {
-        console.error("Artist load error:", error);
-        return;
-      }
-
-      const artistIds = [
-        ...new Set(
-          (tr ?? [])
-            .map((t) => t.artist_id)
-            .filter((id): id is string => Boolean(id))
-        ),
-      ];
-
-      if (artistIds.length === 0) {
-        if (active) setArtistMap({});
-        return;
-      }
-
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", artistIds);
-
-      if (profilesError) {
-        console.error("Artist profile load error:", profilesError);
-        return;
-      }
-
-      if (!active) return;
-
-      const map: Record<string, string> = {};
-      profilesData?.forEach((p) => {
-        map[p.id] = p.display_name ?? "Unknown Artist";
-      });
-
-      setArtistMap(map);
-    }
-
-    loadArtists();
-    return () => {
-      active = false;
-    };
-  }, [open, user]);
-
-  useEffect(() => {
-    if (!open || !user) return;
-
-    let active = true;
-    setLoading(true);
-
-    async function load() {
-      const { data, error } = await supabase
-        .from("tracks")
-        .select("*")
-        .eq("artist_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) console.error("Track load error:", error);
-
-      if (!active) return;
-
-      const tracks = data ?? [];
-      const lower = search.toLowerCase();
-
-      const filtered = tracks.filter((t) => {
-        const artistName =
-          (t.artist_id ? artistMap[t.artist_id] : undefined) ??
-          t.artist_name ??
-          "";
-
-        return (
-          t.title.toLowerCase().includes(lower) ||
-          artistName.toLowerCase().includes(lower)
-        );
-      });
-
-      setSearchResults(filtered);
-
-      setLoading(false);
-    }
-
-    load();
-    return () => {
-      active = false;
-    };
-  }, [open, search, user, artistMap]);
 
   // Toggle public/private
   async function togglePublic() {
@@ -234,33 +128,6 @@ export default function PlaylistClient({
     window.location.href = "/dashboard/library";
   }
 
-  // Add Track
-  async function onSelectTrack(track: Track) {
-    const nextPosition =
-      localTracks.length === 0
-        ? 1
-        : Math.max(...localTracks.map((t) => t.position)) + 1;
-
-    const { error } = await supabase.from("playlist_tracks").insert({
-      playlist_id: localPlaylist.id,
-      track_id: track.id,
-      position: nextPosition,
-    });
-
-    if (error) {
-      console.error("Insert error:", error);
-      return;
-    }
-
-    setLocalTracks((prev) => [
-      ...prev,
-      { position: nextPosition, tracks: track },
-    ]);
-
-    setPlayerTracks((prev) => [...prev, toPlayerTrack(track)]);
-    setOpen(false);
-  }
-
   // Delete track from playlist
   async function onDeleteTrack(trackId: string) {
     const { error } = await supabase
@@ -289,7 +156,7 @@ export default function PlaylistClient({
       <PlaylistHeaderClient
         playlist={localPlaylist}
         playerTracks={playerTracks}
-        onAddTrack={() => setOpen(true)}
+        onAddTrack={() => {}}
         actions={
           <PlaylistSettingsTrigger
             playlist={localPlaylist}
@@ -300,28 +167,6 @@ export default function PlaylistClient({
           />
         }
       />
-
-      <AddTrackModal
-        open={open}
-        onClose={() => setOpen(false)}
-        search={search}
-        onSearchChange={setSearch}
-        tracks={searchResults.map((track) => ({
-          id: track.id,
-          title: track.title,
-          artist:
-            (track.artist_id ? artistMap[track.artist_id] : undefined) ??
-            "Unknown Artist",
-          cover_url: track.cover_url,
-          artist_id: track.artist_id,
-        }))}
-        localTracks={localTracks}
-        onSelectTrack={(trackId) => {
-          const track = searchResults.find((t) => t.id === trackId);
-          if (track) onSelectTrack(track);
-        }}
-      />
-
       {/* Tracks */}
       <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-4">
         <div

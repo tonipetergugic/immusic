@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import CoverDropzone from "./CoverDropzone";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function PlaylistDetailsModal({
@@ -132,7 +131,24 @@ export default function PlaylistDetailsModal({
 
         <div className="space-y-3">
           <p className="text-sm text-white/60">Cover</p>
-          <CoverDropzone onFileSelected={setFile} />
+          <label className="flex flex-col gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                const selectedFile = event.target.files?.[0] ?? null;
+                setFile(selectedFile);
+              }}
+              className="
+                block w-full text-sm text-white
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-lg file:border-0
+                file:text-sm file:font-semibold
+                file:bg-[#00FFC6]/10 file:text-[#00FFC6]
+                hover:file:bg-[#00FFC6]/20
+              "
+            />
+          </label>
 
           {playlist.cover_url && !file && (
             <button

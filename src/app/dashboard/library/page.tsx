@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PlaylistCard from "@/components/PlaylistCard";
 import TrackCard from "@/components/TrackCard";
-import ArtistCard from "@/components/ArtistCard";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist, Profile } from "@/types/database";
@@ -14,9 +13,9 @@ export const metadata: Metadata = {
 };
 
 type LibraryPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     tab?: string;
-  };
+  }>;
 };
 
 export default async function LibraryPage(props: LibraryPageProps) {
@@ -162,12 +161,25 @@ export default async function LibraryPage(props: LibraryPageProps) {
               {artists.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                   {artists.map((artist) => (
-                    <ArtistCard
+                    <div
                       key={artist.id}
-                      id={artist.id}
-                      display_name={artist.display_name}
-                      avatar_url={artist.avatar_url}
-                    />
+                      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col items-center text-center gap-3"
+                    >
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-neutral-900 flex items-center justify-center text-white/50 text-xl">
+                        {artist.avatar_url ? (
+                          <img
+                            src={artist.avatar_url}
+                            alt={artist.display_name ?? "Artist avatar"}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          (artist.display_name?.[0]?.toUpperCase() ?? "?")
+                        )}
+                      </div>
+                      <p className="text-sm font-medium text-white truncate w-full">
+                        {artist.display_name || "Unknown artist"}
+                      </p>
+                    </div>
                   ))}
                 </div>
               ) : (

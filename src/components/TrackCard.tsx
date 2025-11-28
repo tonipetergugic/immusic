@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -37,29 +38,32 @@ export default function TrackCard({ track, index, tracks }: Props) {
         hover:border-[#00FFC622]
       "
     >
-      <div
-        className="relative"
-        onClick={handleClick}
-      >
-        {track.cover_url ? (
-          <Image
-            src={track.cover_url}
-            alt={track.title}
-            width={300}
-            height={300}
-            className="
-              rounded-xl object-cover w-full h-auto
-              transition-all duration-300
-              group-hover:brightness-110
-              group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]
-            "
-          />
-        ) : (
-          <div className="w-full aspect-square bg-neutral-800 rounded-xl" />
-        )}
+      <div className="relative">
+        <Link href={`/dashboard/track/${track.id}`}>
+          {track.cover_url ? (
+            <Image
+              src={track.cover_url}
+              alt={track.title}
+              width={300}
+              height={300}
+              className="
+                rounded-xl object-cover w-full h-auto
+                transition-all duration-300
+                group-hover:brightness-110
+                group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]
+              "
+            />
+          ) : (
+            <div className="w-full aspect-square bg-neutral-800 rounded-xl" />
+          )}
+        </Link>
 
         <button
-          onClick={handleClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            handleClick();
+          }}
           className="
             absolute inset-0 m-auto
             w-12 h-12 

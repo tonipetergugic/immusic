@@ -26,12 +26,11 @@ export async function uploadToStorage(
     throw new Error(`Failed to upload file to ${bucket}`);
   }
 
-  const { data, error: urlError } = supabase.storage
+  const { data } = supabase.storage
     .from(bucket)
     .getPublicUrl(filePath);
 
-  if (urlError) {
-    console.error(urlError);
+  if (!data || !data.publicUrl) {
     throw new Error("Failed to generate public URL");
   }
 
