@@ -6,6 +6,14 @@ import { redirect } from "next/navigation";
 export async function processQueuedTrack(queueId: string, action: "approve" | "reject") {
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated.");
+  }
+
   // Load queue item
   const { data: queueItem, error: fetchError } = await supabase
     .from("tracks_ai_queue")
@@ -44,6 +52,7 @@ export async function processQueuedTrack(queueId: string, action: "approve" | "r
       title: "Untitled Release",
       cover_path: null,
       status: "draft",
+      user_id: user.id,
     })
     .select()
     .single();
