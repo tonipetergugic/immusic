@@ -31,6 +31,7 @@ src/app/globals.css
 src/app/artist
 src/app/artist/releases
 src/app/artist/dashboard
+src/app/artist/components
 src/app/artist/profile
 src/app/artist/layout.tsx
 src/app/artist/onboarding

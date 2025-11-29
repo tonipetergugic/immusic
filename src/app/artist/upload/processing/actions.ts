@@ -27,64 +27,40 @@ export async function processQueuedTrack(queueId: string, action: "approve" | "r
 
   const audioPath = queueItem.audio_path;
 
-  // REJECT → delete file & queue entry
   if (action === "reject") {
-    // 1) Update status first
+    // 1) Mark queue item as rejected
     await supabase
       .from("tracks_ai_queue")
       .update({ status: "rejected" })
       .eq("id", queueId);
 
-    // 2) Remove audio file
-    await supabase.storage.from("tracks").remove([audioPath]);
+    // 2) Try to remove audio file from storage
+    const { error: storageError } = await supabase.storage.from("tracks").remove([audioPath]);
 
-    // 3) Delete queue entry
-    await supabase.from("tracks_ai_queue").delete().eq("id", queueId);
+    if (storageError) {
+      console.error("Storage delete error on reject:", storageError);
+      throw new Error("Failed to delete audio file on reject.");
+    }
 
+    // 3) Keep the queue entry (do NOT delete it)
     return;
   }
 
-  // APPROVE → create release draft
-  const { data: release, error: releaseError } = await supabase
-    .from("releases")
-    .insert({
-      artist_id: queueItem.user_id,
-      title: "Untitled Release",
-      cover_path: null,
-      status: "draft",
-      user_id: user.id,
-    })
-    .select()
-    .single();
-
-  if (releaseError || !release) {
-    throw new Error("Failed to create release draft.");
-  }
-
-  // Create track
-  const { error: trackError } = await supabase
-    .from("tracks")
-    .insert({
-      artist_id: queueItem.user_id,
-      release_id: release.id,
-      audio_path: audioPath,
-      title: "Untitled Track",
-      status: "approved",
-    });
+  // APPROVE → create standalone track
+  const { error: trackError } = await supabase.from("tracks").insert({
+    artist_id: queueItem.user_id,
+    audio_path: audioPath,
+    title: "Untitled Track",
+    status: "approved",
+  });
 
   if (trackError) {
     throw new Error("Failed to insert track.");
   }
 
-  await supabase
-    .from("tracks_ai_queue")
-    .update({ status: "approved" })
-    .eq("id", queueId);
+  await supabase.from("tracks_ai_queue").update({ status: "approved" }).eq("id", queueId);
 
-  await supabase.from("tracks_ai_queue").delete().eq("id", queueId);
-
-  // Redirect to Release Editor
-  redirect(`/artist/releases/${release.id}`);
+  redirect("/artist/my-tracks");
 }
 
 export async function rejectQueueItemAction(formData: FormData) {
@@ -106,6 +82,30 @@ export async function rejectQueueItemAction(formData: FormData) {
     throw new Error("Not authenticated.");
   }
 
+  // Load queue item to get audio_path
+  const { data: queueItem, error: fetchError } = await supabase
+    .from("tracks_ai_queue")
+    .select("*")
+    .eq("id", queueId)
+    .single();
+
+  if (fetchError || !queueItem) {
+    throw new Error("Queue item not found.");
+  }
+
+  const audioPath = queueItem.audio_path as string | null;
+
+  // Delete audio file from storage if present
+  if (audioPath) {
+    const { error: storageError } = await supabase.storage.from("tracks").remove([audioPath]);
+
+    if (storageError) {
+      console.error("Storage delete error on reject:", storageError);
+      throw new Error("Failed to delete audio file on reject.");
+    }
+  }
+
+  // Update queue status and message, keep entry
   const { error } = await supabase
     .from("tracks_ai_queue")
     .update({ status: "rejected", message })

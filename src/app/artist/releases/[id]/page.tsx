@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import CoverUploadClient from "./CoverUploadClient";
 import { updateReleaseTitleAction } from "./actions";
+import TrackListClient from "./TrackListClient";
 
 export default async function ReleaseEditorPage({
   params,
@@ -22,11 +23,17 @@ export default async function ReleaseEditorPage({
 
   if (error || !release) {
     return (
-      <div className="min-h-screen bg-[#0E0E10] text-white p-10">
+      <div className="bg-[#0E0E10] text-white p-10">
         <h1 className="text-2xl font-bold">Release not found</h1>
       </div>
     );
   }
+
+  const { data: tracks, error: tracksError } = await supabase
+    .from("tracks")
+    .select("*")
+    .eq("release_id", release.id)
+    .order("created_at", { ascending: true });
 
   let signedCoverUrl: string | null = null;
 
@@ -39,7 +46,7 @@ export default async function ReleaseEditorPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#0E0E10] text-white p-10">
+    <div className="bg-[#0E0E10] text-white p-10 flex flex-col gap-8 overflow-y-auto min-h-full">
       <h1 className="text-2xl font-bold mb-4">Edit Release</h1>
 
       <div className="text-white/60">
@@ -82,6 +89,11 @@ export default async function ReleaseEditorPage({
         currentCoverPath={release.cover_path}
         currentCoverUrl={signedCoverUrl}
       />
+
+      {tracksError && (
+        <p className="mt-6 text-red-500">Failed to load tracks.</p>
+      )}
+      <TrackListClient tracks={tracks || []} />
     </div>
   );
 }
