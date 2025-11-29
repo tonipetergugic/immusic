@@ -28,6 +28,14 @@ src/app/account
 src/app/account/page.tsx
 src/app/page.tsx
 src/app/globals.css
+src/app/artist
+src/app/artist/releases
+src/app/artist/dashboard
+src/app/artist/profile
+src/app/artist/layout.tsx
+src/app/artist/onboarding
+src/app/artist/upload
+src/app/artist/analytics
 src/app/login
 src/app/login/page.tsx
 src/components
@@ -51,7 +59,6 @@ src/components/TrackOptionsTrigger.tsx
 src/lib
 src/lib/supabase
 src/lib/supabase/getUser.ts
-src/lib/supabase/browserClient.ts
 src/lib/supabase/client.ts
 src/lib/supabase/getProfile.ts
 src/lib/supabase/server.ts
