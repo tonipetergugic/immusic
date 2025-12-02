@@ -50,7 +50,7 @@ export async function processQueuedTrack(queueId: string, action: "approve" | "r
   const { error: trackError } = await supabase.from("tracks").insert({
     artist_id: queueItem.user_id,
     audio_path: audioPath,
-    title: "Untitled Track",
+    title: queueItem.title,
     status: "approved",
   });
 

@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 
 export async function submitToQueueAction(formData: FormData) {
   const audioPath = formData.get("audio_path")?.toString();
+  const title = formData.get("title")?.toString().trim();
+
+  if (!title) {
+    throw new Error("Title is required.");
+  }
 
   if (!audioPath) {
     throw new Error("No audio file uploaded.");
@@ -23,6 +28,7 @@ export async function submitToQueueAction(formData: FormData) {
   const { error } = await supabase.from("tracks_ai_queue").insert({
     user_id: user.id,
     audio_path: audioPath,
+    title,
     status: "pending",
   });
 

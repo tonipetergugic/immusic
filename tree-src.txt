@@ -15,7 +15,6 @@ src/app/logout
 src/app/logout/action.ts
 src/app/dashboard
 src/app/dashboard/playlist
-src/app/dashboard/track
 src/app/dashboard/library
 src/app/dashboard/components
 src/app/dashboard/layout.tsx
@@ -34,6 +33,7 @@ src/app/artist/dashboard
 src/app/artist/components
 src/app/artist/profile
 src/app/artist/layout.tsx
+src/app/artist/my-tracks
 src/app/artist/onboarding
 src/app/artist/upload
 src/app/artist/analytics
@@ -43,11 +43,14 @@ src/components
 src/components/PlaylistSettingsTrigger.tsx
 src/components/PlayerBar.tsx
 src/components/TrackCard.tsx
+src/components/AddTrackModal.tsx
+src/components/SortableItem.tsx
 src/components/GlobalPlayerWrapper.tsx
 src/components/PlaylistRow.tsx
 src/components/LogoutButton.tsx
 src/components/CreatePlaylistModal.tsx
 src/components/TrackOptionsMenu.tsx
+src/components/CoverDropzone.tsx
 src/components/DeletePlaylistModal.tsx
 src/components/PlaylistSettingsMenu.tsx
 src/components/Portal.tsx

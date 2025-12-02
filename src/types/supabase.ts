@@ -68,6 +68,30 @@ export type Database = {
         }
         Relationships: []
       }
+      release_tracks: {
+        Row: {
+          id: string
+          release_id: string
+          track_id: string
+          position: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          release_id: string
+          track_id: string
+          position: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          release_id?: string
+          track_id?: string
+          position?: number
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
