@@ -94,30 +94,34 @@ export default function ReleasesPage() {
         ) : (
           <ul className="space-y-4">
             {releases.map((release) => {
-              const formattedDate = new Date(release.created_at).toLocaleDateString();
               return (
                 <li
                   key={release.id}
-                  className="flex items-center gap-4 rounded-lg border border-[#27272A] bg-[#18181B] p-4"
+                  className="rounded-lg border border-[#27272A] bg-[#18181B] p-4 hover:bg-[#1F1F23] transition"
                 >
-                  {release.cover_url ? (
-                    <img
-                      src={release.cover_url}
-                      alt={`${release.title} cover`}
-                      className="h-16 w-16 rounded object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded bg-[#1F1F23] text-xs text-gray-500">
-                      No Cover
+                  <Link href={`/artist/releases/${release.id}`} className="flex items-center gap-4">
+                    {release.cover_url ? (
+                      <img
+                        src={release.cover_url}
+                        alt={`${release.title} cover`}
+                        className="h-16 w-16 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded bg-[#1F1F23] text-xs text-gray-500">
+                        No Cover
+                      </div>
+                    )}
+
+                    <div className="flex-1">
+                      <p className="text-xs uppercase tracking-wide text-gray-400">
+                        {release.release_type}
+                      </p>
+                      <p className="text-lg font-semibold">{release.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(release.created_at).toLocaleDateString()}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1">
-                    <p className="text-xs uppercase tracking-wide text-gray-400">
-                      {release.release_type}
-                    </p>
-                    <p className="text-lg font-semibold">{release.title}</p>
-                    <p className="text-xs text-gray-500">{formattedDate}</p>
-                  </div>
+                  </Link>
                 </li>
               );
             })}
