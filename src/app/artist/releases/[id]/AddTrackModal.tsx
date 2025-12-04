@@ -109,7 +109,13 @@ export default function AddTrackModal({
                 <span>{t.title}</span>
                 <button
                   onClick={async () => {
-                    await addTrackToReleaseAction(releaseId, t.id);
+                    const result = await addTrackToReleaseAction(releaseId, t.id);
+
+                    if (result?.error) {
+                      alert("⚠️ This track already belongs to another release.");
+                      return;
+                    }
+
                     setClientTracks((prev) => {
                       const nextPosition = prev.length + 1;
                       return [

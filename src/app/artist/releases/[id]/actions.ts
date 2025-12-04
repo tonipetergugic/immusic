@@ -66,7 +66,7 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
     .single();
 
   if (!track) {
-    throw new Error("Track not found.");
+    return { error: "Track not found." };
   }
 
   const { data: maxPos } = await supabase
@@ -87,10 +87,12 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
   });
 
   if (error) {
-    throw new Error("Failed to add track to release.");
+    return { error: "Failed to add track to release." };
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
+
+  return { success: true };
 }
 
 export async function removeTrackFromReleaseAction(releaseId: string, trackId: string) {

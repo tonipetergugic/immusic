@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
@@ -39,9 +40,14 @@ function SortableTrackItem({
       style={style}
       className="rounded border border-[#27272A] bg-[#18181B] p-3 text-sm flex items-center justify-between"
     >
-      <div className="flex flex-col cursor-grab" {...attributes} {...listeners}>
-        <p className="font-medium">{track.track_title}</p>
-        <p className="text-xs text-gray-500">Position: {track.position}</p>
+      <div className="flex items-center gap-3">
+        <div className="cursor-grab text-gray-400 select-none" {...attributes} {...listeners}>
+          |||
+        </div>
+        <div className="flex flex-col">
+          <p className="font-medium">{track.track_title}</p>
+          <p className="text-xs text-gray-500">Position: {track.position}</p>
+        </div>
       </div>
       <form
         action={removeTrackFromReleaseAction.bind(null, track.release_id, track.track_id)}
@@ -74,9 +80,11 @@ export default function TrackListSortable({ releaseId, tracks, setTracks }: Trac
     }),
   );
 
-  function handleDragEnd(event: { active: { id: string }; over: { id: string } | null }) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+
+    let reorderedResult: Track[] = [];
 
     setTracks((prev) => {
       const oldIndex = prev.findIndex((t) => t.track_id === active.id);
@@ -92,13 +100,17 @@ export default function TrackListSortable({ releaseId, tracks, setTracks }: Trac
         position: index + 1,
       }));
 
-      reorderReleaseTracksAction(
-        releaseId,
-        reordered.map((t) => ({ track_id: t.track_id, position: t.position })),
-      );
+      reorderedResult = reordered;
 
       return reordered;
     });
+
+    if (reorderedResult.length > 0) {
+      reorderReleaseTracksAction(
+        releaseId,
+        reorderedResult.map((t) => ({ track_id: t.track_id, position: t.position })),
+      );
+    }
   }
 
   return (

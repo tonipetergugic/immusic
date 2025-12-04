@@ -33,6 +33,7 @@ src/app/artist/dashboard
 src/app/artist/components
 src/app/artist/profile
 src/app/artist/layout.tsx
+src/app/artist/[id]
 src/app/artist/my-tracks
 src/app/artist/onboarding
 src/app/artist/upload
