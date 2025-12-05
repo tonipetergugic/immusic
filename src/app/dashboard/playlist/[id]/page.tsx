@@ -37,11 +37,16 @@ export default async function PlaylistPage(
       position,
       tracks (
         *,
+        releases:releases!tracks_release_id_fkey (
+          status,
+          cover_path
+        ),
         artist:profiles!tracks_artist_id_fkey (
           display_name
         )
       )
     `)
+    .eq("tracks.releases.status", "published")
     .eq("playlist_id", id)
     .order("position", { ascending: true })
     .returns<PlaylistTrack[]>();

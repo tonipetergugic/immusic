@@ -1,4 +1,18 @@
 import { PlayerTrack } from "@/types/playerTrack";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabase =
+  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+
+function getReleaseCoverPublicUrl(path?: string | null): string | null {
+  if (!supabase || !path) {
+    return null;
+  }
+  return supabase.storage.from("release_covers").getPublicUrl(path).data.publicUrl;
+}
 
 type ProfileLike = {
   display_name?: string | null;
@@ -17,6 +31,9 @@ type TrackLike = {
   profiles?: ProfileSource;
   artist?: ProfileSource;
   artist_profile?: ProfileSource;
+  releases?: {
+    cover_path?: string | null;
+  } | null;
 };
 
 function normalizeProfile(profile?: ProfileSource): ProfileLike | null {
@@ -37,12 +54,13 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     normalizeProfile(track.artist) ??
     normalizeProfile(track.artist_profile) ??
     null;
+  const releaseCoverUrl = getReleaseCoverPublicUrl(track.releases?.cover_path);
 
   return {
     id: track.id,
     title: track.title ?? "Untitled Track",
     artist_id: track.artist_id ?? "",
-    cover_url: track.cover_url ?? null,
+    cover_url: releaseCoverUrl ?? track.cover_url ?? null,
     audio_url: track.audio_url ?? "",
     bpm: track.bpm ?? null,
     key: track.key ?? null,

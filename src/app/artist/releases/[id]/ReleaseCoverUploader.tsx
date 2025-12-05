@@ -7,9 +7,10 @@ import { deleteReleaseCoverAction, updateReleaseCoverAction } from "./actions";
 type Props = {
   releaseId: string;
   initialCoverUrl: string | null;
+  onReleaseModified?: () => void;
 };
 
-export default function ReleaseCoverUploader({ releaseId, initialCoverUrl }: Props) {
+export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onReleaseModified }: Props) {
   const supabase = createSupabaseBrowserClient();
   const [uploading, setUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl);
@@ -35,6 +36,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl }: Pro
     }
 
     await updateReleaseCoverAction(releaseId, filePath);
+    onReleaseModified?.();
 
     const {
       data: { publicUrl },
@@ -78,6 +80,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl }: Pro
             await deleteReleaseCoverAction(releaseId);
             setCoverUrl(null);
             setUploading(false);
+            onReleaseModified?.();
           }}
           className="text-red-400 hover:text-red-300 text-xs mt-2"
         >

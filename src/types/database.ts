@@ -16,6 +16,10 @@ export type Track = {
   artist_profile?: {
     display_name: string | null;
   } | null;
+  releases?: {
+    status?: string | null;
+    cover_path?: string | null;
+  } | null;
 };
 
 export type Playlist = {

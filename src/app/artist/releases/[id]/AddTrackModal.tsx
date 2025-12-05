@@ -13,6 +13,7 @@ type AddTrackModalProps = {
   releaseId: string;
   clientTracks: ReleaseTrack[];
   setClientTracks: Dispatch<SetStateAction<ReleaseTrack[]>>;
+  onReleaseModified?: () => void;
 };
 
 export default function AddTrackModal({
@@ -22,6 +23,7 @@ export default function AddTrackModal({
   releaseId,
   clientTracks,
   setClientTracks,
+  onReleaseModified,
 }: AddTrackModalProps) {
   const supabase = createSupabaseBrowserClient();
   const [tracks, setTracks] = useState<any[] | null>(null);
@@ -129,6 +131,7 @@ export default function AddTrackModal({
                       ];
                     });
                     setTracks((prev) => prev?.filter((x) => x.id !== t.id) || []);
+                    onReleaseModified?.();
                   }}
                   className="text-[#00FFC6] hover:text-[#00E0B0] text-xs font-semibold"
                 >
