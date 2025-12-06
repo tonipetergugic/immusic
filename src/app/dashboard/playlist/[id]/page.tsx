@@ -35,7 +35,7 @@ export default async function PlaylistPage(
     .select(`
       id,
       position,
-      tracks (
+      tracks:tracks!playlist_tracks_track_id_fkey (
         *,
         releases:releases!tracks_release_id_fkey (
           status,
@@ -46,7 +46,8 @@ export default async function PlaylistPage(
         )
       )
     `)
-    .eq("tracks.releases.status", "published")
+    .eq("releases.status", "published")
+    .neq("tracks.release_id", null)
     .eq("playlist_id", id)
     .order("position", { ascending: true })
     .returns<PlaylistTrack[]>();

@@ -25,15 +25,16 @@ type TrackLike = {
   title?: string | null;
   artist_id?: string | null;
   cover_url?: string | null;
+  releases?: {
+    cover_path?: string | null;
+  } | null;
   audio_url?: string | null;
+  audio_path?: string | null;
   bpm?: number | null;
   key?: string | null;
   profiles?: ProfileSource;
   artist?: ProfileSource;
   artist_profile?: ProfileSource;
-  releases?: {
-    cover_path?: string | null;
-  } | null;
 };
 
 function normalizeProfile(profile?: ProfileSource): ProfileLike | null {
@@ -55,13 +56,19 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     normalizeProfile(track.artist_profile) ??
     null;
   const releaseCoverUrl = getReleaseCoverPublicUrl(track.releases?.cover_path);
+  const audioPublicUrl =
+    track.audio_url ||
+    (track.audio_path
+      ? supabase?.storage.from("tracks").getPublicUrl(track.audio_path).data.publicUrl
+      : "") ||
+    "";
 
   return {
     id: track.id,
     title: track.title ?? "Untitled Track",
     artist_id: track.artist_id ?? "",
     cover_url: releaseCoverUrl ?? track.cover_url ?? null,
-    audio_url: track.audio_url ?? "",
+    audio_url: audioPublicUrl,
     bpm: track.bpm ?? null,
     key: track.key ?? null,
     profiles: profileSource

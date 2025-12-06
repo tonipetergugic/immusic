@@ -11,7 +11,13 @@ import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
 type ReleaseStatus = "draft" | "published";
-type ReleaseData = { title: string; release_type: string; created_at: string; status?: ReleaseStatus };
+type ReleaseData = {
+  title: string;
+  release_type: string;
+  created_at: string;
+  updated_at?: string;
+  status?: ReleaseStatus;
+};
 
 type ReleaseEditorClientProps = {
   releaseId: string;
@@ -56,11 +62,13 @@ export default function ReleaseEditorClient({
         onReleaseModified={markAsDraft}
       />
 
-      {status === "draft" && (
+      {status === "draft" &&
+        releaseData.updated_at &&
+        releaseData.created_at !== releaseData.updated_at && (
         <div className="bg-yellow-600/20 border border-yellow-500 text-yellow-300 px-4 py-2 rounded my-4">
           ⚠️ This release has been modified. Please re-publish to make your changes public.
         </div>
-      )}
+        )}
 
       <input
         className="text-2xl font-bold bg-transparent outline-none border-b border-transparent focus:border-[#00FFC6] transition w-full max-w-xl"

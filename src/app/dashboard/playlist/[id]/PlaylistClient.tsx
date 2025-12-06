@@ -18,6 +18,7 @@ import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
 import DeletePlaylistModal from "@/components/DeletePlaylistModal";
 import PlaylistDetailsModal from "@/components/PlaylistDetailsModal";
+import PlaylistAddTrackModal from "@/components/PlaylistAddTrackModal";
 import PlaylistHeaderClient from "./PlaylistHeaderClient";
 
 import { Playlist, PlaylistTrack } from "@/types/database";
@@ -36,6 +37,7 @@ export default function PlaylistClient({
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const [localPlaylist, setLocalPlaylist] = useState(playlist);
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
@@ -145,6 +147,64 @@ export default function PlaylistClient({
     setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
+  async function handleTrackAdded(newPlayerTrack: PlayerTrack) {
+    setPlayerTracks((prev) => [...prev, newPlayerTrack]);
+
+    const { data, error } = await supabase
+      .from("playlist_tracks")
+      .select(
+        `
+        position,
+        tracks (
+          *,
+          releases:releases!tracks_release_id_fkey (
+            status,
+            cover_path
+          ),
+          artist:profiles!tracks_artist_id_fkey (
+            display_name
+          )
+        )
+      `
+      )
+      .eq("playlist_id", localPlaylist.id)
+      .eq("track_id", newPlayerTrack.id)
+      .maybeSingle<PlaylistTrack>();
+
+    if (error) {
+      console.error("Failed to fetch newly added playlist track:", error);
+    }
+
+    if (data) {
+      setLocalTracks((prev) => [...prev, data]);
+    } else {
+      setLocalTracks((prev) => [
+        ...prev,
+        {
+          position: prev.length + 1,
+          tracks: {
+            id: newPlayerTrack.id,
+            title: newPlayerTrack.title,
+            artist_name: newPlayerTrack.profiles?.display_name ?? null,
+            cover_url: newPlayerTrack.cover_url,
+            audio_url: newPlayerTrack.audio_url,
+            created_at: null,
+            artist_id: newPlayerTrack.artist_id,
+            bpm: newPlayerTrack.bpm ?? null,
+            key: newPlayerTrack.key ?? null,
+            artist: newPlayerTrack.profiles
+              ? { display_name: newPlayerTrack.profiles.display_name ?? null }
+              : null,
+            artist_profile: newPlayerTrack.profiles
+              ? { display_name: newPlayerTrack.profiles.display_name ?? null }
+              : null,
+            releases: null,
+          },
+        } as PlaylistTrack,
+      ]);
+    }
+  }
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
@@ -156,7 +216,7 @@ export default function PlaylistClient({
       <PlaylistHeaderClient
         playlist={localPlaylist}
         playerTracks={playerTracks}
-        onAddTrack={() => {}}
+        onAddTrack={() => setAddOpen(true)}
         actions={
           <PlaylistSettingsTrigger
             playlist={localPlaylist}
@@ -263,6 +323,13 @@ export default function PlaylistClient({
         onUpdated={(updated) => {
           setLocalPlaylist((prev) => ({ ...prev, ...updated }));
         }}
+      />
+      <PlaylistAddTrackModal
+        playlistId={localPlaylist.id}
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        existingTrackIds={playerTracks.map((t) => t.id)}
+        onTrackAdded={handleTrackAdded}
       />
     </div>
   );
