@@ -32,7 +32,8 @@ export default async function PlaylistPage(
   // Playlist-Tracks laden
   const { data: playlistTracks } = await supabase
     .from("playlist_tracks")
-    .select(`
+    .select(
+      `
       id,
       position,
       tracks:tracks!playlist_tracks_track_id_fkey (
@@ -45,9 +46,8 @@ export default async function PlaylistPage(
           display_name
         )
       )
-    `)
-    .eq("releases.status", "published")
-    .neq("tracks.release_id", null)
+    `
+    )
     .eq("playlist_id", id)
     .order("position", { ascending: true })
     .returns<PlaylistTrack[]>();
