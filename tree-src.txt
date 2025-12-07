@@ -62,6 +62,7 @@ src/components/PlaylistDetailsModal.tsx
 src/components/AvatarDropzone.tsx
 src/components/PlaylistCard.tsx
 src/components/TrackOptionsTrigger.tsx
+src/components/DeleteReleaseModal.tsx
 src/lib
 src/lib/supabase
 src/lib/supabase/getUser.ts

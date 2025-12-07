@@ -3,8 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Pause } from "lucide-react";
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { usePlayer } from "@/context/PlayerContext";
 import type { PlayerTrack } from "@/types/playerTrack";
 
@@ -16,22 +14,6 @@ type Props = {
 
 export default function TrackCard({ track, index, tracks }: Props) {
   const { currentTrack, isPlaying, togglePlay, playQueue } = usePlayer();
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  const [publicCoverUrl, setPublicCoverUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!track.cover_url) return;
-
-    const { data } = supabase.storage
-      .from("track-files")
-      .getPublicUrl(track.cover_url);
-
-    setPublicCoverUrl(data.publicUrl ?? null);
-  }, [track.cover_url]);
 
   const isThisTrackActive = currentTrack?.id === track.id;
 
@@ -58,9 +40,9 @@ export default function TrackCard({ track, index, tracks }: Props) {
     >
       <div className="relative">
         <Link href={`/dashboard/track/${track.id}`}>
-          {publicCoverUrl ? (
+          {track.cover_url ? (
             <Image
-              src={publicCoverUrl}
+              src={track.cover_url}
               alt={track.title}
               width={300}
               height={300}

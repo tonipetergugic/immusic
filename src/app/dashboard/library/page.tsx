@@ -52,7 +52,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
   }
 
   // -----------------------------
-  // TRACKS  (ohne releases-Join)
+  // TRACKS (mit Release- und Artist-Join)
   // -----------------------------
   if (currentTab === "tracks") {
     const { data: tracks } = await supabase
@@ -60,21 +60,32 @@ export default async function LibraryPage(props: LibraryPageProps) {
       .select(`
         id,
         title,
-        cover_url,
-        audio_url,
         audio_path,
         created_at,
-        bpm,
-        key,
         artist_id,
-        profiles:profiles!tracks_artist_id_fkey(
+        releases:releases!tracks_release_id_fkey(
+          id,
+          cover_path,
+          status
+        ),
+        artist_profile:profiles!tracks_artist_id_fkey(
           display_name
         )
       `)
       .order("created_at", { ascending: false });
 
-    // passt exakt zu deinem bestehenden TrackLike / toPlayerTrack
-    trackData = toPlayerTrackList(tracks ?? []);
+    const normalizedTracks =
+      tracks?.map((track) => ({
+        ...track,
+        releases: Array.isArray(track.releases)
+          ? track.releases[0] ?? null
+          : track.releases ?? null,
+        artist_profile: Array.isArray(track.artist_profile)
+          ? track.artist_profile[0] ?? null
+          : track.artist_profile ?? null,
+      })) ?? [];
+
+    trackData = toPlayerTrackList(normalizedTracks);
   }
 
   // -----------------------------

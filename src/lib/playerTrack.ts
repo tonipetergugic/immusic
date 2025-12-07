@@ -53,28 +53,30 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
   }
 
   const profileSource =
+    normalizeProfile(track.artist_profile) ??
     normalizeProfile(track.profiles) ??
     normalizeProfile(track.artist) ??
-    normalizeProfile(track.artist_profile) ??
     null;
+
   const coverUrl =
     track.releases?.cover_path && supabase
       ? supabase.storage
           .from("release_covers")
           .getPublicUrl(track.releases.cover_path).data.publicUrl
       : null;
-  const audioPublicUrl =
-    track.audio_url ||
-    (track.audio_path
-      ? supabase?.storage.from("tracks").getPublicUrl(track.audio_path).data.publicUrl
-      : "") ||
-    "";
+
+  let audioPublicUrl = track.audio_url ?? "";
+
+  if (!audioPublicUrl && track.audio_path && supabase) {
+    const { data } = supabase.storage.from("tracks").getPublicUrl(track.audio_path);
+    audioPublicUrl = data.publicUrl ?? "";
+  }
 
   return {
     id: track.id,
     title: track.title ?? "Untitled Track",
     artist_id: track.artist_id ?? "",
-    cover_url: coverUrl ?? track.cover_url ?? null,
+    cover_url: coverUrl,
     audio_url: audioPublicUrl,
     bpm: track.bpm ?? null,
     key: track.key ?? null,
