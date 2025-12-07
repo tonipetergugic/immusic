@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
 type PlaylistCardProps = {
   id: string;
@@ -17,6 +19,23 @@ export default function PlaylistCard({
   description,
   cover_url,
 }: PlaylistCardProps) {
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const [publicCoverUrl, setPublicCoverUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!cover_url) return;
+
+    const { data } = supabase.storage
+      .from("playlist-covers")
+      .getPublicUrl(cover_url);
+
+    setPublicCoverUrl(data.publicUrl ?? null);
+  }, [cover_url]);
+
   return (
     <Link
       href={`/dashboard/playlist/${id}`}
@@ -34,9 +53,9 @@ export default function PlaylistCard({
       "
     >
       <div className="relative w-full aspect-square rounded-xl overflow-hidden">
-        {cover_url ? (
+        {publicCoverUrl ? (
           <Image
-            src={cover_url}
+            src={publicCoverUrl}
             alt={title}
             fill
             className="

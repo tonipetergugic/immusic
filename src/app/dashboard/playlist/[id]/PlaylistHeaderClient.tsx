@@ -5,17 +5,20 @@ import type { ReactNode } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist } from "@/types/database";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function PlaylistHeaderClient({
   playlist,
   playerTracks,
   onAddTrack,
   actions,
+  onEditCover,
 }: {
   playlist: Playlist;
   playerTracks: PlayerTrack[];
   onAddTrack: () => void;
   actions?: ReactNode;
+  onEditCover: () => void;
 }) {
   const { currentTrack, isPlaying } = usePlayer();
 
@@ -24,6 +27,21 @@ export default function PlaylistHeaderClient({
     isPlaying &&
     playerTracks.some((track) => track.id === currentTrack.id);
   const isPublic = !!playlist.is_public;
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  let coverPublicUrl: string | null = null;
+
+  if (playlist.cover_url) {
+    const { data } = supabase.storage
+      .from("playlist-covers")
+      .getPublicUrl(playlist.cover_url);
+
+    coverPublicUrl = data.publicUrl;
+  }
 
   return (
     <div className="rounded-xl overflow-hidden relative">
@@ -36,7 +54,7 @@ export default function PlaylistHeaderClient({
           pointer-events-none
         "
         style={{
-          backgroundImage: `url('${playlist.cover_url || ""}')`,
+          backgroundImage: `url('${coverPublicUrl || ""}')`,
         }}
       />
 
@@ -97,10 +115,17 @@ export default function PlaylistHeaderClient({
             ${isActive ? "scale-[1.02]" : "scale-100"}
           `}
         >
-          <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-xl overflow-hidden border border-[#1A1A1C] bg-gradient-to-br from-neutral-900 to-neutral-800 flex items-center justify-center">
-            {playlist.cover_url ? (
+        <div
+          onClick={onEditCover}
+          className="
+            relative w-40 h-40 sm:w-48 sm:h-48 rounded-xl overflow-hidden
+            border border-[#1A1A1C] bg-gradient-to-br from-neutral-900 to-neutral-800
+            flex items-center justify-center cursor-pointer
+          "
+        >
+            {coverPublicUrl ? (
               <Image
-                src={playlist.cover_url}
+                src={coverPublicUrl}
                 alt={playlist.title}
                 fill
                 className="object-cover rounded-xl"

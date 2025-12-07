@@ -26,7 +26,9 @@ type TrackLike = {
   artist_id?: string | null;
   cover_url?: string | null;
   releases?: {
-    cover_path?: string | null;
+    id: string;
+    cover_path: string | null;
+    status: string;
   } | null;
   audio_url?: string | null;
   audio_path?: string | null;
@@ -55,7 +57,12 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     normalizeProfile(track.artist) ??
     normalizeProfile(track.artist_profile) ??
     null;
-  const releaseCoverUrl = getReleaseCoverPublicUrl(track.releases?.cover_path);
+  const coverUrl =
+    track.releases?.cover_path && supabase
+      ? supabase.storage
+          .from("release_covers")
+          .getPublicUrl(track.releases.cover_path).data.publicUrl
+      : null;
   const audioPublicUrl =
     track.audio_url ||
     (track.audio_path
@@ -67,7 +74,7 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     id: track.id,
     title: track.title ?? "Untitled Track",
     artist_id: track.artist_id ?? "",
-    cover_url: releaseCoverUrl ?? track.cover_url ?? null,
+    cover_url: coverUrl ?? track.cover_url ?? null,
     audio_url: audioPublicUrl,
     bpm: track.bpm ?? null,
     key: track.key ?? null,

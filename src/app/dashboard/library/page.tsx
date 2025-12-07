@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import PlaylistCard from "@/components/PlaylistCard";
 import TrackCard from "@/components/TrackCard";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
@@ -38,6 +39,9 @@ export default async function LibraryPage(props: LibraryPageProps) {
   let trackData: PlayerTrack[] = [];
   let artists: Profile[] = [];
 
+  // -----------------------------
+  // PLAYLISTS
+  // -----------------------------
   if (currentTab === "playlists") {
     const { data: playlistsData } = await supabase
       .from("playlists")
@@ -47,6 +51,9 @@ export default async function LibraryPage(props: LibraryPageProps) {
     playlists = playlistsData || [];
   }
 
+  // -----------------------------
+  // TRACKS  (ohne releases-Join)
+  // -----------------------------
   if (currentTab === "tracks") {
     const { data: tracks } = await supabase
       .from("tracks")
@@ -55,19 +62,24 @@ export default async function LibraryPage(props: LibraryPageProps) {
         title,
         cover_url,
         audio_url,
+        audio_path,
         created_at,
         bpm,
         key,
         artist_id,
-        profiles:profiles!tracks_artist_id_fkey (
+        profiles:profiles!tracks_artist_id_fkey(
           display_name
         )
       `)
       .order("created_at", { ascending: false });
 
-    trackData = toPlayerTrackList(tracks);
+    // passt exakt zu deinem bestehenden TrackLike / toPlayerTrack
+    trackData = toPlayerTrackList(tracks ?? []);
   }
 
+  // -----------------------------
+  // ARTISTS
+  // -----------------------------
   if (currentTab === "artists") {
     const { data: artistsData } = await supabase
       .from("profiles")
@@ -90,7 +102,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
       </header>
 
       <section>
-        {/* Dynamic Tabs */}
+        {/* Tabs */}
         <div className="border-b border-white/5">
           <nav className="flex gap-6 text-sm">
             {tabs.map((tab) => {
@@ -112,8 +124,8 @@ export default async function LibraryPage(props: LibraryPageProps) {
           </nav>
         </div>
 
-        {/* Placeholder for content – echte Daten in Schritt 3 */}
         <div className="pt-6">
+          {/* PLAYLISTS */}
           {currentTab === "playlists" && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pt-6">
               {playlists.length > 0 ? (
@@ -134,7 +146,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
             </div>
           )}
 
-          {/* TRACKS UI */}
+          {/* TRACKS */}
           {currentTab === "tracks" && (
             <div className="pt-6">
               {trackData.length > 0 ? (
@@ -149,13 +161,12 @@ export default async function LibraryPage(props: LibraryPageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-400">
-                  No tracks found.
-                </p>
+                <p className="text-sm text-neutral-400">No tracks found.</p>
               )}
             </div>
           )}
 
+          {/* ARTISTS */}
           {currentTab === "artists" && (
             <div className="pt-6">
               {artists.length > 0 ? (
@@ -173,7 +184,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          (artist.display_name?.[0]?.toUpperCase() ?? "?")
+                          artist.display_name?.[0]?.toUpperCase() ?? "?"
                         )}
                       </div>
                       <p className="text-sm font-medium text-white truncate w-full">
@@ -183,9 +194,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-400">
-                  No artists found.
-                </p>
+                <p className="text-sm text-neutral-400">No artists found.</p>
               )}
             </div>
           )}
@@ -194,4 +203,3 @@ export default async function LibraryPage(props: LibraryPageProps) {
     </div>
   );
 }
-

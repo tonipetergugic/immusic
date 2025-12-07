@@ -57,22 +57,15 @@ export default function PlaylistDetailsModal({
       }
 
       const ext = file.name.split(".").pop();
-      const path = `covers/${crypto.randomUUID()}.${ext}`;
+      const path = `${playlist.id}/cover.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("playlist-covers")
         .upload(path, file);
 
       if (!uploadError) {
-        const { data: urlData } = supabase.storage
-          .from("playlist-covers")
-          .getPublicUrl(path);
-
-        newCoverUrl = urlData.publicUrl;
-
-        if (newCoverUrl) {
-          newCoverUrl = `${newCoverUrl}?t=${Date.now()}`;
-        }
+        // Store only the relative path in DB (best practice)
+        newCoverUrl = path;
       }
     }
 
@@ -100,20 +93,31 @@ export default function PlaylistDetailsModal({
   async function handleRemoveCover() {
     if (!playlist.cover_url) return;
 
-    let rel = playlist.cover_url.split("/object/public/playlist-covers/")[1];
+    let rel = playlist.cover_url;
 
-    if (rel && rel.includes("?")) {
-      rel = rel.split("?")[0];
+    // Support old full Public URLs
+    if (rel.includes("/object/public/playlist-covers/")) {
+      rel = rel.split("/object/public/playlist-covers/")[1].split("?")[0];
     }
 
-    if (rel) {
-      await supabase.storage.from("playlist-covers").remove([rel]);
+    // 1) delete from storage
+    const { error: deleteError } = await supabase.storage
+      .from("playlist-covers")
+      .remove([rel]);
+
+    if (deleteError) {
+      console.error("❌ Storage delete failed:", deleteError);
     }
 
-    await supabase
+    // 2) clear DB reference
+    const { error: dbError } = await supabase
       .from("playlists")
       .update({ cover_url: null })
       .eq("id", playlist.id);
+
+    if (dbError) {
+      console.error("❌ DB update failed:", dbError);
+    }
 
     onUpdated({
       title,

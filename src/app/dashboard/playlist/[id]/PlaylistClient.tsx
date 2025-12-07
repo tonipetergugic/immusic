@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -38,6 +38,11 @@ export default function PlaylistClient({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const [localPlaylist, setLocalPlaylist] = useState(playlist);
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
@@ -211,12 +216,17 @@ export default function PlaylistClient({
     })
   );
 
+  if (!isClient) {
+    return null; // Do NOT render DnD on the server
+  }
+
   return (
     <div className="space-y-8">
       <PlaylistHeaderClient
         playlist={localPlaylist}
         playerTracks={playerTracks}
         onAddTrack={() => setAddOpen(true)}
+        onEditCover={() => setDetailsOpen(true)}
         actions={
           <PlaylistSettingsTrigger
             playlist={localPlaylist}
