@@ -8,6 +8,8 @@ import { updateReleaseTitleAction } from "./updateReleaseTitleAction";
 import { updateReleaseTypeAction } from "./updateReleaseTypeAction";
 import { publishReleaseAction } from "./publishReleaseAction";
 import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
+import DeleteReleaseModal from "@/components/DeleteReleaseModal";
+import { deleteReleaseAction } from "./deleteReleaseAction";
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
 type ReleaseStatus = "draft" | "published";
@@ -39,6 +41,7 @@ export default function ReleaseEditorClient({
   const [title, setTitle] = useState(releaseData.title);
   const [releaseType, setReleaseType] = useState(releaseData.release_type);
   const [status, setStatus] = useState<ReleaseStatus>(releaseData.status ?? "draft");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const markAsDraft = useCallback(() => {
     setStatus("draft");
@@ -167,6 +170,22 @@ export default function ReleaseEditorClient({
           onReleaseModified={markAsDraft}
         />
       )}
+
+      <button
+        onClick={() => setDeleteModalOpen(true)}
+        className="mt-8 px-4 py-2 rounded bg-red-600 hover:bg-red-500 text-white font-semibold"
+      >
+        Delete Release
+      </button>
+
+      <DeleteReleaseModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={() => {
+          // directly call the server action
+          deleteReleaseAction(releaseId);
+        }}
+      />
     </div>
   );
 }
