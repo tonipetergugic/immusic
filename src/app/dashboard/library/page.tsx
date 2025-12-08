@@ -183,9 +183,10 @@ export default async function LibraryPage(props: LibraryPageProps) {
               {artists.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                   {artists.map((artist) => (
-                    <div
+                    <Link
                       key={artist.id}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col items-center text-center gap-3"
+                      href={`/dashboard/artist/${artist.id}`}
+                      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col items-center text-center gap-3 hover:bg-white/[0.06] transition"
                     >
                       <div className="w-20 h-20 rounded-full overflow-hidden bg-neutral-900 flex items-center justify-center text-white/50 text-xl">
                         {artist.avatar_url ? (
@@ -201,7 +202,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
                       <p className="text-sm font-medium text-white truncate w-full">
                         {artist.display_name || "Unknown artist"}
                       </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
