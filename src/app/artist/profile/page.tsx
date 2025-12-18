@@ -107,6 +107,7 @@ export default async function ArtistProfilePage({
             type="text"
             name="instagram"
             defaultValue={profile.instagram ?? ""}
+            placeholder="https://instagram.com/yourname"
             className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
           />
         </div>
@@ -119,6 +120,7 @@ export default async function ArtistProfilePage({
             type="text"
             name="tiktok"
             defaultValue={profile.tiktok ?? ""}
+            placeholder="https://tiktok.com/@yourname"
             className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
           />
         </div>
@@ -134,6 +136,7 @@ export default async function ArtistProfilePage({
             type="text"
             name="facebook"
             defaultValue={profile.facebook ?? ""}
+            placeholder="https://facebook.com/yourpage"
             className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
           />
         </div>
@@ -146,6 +149,7 @@ export default async function ArtistProfilePage({
             type="text"
             name="x"
             defaultValue={profile.x ?? ""}
+            placeholder="https://x.com/yourhandle"
             className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
           />
         </div>
