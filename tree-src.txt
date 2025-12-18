@@ -1,5 +1,6 @@
 src
 src/types
+src/types/releaseTrack.ts
 src/types/playerTrack.ts
 src/types/database.ts
 src/types/supabase.ts
@@ -15,10 +16,12 @@ src/app/logout
 src/app/logout/action.ts
 src/app/dashboard
 src/app/dashboard/playlist
+src/app/dashboard/track
 src/app/dashboard/library
 src/app/dashboard/components
 src/app/dashboard/layout.tsx
 src/app/dashboard/page.tsx
+src/app/dashboard/artist
 src/app/profile
 src/app/profile/actions.ts
 src/app/profile/page.tsx
