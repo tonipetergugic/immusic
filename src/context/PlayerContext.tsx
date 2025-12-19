@@ -8,8 +8,10 @@ import {
   useEffect,
   useCallback,
   ReactNode,
+  useMemo,
 } from "react";
 import { PlayerTrack } from "@/types/playerTrack";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // PLAYER STATE ░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 type PlayerContextType = {
@@ -39,6 +41,11 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 // PROVIDER ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const listeningChunkSecondsRef = useRef(0);
+  const listeningTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const seekBreakRef = useRef(false);
+  const lastTrackIdRef = useRef<string | null>(null);
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -155,6 +162,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
       audio.currentTime = Math.min(Math.max(seconds, 0), duration);
       setProgress(audio.currentTime);
+      seekBreakRef.current = true;
+      listeningChunkSecondsRef.current = 0;
     },
     [duration]
   );
@@ -191,6 +200,59 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setCurrentIndex(prevIndex);
     playTrack(queue[prevIndex], { queue, startIndex: prevIndex });
   }, [queue, currentIndex, playTrack]);
+
+  useEffect(() => {
+    if (listeningTimerRef.current) {
+      clearInterval(listeningTimerRef.current);
+      listeningTimerRef.current = null;
+    }
+
+    if (!currentTrack || !isPlaying) {
+      listeningChunkSecondsRef.current = 0;
+      return;
+    }
+
+    if (lastTrackIdRef.current !== currentTrack.id) {
+      listeningChunkSecondsRef.current = 0;
+      seekBreakRef.current = false;
+      lastTrackIdRef.current = currentTrack.id;
+    }
+
+    listeningTimerRef.current = setInterval(() => {
+      if (!currentTrack) return;
+
+      if (seekBreakRef.current) {
+        listeningChunkSecondsRef.current = 0;
+        seekBreakRef.current = false;
+        return;
+      }
+
+      listeningChunkSecondsRef.current += 1;
+
+      if (listeningChunkSecondsRef.current >= 5) {
+        const eventId = crypto.randomUUID();
+        (async () => {
+          const { error } = await supabase.rpc("rpc_track_listen_ping", {
+            p_track_id: currentTrack.id,
+            p_delta_seconds: 5,
+            p_event_id: eventId,
+          });
+          if (error) {
+            console.error("listen ping error", error);
+          }
+        })();
+
+        listeningChunkSecondsRef.current = 0;
+      }
+    }, 1000);
+
+    return () => {
+      if (listeningTimerRef.current) {
+        clearInterval(listeningTimerRef.current);
+        listeningTimerRef.current = null;
+      }
+    };
+  }, [currentTrack, isPlaying, supabase]);
 
   return (
     <PlayerContext.Provider
