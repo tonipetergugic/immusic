@@ -1,20 +1,36 @@
 "use client";
 
+import { useEffect, useState, type CSSProperties } from "react";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
+import { rateReleaseTrackAction } from "@/app/dashboard/playlist/[id]/actions";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function PlaylistRow({
   track,
   onDelete,
   tracks,
+  user,
 }: {
   track: PlayerTrack;
   tracks: PlayerTrack[];
   onDelete: () => void;
+  user: any | null;
 }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [agg, setAgg] = useState<{
+    rating_avg: number | null;
+    rating_count: number;
+  }>({
+    rating_avg: track.rating_avg ?? null,
+    rating_count: track.rating_count ?? 0,
+  });
+  const [myStars, setMyStars] = useState<number | null>(track.my_stars ?? null);
+  const supabase = createSupabaseBrowserClient();
+
   const {
     attributes,
     listeners,
@@ -24,7 +40,7 @@ export default function PlaylistRow({
     isDragging: active,
   } = useSortable({ id: track.id });
 
-  const style = {
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition:
       transition ||
@@ -42,6 +58,54 @@ export default function PlaylistRow({
   };
 
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
+  const displayStars = myStars ?? Math.floor(agg.rating_avg ?? 0);
+
+  useEffect(() => {
+    setAgg({
+      rating_avg: track.rating_avg ?? null,
+      rating_count: track.rating_count ?? 0,
+    });
+  }, [track.release_track_id, track.rating_avg, track.rating_count]);
+
+  async function refreshAgg() {
+    if (!track.release_track_id) return;
+
+    const { data, error } = await supabase
+      .from("release_tracks")
+      .select("rating_avg,rating_count")
+      .eq("id", track.release_track_id)
+      .single();
+
+    if (error || !data) {
+      console.error("refreshAgg error", error ?? new Error("No data"));
+      return;
+    }
+
+    setAgg({
+      rating_avg: data.rating_avg,
+      rating_count: data.rating_count,
+    });
+  }
+
+  async function handleRate(stars: number) {
+    if (submitting) return;
+    if (!track.release_track_id) return;
+
+    try {
+      setSubmitting(true);
+      setMyStars(stars);
+      const formData = new FormData();
+      formData.set("releaseTrackId", track.release_track_id);
+      formData.set("stars", String(stars));
+
+      await rateReleaseTrackAction(formData);
+      await refreshAgg();
+    } catch (err) {
+      console.error("RATE ERROR", err);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div
@@ -91,6 +155,26 @@ export default function PlaylistRow({
             · {track.profiles.display_name}
           </span>
         )}
+        {user && track.release_track_id ? (
+          <div className="flex items-center gap-1 text-xs text-white/80">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => handleRate(n)}
+                disabled={submitting}
+                className={`transition-colors ${
+                  submitting ? "opacity-60 cursor-not-allowed" : "hover:text-[#00FFC6]"
+                }`}
+              >
+                {displayStars >= n ? "★" : "☆"}
+              </button>
+            ))}
+            <span className="text-white/50">
+              {agg.rating_avg?.toFixed(1) ?? "—"} ({agg.rating_count})
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* BPM */}

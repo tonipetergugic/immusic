@@ -310,6 +310,7 @@ export default function PlaylistClient({
                     key={track.id}
                     track={track}
                     tracks={playerTracks}
+                    user={user}
                     onDelete={() => onDeleteTrack(track.id)}
                   />
                 ))}
