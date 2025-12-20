@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import PlayerBar from "@/components/PlayerBar";
 import { PlayerProvider } from "@/context/PlayerContext";
 
@@ -8,11 +9,47 @@ export default function GlobalPlayerWrapper({
 }: {
   children: React.ReactNode;
 }) {
+  const [notice, setNotice] = useState<string | null>(null);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    function handleNotice(event: Event) {
+      const e = event as CustomEvent<{ message?: string }>;
+      const message = e?.detail?.message?.trim();
+      if (!message) return;
+
+      setNotice(message);
+
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+
+      timerRef.current = window.setTimeout(() => {
+        setNotice(null);
+        timerRef.current = null;
+      }, 4000);
+    }
+
+    window.addEventListener("immusic:notice", handleNotice as EventListener);
+
+    return () => {
+      window.removeEventListener("immusic:notice", handleNotice as EventListener);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return (
     <PlayerProvider>
-      <div className="min-h-screen pb-24">
-        {children}
-      </div>
+      {/* Global Notice */}
+      {notice && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999]">
+          <div className="px-4 py-2 rounded-xl bg-black/70 border border-white/10 shadow-lg backdrop-blur-md">
+            <p className="text-[13px] text-white/85">{notice}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen pb-24">{children}</div>
 
       <div
         className="

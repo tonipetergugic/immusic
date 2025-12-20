@@ -2,7 +2,11 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function rateReleaseTrackAction(formData: FormData) {
+type RateResult =
+  | { ok: true; agg: { rating_avg: number | null; rating_count: number | null } }
+  | { ok: false; error: string };
+
+export async function rateReleaseTrackAction(formData: FormData): Promise<RateResult> {
   const releaseTrackIdEntry = formData.get("releaseTrackId");
   const starsEntry = formData.get("stars");
 
@@ -12,7 +16,7 @@ export async function rateReleaseTrackAction(formData: FormData) {
       : "";
 
   if (!releaseTrackId) {
-    throw new Error("Invalid releaseTrackId");
+    return { ok: false, error: "Invalid releaseTrackId" };
   }
 
   const starsValue =
@@ -21,7 +25,7 @@ export async function rateReleaseTrackAction(formData: FormData) {
       : Number(starsEntry);
 
   if (!Number.isInteger(starsValue) || starsValue < 1 || starsValue > 5) {
-    throw new Error("Stars must be an integer between 1 and 5");
+    return { ok: false, error: "Stars must be an integer between 1 and 5" };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -30,10 +34,41 @@ export async function rateReleaseTrackAction(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("Not authenticated");
+    return { ok: false, error: "Not authenticated" };
   }
 
-  const { data: writeData, error: writeError } = await supabase.from("track_ratings").upsert(
+  const { data: releaseTrack, error: releaseTrackError } = await supabase
+    .from("release_tracks")
+    .select("track_id")
+    .eq("id", releaseTrackId)
+    .single();
+
+  if (releaseTrackError || !releaseTrack) {
+    return {
+      ok: false,
+      error: releaseTrackError?.message ?? "Release track not found",
+    };
+  }
+
+  const { data: listenState, error: listenError } = await supabase
+    .from("track_listen_state")
+    .select("listened_seconds")
+    .eq("user_id", user.id)
+    .eq("track_id", releaseTrack.track_id)
+    .single();
+
+  if (listenError && listenError.code !== "PGRST116") {
+    return { ok: false, error: listenError.message };
+  }
+
+  if (!listenState || (listenState.listened_seconds ?? 0) < 30) {
+    return {
+      ok: false,
+      error: "You can rate a track only after listening at least 30 seconds.",
+    };
+  }
+
+  const { error: writeError } = await supabase.from("track_ratings").upsert(
     {
       release_track_id: releaseTrackId,
       user_id: user.id,
@@ -43,7 +78,10 @@ export async function rateReleaseTrackAction(formData: FormData) {
   );
 
   if (writeError) {
-    throw writeError;
+    return {
+      ok: false,
+      error: "Artists can’t rate tracks. Ratings reflect listener feedback only.",
+    };
   }
 
   const { error: rpcError } = await supabase.rpc("recalc_release_track_rating", {
@@ -51,7 +89,7 @@ export async function rateReleaseTrackAction(formData: FormData) {
   });
 
   if (rpcError) {
-    throw rpcError;
+    return { ok: false, error: rpcError.message };
   }
 
   const { data: agg, error: aggError } = await supabase
@@ -60,10 +98,10 @@ export async function rateReleaseTrackAction(formData: FormData) {
     .eq("id", releaseTrackId)
     .single();
 
-  if (aggError) {
-    throw aggError;
+  if (aggError || !agg) {
+    return { ok: false, error: aggError?.message ?? "Failed to load rating" };
   }
 
-  return agg;
+  return { ok: true, agg };
 }
 

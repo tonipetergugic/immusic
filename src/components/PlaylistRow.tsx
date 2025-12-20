@@ -24,9 +24,11 @@ export default function PlaylistRow({
   const [agg, setAgg] = useState<{
     rating_avg: number | null;
     rating_count: number;
+    stream_count: number;
   }>({
     rating_avg: track.rating_avg ?? null,
     rating_count: track.rating_count ?? 0,
+    stream_count: (track as any)?.stream_count ?? 0,
   });
   const [myStars, setMyStars] = useState<number | null>(track.my_stars ?? null);
   const supabase = createSupabaseBrowserClient();
@@ -64,15 +66,50 @@ export default function PlaylistRow({
     setAgg({
       rating_avg: track.rating_avg ?? null,
       rating_count: track.rating_count ?? 0,
+      stream_count: (track as any)?.stream_count ?? 0,
     });
   }, [track.release_track_id, track.rating_avg, track.rating_count]);
+
+  useEffect(() => {
+    if (!track.release_track_id) return;
+
+    const channel = supabase
+      .channel(`rt:${track.release_track_id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "release_tracks",
+          filter: `id=eq.${track.release_track_id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as {
+            rating_avg?: number | null;
+            rating_count?: number | null;
+            stream_count?: number | null;
+          };
+
+          setAgg((prev) => ({
+            rating_avg: newRow.rating_avg ?? prev.rating_avg,
+            rating_count: newRow.rating_count ?? prev.rating_count,
+            stream_count: newRow.stream_count ?? prev.stream_count,
+          }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, track.release_track_id]);
 
   async function refreshAgg() {
     if (!track.release_track_id) return;
 
     const { data, error } = await supabase
       .from("release_tracks")
-      .select("rating_avg,rating_count")
+      .select("rating_avg,rating_count,stream_count")
       .eq("id", track.release_track_id)
       .single();
 
@@ -84,8 +121,27 @@ export default function PlaylistRow({
     setAgg({
       rating_avg: data.rating_avg,
       rating_count: data.rating_count,
+      stream_count: data.stream_count ?? 0,
     });
   }
+
+  function showNotice(message: string) {
+    window.dispatchEvent(new CustomEvent("immusic:notice", { detail: { message } }));
+  }
+
+  function mapNotice(raw: string) {
+    const m = raw.toLowerCase();
+    if (m.includes("30 second")) return "Please listen at least 30 seconds to rate this track.";
+    if (m.includes("listener")) return "Only listeners can rate tracks.";
+    return "Rating failed. Please try again.";
+  }
+
+  useEffect(() => {
+    if (track.release_track_id) {
+      void refreshAgg();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleRate(stars: number) {
     if (submitting) return;
@@ -93,15 +149,24 @@ export default function PlaylistRow({
 
     try {
       setSubmitting(true);
-      setMyStars(stars);
       const formData = new FormData();
       formData.set("releaseTrackId", track.release_track_id);
       formData.set("stars", String(stars));
 
-      await rateReleaseTrackAction(formData);
+      const result = await rateReleaseTrackAction(formData);
+
+      if (!result?.ok) {
+        const msg = mapNotice(result?.error ?? "");
+        showNotice(msg);
+        return;
+      }
+
+      setMyStars(stars);
       await refreshAgg();
     } catch (err) {
       console.error("RATE ERROR", err);
+      const raw = err instanceof Error ? err.message : "";
+      showNotice(mapNotice(raw));
     } finally {
       setSubmitting(false);
     }
@@ -171,7 +236,8 @@ export default function PlaylistRow({
               </button>
             ))}
             <span className="text-white/50">
-              {agg.rating_avg?.toFixed(1) ?? "—"} ({agg.rating_count})
+              {agg.rating_avg?.toFixed(1) ?? "—"} ({agg.rating_count}) ·{" "}
+              {agg.stream_count ?? 0} streams
             </span>
           </div>
         ) : null}

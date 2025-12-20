@@ -45,6 +45,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const listeningTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seekBreakRef = useRef(false);
   const lastTrackIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
@@ -108,6 +109,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setCurrentTrack(track);
         audio.src = track.audio_url;
         audio.currentTime = 0;
+        sessionIdRef.current = crypto.randomUUID();
 
         audio.load();
 
@@ -231,11 +233,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
       if (listeningChunkSecondsRef.current >= 5) {
         const eventId = crypto.randomUUID();
+        if (!sessionIdRef.current) {
+          sessionIdRef.current = crypto.randomUUID();
+        }
         (async () => {
           const { error } = await supabase.rpc("rpc_track_listen_ping", {
             p_track_id: currentTrack.id,
             p_delta_seconds: 5,
             p_event_id: eventId,
+            p_session_id: sessionIdRef.current,
           });
           if (error) {
             console.error("listen ping error", error);
