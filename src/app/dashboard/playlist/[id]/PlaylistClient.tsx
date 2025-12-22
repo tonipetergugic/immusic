@@ -14,6 +14,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { createBrowserClient } from "@supabase/ssr";
+import { Play, Pause } from "lucide-react";
+import { usePlayer } from "@/context/PlayerContext";
 import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
 import DeletePlaylistModal from "@/components/DeletePlaylistModal";
@@ -270,6 +272,13 @@ export default function PlaylistClient({
     })
   );
 
+  const { playQueue, togglePlay, isPlaying, currentTrack, queue } = usePlayer();
+  const isThisPlaylistQueueActive =
+    !!currentTrack &&
+    queue.length === playerTracks.length &&
+    queue.every((t, i) => t.id === playerTracks[i]?.id);
+  const showPause = isThisPlaylistQueueActive && isPlaying;
+
   if (!isClient) {
     return null;
   }
@@ -287,21 +296,55 @@ export default function PlaylistClient({
       />
 
       {/* ACTION BAR (below header) */}
-      <div className="flex flex-wrap items-center gap-3">
-        {isOwner ? (
-          <>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* LEFT: Primary actions */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Primary: Play (slot) */}
+          <button
+            type="button"
+            className="
+              inline-flex items-center justify-center gap-2
+              h-11 px-5 rounded-full
+              bg-[#00FFC6] text-black text-sm font-semibold
+              hover:brightness-95 transition
+              shadow-[0_8px_22px_rgba(0,255,198,0.25)]
+              active:scale-[0.99] active:shadow-[0_6px_16px_rgba(0,255,198,0.22)]
+              w-full sm:w-auto
+            "
+            // TODO: wire this to your global player "play playlist" action
+            onClick={() => {
+              if (!playerTracks.length) return;
+
+              const sameQueue =
+                queue.length === playerTracks.length &&
+                queue.every((t, i) => t.id === playerTracks[i]?.id);
+
+              if (sameQueue && currentTrack) {
+                togglePlay();
+                return;
+              }
+
+              playQueue(playerTracks, 0);
+            }}
+          >
+            {showPause ? <Pause size={18} /> : <Play size={18} />}
+            <span>{showPause ? "Pause" : "Play"}</span>
+          </button>
+
+          {/* Primary: Add Track (owner only) */}
+          {isOwner ? (
             <button
+              type="button"
               onClick={() => setAddOpen(true)}
               className="
-                flex items-center gap-2
-                px-4 h-10 rounded-md
-                bg-[#1A1A1C]/80 border border-[#2A2A2D]
-                text-white/80 text-sm
-                hover:bg-[#2A2A2D]
-                hover:text-white
-                hover:border-[#00FFC622]
-                hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-                backdrop-blur-lg transition
+                inline-flex items-center justify-center gap-2
+                h-11 px-5 rounded-full
+                bg-[#0E0E10] border border-[#00FFC633]
+                text-[#00FFC6] text-sm font-semibold
+                hover:border-[#00FFC666]
+                hover:bg-[#00FFC60F]
+                transition
+                w-full sm:w-auto
               "
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -314,35 +357,43 @@ export default function PlaylistClient({
               </svg>
               Add Track
             </button>
+          ) : null}
+        </div>
 
-            <PlaylistSettingsTrigger
-              playlist={localPlaylist}
-              isOwner={true}
-              onTogglePublic={togglePublic}
-              onDeletePlaylist={() => setDeleteOpen(true)}
-              onEditDetails={onEditDetails}
-            />
-          </>
-        ) : (
-          <button
-            onClick={toggleSaveToLibrary}
-            disabled={saveBusy}
-            className="
-              flex items-center gap-2
-              px-4 h-10 rounded-md
-              bg-[#1A1A1C]/80 border border-[#2A2A2D]
-              text-white/80 text-sm
-              hover:bg-[#2A2A2D]
-              hover:text-white
-              hover:border-[#00FFC622]
-              hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-              backdrop-blur-lg transition
-              disabled:opacity-60 disabled:cursor-wait
-            "
-          >
-            {isSavedToLibrary ? "Remove from Library" : "Save to Library"}
-          </button>
-        )}
+        {/* RIGHT: Secondary actions */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:justify-end">
+          {!isOwner ? (
+            <button
+              type="button"
+              onClick={toggleSaveToLibrary}
+              disabled={saveBusy}
+              className="
+                inline-flex items-center justify-center
+                h-10 px-4 rounded-full
+                bg-transparent border border-[#2A2A2D]
+                text-[#B3B3B3] text-sm font-medium
+                hover:text-white hover:border-[#3A3A3D]
+                transition
+                disabled:opacity-60 disabled:cursor-wait
+                w-full sm:w-auto
+              "
+            >
+              {isSavedToLibrary ? "Remove" : "Save"}
+            </button>
+          ) : null}
+
+          {isOwner ? (
+            <div className="w-full sm:w-auto">
+              <PlaylistSettingsTrigger
+                playlist={localPlaylist}
+                isOwner={true}
+                onTogglePublic={togglePublic}
+                onDeletePlaylist={() => setDeleteOpen(true)}
+                onEditDetails={onEditDetails}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Tracks */}
@@ -414,7 +465,10 @@ export default function PlaylistClient({
                     track={track}
                     tracks={playerTracks}
                     user={user}
-                    onDelete={isOwner ? () => onDeleteTrack(track.id) : undefined}
+                  onDelete={() => {
+                    if (!isOwner) return;
+                    void onDeleteTrack(track.id);
+                  }}
                   />
                 ))}
               </div>

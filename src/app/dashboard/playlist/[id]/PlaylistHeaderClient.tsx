@@ -38,10 +38,21 @@ export default function PlaylistHeaderClient({
 
   const coverPublicUrl = useMemo(() => {
     if (!playlist.cover_url) return null;
+
+    const appendCacheBust = (url: string) => {
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}v=${Date.now()}`;
+    };
+
+    if (playlist.cover_url.startsWith("http")) {
+      return appendCacheBust(playlist.cover_url);
+    }
+
     const { data } = supabase.storage
       .from("playlist-covers")
       .getPublicUrl(playlist.cover_url);
-    return data.publicUrl ?? null;
+    const publicUrl = data.publicUrl ?? null;
+    return publicUrl ? appendCacheBust(publicUrl) : null;
   }, [playlist.cover_url, supabase]);
 
   return (

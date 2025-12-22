@@ -47,23 +47,19 @@ export default function PlaylistSettingsTrigger({
         ref={buttonRef}
         onClick={() => setOpen((prev) => !prev)}
         className="
-          flex items-center gap-2
-          px-4 h-10
-          rounded-md
-          bg-[#1A1A1C]/80
-          border border-[#2A2A2D]
-          text-white/80 text-sm
-          hover:bg-[#2A2A2D]
-          hover:text-white
-          hover:border-[#00FFC622]
-          hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-          backdrop-blur-lg
+          inline-flex items-center justify-center gap-2
+          h-11 px-5 rounded-full
+          bg-transparent border border-[#00FFC633]
+          text-[#00FFC6] text-sm font-medium
+          hover:border-[#00FFC666]
+          hover:bg-[#00FFC60F]
           transition
+          w-full sm:w-auto
         "
       >
-        <Settings size={16} className="text-white/80" />
+        <Settings size={16} className="text-current" />
         <span className="font-medium">Playlist Settings</span>
-        <ChevronDown size={16} className="text-white/70" />
+        <ChevronDown size={16} className="text-current opacity-80" />
       </button>
 
       {open && (

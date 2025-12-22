@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -24,17 +24,32 @@ export default function PlaylistDetailsModal({
     cover_url: string | null;
   }) => void;
 }) {
-  if (!isOpen) return null;
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
   );
 
   const [title, setTitle] = useState(playlist.title);
   const [description, setDescription] = useState(playlist.description ?? "");
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+  const currentCoverUrl = useMemo(() => {
+    if (!playlist.cover_url) return null;
+    if (playlist.cover_url.startsWith("http")) return playlist.cover_url;
+    const { data } = supabase.storage.from("playlist-covers").getPublicUrl(playlist.cover_url);
+    return data?.publicUrl ?? playlist.cover_url;
+  }, [playlist.cover_url, supabase]);
 
   async function handleSave() {
     setLoading(true);
@@ -128,6 +143,8 @@ export default function PlaylistDetailsModal({
     onClose();
   }
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999999] flex items-center justify-center">
       <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl w-[420px] shadow-2xl text-white space-y-5">
@@ -142,6 +159,11 @@ export default function PlaylistDetailsModal({
               onChange={(event) => {
                 const selectedFile = event.target.files?.[0] ?? null;
                 setFile(selectedFile);
+                if (selectedFile) {
+                  setPreviewUrl(URL.createObjectURL(selectedFile));
+                } else {
+                  setPreviewUrl(null);
+                }
               }}
               className="
                 block w-full text-sm text-white
@@ -154,7 +176,20 @@ export default function PlaylistDetailsModal({
             />
           </label>
 
-          {playlist.cover_url && !file && (
+          {(previewUrl || currentCoverUrl) && (
+            <div className="mt-2 space-y-2">
+              <p className="text-xs text-white/60">Preview</p>
+              <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900/60">
+                <img
+                  src={previewUrl ?? currentCoverUrl ?? ""}
+                  alt="Playlist cover preview"
+                  className="w-full h-48 object-cover"
+                />
+              </div>
+            </div>
+          )}
+
+          {playlist.cover_url && !previewUrl && (
             <button
               onClick={handleRemoveCover}
               className="

@@ -17,7 +17,7 @@ export default function PlaylistRow({
 }: {
   track: PlayerTrack;
   tracks: PlayerTrack[];
-  onDelete: () => void;
+  onDelete?: () => void;
   user: any | null;
 }) {
   const [submitting, setSubmitting] = useState(false);
