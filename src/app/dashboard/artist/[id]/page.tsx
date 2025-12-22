@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
 import ClientTrackRows from "./ClientTrackRows";
 import ReleasePlayButton from "./ReleasePlayButton";
+import SaveArtistButton from "./SaveArtistButton";
 
 export default async function ArtistPage({
   params,
@@ -15,6 +16,10 @@ export default async function ArtistPage({
   if (!id) return notFound();
 
   const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: artist } = await supabase
     .from("profiles")
@@ -33,22 +38,22 @@ export default async function ArtistPage({
     .from("release_tracks")
     .select(
       `
-    id,
-    release_id,
-    position,
-    track_title,
-    tracks:tracks!release_tracks_track_id_fkey(
-      id,
-      title,
-      audio_path
-    ),
-    releases:releases!release_tracks_release_id_fkey(
-      id,
-      cover_path,
-      title,
-      status
-    )
-  `
+        id,
+        release_id,
+        position,
+        track_title,
+        tracks:tracks!release_tracks_track_id_fkey(
+          id,
+          title,
+          audio_path
+        ),
+        releases:releases!release_tracks_release_id_fkey(
+          id,
+          cover_path,
+          title,
+          status
+        )
+      `
     );
 
   const { data: profile, error: profileError } = await supabase
@@ -68,6 +73,24 @@ export default async function ArtistPage({
   });
 
   if (!artist) return notFound();
+
+  const canSaveArtist = !!user?.id && user.id !== id;
+
+  let initialSaved = false;
+  if (canSaveArtist) {
+    const { data: savedRow, error } = await supabase
+      .from("library_artists")
+      .select("artist_id")
+      .eq("user_id", user!.id)
+      .eq("artist_id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to read library_artists:", error);
+    } else {
+      initialSaved = !!savedRow;
+    }
+  }
 
   const bannerSrc = profile.banner_url ? `${profile.banner_url}?t=${Date.now()}` : null;
 
@@ -92,9 +115,11 @@ export default async function ArtistPage({
           />
 
           <div className="flex flex-col">
-            <h1 className="text-5xl font-bold text-white drop-shadow-xl">
-              {profile.display_name}
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-5xl font-bold text-white drop-shadow-xl">
+                {profile.display_name}
+              </h1>
+            </div>
 
             {profile.location && (
               <p className="text-lg text-white/80 drop-shadow-md">
@@ -105,8 +130,13 @@ export default async function ArtistPage({
         </div>
       </div>
 
-      <div className="mt-10 max-w-3xl mx-auto p-6 space-y-6">
+      <div className="w-full max-w-[1200px] mx-auto px-6 mt-4 flex items-center gap-4">
+        {canSaveArtist ? (
+          <SaveArtistButton artistId={id} initialSaved={initialSaved} />
+        ) : null}
+      </div>
 
+      <div className="mt-10 max-w-3xl mx-auto p-6 space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           {profile.location && (
             <p className="text-sm text-[#B3B3B3]">{profile.location}</p>
@@ -168,7 +198,9 @@ export default async function ArtistPage({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {releases.map((rel) => {
               const coverUrl = rel.cover_path
-                ? supabase.storage.from("release_covers").getPublicUrl(rel.cover_path).data.publicUrl
+                ? supabase.storage
+                    .from("release_covers")
+                    .getPublicUrl(rel.cover_path).data.publicUrl
                 : null;
 
               return (
@@ -198,7 +230,10 @@ export default async function ArtistPage({
 
                   <hr className="mt-3 border-white/10" />
 
-                  <ClientTrackRows releaseId={rel.id} tracks={tracksByRelease[rel.id] || []} />
+                  <ClientTrackRows
+                    releaseId={rel.id}
+                    tracks={tracksByRelease[rel.id] || []}
+                  />
                 </div>
               );
             })}
