@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { createBrowserClient } from "@supabase/ssr";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Music } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
 import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
@@ -397,19 +397,22 @@ export default function PlaylistClient({
       </div>
 
       {/* Tracks */}
-      <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-4">
+      <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-3 md:p-4 -mx-3 md:mx-0">
         <div
           className="
-            grid grid-cols-[40px_60px_1fr_70px_70px_80px]
+            grid grid-cols-[22px_44px_1fr_44px]
+            md:grid-cols-[40px_60px_1fr_70px_70px_80px]
             text-xs text-white/50 uppercase tracking-wide
-            px-4 py-2
+            px-2 md:px-4 py-2
           "
         >
           <span>#</span>
           <span>Cover</span>
           <span>Title</span>
-          <span>BPM</span>
-          <span>Key</span>
+
+          <span className="hidden md:block">BPM</span>
+          <span className="hidden md:block">Key</span>
+
           <span>Actions</span>
         </div>
 
@@ -475,7 +478,49 @@ export default function PlaylistClient({
             </SortableContext>
           </DndContext>
         ) : (
-          <p className="text-white/50">No tracks in this playlist yet.</p>
+          <div className="rounded-xl border border-neutral-900 bg-neutral-950/30 p-8">
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#00FFC633] bg-[#00FFC60A]">
+                <Music size={22} className="text-[#00FFC6]" />
+              </div>
+
+              <h3 className="text-lg font-semibold text-white">
+                {isOwner ? "This playlist is empty" : "No tracks yet"}
+              </h3>
+
+              <p className="text-sm text-white/60 max-w-md">
+                {isOwner
+                  ? "Add your first track to get started."
+                  : "This playlist doesn’t have any tracks yet."}
+              </p>
+
+              {isOwner ? (
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  className="
+                    mt-2 inline-flex items-center justify-center gap-2
+                    h-11 px-5 rounded-full
+                    bg-[#0E0E10] border border-[#00FFC633]
+                    text-[#00FFC6] text-sm font-semibold
+                    hover:border-[#00FFC666]
+                    hover:bg-[#00FFC60F]
+                    transition
+                  "
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 5v14m7-7H5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Add your first track
+                </button>
+              ) : null}
+            </div>
+          </div>
         )}
       </div>
 

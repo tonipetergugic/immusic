@@ -180,9 +180,10 @@ export default function PlaylistRow({
       {...listeners}
       className="
         group 
-        grid grid-cols-[40px_60px_1fr_70px_70px_80px] 
+        grid grid-cols-[24px_64px_1fr_36px]
+        md:grid-cols-[40px_80px_1fr_70px_70px_80px]
         items-center 
-        gap-3 
+        gap-x-4 md:gap-x-3
         px-4 py-2 
         rounded-lg 
         bg-neutral-900/40 
@@ -195,10 +196,10 @@ export default function PlaylistRow({
       "
     >
       {/* Index */}
-      <p className="text-white/50 text-xs">{currentIndex + 1}</p>
+      <p className="text-white/50 text-[11px] tabular-nums">{currentIndex + 1}</p>
 
       {/* Cover + Play Overlay */}
-      <div className="w-12 h-12 rounded-md overflow-hidden relative group bg-neutral-700">
+      <div className="w-16 h-16 rounded-md overflow-hidden relative group bg-neutral-700 justify-self-start">
         <img
           src={track.cover_url || "/placeholder.png"}
           alt={track.title}
@@ -212,45 +213,71 @@ export default function PlaylistRow({
         />
       </div>
 
-      {/* Title */}
-      <div className="flex items-center gap-2">
-        <span className="text-[13px] font-semibold text-white">{track.title}</span>
-        {track.profiles?.display_name && (
-          <span className="text-xs text-white/50">
-            · {track.profiles.display_name}
+      {/* Title / Meta */}
+      <div className="min-w-0 ml-1 sm:ml-0 pl-2 sm:pl-0 flex flex-col gap-1 justify-self-start">
+        {/* Line 1: Title */}
+        <div className="flex items-center min-w-0">
+          <span className="text-[13px] font-semibold text-white truncate">
+            {track.title}
           </span>
-        )}
-        {user && track.release_track_id ? (
-          <div className="flex items-center gap-1 text-xs text-white/80">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => handleRate(n)}
-                disabled={submitting}
-                className={`transition-colors ${
-                  submitting ? "opacity-60 cursor-not-allowed" : "hover:text-[#00FFC6]"
-                }`}
-              >
-                {displayStars >= n ? "★" : "☆"}
-              </button>
-            ))}
-            <span className="text-white/50">
-              {agg.rating_avg?.toFixed(1) ?? "—"} ({agg.rating_count}) ·{" "}
-              {agg.stream_count ?? 0} streams
-            </span>
+        </div>
+
+        {/* Line 2: Artist(s) only */}
+        {track.profiles?.display_name ? (
+          <div className="mt-1 text-xs text-white/60 truncate">
+            {track.profiles.display_name}
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-1 text-xs text-white/40 truncate">
+            Unknown artist
+          </div>
+        )}
+
+        {/* Line 3: Track meta (track-related) */}
+        <div className="mt-2 flex items-center gap-2 min-w-0">
+          {/* Interactive stars stay exactly as buttons calling handleRate */}
+          {user && track.release_track_id ? (
+            <div className="flex items-center gap-1 text-xs text-white/80">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => handleRate(n)}
+                  disabled={submitting}
+                  className={`transition-colors ${
+                    submitting ? "opacity-60 cursor-not-allowed" : "hover:text-[#00FFC6]"
+                  }`}
+                >
+                  {displayStars >= n ? "★" : "☆"}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-white/60">★</span>
+          )}
+
+          <span className="text-xs text-white/70 whitespace-nowrap">
+            {agg.rating_avg?.toFixed(1) ?? "—"} ({agg.rating_count})
+          </span>
+
+          <span className="text-xs text-white/30">·</span>
+
+          <span className="hidden md:inline text-xs text-white/50 whitespace-nowrap">
+            {agg.stream_count ?? 0} streams
+          </span>
+        </div>
       </div>
 
       {/* BPM */}
-      <p className="text-white/50 text-sm">{track.bpm ?? "—"}</p>
+      <p className="hidden md:block text-white/50 text-sm">{track.bpm ?? "—"}</p>
 
       {/* Key */}
-      <p className="text-white/50 text-sm">{track.key ?? "—"}</p>
+      <p className="hidden md:block text-white/50 text-sm">{track.key ?? "—"}</p>
 
       {/* Options */}
-      <TrackOptionsTrigger track={track} onRemove={onDelete} tracks={tracks} />
+      <div className="flex items-center justify-end min-w-[44px] min-h-[44px]">
+        <TrackOptionsTrigger track={track} onRemove={onDelete} tracks={tracks} />
+      </div>
     </div>
   );
 }
