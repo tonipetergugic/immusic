@@ -35,70 +35,154 @@ export default async function LibraryPage(props: LibraryPageProps) {
 
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   let playlists: Playlist[] = [];
   let trackData: PlayerTrack[] = [];
   let artists: Profile[] = [];
 
   // -----------------------------
-  // PLAYLISTS
+  // PLAYLISTS (own + saved)
   // -----------------------------
   if (currentTab === "playlists") {
-    const { data: playlistsData } = await supabase
+    // 1) Eigene Playlists
+    const { data: ownPlaylists, error: ownErr } = await supabase
       .from("playlists")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("id")
+      .eq("created_by", user.id);
 
-    playlists = playlistsData || [];
+    if (ownErr) {
+      console.error("Failed to load own playlists:", ownErr);
+    }
+
+    // 2) Gespeicherte Playlists
+    const { data: savedPlaylists, error: savedErr } = await supabase
+      .from("library_playlists")
+      .select("playlist_id")
+      .eq("user_id", user.id);
+
+    if (savedErr) {
+      console.error("Failed to load saved playlists:", savedErr);
+    }
+
+    const playlistIds = Array.from(
+      new Set([
+        ...(ownPlaylists ?? []).map((p) => p.id),
+        ...(savedPlaylists ?? []).map((p) => p.playlist_id),
+      ])
+    );
+
+    if (playlistIds.length === 0) {
+      playlists = [];
+    } else {
+      const { data: playlistsData, error } = await supabase
+        .from("playlists")
+        .select("*")
+        .in("id", playlistIds)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Failed to load playlists:", error);
+        playlists = [];
+      } else {
+        playlists = playlistsData ?? [];
+      }
+    }
   }
 
   // -----------------------------
-  // TRACKS (mit Release- und Artist-Join)
+  // TRACKS (ONLY saved tracks)
   // -----------------------------
   if (currentTab === "tracks") {
-    const { data: tracks } = await supabase
-      .from("tracks")
-      .select(`
-        id,
-        title,
-        audio_path,
+    const { data: savedRows, error } = await supabase
+      .from("library_tracks")
+      .select(
+        `
+        track_id,
         created_at,
-        artist_id,
-        releases:releases!tracks_release_id_fkey(
+        tracks:tracks!library_tracks_track_id_fkey(
           id,
-          cover_path,
-          status
-        ),
-        artist_profile:profiles!tracks_artist_id_fkey(
-          display_name
+          title,
+          audio_path,
+          created_at,
+          artist_id,
+          releases:releases!tracks_release_id_fkey(
+            id,
+            cover_path,
+            status
+          ),
+          artist_profile:profiles!tracks_artist_id_fkey(
+            display_name
+          )
         )
-      `)
+      `
+      )
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    const normalizedTracks =
-      tracks?.map((track) => ({
-        ...track,
-        releases: Array.isArray(track.releases)
-          ? track.releases[0] ?? null
-          : track.releases ?? null,
-        artist_profile: Array.isArray(track.artist_profile)
-          ? track.artist_profile[0] ?? null
-          : track.artist_profile ?? null,
-      })) ?? [];
+    if (error) {
+      console.error("Failed to load library_tracks:", error);
+      trackData = [];
+    } else {
+      const tracks = (savedRows ?? [])
+        .map((row: any) => row.tracks)
+        .filter(Boolean);
 
-    trackData = toPlayerTrackList(normalizedTracks);
+      const normalizedTracks =
+        tracks.map((track: any) => ({
+          ...track,
+          releases: Array.isArray(track.releases)
+            ? track.releases[0] ?? null
+            : track.releases ?? null,
+          artist_profile: Array.isArray(track.artist_profile)
+            ? track.artist_profile[0] ?? null
+            : track.artist_profile ?? null,
+        })) ?? [];
+
+      trackData = toPlayerTrackList(normalizedTracks);
+    }
   }
 
   // -----------------------------
-  // ARTISTS
+  // ARTISTS (ONLY saved artists)
   // -----------------------------
   if (currentTab === "artists") {
-    const { data: artistsData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "artist")
-      .order("display_name", { ascending: true });
+    const { data: savedArtists, error: savedErr } = await supabase
+      .from("library_artists")
+      .select("artist_id, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    artists = artistsData || [];
+    if (savedErr) {
+      console.error("Failed to load library_artists:", savedErr);
+      artists = [];
+    } else {
+      const artistIds = (savedArtists ?? []).map((row) => row.artist_id);
+
+      if (artistIds.length === 0) {
+        artists = [];
+      } else {
+        const { data: artistsData, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .in("id", artistIds)
+          .order("display_name", { ascending: true });
+
+        if (error) {
+          console.error("Failed to load saved artist profiles:", error);
+          artists = [];
+        } else {
+          // optional: only keep role=artist if your profiles contain others
+          artists = (artistsData ?? []).filter((p: any) => p.role === "artist");
+        }
+      }
+    }
   }
 
   return (
@@ -172,7 +256,9 @@ export default async function LibraryPage(props: LibraryPageProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-400">No tracks found.</p>
+                <p className="text-sm text-neutral-400">
+                  No saved tracks yet. Use “Save to Library” on a track.
+                </p>
               )}
             </div>
           )}
@@ -181,7 +267,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
           {currentTab === "artists" && (
             <div className="pt-6">
               {artists.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg-grid-cols-5 gap-6">
                   {artists.map((artist) => (
                     <Link
                       key={artist.id}
@@ -215,3 +301,4 @@ export default async function LibraryPage(props: LibraryPageProps) {
     </div>
   );
 }
+

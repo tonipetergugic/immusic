@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -40,21 +40,105 @@ export default function PlaylistClient({
   const [addOpen, setAddOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   const [localPlaylist, setLocalPlaylist] = useState(playlist);
   const [localTracks, setLocalTracks] = useState<PlaylistTrack[]>(playlistTracks);
   const [playerTracks, setPlayerTracks] = useState<PlayerTrack[]>(initialPlayerTracks);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
   );
 
-  // Toggle public/private
+  const isOwner = !!user?.id && user.id === (localPlaylist as any).created_by;
+
+  const [isSavedToLibrary, setIsSavedToLibrary] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Load saved state for non-owner
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSaved() {
+      if (!user?.id) return;
+      if (isOwner) return;
+
+      const { data, error } = await supabase
+        .from("library_playlists")
+        .select("playlist_id")
+        .eq("user_id", user.id)
+        .eq("playlist_id", localPlaylist.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to read library_playlists:", error);
+        setIsSavedToLibrary(false);
+        return;
+      }
+
+      setIsSavedToLibrary(!!data);
+    }
+
+    void loadSaved();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, user?.id, isOwner, localPlaylist.id]);
+
+  async function toggleSaveToLibrary() {
+    if (!user?.id) return;
+    if (isOwner) return;
+    if (saveBusy) return;
+
+    setSaveBusy(true);
+
+    if (isSavedToLibrary) {
+      const { error } = await supabase
+        .from("library_playlists")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("playlist_id", localPlaylist.id);
+
+      if (error) {
+        console.error("Failed to remove from library_playlists:", error);
+        setSaveBusy(false);
+        return;
+      }
+
+      setIsSavedToLibrary(false);
+      setSaveBusy(false);
+      return;
+    }
+
+    const { error } = await supabase.from("library_playlists").insert({
+      user_id: user.id,
+      playlist_id: localPlaylist.id,
+    });
+
+    if (error) {
+      console.error("Failed to insert into library_playlists:", error);
+      setSaveBusy(false);
+      return;
+    }
+
+    setIsSavedToLibrary(true);
+    setSaveBusy(false);
+  }
+
+  // Toggle public/private (owner only)
   async function togglePublic() {
+    if (!isOwner) return;
+
     const newValue = !localPlaylist.is_public;
 
     const { error } = await supabase
@@ -71,18 +155,20 @@ export default function PlaylistClient({
   }
 
   function onEditDetails() {
+    if (!isOwner) return;
     setDetailsOpen(true);
   }
 
-  // Delete playlist (with cover cleanup)
+  // Delete playlist (owner only)
   async function onDeletePlaylist() {
-    const { data: fresh, error: freshError } = await supabase
+    if (!isOwner) return;
+
+    const { data: fresh } = await supabase
       .from("playlists")
       .select("cover_url")
       .eq("id", localPlaylist.id)
       .single();
 
-    // 1) Cover löschen (falls vorhanden)
     if (fresh?.cover_url || localPlaylist.cover_url) {
       try {
         const bucketName = "playlist-covers";
@@ -91,52 +177,43 @@ export default function PlaylistClient({
         let relativePath = publicUrl?.split("/object/public/playlist-covers/")[1];
 
         if (!relativePath) {
-          console.error("❌ Could not extract relative path");
-        } else {
-          if (relativePath.includes("?")) {
-            relativePath = relativePath.split("?")[0];
-          }
+          relativePath = publicUrl ?? null;
+        }
 
-          console.log("Deleting cover (playlist delete):", relativePath);
+        if (relativePath && relativePath.includes("?")) {
+          relativePath = relativePath.split("?")[0];
+        }
 
-          const { data, error } = await supabase.storage
+        if (relativePath) {
+          const { error } = await supabase.storage
             .from(bucketName)
             .remove([relativePath]);
 
           if (error) {
-            console.error("❌ Storage delete error:", error);
-          } else {
-            console.log("✅ Deleted from storage (playlist delete):", data);
+            console.error("Storage delete error:", error);
           }
         }
       } catch (err) {
-        console.error("❌ Error parsing cover delete:", err);
+        console.error("Error parsing cover delete:", err);
       }
     }
 
-    // 2) cover_url in DB auf NULL setzen
-    await supabase
-      .from("playlists")
-      .update({ cover_url: null })
-      .eq("id", localPlaylist.id);
+    await supabase.from("playlists").update({ cover_url: null }).eq("id", localPlaylist.id);
 
-    // 3) Playlist löschen
-    const { error } = await supabase
-      .from("playlists")
-      .delete()
-      .eq("id", localPlaylist.id);
+    const { error } = await supabase.from("playlists").delete().eq("id", localPlaylist.id);
 
     if (error) {
       console.error("Error deleting playlist:", error);
       return;
     }
 
-    // Redirect
-    window.location.href = "/dashboard/library";
+    window.location.href = "/dashboard/library?tab=playlists";
   }
 
-  // Delete track from playlist
+  // Delete track from playlist (owner only)
   async function onDeleteTrack(trackId: string) {
+    if (!isOwner) return;
+
     const { error } = await supabase
       .from("playlist_tracks")
       .delete()
@@ -153,6 +230,8 @@ export default function PlaylistClient({
   }
 
   async function handleTrackAdded(newPlayerTrack: PlayerTrack) {
+    if (!isOwner) return;
+
     setPlayerTracks((prev) => [...prev, newPlayerTrack]);
 
     const { data, error } = await supabase
@@ -182,31 +261,6 @@ export default function PlaylistClient({
 
     if (data) {
       setLocalTracks((prev) => [...prev, data]);
-    } else {
-      setLocalTracks((prev) => [
-        ...prev,
-        {
-          position: prev.length + 1,
-          tracks: {
-            id: newPlayerTrack.id,
-            title: newPlayerTrack.title,
-            artist_name: newPlayerTrack.profiles?.display_name ?? null,
-            cover_url: newPlayerTrack.cover_url,
-            audio_url: newPlayerTrack.audio_url,
-            created_at: null,
-            artist_id: newPlayerTrack.artist_id,
-            bpm: newPlayerTrack.bpm ?? null,
-            key: newPlayerTrack.key ?? null,
-            artist: newPlayerTrack.profiles
-              ? { display_name: newPlayerTrack.profiles.display_name ?? null }
-              : null,
-            artist_profile: newPlayerTrack.profiles
-              ? { display_name: newPlayerTrack.profiles.display_name ?? null }
-              : null,
-            releases: null,
-          },
-        } as PlaylistTrack,
-      ]);
     }
   }
 
@@ -217,26 +271,80 @@ export default function PlaylistClient({
   );
 
   if (!isClient) {
-    return null; // Do NOT render DnD on the server
+    return null;
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PlaylistHeaderClient
         playlist={localPlaylist}
         playerTracks={playerTracks}
-        onAddTrack={() => setAddOpen(true)}
-        onEditCover={() => setDetailsOpen(true)}
-        actions={
-          <PlaylistSettingsTrigger
-            playlist={localPlaylist}
-            isOwner={user?.id === localPlaylist.created_by}
-            onTogglePublic={togglePublic}
-            onDeletePlaylist={() => setDeleteOpen(true)}
-            onEditDetails={onEditDetails}
-          />
-        }
+        onEditCover={() => {
+          if (!isOwner) return;
+          setDetailsOpen(true);
+        }}
+        isOwner={isOwner}
       />
+
+      {/* ACTION BAR (below header) */}
+      <div className="flex flex-wrap items-center gap-3">
+        {isOwner ? (
+          <>
+            <button
+              onClick={() => setAddOpen(true)}
+              className="
+                flex items-center gap-2
+                px-4 h-10 rounded-md
+                bg-[#1A1A1C]/80 border border-[#2A2A2D]
+                text-white/80 text-sm
+                hover:bg-[#2A2A2D]
+                hover:text-white
+                hover:border-[#00FFC622]
+                hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
+                backdrop-blur-lg transition
+              "
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 5v14m7-7H5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Add Track
+            </button>
+
+            <PlaylistSettingsTrigger
+              playlist={localPlaylist}
+              isOwner={true}
+              onTogglePublic={togglePublic}
+              onDeletePlaylist={() => setDeleteOpen(true)}
+              onEditDetails={onEditDetails}
+            />
+          </>
+        ) : (
+          <button
+            onClick={toggleSaveToLibrary}
+            disabled={saveBusy}
+            className="
+              flex items-center gap-2
+              px-4 h-10 rounded-md
+              bg-[#1A1A1C]/80 border border-[#2A2A2D]
+              text-white/80 text-sm
+              hover:bg-[#2A2A2D]
+              hover:text-white
+              hover:border-[#00FFC622]
+              hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
+              backdrop-blur-lg transition
+              disabled:opacity-60 disabled:cursor-wait
+            "
+          >
+            {isSavedToLibrary ? "Remove from Library" : "Save to Library"}
+          </button>
+        )}
+      </div>
+
       {/* Tracks */}
       <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-4">
         <div
@@ -259,9 +367,9 @@ export default function PlaylistClient({
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={async ({ active, over }) => {
+              if (!isOwner) return;
               if (!over || active.id === over.id) return;
 
-              // 1) PRODUCE NEW ORDER BASED ON CURRENT STATE (NO STATE MUTATION YET)
               const oldIndex = playerTracks.findIndex((t) => t.id === active.id);
               const newIndex = playerTracks.findIndex((t) => t.id === over.id);
 
@@ -272,18 +380,15 @@ export default function PlaylistClient({
                 localTracks.findIndex((t) => t.tracks.id === over.id)
               );
 
-              // 2) UPDATE UI FIRST (SYNC, STABLE, NO JUMPING)
               setPlayerTracks(newPlayerTracks);
               setLocalTracks(newLocalTracks);
 
-              // 3) PREPARE DB ORDER FROM newLocalTracks (NOT old state!)
               const updates = newLocalTracks.map((item, index) => ({
                 playlist_id: localPlaylist.id,
                 track_id: item.tracks.id,
                 position: index + 1,
               }));
 
-              // 4) SAVE IN DATABASE
               for (const row of updates) {
                 const { error } = await supabase
                   .from("playlist_tracks")
@@ -296,8 +401,6 @@ export default function PlaylistClient({
                   break;
                 }
               }
-
-              // ❗️ NO UI SYNC AFTER THIS — UI IS ALREADY CORRECT
             }}
           >
             <SortableContext
@@ -311,7 +414,7 @@ export default function PlaylistClient({
                     track={track}
                     tracks={playerTracks}
                     user={user}
-                    onDelete={() => onDeleteTrack(track.id)}
+                    onDelete={isOwner ? () => onDeleteTrack(track.id) : undefined}
                   />
                 ))}
               </div>
@@ -322,26 +425,31 @@ export default function PlaylistClient({
         )}
       </div>
 
-      <DeletePlaylistModal
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={onDeletePlaylist}
-      />
-      <PlaylistDetailsModal
-        isOpen={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        playlist={localPlaylist}
-        onUpdated={(updated) => {
-          setLocalPlaylist((prev) => ({ ...prev, ...updated }));
-        }}
-      />
-      <PlaylistAddTrackModal
-        playlistId={localPlaylist.id}
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        existingTrackIds={playerTracks.map((t) => t.id)}
-        onTrackAdded={handleTrackAdded}
-      />
+      {isOwner ? (
+        <>
+          <DeletePlaylistModal
+            open={deleteOpen}
+            onClose={() => setDeleteOpen(false)}
+            onConfirm={onDeletePlaylist}
+          />
+          <PlaylistDetailsModal
+            isOpen={detailsOpen}
+            onClose={() => setDetailsOpen(false)}
+            playlist={localPlaylist}
+            onUpdated={(updated) => {
+              setLocalPlaylist((prev) => ({ ...prev, ...updated }));
+            }}
+          />
+          <PlaylistAddTrackModal
+            playlistId={localPlaylist.id}
+            open={addOpen}
+            onClose={() => setAddOpen(false)}
+            existingTrackIds={playerTracks.map((t) => t.id)}
+            onTrackAdded={handleTrackAdded}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
+
