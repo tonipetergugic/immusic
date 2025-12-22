@@ -3,6 +3,13 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+export type RenameTrackPayload = {
+  title: string;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+};
+
 export async function deleteTrackAction(trackId: string, audioPath: string) {
   const supabase = await createSupabaseServerClient();
 
@@ -31,7 +38,10 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
   revalidatePath("/artist/my-tracks");
 }
 
-export async function renameTrackAction(trackId: string, newTitle: string) {
+export async function renameTrackAction(
+  trackId: string,
+  payload: RenameTrackPayload
+) {
   "use server";
 
   const supabase = await createSupabaseServerClient();
@@ -46,7 +56,12 @@ export async function renameTrackAction(trackId: string, newTitle: string) {
 
   const { error } = await supabase
     .from("tracks")
-    .update({ title: newTitle })
+    .update({
+      title: payload.title,
+      bpm: payload.bpm,
+      key: payload.key,
+      genre: payload.genre,
+    })
     .eq("id", trackId)
     .eq("artist_id", user.id);
 

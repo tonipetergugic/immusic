@@ -3,8 +3,17 @@
 import { useState } from "react";
 import { TrackCard } from "./TrackCard";
 
+type Track = {
+  id: string;
+  title: string;
+  audio_path: string;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+};
+
 type TrackListClientProps = {
-  tracks: any[];
+  tracks: Track[];
 };
 
 export default function TrackListClient({ tracks }: TrackListClientProps) {
