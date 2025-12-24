@@ -43,36 +43,72 @@ type Props = {
 };
 
 export default function DashboardHomeClient({ home }: Props) {
-  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [featuredPlaylistsById, setFeaturedPlaylistsById] = useState<
+    Record<string, { id: string; title: string; description: string | null; cover_url: string | null }>
+  >({});
+  // Releases section (from home_modules + home_module_items)
+  const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
+  const releaseItems = releaseModule ? home.itemsByModuleId[releaseModule.id] ?? [] : [];
+  const playlistModule =
+    home.modules.find((m) => m.module_type === "playlist") ?? null;
 
-  // Public playlists for "Discover Playlists"
+  const playlistItems = playlistModule
+    ? home.itemsByModuleId[playlistModule.id] ?? []
+    : [];
+
   useEffect(() => {
+    const ids = Array.from(
+      new Set(
+        playlistItems
+          .filter((it) => it.item_type === "playlist")
+          .sort((a, b) => a.position - b.position)
+          .slice(0, 10)
+          .map((it) => it.item_id)
+      )
+    );
+
+    if (ids.length === 0) {
+      setFeaturedPlaylistsById({});
+      return;
+    }
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    async function loadPlaylists() {
-      const { data } = await supabase
+    (async () => {
+      const { data, error } = await supabase
         .from("playlists")
-        .select("*")
-        .eq("is_public", true)
-        .order("created_at", { ascending: false });
+        .select("id,title,description,cover_url")
+        .in("id", ids);
 
-      setPlaylists(data ?? []);
-    }
+      if (error || !data) return;
 
-    loadPlaylists();
-  }, []);
+      const map: Record<
+        string,
+        { id: string; title: string; description: string | null; cover_url: string | null }
+      > = {};
 
-  // Releases section (from home_modules + home_module_items)
-  const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
-  const releaseItems = releaseModule ? home.itemsByModuleId[releaseModule.id] ?? [] : [];
+      for (const p of data) {
+        map[p.id] = {
+          id: p.id,
+          title: p.title,
+          description: p.description ?? null,
+          cover_url: p.cover_url ?? null,
+        };
+      }
+
+      setFeaturedPlaylistsById(map);
+    })();
+  }, [playlistItems]);
 
   return (
     <div className="space-y-10">
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Releases</h2>
+        <h2 className="text-xl font-semibold">
+          {releaseModule?.title ?? "Releases"}
+        </h2>
 
         {releaseItems.length === 0 ? (
           <p className="text-white/40">No releases configured for Home yet.</p>
@@ -90,23 +126,46 @@ export default function DashboardHomeClient({ home }: Props) {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Discover Playlists</h2>
+        <h2 className="text-xl font-semibold">
+          {playlistModule?.title ?? "Playlists"}
+        </h2>
 
-        {playlists.length === 0 && (
-          <p className="text-white/40">No public playlists available yet.</p>
+        {playlistItems.length === 0 ? (
+          <p className="text-white/40">No playlists configured for Home yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {playlistItems
+              .filter((it) => it.item_type === "playlist")
+              .sort((a, b) => a.position - b.position)
+              .slice(0, 10)
+              .map((it) => {
+                const pl = featuredPlaylistsById[it.item_id];
+
+                if (!pl) {
+                  return (
+                    <div
+                      key={it.id}
+                      className="bg-[#111112] p-3 rounded-xl border border-transparent"
+                    >
+                      <div className="w-full aspect-square rounded-xl bg-white/10" />
+                      <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
+                      <div className="mt-2 h-3 w-1/2 bg-white/10 rounded" />
+                    </div>
+                  );
+                }
+
+                return (
+                  <PlaylistCard
+                    key={it.id}
+                    id={pl.id}
+                    title={pl.title}
+                    description={pl.description}
+                    cover_url={pl.cover_url}
+                  />
+                );
+              })}
+          </div>
         )}
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {playlists.map((pl) => (
-            <PlaylistCard
-              key={pl.id}
-              id={pl.id}
-              title={pl.title}
-              description={pl.description}
-              cover_url={pl.cover_url}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -295,4 +354,5 @@ function ExtraReleaseCard({ releaseId }: { releaseId: string }) {
     </div>
   );
 }
+
 

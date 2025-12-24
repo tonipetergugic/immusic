@@ -185,7 +185,7 @@ export default function Topbar() {
 
         {role === "admin" && (
           <Link
-            href="/admin/applications"
+    href="/dashboard/admin"
             className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
           >
             Admin Panel
