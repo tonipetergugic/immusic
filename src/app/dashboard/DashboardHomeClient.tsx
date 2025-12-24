@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import PlaylistCard from "@/components/PlaylistCard";
 import { createBrowserClient } from "@supabase/ssr";
 import { usePlayer } from "@/context/PlayerContext";
@@ -131,9 +132,12 @@ export default function DashboardHomeClient({ home, featuredRelease }: Props) {
                     <Play size={18} />
                   )}
                 </button>
-                <button className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 hover:bg-white/5">
+                <Link
+                  href={`/dashboard/release/${featuredRelease.id}`}
+                  className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 hover:bg-white/5"
+                >
                   Open
-                </button>
+                </Link>
               </div>
             </div>
           </div>

@@ -344,7 +344,7 @@ export default function TrackOptionsTrigger({
         type="button"
         ref={buttonRef}
         onClick={handleToggle}
-        className="h-6 w-6 flex items-center justify-center text-white/60 hover:text-white transition"
+        className="h-6 w-6 flex items-center justify-center text-white/60 hover:text-[#00FFC6] transition"
         aria-label="Track options"
       >
         <MoreVertical size={16} />

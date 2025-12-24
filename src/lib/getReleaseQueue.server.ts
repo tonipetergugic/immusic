@@ -1,8 +1,11 @@
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { PlayerTrack } from "@/types/playerTrack";
+import { PlayerTrack } from "@/types/playerTrack";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getReleaseQueueForPlayer(releaseId: string): Promise<PlayerTrack[]> {
-  const supabase = createSupabaseBrowserClient();
+// SERVER-ONLY: darf in Client Components NICHT importiert werden!
+export async function getReleaseQueueForPlayerServer(
+  releaseId: string
+): Promise<PlayerTrack[]> {
+  const supabase = await createSupabaseServerClient();
 
   /**
    * 1) Release + Cover laden (einmal)
@@ -79,7 +82,4 @@ export async function getReleaseQueueForPlayer(releaseId: string): Promise<Playe
 
   return queue;
 }
-
-// Alias für Konsumenten, die getReleaseQueue erwarten
-export const getReleaseQueue = getReleaseQueueForPlayer;
 

@@ -21,6 +21,7 @@ src/app/dashboard/library
 src/app/dashboard/components
 src/app/dashboard/layout.tsx
 src/app/dashboard/page.tsx
+src/app/dashboard/DashboardHomeClient.tsx
 src/app/dashboard/artist
 src/app/profile
 src/app/profile/actions.ts
@@ -66,8 +67,11 @@ src/components/PlaylistCard.tsx
 src/components/TrackOptionsTrigger.tsx
 src/components/DeleteReleaseModal.tsx
 src/lib
+src/lib/getReleaseQueue.ts
 src/lib/supabase
+src/lib/supabase/getHomeModules.ts
 src/lib/supabase/getUser.ts
+src/lib/supabase/getFeaturedRelease.ts
 src/lib/supabase/client.ts
 src/lib/supabase/getProfile.ts
 src/lib/supabase/server.ts

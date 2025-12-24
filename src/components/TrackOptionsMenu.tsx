@@ -100,15 +100,23 @@ export default function TrackOptionsMenu({
   }, [toast]);
 
   const menuItems: MenuItem[] = useMemo(() => {
-    return [
+    const items: MenuItem[] = [
       { label: "Add to playlist", action: "add_to_playlist" },
-      { label: isSaved ? "Remove from Library" : "Save to Library", action: "toggle_library" },
+      {
+        label: isSaved ? "Remove from Library" : "Save to Library",
+        action: "toggle_library",
+      },
       { label: "Share Track", action: "share" },
       { label: "Go to Artist", action: "go_artist" },
       { label: "Go to Track Page", action: "go_track" },
-      { label: "Remove from Playlist", action: "remove" },
     ];
-  }, [isSaved]);
+
+    if (onRemove) {
+      items.push({ label: "Remove from Playlist", action: "remove" });
+    }
+
+    return items;
+  }, [isSaved, onRemove]);
 
   const getShareUrl = () => {
     if (!trackId) return null;
