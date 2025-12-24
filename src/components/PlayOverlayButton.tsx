@@ -27,7 +27,16 @@ export default function PlayOverlayButton({ track, index, tracks }: PlayOverlayB
 
   return (
     <button
-      onClick={handleClick}
+      type="button"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleClick();
+      }}
       className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out backdrop-blur-sm"
     >
       <div className="h-9 w-9 rounded-full bg-[#00FFC6] hover:bg-[#00E0B0] flex items-center justify-center shadow-md transition-transform duration-200 ease-out group-hover:scale-105">

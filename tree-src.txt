@@ -18,6 +18,7 @@ src/app/dashboard
 src/app/dashboard/playlist
 src/app/dashboard/track
 src/app/dashboard/library
+src/app/dashboard/release
 src/app/dashboard/components
 src/app/dashboard/layout.tsx
 src/app/dashboard/page.tsx
@@ -75,4 +76,5 @@ src/lib/supabase/getFeaturedRelease.ts
 src/lib/supabase/client.ts
 src/lib/supabase/getProfile.ts
 src/lib/supabase/server.ts
+src/lib/getReleaseQueue.server.ts
 src/lib/playerTrack.ts

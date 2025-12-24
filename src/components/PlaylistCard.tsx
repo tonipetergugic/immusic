@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { usePlayer } from "@/context/PlayerContext";
+import { toPlayerTrackList } from "@/lib/playerTrack";
 
 type PlaylistCardProps = {
   id: string;
@@ -25,6 +27,9 @@ export default function PlaylistCard({
   );
 
   const [publicCoverUrl, setPublicCoverUrl] = useState<string | null>(null);
+  const { playQueue, togglePlay, pause, currentTrack, isPlaying } = usePlayer();
+  const [isPlayLoading, setIsPlayLoading] = useState(false);
+  const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!cover_url) return;
@@ -35,6 +40,46 @@ export default function PlaylistCard({
 
     setPublicCoverUrl(data.publicUrl ?? null);
   }, [cover_url]);
+
+  const isCurrentFromThisPlaylist =
+    !!currentTrack?.id && playlistTrackIds.has(currentTrack.id);
+
+  async function loadPlaylistQueue() {
+    const { data, error } = await supabase
+      .from("playlist_tracks")
+      .select(
+        `
+        position,
+        tracks:track_id (
+          id,
+          title,
+          artist_id,
+          audio_path,
+          bpm,
+          key,
+          releases:release_id (
+            id,
+            cover_path,
+            status
+          ),
+          profiles:artist_id (
+            display_name
+          )
+        )
+      `
+      )
+      .eq("playlist_id", id)
+      .order("position", { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as any[];
+    const tracks = rows.map((r) => r.tracks).filter(Boolean);
+
+    setPlaylistTrackIds(new Set(tracks.map((t: any) => t.id)));
+
+    return toPlayerTrackList(tracks);
+  }
 
   return (
     <Link
@@ -77,7 +122,33 @@ export default function PlaylistCard({
             transition-all duration-300
           "
         >
-          <div
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Wenn bereits ein Track aus dieser Playlist aktiv ist: toggle play/pause
+              if (isCurrentFromThisPlaylist) {
+                if (isPlaying) pause();
+                else togglePlay();
+                return;
+              }
+
+              try {
+                setIsPlayLoading(true);
+                const queue = await loadPlaylistQueue();
+                if (queue.length === 0) return;
+                playQueue(queue, 0);
+              } catch (err: any) {
+                console.error("PlaylistCard play error:", err?.message ?? err);
+              } finally {
+                setIsPlayLoading(false);
+              }
+            }}
             className="
               w-14 h-14 rounded-full
               bg-[#00FFC6] hover:bg-[#00E0B0]
@@ -85,9 +156,16 @@ export default function PlaylistCard({
               shadow-[0_0_20px_rgba(0,255,198,0.40)]
               backdrop-blur-md
             "
+            aria-label="Play playlist"
           >
-            <Play size={26} className="text-black" />
-          </div>
+            {isPlayLoading ? (
+              <div className="h-4 w-4 animate-pulse rounded-sm bg-black/60" />
+            ) : isCurrentFromThisPlaylist && isPlaying ? (
+              <Pause size={26} className="text-black" />
+            ) : (
+              <Play size={26} className="text-black" />
+            )}
+          </button>
         </div>
       </div>
 
