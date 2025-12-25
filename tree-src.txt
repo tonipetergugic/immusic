@@ -17,6 +17,7 @@ src/app/logout/action.ts
 src/app/dashboard
 src/app/dashboard/playlist
 src/app/dashboard/track
+src/app/dashboard/admin
 src/app/dashboard/library
 src/app/dashboard/release
 src/app/dashboard/components
