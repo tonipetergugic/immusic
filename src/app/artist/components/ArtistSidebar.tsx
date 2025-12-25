@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   FileMusic,
+  Disc3,
   Upload,
   BarChart3,
   User,
@@ -13,6 +15,11 @@ import {
 
 export default function ArtistSidebar() {
   const pathname = usePathname();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    containerRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
 
   const navItems = [
     {
@@ -23,7 +30,7 @@ export default function ArtistSidebar() {
     {
       label: "Releases",
       href: "/artist/releases",
-      icon: <FileMusic size={20} />,
+      icon: <Disc3 size={20} />,
     },
     {
       label: "Upload",
@@ -48,7 +55,10 @@ export default function ArtistSidebar() {
   ];
 
   return (
-    <div className="h-screen w-full bg-[#0F0F12] border-r border-white/10 flex flex-col py-6 px-4 pb-24 overflow-y-auto">
+    <div
+      ref={containerRef}
+      className="h-screen w-full bg-[#0F0F12] border-r border-white/10 flex flex-col py-6 px-4 pb-24 overflow-y-auto"
+    >
       
       {/* Navigation oben */}
       <div className="flex flex-col gap-1">
