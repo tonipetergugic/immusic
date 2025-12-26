@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Library, PlusCircle, Mic } from "lucide-react";
 import { useEffect } from "react";
@@ -8,6 +9,7 @@ import CreatePlaylistModal from "@/components/CreatePlaylistModal";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function Sidebar() {
+  const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -106,12 +108,22 @@ export default function Sidebar() {
           matchPrefix
         />
       ) : (
-        <SidebarItem
-          href="/artist/become"
-          icon={<Mic size={20} />}
-          label="Become Artist"
-          matchPrefix
-        />
+        <Link
+          href="/artist/onboarding"
+          className={`
+            flex items-center gap-3 p-3 rounded-md text-white 
+            hover:bg-[#161619] hover:text-[#00FFC6] transition-colors cursor-pointer
+            ${
+              pathname === "/artist/onboarding" ||
+              pathname.startsWith("/artist/onboarding/")
+                ? "bg-[#161619] text-[#00FFC6]"
+                : ""
+            }
+          `}
+        >
+          <Mic size={20} />
+          <span className="text-sm">Become Artist</span>
+        </Link>
       )}
 
       <CreatePlaylistModal

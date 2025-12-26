@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   FileMusic,
@@ -12,6 +12,7 @@ import {
   User,
   Home
 } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ArtistSidebar() {
   const pathname = usePathname();
@@ -21,36 +22,82 @@ export default function ArtistSidebar() {
     containerRef.current?.scrollTo({ top: 0 });
   }, [pathname]);
 
+  const [canAccessProtected, setCanAccessProtected] = useState(false);
+  const [canAccessUpload, setCanAccessUpload] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccess() {
+      const supabase = createSupabaseBrowserClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        if (!cancelled) {
+          setCanAccessProtected(false);
+          setCanAccessUpload(false);
+        }
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, artist_onboarding_status")
+        .eq("id", user.id)
+        .single();
+
+      const isArtist = profile?.role === "artist";
+      const isPending = profile?.artist_onboarding_status === "pending_upload";
+
+      if (!cancelled) {
+        setCanAccessProtected(isArtist);
+        setCanAccessUpload(isArtist || isPending);
+      }
+    }
+
+    loadAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const navItems = [
     {
       label: "Dashboard",
       href: "/artist/dashboard",
       icon: <LayoutDashboard size={20} />,
+      requiresArtist: true,
     },
     {
       label: "Releases",
       href: "/artist/releases",
       icon: <Disc3 size={20} />,
+      requiresArtist: true,
     },
     {
       label: "Upload",
       href: "/artist/upload",
       icon: <Upload size={20} />,
+      requiresArtist: false,
     },
     {
       label: "My Tracks",
       href: "/artist/my-tracks",
       icon: <FileMusic size={20} />,
+      requiresArtist: true,
     },
     {
       label: "Analytics",
       href: "/artist/analytics",
       icon: <BarChart3 size={20} />,
+      requiresArtist: true,
     },
     {
       label: "Profile",
       href: "/artist/profile",
       icon: <User size={20} />,
+      requiresArtist: true,
     },
   ];
 
@@ -65,13 +112,37 @@ export default function ArtistSidebar() {
         {navItems.map((item) => {
           const active = pathname.startsWith(item.href);
 
+          const allowed =
+            item.label === "Upload"
+              ? canAccessUpload
+              : item.requiresArtist
+                ? canAccessProtected
+                : true;
+
+          const baseClass =
+            `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition ` +
+            (active
+              ? "bg-white/10 text-white"
+              : "text-white/60 hover:text-white hover:bg-white/5");
+
+          if (!allowed) {
+            return (
+              <div
+                key={item.href}
+                title="Become an Artist to unlock"
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-white/30 cursor-not-allowed select-none opacity-60"
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
-                ${active ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5"}
-              `}
+              className={baseClass}
             >
               {item.icon}
               <span>{item.label}</span>

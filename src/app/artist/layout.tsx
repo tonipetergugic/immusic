@@ -7,6 +7,7 @@ export default function ArtistLayout({
 }: {
   children: React.ReactNode;
 }) {
+
   return (
     <div className="flex h-screen w-full bg-[#0E0E10] text-white overflow-hidden">
 
