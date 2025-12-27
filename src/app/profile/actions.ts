@@ -13,7 +13,7 @@ export async function updateAvatar(avatarUrl: string) {
     throw new Error("Missing avatarUrl");
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,7 +67,7 @@ export async function updateAvatar(avatarUrl: string) {
 }
 
 export async function deleteAvatar() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -134,7 +134,7 @@ export async function updateDisplayName(newName: string) {
     throw new Error("Display name must be at least 2 characters.");
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
