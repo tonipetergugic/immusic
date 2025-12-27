@@ -19,9 +19,9 @@ type TrackLike = {
   artist_id?: string | null;
   cover_url?: string | null;
   releases?: {
-    id: string;
+    id?: string;
     cover_path: string | null;
-    status: string;
+    status?: string | null;
   } | null;
   audio_url?: string | null;
   audio_path?: string | null;
