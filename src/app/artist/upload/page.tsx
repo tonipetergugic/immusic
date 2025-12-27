@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
-import { submitToQueueAction as submitToQueueActionServer } from "./actions";
-
-export { submitToQueueAction } from "./actions";
-
-const submitToQueueAction = submitToQueueActionServer;
+import { submitToQueueAction } from "./actions";
 
 export default function ArtistUploadPage() {
   const supabase = createSupabaseBrowserClient();
