@@ -7,13 +7,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-function getReleaseCoverPublicUrl(path?: string | null): string | null {
-  if (!supabase || !path) {
-    return null;
-  }
-  return supabase.storage.from("release_covers").getPublicUrl(path).data.publicUrl;
-}
-
 type ProfileLike = {
   display_name?: string | null;
 };
