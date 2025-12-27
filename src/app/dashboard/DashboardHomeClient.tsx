@@ -40,6 +40,7 @@ type Props = {
     modules: HomeModule[];
     itemsByModuleId: Record<string, HomeItem[]>;
   };
+  featuredRelease?: unknown;
 };
 
 export default function DashboardHomeClient({ home }: Props) {
