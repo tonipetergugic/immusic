@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateArtistProfileAction } from "./actions";
 import BannerUpload from "./BannerUpload";
+import ProfileForm from "./ProfileForm";
+import ProfileSuccessToast from "./ProfileSuccessToast";
 
 export default async function ArtistProfilePage({
   searchParams,
@@ -34,134 +36,43 @@ export default async function ArtistProfilePage({
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
-      <h1 className="text-2xl font-semibold text-white">
-        Artist Profile Settings
-      </h1>
-      <p className="text-sm text-white/60">
-        Update your public artist profile information.
-      </p>
-      {params?.success === "1" && (
-        <div className="rounded-lg border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-4 py-3 text-sm text-[#00FFC6]">
-          Profile saved successfully!
-        </div>
-      )}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-        <h2 className="text-sm font-semibold text-white/80 mb-3">Banner</h2>
-        <BannerUpload userId={profile.id} currentBannerUrl={profile.banner_url} />
-      </div>
-      <form
-        action={updateArtistProfileAction}
-        className="space-y-6 rounded-xl border border-white/10 bg-white/5 p-6"
-      >
-        <div className="flex flex-col space-y-2">
-          <label
-            htmlFor="display_name"
-            className="text-sm font-medium text-white/80"
-          >
-            Display Name
-          </label>
-          <input
-            id="display_name"
-            type="text"
-            name="display_name"
-            defaultValue={profile.display_name ?? ""}
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
-        <div className="flex flex-col space-y-2">
-          <label htmlFor="bio" className="text-sm font-medium text-white/80">
-            Bio
-          </label>
-          <textarea
-            id="bio"
-            name="bio"
-            rows={5}
-            defaultValue={profile.bio ?? ""}
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white resize-none focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
-        <div className="flex flex-col space-y-2">
-          <label
-            htmlFor="location"
-            className="text-sm font-medium text-white/80"
-          >
-            Location
-          </label>
-          <input
-            id="location"
-            type="text"
-            name="location"
-            defaultValue={profile.location ?? ""}
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
-        <div className="flex flex-col space-y-2">
-          <label
-            htmlFor="instagram"
-            className="text-sm font-medium text-white/80"
-          >
-            Instagram
-          </label>
-          <input
-            id="instagram"
-            type="text"
-            name="instagram"
-            defaultValue={profile.instagram ?? ""}
-            placeholder="https://instagram.com/yourname"
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
-        <div className="flex flex-col space-y-2">
-          <label htmlFor="tiktok" className="text-sm font-medium text-white/80">
-            TikTok
-          </label>
-          <input
-            id="tiktok"
-            type="text"
-            name="tiktok"
-            defaultValue={profile.tiktok ?? ""}
-            placeholder="https://tiktok.com/@yourname"
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
-        <div className="flex flex-col space-y-2">
-          <label
-            htmlFor="facebook"
-            className="text-sm font-medium text-white/80"
-          >
-            Facebook
-          </label>
-          <input
-            id="facebook"
-            type="text"
-            name="facebook"
-            defaultValue={profile.facebook ?? ""}
-            placeholder="https://facebook.com/yourpage"
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
-        <div className="flex flex-col space-y-2">
-          <label htmlFor="x" className="text-sm font-medium text-white/80">
-            X
-          </label>
-          <input
-            id="x"
-            type="text"
-            name="x"
-            defaultValue={profile.x ?? ""}
-            placeholder="https://x.com/yourhandle"
-            className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
-          />
-        </div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <button
-            type="submit"
-            className="bg-[#00FFC6] hover:bg-[#00E0B0] text-black font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/60 focus:ring-offset-2 focus:ring-offset-black"
-          >
-            Save
-          </button>
+          <h1 className="text-2xl font-semibold text-white">Artist profile</h1>
+          <p className="text-sm text-[#B3B3B3] mt-1">
+            Update your public artist page details.
+          </p>
         </div>
-      </form>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#B3B3B3]">
+            UI: Live
+          </span>
+          <span className="text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#B3B3B3]">
+            Preview later
+          </span>
+        </div>
+      </div>
+      {params?.success === "1" && <ProfileSuccessToast />}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white/90">Banner</p>
+            <p className="text-xs text-[#B3B3B3] mt-1">
+              This image appears at the top of your public artist page.
+            </p>
+          </div>
+
+          <span className="text-xs px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-[#B3B3B3]">
+            Recommended: 1600×400
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <BannerUpload userId={profile.id} currentBannerUrl={profile.banner_url} />
+        </div>
+      </div>
+      <ProfileForm profile={profile} updateAction={updateArtistProfileAction} />
     </div>
   );
 }
