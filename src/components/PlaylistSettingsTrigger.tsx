@@ -17,8 +17,6 @@ export default function PlaylistSettingsTrigger({
   onEditDetails: () => void;
   isOwner: boolean;
 }) {
-  if (!isOwner) return null;
-
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +37,8 @@ export default function PlaylistSettingsTrigger({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
+
+  if (!isOwner) return null;
 
   return (
     <div className="relative">
