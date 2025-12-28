@@ -4,6 +4,7 @@ type ChartCardProps = {
   title: string;
   subtitle?: string;
   kind: "line" | "bars";
+  onOpenDetails?: (title: string, subtitle?: string) => void;
 };
 
 function FakeLine() {
@@ -88,7 +89,12 @@ function FakeBars() {
   );
 }
 
-export default function ChartCard({ title, subtitle, kind }: ChartCardProps) {
+export default function ChartCard({
+  title,
+  subtitle,
+  kind,
+  onOpenDetails,
+}: ChartCardProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -103,7 +109,11 @@ export default function ChartCard({ title, subtitle, kind }: ChartCardProps) {
           <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#B3B3B3]">
             Live later
           </span>
-          <button className="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10">
+          <button
+            type="button"
+            onClick={() => onOpenDetails?.(title, subtitle)}
+            className="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10"
+          >
             View
           </button>
         </div>
@@ -115,7 +125,13 @@ export default function ChartCard({ title, subtitle, kind }: ChartCardProps) {
         <span className="px-2 py-1 rounded-full border border-white/10 bg-black/20">
           UI preview
         </span>
-        <span className="text-[#00FFC6]">Details →</span>
+        <button
+          type="button"
+          onClick={() => onOpenDetails?.(title, subtitle)}
+          className="text-[#00FFC6] hover:opacity-90"
+        >
+          Details →
+        </button>
       </div>
     </div>
   );
