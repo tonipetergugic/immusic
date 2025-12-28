@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -75,57 +76,125 @@ export default function ReleasesPage() {
   }, []);
 
   return (
-    <div className="min-h-screen p-10 bg-[#0E0E10] text-white">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">My Releases</h1>
+    <div className="w-full max-w-[1600px] mx-auto">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-6">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-semibold tracking-tight">My Releases</h1>
+          <p className="mt-2 text-sm text-[#B3B3B3]">
+            Manage your releases, covers and details.
+          </p>
+        </div>
+
         <Link
           href="/artist/releases/create"
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
+          className="group shrink-0 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm font-semibold text-white/90 backdrop-blur transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
         >
-          Create Release
+          <Plus
+            size={16}
+            strokeWidth={2.5}
+            className="text-white/70 transition group-hover:text-white/90"
+          />
+          <span className="tracking-tight">Create Release</span>
         </Link>
       </div>
 
+      {/* Content */}
       <div className="mt-8">
         {loading ? (
-          <p className="text-sm text-gray-400">Loading releases...</p>
-        ) : releases.length === 0 ? (
-          <p className="text-sm text-gray-400">No releases yet</p>
-        ) : (
-          <ul className="space-y-4">
-            {releases.map((release) => {
-              return (
-                <li
-                  key={release.id}
-                  className="rounded-lg border border-[#27272A] bg-[#18181B] p-4 hover:bg-[#1F1F23] transition"
-                >
-                  <Link href={`/artist/releases/${release.id}`} className="flex items-center gap-4">
-                    {release.cover_url ? (
-                      <img
-                        src={release.cover_url}
-                        alt={`${release.title} cover`}
-                        className="h-16 w-16 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded bg-[#1F1F23] text-xs text-gray-500">
-                        No Cover
-                      </div>
-                    )}
+          <div className="grid gap-6 sm:gap-7 lg:gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 animate-pulse"
+              >
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] overflow-hidden">
+                  <div className="aspect-square" />
+                </div>
 
-                    <div className="flex-1">
-                      <p className="text-xs uppercase tracking-wide text-gray-400">
-                        {release.release_type}
-                      </p>
-                      <p className="text-lg font-semibold">{release.title}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(release.created_at).toLocaleDateString()}
-                      </p>
+                <div className="mt-4 space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-white/[0.06]" />
+                  <div className="h-3 w-1/2 rounded bg-white/[0.05]" />
+                  <div className="h-3 w-1/3 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : releases.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8">
+            <p className="text-base font-medium">No releases yet</p>
+            <p className="mt-1 text-sm text-[#B3B3B3]">
+              Create your first release to start uploading tracks.
+            </p>
+            <div className="mt-5">
+              <Link
+                href="/artist/releases/create"
+                className="inline-flex items-center px-4 py-2 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0] transition"
+              >
+                Create Release
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:gap-7 lg:gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {releases.map((release) => {
+              const dateLabel = new Date(release.created_at).toLocaleDateString();
+
+              return (
+                <Link
+                  key={release.id}
+                  href={`/artist/releases/${release.id}`}
+                  className="group relative rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:bg-white/[0.05] hover:border-white/15 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.45)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+                >
+                  {/* Cover */}
+                  <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02]">
+                    <div className="aspect-square">
+                      {release.cover_url ? (
+                        <img
+                          src={release.cover_url}
+                          alt={`${release.title} cover`}
+                          className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.03] group-hover:brightness-[1.02]"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-xs text-[#B3B3B3]">
+                          No Cover
+                        </div>
+                      )}
                     </div>
-                  </Link>
-                </li>
+
+                    {/* Type pill */}
+                    <div className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/75 backdrop-blur">
+                      {release.release_type}
+                    </div>
+                  </div>
+
+                  {/* Text */}
+                  <div className="mt-4 min-w-0">
+                    <div className="text-base font-semibold leading-snug line-clamp-2">
+                      {release.title}
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <div className="text-sm text-[#B3B3B3]">{dateLabel}</div>
+
+                      {/* Visual-only status (no new data) */}
+                      <div className="inline-flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur">
+                          Ready
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* subtle affordance */}
+                    <div className="mt-4 flex items-center justify-between text-xs text-white/60 transition opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+                      <span>Open release →</span>
+                      <span className="text-[#00FFC6]/80">Edit</span>
+                    </div>
+                  </div>
+                </Link>
               );
             })}
-          </ul>
+          </div>
         )}
       </div>
     </div>
