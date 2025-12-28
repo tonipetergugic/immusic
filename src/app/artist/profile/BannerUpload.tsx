@@ -80,13 +80,29 @@ export default function BannerUpload({
       <BannerPreview url={currentBannerUrl} />
 
       <input
+        id="banner_upload_input"
         type="file"
         accept="image/*"
         onChange={handleUpload}
-        className="text-white"
+        className="hidden"
       />
 
-      {uploading && <p className="text-sm text-white">Uploading...</p>}
+      <div className="flex items-center justify-between gap-3">
+        <label
+          htmlFor="banner_upload_input"
+          className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition border ${
+            uploading
+              ? "bg-white/5 text-white/50 border-white/10 cursor-not-allowed"
+              : "bg-white/5 text-white/90 border-white/10 hover:border-[#00FFC6]/40 hover:bg-[#00FFC6]/5 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.15)] cursor-pointer"
+          } focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/30`}
+        >
+          {uploading ? "Uploading…" : "Upload banner"}
+        </label>
+
+        <span className="text-xs text-[#B3B3B3]">
+          JPG/PNG • Recommended 1600×400
+        </span>
+      </div>
       {errorMessage && (
         <p className="text-sm text-red-400">Upload error: {errorMessage}</p>
       )}

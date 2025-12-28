@@ -212,7 +212,7 @@ export default function ProfileForm({
             disabled={!dirty}
             className={`group relative inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
               dirty
-                ? "bg-[#00FFC6] text-black hover:bg-[#00E0B0] shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.12)]"
+                ? "bg-[#00FFC6] text-black hover:bg-[#00FFC6]/90 hover:border-[#00FFC6]/40 hover:shadow-none"
                 : "bg-white/10 text-white/40 cursor-not-allowed shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
             } focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/60 focus:ring-offset-2 focus:ring-offset-black`}
           >
