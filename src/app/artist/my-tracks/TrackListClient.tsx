@@ -24,11 +24,11 @@ export default function TrackListClient({ tracks }: TrackListClientProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 max-w-[900px] mx-auto">
       <input
         type="text"
         placeholder="Search tracks..."
-        className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white placeholder-white/40"
+        className="w-full bg-transparent border-b border-white/10 px-0 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-0"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />

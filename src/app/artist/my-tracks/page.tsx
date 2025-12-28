@@ -25,9 +25,28 @@ export default async function MyTracksPage() {
   const tracks = data ?? [];
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-white text-2xl font-semibold">My Tracks</h1>
-      <TrackListClient tracks={tracks} />
+    <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
+      <div className="mt-2">
+        <h1 className="text-4xl font-semibold tracking-tight">My Tracks</h1>
+        <p className="mt-3 text-sm text-white/60">
+          Approved tracks ready to be added to releases.
+        </p>
+      </div>
+
+      <div className="mt-10">
+        <div className="mb-6 max-w-[900px] mx-auto">
+          <div className="flex items-baseline gap-4">
+            <div className="text-2xl font-semibold tracking-tight text-white">
+              Tracks
+            </div>
+            <div className="text-base font-medium text-[#00FFC6]">
+              {tracks.length} approved
+            </div>
+          </div>
+        </div>
+
+        <TrackListClient tracks={tracks} />
+      </div>
     </div>
   );
 }

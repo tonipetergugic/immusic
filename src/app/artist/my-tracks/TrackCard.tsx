@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Music, MoreVertical } from "lucide-react";
+import { Music, MoreVertical, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   deleteTrackAction,
   renameTrackAction,
@@ -139,6 +139,9 @@ export function TrackCard({ track }: TrackCardProps) {
     };
   }, [showRenameModal, isPending, handleSaveEdit]);
 
+  const isComplete = Boolean(track?.bpm) && Boolean(track?.key) && Boolean(track?.genre);
+  const isIncomplete = !isComplete;
+
   return (
     <div className="relative bg-white/5 hover:bg-white/10 rounded-lg p-4 transition">
       <div className="flex items-center justify-between">
@@ -147,22 +150,78 @@ export function TrackCard({ track }: TrackCardProps) {
           <div className="flex flex-col">
             <div className="text-white text-sm font-medium">{track.title}</div>
             {/* BPM / Key / Genre (secondary meta) */}
-            {(track.bpm || track.key || track.genre) && (
-              <div className="text-sm text-[#B3B3B3] mt-0.5">
-                {[track.bpm ? `${track.bpm} BPM` : null, track.key ?? null, track.genre ?? null]
-                  .filter(Boolean)
-                  .join(" • ")}
-              </div>
-            )}
+            <div className="text-sm text-[#B3B3B3] mt-0.5">
+              {[
+                track.bpm ? `${track.bpm} BPM` : "— BPM",
+                track.key ? track.key : "—",
+                track.genre ? track.genre : "—",
+              ].join(" • ")}
+            </div>
             <div className="text-white/50 text-xs">{track.audio_path}</div>
           </div>
         </div>
-        <button
-          onClick={() => setOpen(!open)}
-          className="text-white/60 hover:text-white"
-        >
-          <MoreVertical size={18} />
-        </button>
+        <div className="flex items-center gap-3">
+          {isComplete && (
+            <div className="relative group">
+              <CheckCircle2
+                size={20}
+                strokeWidth={2.5}
+                className="text-emerald-400"
+                aria-label="Track ready for release"
+              />
+              <div
+                className="
+      pointer-events-none
+      absolute right-1/2 top-1/2 -translate-y-1/2 translate-x-full
+      ml-2
+      opacity-0 group-hover:opacity-100
+      transition
+      whitespace-nowrap
+      rounded-md
+      bg-black/90
+      px-2.5 py-1.5
+      text-xs text-white
+    "
+              >
+                Track ready for release
+              </div>
+            </div>
+          )}
+
+          {isIncomplete && (
+            <div className="relative group">
+              <AlertCircle
+                size={20}
+                strokeWidth={2.5}
+                className="text-yellow-400"
+                aria-label="Metadata incomplete"
+              />
+              <div
+                className="
+      pointer-events-none
+      absolute right-1/2 top-1/2 -translate-y-1/2 translate-x-full
+      ml-2
+      opacity-0 group-hover:opacity-100
+      transition
+      whitespace-nowrap
+      rounded-md
+      bg-black/90
+      px-2.5 py-1.5
+      text-xs text-white
+    "
+              >
+                Please add BPM, key and genre
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setOpen(!open)}
+            className="text-white/60 hover:text-white"
+          >
+            <MoreVertical size={18} />
+          </button>
+        </div>
       </div>
       {open && (
         <div
