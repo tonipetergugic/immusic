@@ -229,9 +229,43 @@ function ArtistAnalyticsPageInner() {
               <button className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm">
                 Sort: Streams
               </button>
-              <button className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm">
-                Last 28 days
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRangeChange("7d")}
+                  className={`px-3 py-2 rounded-xl border text-sm ${
+                    activeRange === "7d"
+                      ? "bg-white/10 border-white/20 text-white"
+                      : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                  }`}
+                >
+                  7 days
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRangeChange("28d")}
+                  className={`px-3 py-2 rounded-xl border text-sm ${
+                    activeRange === "28d"
+                      ? "bg-white/10 border-white/20 text-white"
+                      : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                  }`}
+                >
+                  28 days
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRangeChange("all")}
+                  className={`px-3 py-2 rounded-xl border text-sm ${
+                    activeRange === "all"
+                      ? "bg-white/10 border-white/20 text-white"
+                      : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                  }`}
+                >
+                  All
+                </button>
+              </div>
             </div>
           </div>
 
@@ -316,8 +350,40 @@ function ArtistAnalyticsPageInner() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm">
-                Last 28 days
+              <button
+                type="button"
+                onClick={() => handleRangeChange("7d")}
+                className={`px-3 py-2 rounded-xl border text-sm ${
+                  activeRange === "7d"
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                }`}
+              >
+                7 days
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRangeChange("28d")}
+                className={`px-3 py-2 rounded-xl border text-sm ${
+                  activeRange === "28d"
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                }`}
+              >
+                28 days
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRangeChange("all")}
+                className={`px-3 py-2 rounded-xl border text-sm ${
+                  activeRange === "all"
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                }`}
+              >
+                All
               </button>
             </div>
           </div>
