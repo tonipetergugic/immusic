@@ -598,21 +598,27 @@ function ArtistAnalyticsPageInner() {
               </Tooltip>
             </div>
 
-            <div className="mt-4 h-64 rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent relative overflow-hidden">
-              <div className="absolute inset-0 opacity-60">
-                <div className="absolute inset-0 flex flex-col justify-between py-3">
-                  <div className="h-px bg-white/10" />
-                  <div className="h-px bg-white/10" />
-                  <div className="h-px bg-white/10" />
-                  <div className="h-px bg-white/10" />
-                </div>
+            {drawerTitle.toLowerCase().includes("streams") ? (
+              <div className="mt-4">
+                <StreamsOverTimeChart range={activeRange} />
               </div>
-              <div className="absolute bottom-10 left-8 right-8 h-[2px] bg-[#00FFC6]/30" />
-              <div className="absolute bottom-16 left-10 h-2 w-2 rounded-full bg-[#00FFC6]" />
-              <div className="absolute bottom-28 left-1/3 h-2 w-2 rounded-full bg-[#00FFC6]" />
-              <div className="absolute bottom-20 left-2/3 h-2 w-2 rounded-full bg-[#00FFC6]" />
-              <div className="absolute bottom-36 right-10 h-2 w-2 rounded-full bg-[#00FFC6]" />
-            </div>
+            ) : (
+              <div className="mt-4 h-64 rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent relative overflow-hidden">
+                <div className="absolute inset-0 opacity-60">
+                  <div className="absolute inset-0 flex flex-col justify-between py-3">
+                    <div className="h-px bg-white/10" />
+                    <div className="h-px bg-white/10" />
+                    <div className="h-px bg-white/10" />
+                    <div className="h-px bg-white/10" />
+                  </div>
+                </div>
+                <div className="absolute bottom-10 left-8 right-8 h-[2px] bg-[#00FFC6]/30" />
+                <div className="absolute bottom-16 left-10 h-2 w-2 rounded-full bg-[#00FFC6]" />
+                <div className="absolute bottom-28 left-1/3 h-2 w-2 rounded-full bg-[#00FFC6]" />
+                <div className="absolute bottom-20 left-2/3 h-2 w-2 rounded-full bg-[#00FFC6]" />
+                <div className="absolute bottom-36 right-10 h-2 w-2 rounded-full bg-[#00FFC6]" />
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
