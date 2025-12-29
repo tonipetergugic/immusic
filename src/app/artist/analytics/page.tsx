@@ -482,16 +482,56 @@ function ArtistAnalyticsPageInner() {
         }}
       >
         <div className="space-y-5">
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold">Range</p>
-              <p className="text-xs text-[#B3B3B3] mt-1">
-                This drawer follows the same range as the main view.
-              </p>
+          <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">Range</p>
+                <p className="text-xs text-[#B3B3B3] mt-1">
+                  This drawer follows the same range as the main view.
+                </p>
+              </div>
+              <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#00FFC6] tabular-nums">
+                {activeRange}
+              </span>
             </div>
-            <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#00FFC6] tabular-nums">
-              {activeRange}
-            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleRangeChange("7d")}
+                className={`px-3 py-2 rounded-xl border text-sm ${
+                  activeRange === "7d"
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                }`}
+              >
+                7 days
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRangeChange("28d")}
+                className={`px-3 py-2 rounded-xl border text-sm ${
+                  activeRange === "28d"
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                }`}
+              >
+                28 days
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRangeChange("all")}
+                className={`px-3 py-2 rounded-xl border text-sm ${
+                  activeRange === "all"
+                    ? "bg-white/10 border-white/20 text-white"
+                    : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
+                }`}
+              >
+                All
+              </button>
+            </div>
           </div>
           {compareMode && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
