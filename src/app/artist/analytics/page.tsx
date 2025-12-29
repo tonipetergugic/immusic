@@ -15,6 +15,7 @@ import Tooltip from "@/components/Tooltip";
 
 function ArtistAnalyticsPageInner() {
   type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
+  type Range = "7d" | "28d" | "all";
 
   const router = useRouter();
   const pathname = usePathname();
@@ -28,11 +29,23 @@ function ArtistAnalyticsPageInner() {
     return "Overview";
   }, [searchParams]);
 
+  const rangeFromUrl = useMemo((): Range => {
+    const raw = (searchParams.get("range") || "28d").toLowerCase();
+    if (raw === "7d") return "7d";
+    if (raw === "all") return "all";
+    return "28d";
+  }, [searchParams]);
+
   const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl);
+  const [activeRange, setActiveRange] = useState<Range>(rangeFromUrl);
 
   useEffect(() => {
     setActiveTab(tabFromUrl);
   }, [tabFromUrl]);
+
+  useEffect(() => {
+    setActiveRange(rangeFromUrl);
+  }, [rangeFromUrl]);
 
   useEffect(() => {
     const detail = searchParams.get("detail");
@@ -46,6 +59,13 @@ function ArtistAnalyticsPageInner() {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab.toLowerCase());
+    router.replace(`${pathname}?${next.toString()}`);
+  };
+
+  const handleRangeChange = (range: Range) => {
+    setActiveRange(range);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("range", range);
     router.replace(`${pathname}?${next.toString()}`);
   };
 
@@ -66,7 +86,7 @@ function ArtistAnalyticsPageInner() {
 
   return (
     <div className="space-y-6">
-      <AnalyticsHeader />
+      <AnalyticsHeader activeRange={activeRange} onRangeChange={handleRangeChange} />
 
       <AnalyticsTabs value={activeTab} onChange={handleTabChange} />
 
@@ -81,7 +101,7 @@ function ArtistAnalyticsPageInner() {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <div className="xl:col-span-2 space-y-4">
-              <StreamsOverTimeChart />
+              <StreamsOverTimeChart range={activeRange} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ChartCard title="Top tracks" subtitle="Bars preview (data later)" kind="bars" onOpenDetails={openDrawer} />
                 <ChartCard title="Discovery sources" subtitle="Bars preview (data later)" kind="bars" onOpenDetails={openDrawer} />
@@ -396,6 +416,17 @@ function ArtistAnalyticsPageInner() {
         }}
       >
         <div className="space-y-5">
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Range</p>
+              <p className="text-xs text-[#B3B3B3] mt-1">
+                This drawer follows the same range as the main view.
+              </p>
+            </div>
+            <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#00FFC6] tabular-nums">
+              {activeRange}
+            </span>
+          </div>
           {compareMode && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-sm font-semibold">Compare mode</p>
