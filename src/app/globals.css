@@ -2,64 +2,7 @@
 
 html,
 body {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  background-color: #0E0E10;
+  color: #ffffff;
 }
-
-:root {
-  --background: #0E0E10;
-  --foreground: #ffffff;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-@keyframes pulseGlow {
-  0% {
-    box-shadow: 0 0 45px rgba(0, 255, 198, 0.12);
-  }
-  50% {
-    box-shadow: 0 0 70px rgba(0, 255, 198, 0.18);
-  }
-  100% {
-    box-shadow: 0 0 45px rgba(0, 255, 198, 0.12);
-  }
-}
-
-/* ------- Improved Dark Scrollbar (main only, thicker 20px) ------- */
-main::-webkit-scrollbar {
-  width: 20px; /* thicker and fully visible */
-}
-
-main::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-main::-webkit-scrollbar-thumb {
-  background-color: #3d3d42;
-  border-radius: 12px;
-  border: 5px solid transparent; /* inset effect */
-  background-clip: content-box; 
-}
-
-main::-webkit-scrollbar-thumb:hover {
-  background-color: #4a4a50;
-}
-
-/* Firefox */
-main {
-  scrollbar-width: auto;
-  scrollbar-color: #4a4a50 transparent;
-}
-

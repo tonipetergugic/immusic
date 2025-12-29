@@ -10,6 +10,7 @@ import ChartCard from "./components/ChartCard";
 import WorldMapCard from "./components/WorldMapCard";
 import AnalyticsTabs from "./components/AnalyticsTabs";
 import AnalyticsDrawer from "./components/AnalyticsDrawer";
+import StreamsOverTimeChart from "./components/StreamsOverTimeChart";
 import Tooltip from "@/components/Tooltip";
 
 function ArtistAnalyticsPageInner() {
@@ -80,7 +81,7 @@ function ArtistAnalyticsPageInner() {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <div className="xl:col-span-2 space-y-4">
-              <ChartCard title="Streams over time" subtitle="Line preview (data later)" kind="line" onOpenDetails={openDrawer} />
+              <StreamsOverTimeChart />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ChartCard title="Top tracks" subtitle="Bars preview (data later)" kind="bars" onOpenDetails={openDrawer} />
                 <ChartCard title="Discovery sources" subtitle="Bars preview (data later)" kind="bars" onOpenDetails={openDrawer} />

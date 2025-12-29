@@ -58,6 +58,7 @@ src/components/PlaylistRow.tsx
 src/components/LogoutButton.tsx
 src/components/CreatePlaylistModal.tsx
 src/components/TrackOptionsMenu.tsx
+src/components/Tooltip.tsx
 src/components/CoverDropzone.tsx
 src/components/DeletePlaylistModal.tsx
 src/components/PlaylistSettingsMenu.tsx
