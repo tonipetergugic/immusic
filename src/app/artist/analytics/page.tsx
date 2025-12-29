@@ -60,6 +60,7 @@ function ArtistAnalyticsPageInner() {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab.toLowerCase());
+    next.delete("detail");
     router.replace(`${pathname}?${next.toString()}`);
   };
 
@@ -637,6 +638,10 @@ function ArtistAnalyticsPageInner() {
             {drawerTitle.toLowerCase().includes("streams") ? (
               <div className="mt-4">
                 <StreamsOverTimeChart range={activeRange} />
+              </div>
+            ) : drawerTitle.toLowerCase().includes("listeners") ? (
+              <div className="mt-4">
+                <ListenersOverTimeChart range={activeRange} />
               </div>
             ) : (
               <div className="mt-4 h-64 rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent relative overflow-hidden">
