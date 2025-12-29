@@ -11,6 +11,7 @@ import WorldMapCard from "./components/WorldMapCard";
 import AnalyticsTabs from "./components/AnalyticsTabs";
 import AnalyticsDrawer from "./components/AnalyticsDrawer";
 import StreamsOverTimeChart from "./components/StreamsOverTimeChart";
+import ListenersOverTimeChart from "./components/ListenersOverTimeChart";
 import Tooltip from "@/components/Tooltip";
 
 function ArtistAnalyticsPageInner() {
@@ -119,12 +120,7 @@ function ArtistAnalyticsPageInner() {
         <div className="mt-8 grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2 space-y-4">
             <WorldMapCard />
-            <ChartCard
-              title="Listeners over time"
-              subtitle="Audience trend (preview)"
-              kind="line"
-              onOpenDetails={openDrawer}
-            />
+            <ListenersOverTimeChart range={activeRange} />
           </div>
 
           <div className="space-y-4">
