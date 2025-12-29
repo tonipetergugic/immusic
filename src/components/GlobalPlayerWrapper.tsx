@@ -49,7 +49,7 @@ export default function GlobalPlayerWrapper({
         </div>
       )}
 
-      <div className="min-h-screen pb-24">{children}</div>
+      <div className="pb-24">{children}</div>
 
       <div
         className="

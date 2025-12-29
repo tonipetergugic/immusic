@@ -48,6 +48,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const sessionIdRef = useRef<string | null>(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
+  const getCountryCodeISO2 = (): string => {
+    if (typeof navigator === "undefined") return "ZZ";
+    const lang = navigator.language || "";
+    const match = lang.match(/-([A-Za-z]{2})$/);
+    if (!match) return "ZZ";
+    return match[1].toUpperCase();
+  };
+
+  const getCountryCodeFromCookie = (): string | null => {
+    if (typeof document === "undefined") return null;
+    const m = document.cookie.match(/(?:^|;\s*)immusic_cc=([^;]+)/);
+    if (!m) return null;
+    const v = decodeURIComponent(m[1] || "").trim().toUpperCase();
+    if (/^[A-Z]{2}$/.test(v)) return v;
+    return null;
+  };
+
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -232,19 +249,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       listeningChunkSecondsRef.current += 1;
 
       if (listeningChunkSecondsRef.current >= 5) {
-        const eventId = crypto.randomUUID();
         if (!sessionIdRef.current) {
           sessionIdRef.current = crypto.randomUUID();
         }
+        const countryCode = getCountryCodeFromCookie() ?? getCountryCodeISO2();
         (async () => {
-          const { error } = await supabase.rpc("rpc_track_listen_ping", {
+          const { data, error } = await supabase.rpc("rpc_track_listen_ping", {
             p_track_id: currentTrack.id,
-            p_delta_seconds: 5,
-            p_event_id: eventId,
             p_session_id: sessionIdRef.current,
+            p_delta_seconds: 5,
+            p_country_code: countryCode,
           });
+
           if (error) {
             console.error("listen ping error", error);
+            return;
           }
         })();
 

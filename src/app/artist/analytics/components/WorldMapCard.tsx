@@ -11,7 +11,7 @@ const mockCountries = [
   { country: "Spain", share: 7 },
 ];
 
-export default function WorldMapCard() {
+export default function WorldMapCard({ artistId }: { artistId: string }) {
   const [mode, setMode] = useState<"Countries" | "Regions">("Countries");
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
@@ -19,7 +19,7 @@ export default function WorldMapCard() {
         <div>
           <p className="text-sm font-semibold">Listener locations</p>
           <p className="text-xs text-[#B3B3B3] mt-1">
-            World view preview — we’ll add a real map later.
+            World view preview — we'll add a real map later.
           </p>
         </div>
         <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-black/20 p-1">
@@ -46,7 +46,7 @@ export default function WorldMapCard() {
         </div>
       </div>
 
-      <AudienceWorldMap />
+      <AudienceWorldMap artistId={artistId} />
 
       <p className="text-xs text-[#B3B3B3] mt-4">
         Tip: Pins show where your listeners are coming from (UI preview).

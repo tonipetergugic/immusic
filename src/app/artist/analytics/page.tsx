@@ -13,6 +13,9 @@ import AnalyticsDrawer from "./components/AnalyticsDrawer";
 import StreamsOverTimeChart from "./components/StreamsOverTimeChart";
 import ListenersOverTimeChart from "./components/ListenersOverTimeChart";
 import Tooltip from "@/components/Tooltip";
+import { fetchArtistAnalyticsSummary } from "@/lib/analytics/fetchArtistAnalytics.client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { fetchTopTracks } from "@/lib/analytics/fetchTopTracks.client";
 
 function ArtistAnalyticsPageInner() {
   type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
@@ -40,6 +43,24 @@ function ArtistAnalyticsPageInner() {
   const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl);
   const [activeRange, setActiveRange] = useState<Range>(rangeFromUrl);
 
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<any>(null);
+  const [artistId, setArtistId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    const run = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setArtistId(user.id);
+      }
+    };
+    run();
+  }, []);
+
   useEffect(() => {
     setActiveTab(tabFromUrl);
   }, [tabFromUrl]);
@@ -47,6 +68,99 @@ function ArtistAnalyticsPageInner() {
   useEffect(() => {
     setActiveRange(rangeFromUrl);
   }, [rangeFromUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setSummaryLoading(true);
+      setSummaryError(null);
+      try {
+        const s = await fetchArtistAnalyticsSummary(activeRange);
+        if (!cancelled) setSummary(s);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        if (!cancelled) {
+          setSummaryError(msg);
+          setSummary(null);
+        }
+      } finally {
+        if (!cancelled) setSummaryLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRange]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (activeTab !== "Tracks") return;
+
+      setTopTracksLoading(true);
+      setTopTracksError(null);
+
+      try {
+        const res = await fetchTopTracks(activeRange);
+        const items = res.items || [];
+
+        if (items.length === 0) {
+          if (!cancelled) setTopTracks([]);
+          return;
+        }
+
+        const supabase = createSupabaseBrowserClient();
+        const ids = items.map((i) => i.track_id);
+
+        const { data: tracks, error } = await supabase
+          .from("tracks")
+          .select("id,title")
+          .in("id", ids);
+
+        if (error) throw new Error(error.message);
+
+        const titleById = new Map<string, string>();
+        (tracks || []).forEach((t) => titleById.set(t.id, t.title));
+
+        const merged = items.map((i) => ({
+          track_id: i.track_id,
+          title: titleById.get(i.track_id) || "Unknown track",
+          streams: i.streams || 0,
+        }));
+
+        if (!cancelled) setTopTracks(merged);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        if (!cancelled) {
+          setTopTracksError(msg);
+          setTopTracks([]);
+        }
+      } finally {
+        if (!cancelled) setTopTracksLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, activeRange]);
+
+  const liveStreamsTotal =
+    summary?.streams_over_time?.reduce((acc: number, p: any) => acc + (p.streams || 0), 0) ?? null;
+
+  const liveLastListeners =
+    summary?.listeners_over_time?.length
+      ? summary.listeners_over_time[summary.listeners_over_time.length - 1].listeners ?? 0
+      : null;
+
+  function formatInt(v: number) {
+    return new Intl.NumberFormat("en-US").format(v);
+  }
 
   useEffect(() => {
     const detail = searchParams.get("detail");
@@ -76,6 +190,10 @@ function ArtistAnalyticsPageInner() {
   const [drawerSubtitle, setDrawerSubtitle] = useState<string | undefined>(undefined);
   const [compareMode, setCompareMode] = useState(false);
 
+  const [topTracksLoading, setTopTracksLoading] = useState(false);
+  const [topTracksError, setTopTracksError] = useState<string | null>(null);
+  const [topTracks, setTopTracks] = useState<Array<{ track_id: string; title: string; streams: number }>>([]);
+
   const openDrawer = (title: string, subtitle?: string) => {
     setDrawerTitle(title);
     setDrawerSubtitle(subtitle);
@@ -95,8 +213,18 @@ function ArtistAnalyticsPageInner() {
       {activeTab === "Overview" && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <StatCard label="Streams" value="128,430" delta="+12%" helper="vs previous period" />
-            <StatCard label="Listeners" value="34,120" delta="+7%" helper="unique listeners" />
+            <StatCard
+              label="Streams"
+              value={summaryLoading ? "…" : liveStreamsTotal === null ? "—" : formatInt(liveStreamsTotal)}
+              delta="+12%"
+              helper="vs previous period"
+            />
+            <StatCard
+              label="Listeners"
+              value={summaryLoading ? "…" : liveLastListeners === null ? "—" : formatInt(liveLastListeners)}
+              delta="+7%"
+              helper="unique listeners"
+            />
             <StatCard label="Saves" value="9,842" delta="+4%" helper="track + release saves" />
             <StatCard label="Followers" value="1,240" delta="+2%" helper="artist profile" />
           </div>
@@ -120,7 +248,7 @@ function ArtistAnalyticsPageInner() {
       {activeTab === "Audience" && (
         <div className="mt-8 grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2 space-y-4">
-            <WorldMapCard />
+            {artistId && <WorldMapCard artistId={artistId} />}
             <ListenersOverTimeChart range={activeRange} />
           </div>
 
@@ -274,15 +402,19 @@ function ArtistAnalyticsPageInner() {
               </div>
 
               <div className="divide-y divide-white/10">
-                {[
-                  { title: "Come On in D Minor", streams: "12,430", saves: "842", rating: "3.2" },
-                  { title: "Cosmic Puls", streams: "9,210", saves: "611", rating: "3.0" },
-                  { title: "Dark Places", streams: "7,980", saves: "534", rating: "3.4" },
-                  { title: "Come on now", streams: "6,120", saves: "401", rating: "2.9" },
-                  { title: "Uplift Run", streams: "5,440", saves: "388", rating: "3.1" },
-                ].map((t, idx) => (
+                {topTracksLoading && (
+                  <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">Loading…</div>
+                )}
+                {topTracksError && (
+                  <div className="px-4 md:px-5 py-3 text-xs text-red-400 break-words">{topTracksError}</div>
+                )}
+                {!topTracksLoading && !topTracksError && topTracks.length === 0 && (
+                  <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">No data yet.</div>
+                )}
+
+                {topTracks.map((t, idx) => (
                   <div
-                    key={t.title}
+                    key={t.track_id}
                     className="px-4 md:px-5 py-3 flex items-center gap-4 hover:bg-white/5 transition"
                   >
                     <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
@@ -299,13 +431,13 @@ function ArtistAnalyticsPageInner() {
                     </div>
 
                     <div className="hidden md:flex items-center gap-6">
-                      <div className="text-sm text-white/90 tabular-nums">{t.streams}</div>
-                      <div className="text-sm text-white/90 tabular-nums">{t.saves}</div>
-                      <div className="text-sm text-[#00FFC6] tabular-nums">{t.rating}</div>
+                      <div className="text-sm text-white/90 tabular-nums">{new Intl.NumberFormat("en-US").format(t.streams)}</div>
+                      <div className="text-sm text-white/90 tabular-nums">—</div>
+                      <div className="text-sm text-[#00FFC6] tabular-nums">—</div>
                     </div>
 
                     <div className="md:hidden text-sm text-[#00FFC6] tabular-nums">
-                      {t.streams}
+                      {new Intl.NumberFormat("en-US").format(t.streams)}
                     </div>
                   </div>
                 ))}
@@ -740,7 +872,6 @@ function ArtistAnalyticsPageInner() {
     </div>
   );
 }
-
 export default function ArtistAnalyticsPage() {
   return (
     <Suspense fallback={<div className="text-sm text-[#B3B3B3]">Loading analytics…</div>}>
@@ -748,3 +879,4 @@ export default function ArtistAnalyticsPage() {
     </Suspense>
   );
 }
+

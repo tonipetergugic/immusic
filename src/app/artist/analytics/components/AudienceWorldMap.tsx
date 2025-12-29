@@ -5,21 +5,12 @@ import { zoom, zoomIdentity } from "d3-zoom";
 import type { ZoomTransform } from "d3-zoom";
 import { select } from "d3-selection";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CountryValues = Record<string, number>; // key = ISO_A3, value = listeners/streams
 
-// Mock values (Phase 2). Later: load from Supabase aggregated listen_events by country.
-const mockValues: CountryValues = {
-  DEU: 1240,
-  GBR: 860,
-  NLD: 540,
-  ESP: 420,
-  USA: 980,
-  BRA: 310,
-  AUS: 260,
-  FRA: 610,
-  ITA: 480,
-};
+// Live values from analytics_country_streams_30d (30d)
+const EMPTY_VALUES: CountryValues = {};
 
 function getFill(value: number | undefined) {
   // simple bucket coloring (Tailwind-free inline colors to keep it stable)
@@ -30,20 +21,22 @@ function getFill(value: number | undefined) {
   return "rgba(0,255,198,0.22)";
 }
 
-export default function AudienceWorldMap() {
+export default function AudienceWorldMap({ artistId }: { artistId: string }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const zoomRef = useRef<any>(null);
   const [t, setT] = useState<ZoomTransform>(() => zoomIdentity);
+  const [values, setValues] = useState<CountryValues>(EMPTY_VALUES);
+  const [totalStreams, setTotalStreams] = useState(0);
 
   useEffect(() => {
     if (!svgRef.current) return;
 
     const svg = select(svgRef.current);
 
-    const z = zoom<SVGSVGElement, unknown>()
+    const z = zoom()
       .scaleExtent([1, 6])
-      .on("zoom", (event) => {
-        setT(event.transform);
+      .on("zoom", (event: any) => {
+        setT(event.transform as ZoomTransform);
       });
 
     zoomRef.current = z;
@@ -56,6 +49,40 @@ export default function AudienceWorldMap() {
       svg.on(".zoom", null);
     };
   }, []);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("analytics_artist_country_streams_30d")
+        .select("country_code, streams")
+        .eq("artist_id", artistId)
+        .order("streams", { ascending: false });
+
+      if (error || !data) {
+        setValues(EMPTY_VALUES);
+        setTotalStreams(0);
+        return;
+      }
+
+      const next: CountryValues = {};
+      let sum = 0;
+
+      for (const r of data) {
+        const code = String(r.country_code ?? "").trim().toUpperCase();
+        const n = Number(r.streams ?? 0);
+        if (!code) continue;
+        next[code] = (next[code] ?? 0) + n;
+        sum += n;
+      }
+
+      setValues(next);
+      setTotalStreams(sum);
+    };
+
+    run();
+  }, [artistId]);
 
   const handleResetView = () => {
     if (!svgRef.current || !zoomRef.current) return;
@@ -95,8 +122,8 @@ export default function AudienceWorldMap() {
               style={{ width: "100%", height: "100%" }}
             >
               <Geographies geography="/maps/countries.geojson">
-                {({ geographies }) =>
-                  geographies.map((geo) => {
+                {({ geographies }: { geographies: any[] }) =>
+                  geographies.map((geo: any) => {
                     const iso3 =
                       (geo.properties?.ISO_A3 as string) ||
                       (geo.properties?.ADM0_A3 as string) ||
@@ -107,7 +134,15 @@ export default function AudienceWorldMap() {
                       (geo.properties?.name as string) ||
                       "Unknown";
 
-                    const value = iso3 ? mockValues[iso3] : undefined;
+                    const iso2 =
+                      (geo.properties?.ISO_A2 as string) ||
+                      (geo.properties?.ADM0_A3 as string)?.slice(0, 2) ||
+                      "";
+
+                    const value =
+                      (iso3 && values[iso3]) ||
+                      (iso2 && values[iso2]) ||
+                      undefined;
 
                     return (
                       <Geography
@@ -121,7 +156,13 @@ export default function AudienceWorldMap() {
                           hover: { outline: "none", fill: "rgba(0,255,198,0.95)" },
                           pressed: { outline: "none" },
                         }}
-                        title={`${name}${value ? ` · ${value.toLocaleString()} listeners` : ""}`}
+                        title={
+                          value
+                            ? `${name} · ${value.toLocaleString()} streams${
+                                totalStreams > 0 ? ` · ${Math.round((value / totalStreams) * 100)}%` : ""
+                              }`
+                            : `${name}`
+                        }
                       />
                     );
                   })
@@ -153,9 +194,9 @@ export default function AudienceWorldMap() {
 
       {/* bottom label */}
       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-        <span className="text-xs text-[#B3B3B3]">Audience map (mock)</span>
+        <span className="text-xs text-[#B3B3B3]">Audience map (last 30d)</span>
         <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/30 text-[#00FFC6]">
-          Live later
+          Live
         </span>
       </div>
     </div>

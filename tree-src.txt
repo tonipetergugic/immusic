@@ -30,6 +30,8 @@ src/app/profile
 src/app/profile/actions.ts
 src/app/profile/page.tsx
 src/app/layout.tsx
+src/app/api
+src/app/api/artist
 src/app/account
 src/app/account/page.tsx
 src/app/page.tsx
@@ -82,3 +84,7 @@ src/lib/supabase/getProfile.ts
 src/lib/supabase/server.ts
 src/lib/getReleaseQueue.server.ts
 src/lib/playerTrack.ts
+src/lib/analytics
+src/lib/analytics/fetchTopTracks.client.ts
+src/lib/analytics/getArtistAnalytics.server.ts
+src/lib/analytics/fetchArtistAnalytics.client.ts

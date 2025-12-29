@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -10,47 +11,58 @@ import {
   CartesianGrid,
 } from "recharts";
 
+import { fetchArtistAnalyticsSummary } from "@/lib/analytics/fetchArtistAnalytics.client";
+
 type Range = "7d" | "28d" | "all";
 type Point = { date: string; listeners: number };
-
-const mockAll: Point[] = [
-  { date: "Dec 01", listeners: 42 },
-  { date: "Dec 02", listeners: 46 },
-  { date: "Dec 03", listeners: 45 },
-  { date: "Dec 04", listeners: 48 },
-  { date: "Dec 05", listeners: 55 },
-  { date: "Dec 06", listeners: 52 },
-  { date: "Dec 07", listeners: 58 },
-  { date: "Dec 08", listeners: 50 },
-  { date: "Dec 09", listeners: 49 },
-  { date: "Dec 10", listeners: 54 },
-  { date: "Dec 11", listeners: 62 },
-  { date: "Dec 12", listeners: 64 },
-  { date: "Dec 13", listeners: 71 },
-  { date: "Dec 14", listeners: 69 },
-  { date: "Dec 15", listeners: 66 },
-  { date: "Dec 16", listeners: 63 },
-  { date: "Dec 17", listeners: 65 },
-  { date: "Dec 18", listeners: 68 },
-  { date: "Dec 19", listeners: 72 },
-  { date: "Dec 20", listeners: 78 },
-  { date: "Dec 21", listeners: 82 },
-  { date: "Dec 22", listeners: 79 },
-  { date: "Dec 23", listeners: 81 },
-  { date: "Dec 24", listeners: 83 },
-  { date: "Dec 25", listeners: 74 },
-  { date: "Dec 26", listeners: 77 },
-  { date: "Dec 27", listeners: 86 },
-  { date: "Dec 28", listeners: 92 },
-];
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
+function formatDayLabel(isoDay: string) {
+  // isoDay: "YYYY-MM-DD"
+  const d = new Date(`${isoDay}T00:00:00`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+}
+
 export default function ListenersOverTimeChart({ range }: { range: Range }) {
-  const data =
-    range === "7d" ? mockAll.slice(-7) : range === "28d" ? mockAll.slice(-28) : mockAll;
+  const [data, setData] = useState<Point[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const summary = await fetchArtistAnalyticsSummary(range);
+
+        const points: Point[] = (summary.listeners_over_time || []).map((p) => ({
+          date: formatDayLabel(p.day),
+          listeners: p.listeners,
+        }));
+
+        if (!cancelled) setData(points);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Unknown error";
+        if (!cancelled) {
+          setError(message);
+          setData([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
 
   const last = data[data.length - 1]?.listeners ?? 0;
 
@@ -59,9 +71,7 @@ export default function ListenersOverTimeChart({ range }: { range: Range }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold text-white">Listeners over time</div>
-          <div className="mt-1 text-sm text-[#B3B3B3]">
-            Mock data (Phase 2) · Range: {range} · Supabase later
-          </div>
+          <div className="mt-1 text-sm text-[#B3B3B3]">Live data · Range: {range}</div>
         </div>
 
         <div className="text-right">
@@ -70,16 +80,26 @@ export default function ListenersOverTimeChart({ range }: { range: Range }) {
         </div>
       </div>
 
+      {loading && <div className="mt-3 text-xs text-[#B3B3B3]">Loading…</div>}
+      {error && (
+        <div className="mt-3 text-xs text-red-400 break-words">{error}</div>
+      )}
+      {!loading && !error && data.length === 0 && (
+        <div className="mt-3 text-xs text-[#B3B3B3]">No data yet.</div>
+      )}
+
       <div className="mt-4 h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.08)" />
+
             <XAxis
               dataKey="date"
               tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 12 }}
               axisLine={{ stroke: "rgba(255,255,255,0.12)" }}
               tickLine={{ stroke: "rgba(255,255,255,0.12)" }}
             />
+
             <YAxis
               width={44}
               tickFormatter={(v) => formatNumber(Number(v))}
@@ -87,6 +107,7 @@ export default function ListenersOverTimeChart({ range }: { range: Range }) {
               axisLine={{ stroke: "rgba(255,255,255,0.12)" }}
               tickLine={{ stroke: "rgba(255,255,255,0.12)" }}
             />
+
             <Tooltip
               contentStyle={{
                 background: "#0E0E10",
@@ -97,6 +118,7 @@ export default function ListenersOverTimeChart({ range }: { range: Range }) {
               labelStyle={{ color: "rgba(255,255,255,0.8)" }}
               formatter={(value) => [formatNumber(Number(value)), "Listeners"]}
             />
+
             <Line
               type="monotone"
               dataKey="listeners"
@@ -111,4 +133,3 @@ export default function ListenersOverTimeChart({ range }: { range: Range }) {
     </div>
   );
 }
-

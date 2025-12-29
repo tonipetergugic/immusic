@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -10,51 +11,57 @@ import {
   CartesianGrid,
 } from "recharts";
 
+import { fetchArtistAnalyticsSummary } from "@/lib/analytics/fetchArtistAnalytics.client";
+
 type Range = "7d" | "28d" | "all";
 type Point = { date: string; streams: number };
-
-const mockStreamsAll: Point[] = [
-  { date: "Dec 01", streams: 120 },
-  { date: "Dec 02", streams: 135 },
-  { date: "Dec 03", streams: 128 },
-  { date: "Dec 04", streams: 142 },
-  { date: "Dec 05", streams: 180 },
-  { date: "Dec 06", streams: 165 },
-  { date: "Dec 07", streams: 190 },
-  { date: "Dec 08", streams: 155 },
-  { date: "Dec 09", streams: 140 },
-  { date: "Dec 10", streams: 172 },
-  { date: "Dec 11", streams: 210 },
-  { date: "Dec 12", streams: 225 },
-  { date: "Dec 13", streams: 260 },
-  { date: "Dec 14", streams: 240 },
-  { date: "Dec 15", streams: 230 },
-  { date: "Dec 16", streams: 215 },
-  { date: "Dec 17", streams: 220 },
-  { date: "Dec 18", streams: 245 },
-  { date: "Dec 19", streams: 270 },
-  { date: "Dec 20", streams: 290 },
-  { date: "Dec 21", streams: 310 },
-  { date: "Dec 22", streams: 295 },
-  { date: "Dec 23", streams: 305 },
-  { date: "Dec 24", streams: 315 },
-  { date: "Dec 25", streams: 280 },
-  { date: "Dec 26", streams: 300 },
-  { date: "Dec 27", streams: 330 },
-  { date: "Dec 28", streams: 360 },
-];
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
+function formatDayLabel(isoDay: string) {
+  // isoDay: "YYYY-MM-DD"
+  const d = new Date(`${isoDay}T00:00:00`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+}
+
 export default function StreamsOverTimeChart({ range }: { range: Range }) {
-  const data =
-    range === "7d"
-      ? mockStreamsAll.slice(-7)
-      : range === "28d"
-      ? mockStreamsAll.slice(-28)
-      : mockStreamsAll;
+  const [data, setData] = useState<Point[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const summary = await fetchArtistAnalyticsSummary(range);
+        const points: Point[] = (summary.streams_over_time || []).map((p) => ({
+          date: formatDayLabel(p.day),
+          streams: p.streams,
+        }));
+
+        if (!cancelled) setData(points);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Unknown error";
+        if (!cancelled) {
+          setError(message);
+          setData([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
 
   const last = data[data.length - 1]?.streams ?? 0;
 
@@ -64,7 +71,7 @@ export default function StreamsOverTimeChart({ range }: { range: Range }) {
         <div>
           <div className="text-lg font-semibold text-white">Streams over time</div>
           <div className="mt-1 text-sm text-[#B3B3B3]">
-            Mock data (Phase 2) · Range: {range} · Supabase later
+            Live data · Range: {range}
           </div>
         </div>
 
@@ -73,6 +80,15 @@ export default function StreamsOverTimeChart({ range }: { range: Range }) {
           <div className="text-base font-semibold text-white">{formatNumber(last)}</div>
         </div>
       </div>
+
+      {loading && (
+        <div className="mt-3 text-xs text-[#B3B3B3]">Loading…</div>
+      )}
+      {error && (
+        <div className="mt-3 text-xs text-red-400 break-words">
+          {error}
+        </div>
+      )}
 
       <div className="mt-4 h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
