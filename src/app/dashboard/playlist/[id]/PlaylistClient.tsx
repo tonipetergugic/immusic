@@ -429,7 +429,7 @@ export default function PlaylistClient({
                 w-full sm:w-auto
               "
             >
-              {isSavedToLibrary ? "Remove" : "Save"}
+              {isSavedToLibrary ? "Remove from library" : "Save to library"}
             </button>
           ) : null}
 

@@ -86,7 +86,7 @@ export default function PlaylistHeaderClient({
       />
 
       {/* CONTENT */}
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-10 pt-10 pb-14 px-10">
+      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-end gap-10 pt-10 pb-14 px-10">
         {/* COVER */}
         <div
           className={`
@@ -97,7 +97,8 @@ export default function PlaylistHeaderClient({
           <div
             onClick={isOwner ? onEditCover : undefined}
             className={`
-              relative w-40 h-40 sm:w-48 sm:h-48 rounded-xl overflow-hidden
+              relative w-[220px] h-[220px] md:w-[280px] md:h-[280px]
+              rounded-xl overflow-hidden
               border border-[#1A1A1C] bg-gradient-to-br from-neutral-900 to-neutral-800
               flex items-center justify-center
               ${isOwner ? "cursor-pointer" : "cursor-default"}
@@ -134,7 +135,7 @@ export default function PlaylistHeaderClient({
           <h1
             className="
               font-semibold text-white tracking-tight leading-tight
-              text-3xl sm:text-4xl md:text-5xl
+              text-5xl md:text-7xl
               max-w-[70vw] md:max-w-[600px]
               truncate
             "
