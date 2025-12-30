@@ -1,11 +1,12 @@
 "use client";
 
+import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import type { ReleaseTrackRow } from "@/types/releaseTrack";
 
 export default function ReleasePlayButton({ tracks }: { tracks: ReleaseTrackRow[] }) {
-  const { playQueue } = usePlayer();
+  const { playQueue, currentTrack, isPlaying, togglePlay, queue } = usePlayer();
 
   const playerTracks = tracks.map((rt) =>
     toPlayerTrack({
@@ -23,33 +24,48 @@ export default function ReleasePlayButton({ tracks }: { tracks: ReleaseTrackRow[
     })
   );
 
-  const handlePlay = () => {
-    if (playerTracks.length > 0) {
+  // Check if this release is currently playing
+  const firstTrackId = playerTracks[0]?.id;
+  const isCurrent =
+    !!firstTrackId &&
+    currentTrack?.id === firstTrackId &&
+    queue.length === playerTracks.length &&
+    queue.every((t, i) => t.id === playerTracks[i]?.id);
+
+  const handleClick = () => {
+    if (isCurrent) {
+      togglePlay();
+    } else if (playerTracks.length > 0) {
       playQueue(playerTracks, 0);
     }
   };
 
   return (
     <button
-      onClick={(e) => {
+      type="button"
+      onPointerDown={(e) => {
+        e.preventDefault();
         e.stopPropagation();
-        handlePlay();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleClick();
       }}
       className="
-        absolute inset-0 m-auto
         w-14 h-14 rounded-full
-        bg-[#00FFC6] text-black
+        bg-[#00FFC6] hover:bg-[#00E0B0]
         flex items-center justify-center
-        text-xl
-        opacity-0 group-hover:opacity-100
-        shadow-[0_0_20px_rgba(0,255,198,0.4)]
-        backdrop-blur-sm
-        hover:bg-[#00E0B0]
-        transition-all duration-300
+        shadow-[0_0_20px_rgba(0,255,198,0.40)]
+        backdrop-blur-md
       "
-      style={{ pointerEvents: 'auto' }}
+      aria-label={isCurrent && isPlaying ? "Pause release" : "Play release"}
     >
-      ▶
+      {isCurrent && isPlaying ? (
+        <Pause size={26} className="text-black" />
+      ) : (
+        <Play size={26} className="text-black" />
+      )}
     </button>
   );
 }

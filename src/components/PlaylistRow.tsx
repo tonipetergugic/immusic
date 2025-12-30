@@ -32,6 +32,7 @@ export default function PlaylistRow({
     stream_count: (track as any)?.stream_count ?? 0,
   });
   const [myStars, setMyStars] = useState<number | null>(track.my_stars ?? null);
+  const [hover, setHover] = useState<number | null>(null);
   const supabase = createSupabaseBrowserClient();
   const router = useRouter();
 
@@ -63,6 +64,7 @@ export default function PlaylistRow({
 
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
   const displayStars = myStars ?? Math.floor(agg.rating_avg ?? 0);
+  const effective = hover ?? displayStars;
 
   useEffect(() => {
     setAgg({
@@ -277,30 +279,40 @@ export default function PlaylistRow({
 
         {/* Line 3: Track meta (track-related) */}
         <div className="mt-2 flex items-center gap-2 min-w-0">
-          {/* Interactive stars stay exactly as buttons calling handleRate */}
           {user && track.release_track_id ? (
-            <div className="flex items-center gap-1 text-xs text-white/80">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => handleRate(n)}
-                  disabled={submitting}
-                  className={`transition-colors ${
-                    submitting ? "opacity-60 cursor-not-allowed" : "hover:text-[#00FFC6]"
-                  }`}
-                >
-                  {displayStars >= n ? "★" : "☆"}
-                </button>
-              ))}
+            <div className="flex items-center gap-2 text-xs text-neutral-500">
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={submitting}
+                    onMouseEnter={() => setHover(n)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleRate(n);
+                    }}
+                    className={`transition-colors ${
+                      submitting ? "opacity-60 cursor-not-allowed" : "hover:text-[#00FFC6]"
+                    } ${effective >= n ? "text-[#00FFC6]" : "text-neutral-600"}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+
+              {agg.rating_count && agg.rating_count > 0 ? (
+                <span className="tabular-nums whitespace-nowrap">
+                  {Number(agg.rating_avg ?? 0).toFixed(1)} ({agg.rating_count})
+                </span>
+              ) : (
+                <span className="text-neutral-600 whitespace-nowrap">No ratings</span>
+              )}
             </div>
           ) : (
             <span className="text-xs text-white/60">★</span>
           )}
-
-          <span className="text-xs text-white/70 whitespace-nowrap">
-            {agg.rating_avg?.toFixed(1) ?? "—"} ({agg.rating_count})
-          </span>
 
           <span className="text-xs text-white/30">·</span>
 

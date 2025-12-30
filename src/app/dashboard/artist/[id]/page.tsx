@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
 import ClientTrackRows from "./ClientTrackRows";
@@ -12,7 +12,6 @@ export default async function ArtistPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
   if (!id) return notFound();
 
   const supabase = await createSupabaseServerClient();
@@ -21,15 +20,18 @@ export default async function ArtistPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: artist } = await supabase
+  // Single source of truth: profile
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url")
+    .select("*")
     .eq("id", id)
-    .maybeSingle();
+    .single();
+
+  if (profileError || !profile) return notFound();
 
   const { data: releases } = await supabase
     .from("releases")
-    .select("id, title, cover_path, release_type, status")
+    .select("id, title, cover_path, release_type, status, created_at")
     .eq("artist_id", id)
     .eq("status", "published")
     .order("created_at", { ascending: false });
@@ -60,23 +62,11 @@ export default async function ArtistPage({
     .eq("releases.artist_id", id)
     .eq("releases.status", "published");
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (profileError) {
-    throw new Error("Artist profile not found");
-  }
-
   const tracksByRelease: Record<string, any[]> = {};
   (releaseTracks ?? []).forEach((rt) => {
     if (!tracksByRelease[rt.release_id]) tracksByRelease[rt.release_id] = [];
     tracksByRelease[rt.release_id].push(rt);
   });
-
-  if (!artist) return notFound();
 
   const canSaveArtist = !!user?.id && user.id !== id;
 
@@ -96,107 +86,132 @@ export default async function ArtistPage({
     }
   }
 
-  const bannerSrc = profile.banner_url ? `${profile.banner_url}?t=${Date.now()}` : null;
+  // NOTE: Do NOT use Date.now() in src (causes constant reloads). Cache-busting belongs in upload flow.
+  const bannerUrl = profile.banner_url || null;
+  const avatarUrl = profile.avatar_url || null;
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="relative w-full h-64 rounded-lg overflow-hidden">
-        {profile.banner_url && (
-          <img
-            src={`${profile.banner_url}?t=${Date.now()}`}
-            alt="Artist Banner"
-            className="w-full h-full object-cover"
-          />
-        )}
+    <div className="w-full">
+      {/* Header */}
+      <div className="w-full max-w-[1200px] mx-auto px-6 pt-6">
+        <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt="Artist Banner"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-white/5 via-white/[0.06] to-white/5" />
+          )}
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80" />
 
-        <div className="absolute left-12 top-1/2 -translate-y-1/2 flex items-center gap-6">
-          <img
-            src={`${profile.avatar_url}?t=${Date.now()}`}
-            alt={profile.display_name}
-            className="w-40 h-40 rounded-full object-cover border-4 border-white/20 shadow-2xl"
-          />
-
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-5xl font-bold text-white drop-shadow-xl">
-                {profile.display_name}
-              </h1>
+          <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 flex items-center gap-6">
+            <div className="shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={profile.display_name}
+                  className="w-28 h-28 md:w-36 md:h-36 rounded-full object-cover border-4 border-white/15 shadow-2xl"
+                />
+              ) : (
+                <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-white/10 border-4 border-white/10" />
+              )}
             </div>
 
-            {profile.location && (
-              <p className="text-lg text-white/80 drop-shadow-md">
-                {profile.location}
-              </p>
-            )}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-xl truncate">
+                {profile.display_name}
+              </h1>
+
+              {profile.location ? (
+                <p className="mt-2 text-sm md:text-base text-white/70 drop-shadow-md">
+                  {profile.location}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-[1200px] mx-auto px-6 mt-4 flex items-center gap-4">
-        {canSaveArtist ? (
-          <SaveArtistButton artistId={id} initialSaved={initialSaved} />
-        ) : null}
-      </div>
+      {/* Actions + Social (inline) + Bio */}
+      <div className="w-full max-w-[1200px] mx-auto px-6 mt-6">
+        <div className="flex flex-wrap items-center gap-5">
+          {canSaveArtist ? (
+            <SaveArtistButton artistId={id} initialSaved={initialSaved} />
+          ) : null}
 
-      <div className="mt-10 max-w-3xl mx-auto p-6 space-y-6">
-        <div className="flex flex-col items-center gap-3 text-center">
-          {profile.location && (
-            <p className="text-sm text-[#B3B3B3]">{profile.location}</p>
-          )}
-
-          {profile.bio && (
-            <p className="text-white whitespace-pre-line">{profile.bio}</p>
-          )}
-
-          <div className="flex flex-col space-y-2">
-            {profile.instagram && (
+          <div className="flex items-center gap-4">
+            {profile.instagram ? (
               <a
                 href={profile.instagram}
                 target="_blank"
-                className="flex items-center gap-2 text-sm text-[#00FFC6] hover:text-[#00E0B0] transition-colors justify-center"
+                rel="noreferrer noopener"
+                aria-label="Instagram"
+                className="flex items-center gap-1 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
               >
                 <Instagram size={16} />
                 Instagram
               </a>
-            )}
-            {profile.tiktok && (
+            ) : null}
+
+            {profile.tiktok ? (
               <a
                 href={profile.tiktok}
                 target="_blank"
-                className="flex items-center gap-2 text-sm text-[#00FFC6] hover:text-[#00E0B0] transition-colors justify-center"
+                rel="noreferrer noopener"
+                aria-label="TikTok"
+                className="flex items-center gap-1 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
               >
                 <Music2 size={16} />
                 TikTok
               </a>
-            )}
-            {profile.facebook && (
+            ) : null}
+
+            {profile.facebook ? (
               <a
                 href={profile.facebook}
                 target="_blank"
-                className="flex items-center gap-2 text-sm text-[#00FFC6] hover:text-[#00E0B0] transition-colors justify-center"
+                rel="noreferrer noopener"
+                aria-label="Facebook"
+                className="flex items-center gap-1 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
               >
                 <Facebook size={16} />
                 Facebook
               </a>
-            )}
-            {profile.x && (
+            ) : null}
+
+            {profile.x ? (
               <a
                 href={profile.x}
                 target="_blank"
-                className="flex items-center gap-2 text-sm text-[#00FFC6] hover:text-[#00E0B0] transition-colors justify-center"
+                rel="noreferrer noopener"
+                aria-label="X"
+                className="flex items-center gap-1 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
               >
                 <Twitter size={16} />
                 X
               </a>
-            )}
+            ) : null}
           </div>
         </div>
+
+        {profile.bio ? (
+          <p className="mt-6 max-w-3xl text-white/90 whitespace-pre-line leading-relaxed">
+            {profile.bio}
+          </p>
+        ) : null}
       </div>
 
-      <div className="mt-12 w-full">
-        <h2 className="text-2xl font-semibold mb-6">Releases</h2>
+      {/* Releases */}
+      <div className="w-full max-w-[1200px] mx-auto px-6 mt-10 pb-12">
+        <div className="flex items-end justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-semibold text-white">Releases</h2>
+          <div className="text-sm text-[#B3B3B3]">
+            {(releases?.length ?? 0) > 0 ? `${releases!.length} published` : ""}
+          </div>
+        </div>
 
         {releases && releases.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -207,46 +222,64 @@ export default async function ArtistPage({
                     .getPublicUrl(rel.cover_path).data.publicUrl
                 : null;
 
+              const relTracks = tracksByRelease[rel.id] || [];
+
               return (
                 <div
                   key={rel.id}
-                  className="rounded-2xl bg-white/5 backdrop-blur-sm hover:bg-white/[0.08] transition border border-white/10 p-6 flex flex-col gap-4 shadow-sm"
+                  className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-colors border border-white/10 hover:border-white/20 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md"
                 >
-                  <div className="relative group overflow-hidden rounded-lg">
-                    {coverUrl ? (
-                      <img
-                        src={coverUrl}
-                        className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full aspect-square bg-neutral-800 rounded-lg" />
-                    )}
+                  <div className="relative">
+                    <div className="relative group overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                      <Link href={`/dashboard/release/${rel.id}`} className="block">
+                        {coverUrl ? (
+                          <img
+                            src={coverUrl}
+                            alt={rel.title}
+                            className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                          />
+                        ) : (
+                          <div className="w-full aspect-square bg-neutral-800" />
+                        )}
+                      </Link>
 
-                    <ReleasePlayButton tracks={tracksByRelease[rel.id] || []} />
+                      {/* Play Overlay – exakt bounded to cover */}
+                      <div
+                        className="
+                          absolute inset-0 flex items-center justify-center
+                          opacity-0 group-hover:opacity-100
+                          transition-all duration-300
+                        "
+                      >
+                        <ReleasePlayButton tracks={relTracks} />
+                      </div>
+                    </div>
+
+                    <Link href={`/dashboard/release/${rel.id}`} className="block">
+                      <div className="min-w-0 mt-4">
+                        <h3 className="text-base font-semibold text-white truncate">
+                          {rel.title}
+                        </h3>
+                        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/50">
+                          {rel.release_type}
+                        </p>
+                      </div>
+                    </Link>
                   </div>
 
-                  <h3 className="text-lg font-semibold text-white truncate">
-                    {rel.title}
-                  </h3>
-                  <p className="text-xs uppercase tracking-wide text-white/50">
-                    {rel.release_type}
-                  </p>
+                  <div className="h-px bg-white/10 my-1" />
 
-                  <hr className="mt-3 border-white/10" />
-
-                  <ClientTrackRows
-                    releaseId={rel.id}
-                    tracks={tracksByRelease[rel.id] || []}
-                  />
+                  <ClientTrackRows releaseId={rel.id} tracks={relTracks} />
                 </div>
               );
             })}
           </div>
         ) : (
-          <p className="text-neutral-500 text-sm">No releases yet.</p>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+            <p className="text-neutral-400 text-sm">No releases yet.</p>
+          </div>
         )}
       </div>
     </div>
   );
 }
-

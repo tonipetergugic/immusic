@@ -234,24 +234,23 @@ export default function PlaylistClient({
   async function handleTrackAdded(newPlayerTrack: PlayerTrack) {
     if (!isOwner) return;
 
-    setPlayerTracks((prev) => [...prev, newPlayerTrack]);
-
+    // 1) Nach Insert: Playlist-Row nachladen (für localTracks UI)
     const { data, error } = await supabase
       .from("playlist_tracks")
       .select(
         `
-        position,
-        tracks (
-          *,
-          releases:releases!tracks_release_id_fkey (
-            status,
-            cover_path
-          ),
-          artist:profiles!tracks_artist_id_fkey (
-            display_name
-          )
+      position,
+      tracks (
+        *,
+        releases:releases!tracks_release_id_fkey (
+          status,
+          cover_path
+        ),
+        artist:profiles!tracks_artist_id_fkey (
+          display_name
         )
-      `
+      )
+    `
       )
       .eq("playlist_id", localPlaylist.id)
       .eq("track_id", newPlayerTrack.id)
@@ -259,11 +258,56 @@ export default function PlaylistClient({
 
     if (error) {
       console.error("Failed to fetch newly added playlist track:", error);
+      // Fallback: Track trotzdem in Player-Liste aufnehmen (ohne release_track_id)
+      setPlayerTracks((prev) => [...prev, newPlayerTrack]);
+      return;
     }
 
     if (data) {
       setLocalTracks((prev) => [...prev, data]);
     }
+
+    // 2) Kritisch: release_track_id + Aggregates aus release_tracks nachladen,
+    // damit Rating/Realtime ohne Browser-Refresh korrekt funktioniert.
+    const { data: rt, error: rtError } = await supabase
+      .from("release_tracks")
+      .select(
+        `
+      id,
+      rating_avg,
+      rating_count,
+      stream_count,
+      releases!inner(status)
+    `
+      )
+      .eq("track_id", newPlayerTrack.id)
+      .eq("releases.status", "published")
+      .maybeSingle<{
+        id: string;
+        rating_avg: number | null;
+        rating_count: number | null;
+        stream_count: number | null;
+        releases: { status: string };
+      }>();
+
+    if (rtError) {
+      console.error("Failed to load release_track for added track:", rtError);
+      setPlayerTracks((prev) => [...prev, newPlayerTrack]);
+      return;
+    }
+
+    const enriched: PlayerTrack = {
+      ...newPlayerTrack,
+      release_track_id: rt?.id ?? null,
+      rating_avg: rt?.rating_avg ?? null,
+      rating_count: rt?.rating_count ?? 0,
+      // stream_count ist optional in PlayerTrack – falls vorhanden, übernehmen
+      ...(rt?.stream_count !== null && rt?.stream_count !== undefined
+        ? { stream_count: rt.stream_count }
+        : {}),
+    };
+
+    setPlayerTracks((prev) => [...prev, enriched]);
   }
 
   const sensors = useSensors(
