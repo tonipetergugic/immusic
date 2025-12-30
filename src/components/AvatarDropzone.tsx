@@ -39,7 +39,7 @@ export default function AvatarDropzone({
   return (
     <div
       className={`
-        w-30 h-30 rounded-xl overflow-hidden border border-[#00FFC622]
+        w-full h-full rounded-xl overflow-hidden border border-[#00FFC622]
         flex items-center justify-center cursor-pointer
         transition-all duration-150
         hover:shadow-[0_0_10px_2px_rgba(0,255,198,0.3)]
