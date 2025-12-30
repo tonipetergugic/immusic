@@ -7,6 +7,7 @@ export type ReleaseTrackRow = {
       id: string;
       title: string | null;
       audio_path?: string | null;
+      artist_id?: string | null;
     } | null;
     releases?: {
       id: string;

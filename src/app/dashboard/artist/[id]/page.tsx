@@ -45,16 +45,20 @@ export default async function ArtistPage({
         tracks:tracks!release_tracks_track_id_fkey(
           id,
           title,
-          audio_path
+          audio_path,
+          artist_id
         ),
         releases:releases!release_tracks_release_id_fkey(
           id,
           cover_path,
           title,
-          status
+          status,
+          artist_id
         )
       `
-    );
+    )
+    .eq("releases.artist_id", id)
+    .eq("releases.status", "published");
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")

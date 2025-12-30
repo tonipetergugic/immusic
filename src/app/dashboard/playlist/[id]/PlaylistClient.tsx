@@ -305,11 +305,13 @@ export default function PlaylistClient({
             className="
               inline-flex items-center justify-center gap-2
               h-11 px-5 rounded-full
-              bg-[#00FFC6] text-black text-sm font-semibold
-              hover:brightness-95 transition
-              shadow-[0_8px_22px_rgba(0,255,198,0.25)]
-              active:scale-[0.99] active:shadow-[0_6px_16px_rgba(0,255,198,0.22)]
+              bg-[#0E0E10] border border-[#00FFC633]
+              text-[#00FFC6] text-sm font-semibold
+              hover:border-[#00FFC666]
+              hover:bg-[#00FFC60F]
+              transition
               w-full sm:w-auto
+              min-w-[132px]
             "
             // TODO: wire this to your global player "play playlist" action
             onClick={() => {
@@ -327,8 +329,13 @@ export default function PlaylistClient({
               playQueue(playerTracks, 0);
             }}
           >
-            {showPause ? <Pause size={18} /> : <Play size={18} />}
-            <span>{showPause ? "Pause" : "Play"}</span>
+            <span className="inline-flex w-4 items-center justify-center">
+              {showPause ? <Pause size={18} /> : <Play size={18} />}
+            </span>
+
+            <span className="inline-block w-[52px] text-left">
+              {showPause ? "Pause" : "Play"}
+            </span>
           </button>
 
           {/* Primary: Add Track (owner only) */}
@@ -400,10 +407,12 @@ export default function PlaylistClient({
       <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-3 md:p-4 -mx-3 md:mx-0">
         <div
           className="
-            grid grid-cols-[22px_44px_1fr_44px]
-            md:grid-cols-[40px_60px_1fr_70px_70px_80px]
+            grid grid-cols-[24px_64px_1fr_36px]
+            md:grid-cols-[40px_80px_1fr_70px_70px_80px]
+            items-center
+            gap-x-4 md:gap-x-3
             text-xs text-white/50 uppercase tracking-wide
-            px-2 md:px-4 py-2
+            px-4 py-2
           "
         >
           <span>#</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -32,6 +33,7 @@ export default function PlaylistRow({
   });
   const [myStars, setMyStars] = useState<number | null>(track.my_stars ?? null);
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
 
   const {
     attributes,
@@ -172,6 +174,19 @@ export default function PlaylistRow({
     }
   }
 
+  function goToTrack(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/dashboard/track/${track.id}`);
+  }
+
+  function goToArtist(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    router.push(`/dashboard/artist/${track.artist_id}`);
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -217,16 +232,43 @@ export default function PlaylistRow({
       <div className="min-w-0 ml-1 sm:ml-0 pl-2 sm:pl-0 flex flex-col gap-1 justify-self-start">
         {/* Line 1: Title */}
         <div className="flex items-center min-w-0">
-          <span className="text-[13px] font-semibold text-white truncate">
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={goToTrack}
+            className="
+              text-left text-[13px] font-semibold text-white truncate
+              hover:text-[#00FFC6] transition-colors
+              focus:outline-none
+            "
+            title={track.title}
+          >
             {track.title}
-          </span>
+          </button>
         </div>
 
         {/* Line 2: Artist(s) only */}
         {track.profiles?.display_name ? (
-          <div className="mt-1 text-xs text-white/60 truncate">
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={goToArtist}
+            className="
+              mt-1 text-left text-xs text-white/60 truncate
+              hover:text-[#00FFC6] hover:underline underline-offset-2
+              transition-colors
+              focus:outline-none
+            "
+            title={track.profiles.display_name}
+          >
             {track.profiles.display_name}
-          </div>
+          </button>
         ) : (
           <div className="mt-1 text-xs text-white/40 truncate">
             Unknown artist

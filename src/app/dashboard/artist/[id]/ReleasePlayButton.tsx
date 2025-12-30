@@ -11,7 +11,7 @@ export default function ReleasePlayButton({ tracks }: { tracks: ReleaseTrackRow[
     toPlayerTrack({
       id: rt.tracks?.id ?? "",
       title: rt.track_title || rt.tracks?.title || "Untitled Track",
-      artist_id: null,
+      artist_id: rt.tracks?.artist_id ?? "",
       audio_path: rt.tracks?.audio_path ?? null,
       releases: rt.releases
         ? {
