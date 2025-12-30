@@ -72,20 +72,21 @@ export default function PlaylistHeaderClient({
       {/* DARK OVERLAY */}
       <div className="absolute inset-0 bg-[rgba(0,0,0,0.40)] pointer-events-none" />
 
-      {/* TOP GRADIENT */}
+      {/* SOFT FADE GRADIENT (nach unten auslaufend) */}
       <div
         className="
           absolute inset-0
           bg-gradient-to-b
-          from-[rgba(0,0,0,0.0)]
-          via-[rgba(0,0,0,0.30)]
-          to-[rgba(0,0,0,0.55)]
+          from-[rgba(0,0,0,0.00)]
+          via-[rgba(0,0,0,0.25)]
+          via-[rgba(0,0,0,0.45)]
+          to-[rgba(14,14,16,0.95)]
           pointer-events-none
         "
       />
 
       {/* CONTENT */}
-      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-10 py-10 px-10">
+      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-10 pt-10 pb-14 px-10">
         {/* COVER */}
         <div
           className={`
