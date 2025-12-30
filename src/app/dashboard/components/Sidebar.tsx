@@ -63,41 +63,11 @@ export default function Sidebar() {
         label="Library"
         matchPrefix
       />
-      <div className="relative group">
-        <SidebarItem
-          icon={<PlusCircle size={20} />}
-          label="Create"
-          onClick={() => {}}
-        />
-
-        {/* Hover Dropdown */}
-        <div
-          className="
-            absolute top-0 left-full ml-4
-            hidden group-hover:flex
-            flex-col
-            bg-[#0B0B0D]
-            border border-[#1A1A1C]
-            rounded-lg
-            shadow-xl
-            p-2
-            w-48
-            z-50
-            before:absolute before:-left-4 before:top-0 before:bottom-0 before:w-4 before:content-['']
-          "
-        >
-          <div
-            onClick={() => setIsCreateOpen(true)}
-            className="
-              p-2 rounded-md text-sm text-white
-              hover:bg-[#161619] hover:text-[#00FFC6]
-              cursor-pointer transition
-            "
-          >
-            Create Playlist
-          </div>
-        </div>
-      </div>
+      <SidebarItem
+        icon={<PlusCircle size={20} />}
+        label="Create Playlist"
+        onClick={() => setIsCreateOpen(true)}
+      />
 
       {/* Artist Bereich */}
       {role === "artist" || role === "admin" ? (

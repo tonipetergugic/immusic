@@ -46,6 +46,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const seekBreakRef = useRef(false);
   const lastTrackIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const queueRef = useRef<PlayerTrack[]>([]);
+  const currentIndexRef = useRef<number>(0);
+  const playTrackRef = useRef<
+    ((track: PlayerTrack, options?: { queue?: PlayerTrack[]; startIndex?: number }) => void) | null
+  >(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const getCountryCodeISO2 = (): string => {
@@ -73,6 +78,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
   // INIT AUDIO ONLY ON CLIENT
   useEffect(() => {
     if (!audioRef.current) {
@@ -82,21 +95,26 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const audio = audioRef.current;
 
-    const handleTimeUpdate = () => setProgress(audio.currentTime);
-    const handleLoaded = () => setDuration(audio.duration || 0);
-    const handleEnded = () => {
+    audio.ontimeupdate = () => setProgress(audio.currentTime);
+    audio.onloadedmetadata = () => setDuration(audio.duration || 0);
+    audio.onended = () => {
       setIsPlaying(false);
-      playNext();
+
+      const q = queueRef.current;
+      if (!q || q.length === 0) return;
+
+      const idx = currentIndexRef.current;
+      const nextIndex = idx < q.length - 1 ? idx + 1 : 0;
+
+      setCurrentIndex(nextIndex);
+      playTrackRef.current?.(q[nextIndex], { queue: q, startIndex: nextIndex });
     };
 
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("loadedmetadata", handleLoaded);
-    audio.addEventListener("ended", handleEnded);
-
     return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("loadedmetadata", handleLoaded);
-      audio.removeEventListener("ended", handleEnded);
+      // Important for Fast Refresh: always clear handlers
+      audio.ontimeupdate = null;
+      audio.onloadedmetadata = null;
+      audio.onended = null;
     };
   }, []);
 
@@ -148,6 +166,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     },
     [currentTrack]
   );
+
+  useEffect(() => {
+    playTrackRef.current = playTrack;
+  }, [playTrack]);
 
   // TOGGLE PLAY
   const togglePlay = useCallback(() => {
@@ -258,7 +280,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             p_track_id: currentTrack.id,
             p_session_id: sessionIdRef.current,
             p_delta_seconds: 5,
-            p_country_code: countryCode,
+            p_country_code: (countryCode ?? "Z").slice(0, 1),
           });
 
           if (error) {

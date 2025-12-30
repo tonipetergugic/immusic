@@ -48,18 +48,16 @@ export async function GET(req: Request) {
 
   const artistId = profile.id;
 
-  const limit = Number(20);
-
   const { data, error } = await supabase
     .from("analytics_artist_top_tracks_30d")
     .select("track_id, streams, unique_listeners")
     .eq("artist_id", artistId)
     .order("streams", { ascending: false })
-    .limit(limit);
+    .limit(20);
 
   if (error) {
     return NextResponse.json(
-      { error: `get_top_tracks failed: ${error.message}` },
+      { error: `Failed to fetch top tracks: ${error.message}` },
       { status: 500 }
     );
   }

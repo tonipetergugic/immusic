@@ -2,6 +2,7 @@ src
 src/middleware.ts
 src/types
 src/types/releaseTrack.ts
+src/types/vendor.d.ts
 src/types/playerTrack.ts
 src/types/database.ts
 src/types/supabase.ts

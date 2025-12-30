@@ -52,16 +52,18 @@ export async function rateReleaseTrackAction(formData: FormData): Promise<RateRe
 
   const { data: listenState, error: listenError } = await supabase
     .from("track_listen_state")
-    .select("listened_seconds")
+    .select("session_listened_seconds")
     .eq("user_id", user.id)
     .eq("track_id", releaseTrack.track_id)
-    .single();
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (listenError && listenError.code !== "PGRST116") {
+  if (listenError) {
     return { ok: false, error: listenError.message };
   }
 
-  if (!listenState || (listenState.listened_seconds ?? 0) < 30) {
+  if (!listenState || (listenState.session_listened_seconds ?? 0) < 30) {
     return {
       ok: false,
       error: "You can rate a track only after listening at least 30 seconds.",

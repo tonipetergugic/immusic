@@ -222,7 +222,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
         <div className="pt-6">
           {/* PLAYLISTS */}
           {currentTab === "playlists" && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pt-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-6">
               {playlists.length > 0 ? (
                 playlists.map((playlist) => (
                   <PlaylistCard
@@ -245,7 +245,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
           {currentTab === "tracks" && (
             <div className="pt-6">
               {trackData.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {trackData.map((track, index) => (
                     <TrackCard
                       key={track.id}
@@ -267,27 +267,43 @@ export default async function LibraryPage(props: LibraryPageProps) {
           {currentTab === "artists" && (
             <div className="pt-6">
               {artists.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg-grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {artists.map((artist) => (
                     <Link
                       key={artist.id}
                       href={`/dashboard/artist/${artist.id}`}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col items-center text-center gap-3 hover:bg-white/[0.06] transition"
+                      className="
+                        group relative 
+                        bg-[#111112] 
+                        p-3 rounded-xl 
+                        transition-all
+                        hover:scale-[1.02]
+                        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
+                        border border-transparent
+                        hover:border-[#00FFC622]
+                        cursor-pointer
+                        block
+                      "
                     >
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-neutral-900 flex items-center justify-center text-white/50 text-xl">
+                      <div className="w-full aspect-square rounded-xl bg-neutral-900 flex items-center justify-center overflow-hidden">
                         {artist.avatar_url ? (
                           <img
                             src={artist.avatar_url}
                             alt={artist.display_name ?? "Artist avatar"}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110"
                           />
                         ) : (
-                          artist.display_name?.[0]?.toUpperCase() ?? "?"
+                          <div className="w-full h-full flex items-center justify-center text-white/50 text-5xl">
+                            {artist.display_name?.[0]?.toUpperCase() ?? "?"}
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm font-medium text-white truncate w-full">
+
+                      <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
                         {artist.display_name || "Unknown artist"}
-                      </p>
+                      </h3>
+
+                      <p className="text-xs text-white/50 truncate">Artist</p>
                     </Link>
                   ))}
                 </div>

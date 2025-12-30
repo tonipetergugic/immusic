@@ -26,9 +26,10 @@ export default function TrackCard({ track, index, tracks }: Props) {
   };
 
   return (
-    <div
+    <Link
+      href={`/dashboard/track/${track.id}`}
       className="
-        group relative cursor-pointer 
+        group relative 
         bg-[#111112] 
         p-3 rounded-xl 
         transition-all
@@ -36,10 +37,12 @@ export default function TrackCard({ track, index, tracks }: Props) {
         hover:shadow-[0_0_12px_rgba(0,255,198,0.15)]
         border border-transparent
         hover:border-[#00FFC622]
+        cursor-pointer
+        block
       "
     >
       <div className="relative">
-        <Link href={`/dashboard/track/${track.id}`}>
+        <div className="block">
           {track.cover_url ? (
             <Image
               src={track.cover_url}
@@ -56,33 +59,42 @@ export default function TrackCard({ track, index, tracks }: Props) {
           ) : (
             <div className="w-full aspect-square bg-neutral-800 rounded-xl" />
           )}
-        </Link>
+        </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            handleClick();
-          }}
+        <div
           className="
-            absolute inset-0 m-auto
-            w-12 h-12 
-            flex items-center justify-center
+            absolute inset-0 flex items-center justify-center
             opacity-0 group-hover:opacity-100
             transition-all duration-300
-            bg-[#00FFC6] hover:bg-[#00E0B0]
-            text-black rounded-full
-            shadow-[0_0_20px_rgba(0,255,198,0.4)]
-            backdrop-blur-md
           "
-          style={{ pointerEvents: "auto" }}
         >
-          {isThisTrackActive && isPlaying ? (
-            <Pause size={22} />
-          ) : (
-            <Play size={22} />
-          )}
-        </button>
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClick();
+            }}
+            className="
+              w-14 h-14 rounded-full
+              bg-[#00FFC6] hover:bg-[#00E0B0]
+              flex items-center justify-center
+              shadow-[0_0_20px_rgba(0,255,198,0.40)]
+              backdrop-blur-md
+            "
+            aria-label={isThisTrackActive && isPlaying ? "Pause track" : "Play track"}
+          >
+            {isThisTrackActive && isPlaying ? (
+              <Pause size={26} className="text-black" />
+            ) : (
+              <Play size={26} className="text-black" />
+            )}
+          </button>
+        </div>
       </div>
 
       <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
@@ -91,6 +103,6 @@ export default function TrackCard({ track, index, tracks }: Props) {
       <p className="text-xs text-white/50 truncate">
         {track.profiles?.display_name ?? "Unknown Artist"}
       </p>
-    </div>
+    </Link>
   );
 }
