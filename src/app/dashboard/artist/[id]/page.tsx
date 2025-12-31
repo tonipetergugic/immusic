@@ -10,6 +10,7 @@ import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import PlaylistPlayOverlayButton from "./PlaylistPlayOverlayButton";
+import FollowCountsClient from "./FollowCountsClient";
 
 export default async function ArtistPage({
   params,
@@ -44,6 +45,9 @@ export default async function ArtistPage({
       .select("*", { count: "exact", head: true })
       .eq("follower_id", id),
   ]);
+
+  const followerCountNum = followerCount ?? 0;
+  const followingCountNum = followingCount ?? 0;
 
   const { data: releases } = await supabase
     .from("releases")
@@ -249,20 +253,11 @@ export default async function ArtistPage({
                 </p>
               ) : null}
 
-              <div className="mt-3 flex items-center gap-6 text-sm text-white/70">
-                <span>
-                  <span className="text-white/90 font-semibold tabular-nums">
-                    {followerCount ?? 0}
-                  </span>{" "}
-                  Followers
-                </span>
-                <span>
-                  <span className="text-white/90 font-semibold tabular-nums">
-                    {followingCount ?? 0}
-                  </span>{" "}
-                  Following
-                </span>
-              </div>
+              <FollowCountsClient
+                profileId={id}
+                followerCount={followerCountNum}
+                followingCount={followingCountNum}
+              />
             </div>
           </div>
         </div>

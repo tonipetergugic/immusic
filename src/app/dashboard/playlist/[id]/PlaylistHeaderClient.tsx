@@ -7,13 +7,21 @@ import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist } from "@/types/database";
 import { createBrowserClient } from "@supabase/ssr";
 
+type PlaylistOwnerJoin = {
+  owner?: {
+    id: string;
+    display_name: string | null;
+    role?: string | null;
+  } | null;
+};
+
 export default function PlaylistHeaderClient({
   playlist,
   playerTracks,
   onEditCover,
   isOwner,
 }: {
-  playlist: Playlist;
+  playlist: Playlist & PlaylistOwnerJoin;
   playerTracks: PlayerTrack[];
   onEditCover: () => void;
   isOwner: boolean;
