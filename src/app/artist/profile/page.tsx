@@ -32,6 +32,10 @@ export default async function ArtistProfilePage({
     throw new Error("Profile not found");
   }
 
+  const needsCollectingSocietyConfirmation =
+    profile.role === "artist" &&
+    profile.collecting_society_member === null;
+
   const params = await searchParams;
 
   return (
@@ -53,6 +57,21 @@ export default async function ArtistProfilePage({
           </span>
         </div>
       </div>
+      {needsCollectingSocietyConfirmation && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4">
+          <p className="text-sm font-semibold text-amber-200">
+            Action required: Collecting society status
+          </p>
+          <p className="text-sm text-[#B3B3B3] mt-1">
+            Please confirm whether you are a member of a collecting society.
+            This information is required for rights clarity, but does not block
+            uploads or releases.
+          </p>
+          <p className="text-xs text-[#B3B3B3] mt-2">
+            Once confirmed, you will not be asked again.
+          </p>
+        </div>
+      )}
       {params?.success === "1" && <ProfileSuccessToast />}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
         <div className="flex items-start justify-between gap-4">
