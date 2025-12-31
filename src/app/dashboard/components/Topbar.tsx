@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   User,
   CreditCard,
@@ -17,6 +18,7 @@ export default function Topbar() {
   const [role, setRole] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const supabase = useMemo(() => {
     return createBrowserClient(

@@ -12,6 +12,9 @@ type TrackOptionsTriggerProps = {
   track: PlayerTrack;
   onRemove?: () => void;
   tracks?: PlayerTrack[];
+  showGoToArtist?: boolean;
+  showGoToRelease?: boolean;
+  releaseId?: string | null;
 };
 
 const MENU_HEIGHT = 232;
@@ -251,6 +254,9 @@ function AddToPlaylistModal({
 export default function TrackOptionsTrigger({
   track,
   onRemove,
+  showGoToArtist = true,
+  showGoToRelease = false,
+  releaseId = null,
 }: TrackOptionsTriggerProps) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -358,6 +364,9 @@ export default function TrackOptionsTrigger({
               onRemove={onRemove}
               onAddToPlaylist={() => setOpenAddModal(true)}
               position={menuPosition}
+              showGoToArtist={showGoToArtist}
+              showGoToRelease={showGoToRelease}
+              releaseId={releaseId}
             />,
             document.body
           )

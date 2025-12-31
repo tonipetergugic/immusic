@@ -62,14 +62,12 @@ export default function SaveArtistButton({
       onClick={toggle}
       disabled={busy}
       className="
-        h-10 px-4 rounded-md
-        bg-[#1A1A1C]/80 border border-[#2A2A2D]
-        text-white/80 text-sm
-        hover:bg-[#2A2A2D]
-        hover:text-white
-        hover:border-[#00FFC622]
-        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-        backdrop-blur-lg transition
+        inline-flex items-center justify-center
+        h-10 px-4 rounded-full
+        bg-transparent border border-white/10
+        text-[#B3B3B3] text-sm font-medium
+        hover:text-white hover:border-white/20
+        transition
         disabled:opacity-60 disabled:cursor-wait
       "
     >

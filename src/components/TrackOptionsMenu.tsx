@@ -15,6 +15,9 @@ type TrackOptionsMenuProps = {
     left: number;
     openUpwards: boolean;
   };
+  showGoToArtist?: boolean;
+  showGoToRelease?: boolean;
+  releaseId?: string | null;
 };
 
 type MenuAction =
@@ -23,6 +26,7 @@ type MenuAction =
   | "share"
   | "go_artist"
   | "go_track"
+  | "go_release"
   | "remove";
 
 type MenuItem = { label: string; action: MenuAction };
@@ -33,6 +37,9 @@ export default function TrackOptionsMenu({
   onRemove,
   onAddToPlaylist,
   position,
+  showGoToArtist = true,
+  showGoToRelease = false,
+  releaseId = null,
 }: TrackOptionsMenuProps) {
   const router = useRouter();
 
@@ -107,16 +114,24 @@ export default function TrackOptionsMenu({
         action: "toggle_library",
       },
       { label: "Share Track", action: "share" },
-      { label: "Go to Artist", action: "go_artist" },
-      { label: "Go to Track Page", action: "go_track" },
     ];
+
+    if (showGoToArtist) {
+      items.push({ label: "Go to Artist", action: "go_artist" });
+    }
+
+    if (showGoToRelease && releaseId) {
+      items.push({ label: "Go to Release Page", action: "go_release" });
+    }
+
+    items.push({ label: "Go to Track Page", action: "go_track" });
 
     if (onRemove) {
       items.push({ label: "Remove from Playlist", action: "remove" });
     }
 
     return items;
-  }, [isSaved, onRemove]);
+  }, [isSaved, onRemove, showGoToArtist, showGoToRelease, releaseId]);
 
   const getShareUrl = () => {
     if (!trackId) return null;
@@ -233,6 +248,16 @@ export default function TrackOptionsMenu({
           return;
         }
         router.push(`/dashboard/artist/${artistId}`);
+        onClose();
+        return;
+      }
+
+      if (action === "go_release") {
+        if (!releaseId) {
+          setToast("Release ID missing.");
+          return;
+        }
+        router.push(`/dashboard/release/${releaseId}`);
         onClose();
         return;
       }

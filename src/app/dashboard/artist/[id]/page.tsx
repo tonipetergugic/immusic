@@ -5,6 +5,11 @@ import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
 import ClientTrackRows from "./ClientTrackRows";
 import ReleasePlayButton from "./ReleasePlayButton";
 import SaveArtistButton from "./SaveArtistButton";
+import FollowArtistButton from "./FollowArtistButton";
+import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
+import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { toPlayerTrack } from "@/lib/playerTrack";
+import PlaylistPlayOverlayButton from "./PlaylistPlayOverlayButton";
 
 export default async function ArtistPage({
   params,
@@ -29,12 +34,125 @@ export default async function ArtistPage({
 
   if (profileError || !profile) return notFound();
 
+  const [{ count: followerCount }, { count: followingCount }] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("*", { count: "exact", head: true })
+      .eq("following_id", id),
+    supabase
+      .from("follows")
+      .select("*", { count: "exact", head: true })
+      .eq("follower_id", id),
+  ]);
+
   const { data: releases } = await supabase
     .from("releases")
     .select("id, title, cover_path, release_type, status, created_at")
     .eq("artist_id", id)
     .eq("status", "published")
     .order("created_at", { ascending: false });
+
+  const { data: publicPlaylists } = await supabase
+    .from("playlists")
+    .select("id, title, cover_url, created_at")
+    .eq("created_by", id)
+    .eq("is_public", true)
+    .order("created_at", { ascending: false });
+
+  const { data: topTracksRaw } = await supabase
+    .from("analytics_artist_top_tracks_30d")
+    .select("track_id, streams, unique_listeners")
+    .eq("artist_id", id)
+    .order("streams", { ascending: false })
+    .limit(10);
+
+  const topTrackIds = (topTracksRaw ?? []).map((r) => r.track_id);
+
+  let topTracksDetails: any[] = [];
+  if (topTrackIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("release_tracks")
+      .select(`
+        track_id,
+        track_title,
+        rating_avg,
+        rating_count,
+        tracks:tracks!release_tracks_track_id_fkey (
+          id,
+          title,
+          audio_path,
+          artist_id,
+          bpm,
+          key
+        ),
+        releases:releases!release_tracks_release_id_fkey (
+          id,
+          cover_path,
+          title,
+          status
+        )
+      `)
+      .in("track_id", topTrackIds)
+      .eq("releases.status", "published");
+
+    topTracksDetails = rows ?? [];
+  }
+
+  const topTracks = (topTracksRaw ?? []).map((a) => {
+    const d = topTracksDetails.find((x) => x.track_id === a.track_id) || null;
+    const trackData = d?.tracks;
+    
+    if (!trackData) {
+      // Fallback wenn keine Track-Daten gefunden wurden
+      return {
+        track_id: a.track_id,
+        streams: a.streams ?? 0,
+        track_title: d?.track_title ?? null,
+        cover_path: d?.releases?.cover_path ?? null,
+        rating_avg: d?.rating_avg ?? null,
+        rating_count: d?.rating_count ?? 0,
+        release_id: d?.releases?.id ?? null,
+        playerTrack: null as any,
+      };
+    }
+
+    // Erstelle PlayerTrack-Objekt mit toPlayerTrack
+    const playerTrack = toPlayerTrack({
+      id: trackData.id,
+      title: trackData.title ?? d?.track_title ?? null,
+      artist_id: trackData.artist_id ?? id,
+      audio_path: trackData.audio_path ?? null,
+      bpm: trackData.bpm ?? null,
+      key: trackData.key ?? null,
+      releases: d?.releases ? {
+        id: d.releases.id,
+        cover_path: d.releases.cover_path ?? null,
+        status: d.releases.status ?? null,
+      } : null,
+    });
+    
+    // Füge optionale Felder hinzu
+    if (d?.rating_avg !== null && d?.rating_avg !== undefined) {
+      playerTrack.rating_avg = d.rating_avg;
+    }
+    if (d?.rating_count !== null && d?.rating_count !== undefined) {
+      playerTrack.rating_count = d.rating_count;
+    }
+    if (d?.releases?.id) {
+      playerTrack.release_id = d.releases.id;
+    }
+
+    return {
+      track_id: a.track_id,
+      streams: a.streams ?? 0,
+      track_title: d?.track_title ?? null,
+      cover_path: d?.releases?.cover_path ?? null,
+      rating_avg: d?.rating_avg ?? null,
+      rating_count: d?.rating_count ?? 0,
+      release_id: d?.releases?.id ?? null,
+      playerTrack,
+    };
+  });
 
   const { data: releaseTracks } = await supabase
     .from("release_tracks")
@@ -130,6 +248,21 @@ export default async function ArtistPage({
                   {profile.location}
                 </p>
               ) : null}
+
+              <div className="mt-3 flex items-center gap-6 text-sm text-white/70">
+                <span>
+                  <span className="text-white/90 font-semibold tabular-nums">
+                    {followerCount ?? 0}
+                  </span>{" "}
+                  Followers
+                </span>
+                <span>
+                  <span className="text-white/90 font-semibold tabular-nums">
+                    {followingCount ?? 0}
+                  </span>{" "}
+                  Following
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -141,6 +274,8 @@ export default async function ArtistPage({
           {canSaveArtist ? (
             <SaveArtistButton artistId={id} initialSaved={initialSaved} />
           ) : null}
+
+          <FollowArtistButton artistId={id} />
 
           <div className="flex items-center gap-4">
             {profile.instagram ? (
@@ -279,6 +414,187 @@ export default async function ArtistPage({
             <p className="text-neutral-400 text-sm">No releases yet.</p>
           </div>
         )}
+
+        {/* Public Playlists */}
+        <div className="mt-12">
+          <div className="flex items-end justify-between gap-4 mb-6">
+            <h2 className="text-2xl font-semibold text-white">Playlists</h2>
+            <div className="text-sm text-[#B3B3B3]">
+              {(publicPlaylists?.length ?? 0) > 0 ? `${publicPlaylists!.length} public` : ""}
+            </div>
+          </div>
+
+          {publicPlaylists && publicPlaylists.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {publicPlaylists.map((pl) => {
+                const coverUrl = pl.cover_url
+                  ? supabase.storage
+                      .from("playlist-covers")
+                      .getPublicUrl(pl.cover_url).data.publicUrl
+                  : null;
+
+                return (
+                  <div
+                    key={pl.id}
+                    className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-colors border border-white/10 hover:border-white/20 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md"
+                  >
+                    <div className="relative group overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                      <Link href={`/dashboard/playlist/${pl.id}`} className="block">
+                        {coverUrl ? (
+                          <img
+                            src={coverUrl}
+                            alt={pl.title}
+                            className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                          />
+                        ) : (
+                          <div className="w-full aspect-square bg-neutral-800" />
+                        )}
+                      </Link>
+                      <PlaylistPlayOverlayButton playlistId={pl.id} size="lg" />
+                    </div>
+
+                    <Link href={`/dashboard/playlist/${pl.id}`} className="block">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-white truncate">
+                          {pl.title}
+                        </h3>
+                        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/50">
+                          Public playlist
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+              <p className="text-neutral-400 text-sm">No public playlists yet.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Top Tracks */}
+        <div className="mt-12">
+          <div className="flex items-end justify-between gap-4 mb-6">
+            <h2 className="text-2xl font-semibold text-white">Top Tracks</h2>
+            <div className="text-sm text-[#B3B3B3]">
+              {(topTracks?.length ?? 0) > 0 ? "Last 30 days" : ""}
+            </div>
+          </div>
+
+          {topTracks && topTracks.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {topTracks.map((t, idx) => {
+                const coverUrl = t.cover_path
+                  ? supabase.storage
+                      .from("release_covers")
+                      .getPublicUrl(t.cover_path).data.publicUrl
+                  : null;
+
+                if (!t.playerTrack) {
+                  // Skip tracks without playerTrack data
+                  return null;
+                }
+
+                const playerTracksQueue = topTracks
+                  .filter((tt) => tt.playerTrack)
+                  .map((tt) => tt.playerTrack);
+                
+                const queueIndex = playerTracksQueue.findIndex((pt) => pt.id === t.track_id);
+
+                return (
+                  <div
+                    key={t.track_id}
+                    className="
+                      flex items-center gap-4
+                      px-5 py-4
+                      rounded-2xl
+                      border border-white/10
+                      bg-white/[0.03]
+                      hover:bg-white/[0.05]
+                      hover:border-white/20
+                      transition
+                    "
+                  >
+                    {/* Index */}
+                    <div className="w-6 text-sm text-white/50 tabular-nums">
+                      {idx + 1}
+                    </div>
+
+                    {/* Cover */}
+                    <div className="relative group w-14 h-14 -my-1 rounded-xl overflow-hidden border border-white/10 bg-black/20 shrink-0">
+                      {coverUrl ? (
+                        <img
+                          src={coverUrl}
+                          alt={t.track_title ?? "Track cover"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-neutral-800" />
+                      )}
+                      <PlayOverlayButton
+                        track={t.playerTrack}
+                        index={queueIndex >= 0 ? queueIndex : undefined}
+                        tracks={playerTracksQueue}
+                      />
+                    </div>
+
+                    {/* Title */}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-white font-medium truncate">
+                        {t.track_title ?? "Unknown track"}
+                      </div>
+                      {t.rating_avg !== null && t.rating_count > 0 ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-[2px] leading-none">
+                            {[1, 2, 3, 4, 5].map((i) => {
+                              const filled = i <= Math.round(Number(t.rating_avg));
+                              return (
+                                <span
+                                  key={i}
+                                  className={filled ? "text-[#00FFC6] text-sm" : "text-white/25 text-sm"}
+                                  aria-hidden="true"
+                                >
+                                  ★
+                                </span>
+                              );
+                            })}
+                          </div>
+
+                          <div className="text-xs text-white/50 tabular-nums">
+                            {Number(t.rating_avg).toFixed(1)} ({t.rating_count})
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-white/40 mt-1">No ratings yet</div>
+                      )}
+                    </div>
+
+                    {/* Streams */}
+                    <div className="text-sm text-white/70 tabular-nums">
+                      {t.streams} streams
+                    </div>
+
+                    {/* Options Menu */}
+                    <div className="shrink-0">
+                      <TrackOptionsTrigger
+                        track={t.playerTrack}
+                        showGoToArtist={false}
+                        showGoToRelease={true}
+                        releaseId={t.release_id}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+              <p className="text-neutral-400 text-sm">No top tracks yet.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

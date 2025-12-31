@@ -17,7 +17,14 @@ export default async function PlaylistPage(
   // Playlist laden
   const { data: playlist } = await supabase
     .from("playlists")
-    .select("*")
+    .select(`
+      *,
+      owner:profiles!playlists_created_by_fkey (
+        id,
+        display_name,
+        role
+      )
+    `)
     .eq("id", id)
     .single<Playlist>();
 

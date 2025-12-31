@@ -154,6 +154,22 @@ export default function PlaylistHeaderClient({
           <p className="text-white/70 text-sm mt-1">
             {isPublic ? "Public playlist" : "Private playlist"}
           </p>
+
+          {playlist.owner?.id ? (
+            <p className="text-white/60 text-sm mt-1">
+              Playlist by{" "}
+              <a
+                href={
+                  playlist.owner.role === "artist"
+                    ? `/dashboard/artist/${playlist.owner.id}`
+                    : `/profile/${playlist.owner.id}`
+                }
+                className="hover:text-white underline underline-offset-2 transition"
+              >
+                {playlist.owner.display_name ?? "Unknown"}
+              </a>
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

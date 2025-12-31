@@ -18,15 +18,16 @@ export default function DashboardLayout({
       {/* Right Side */}
       <div className="flex flex-col flex-1 overflow-hidden">
 
-        <div className="shrink-0">
-          {/* Mobile menu + Topbar row */}
-          <div className="flex items-center gap-3 px-4 pt-4 md:px-0 md:pt-0">
-            <MobileSidebarDrawer />
+        <header className="shrink-0">
+          <div className="flex items-center">
+            <div className="md:hidden pl-4">
+              <MobileSidebarDrawer />
+            </div>
             <div className="flex-1">
               <Topbar />
             </div>
           </div>
-        </div>
+        </header>
 
         <main className="flex-1 overflow-y-auto px-6 py-6 lg:px-10 lg:py-8">
           <div className="max-w-[1600px] mx-auto w-full pb-40 lg:pb-48">
