@@ -33,6 +33,17 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const initialTracks = tracks ?? [];
   const existingTrackIds = initialTracks.map((t) => t.track_id);
 
+  const { data: incompleteMeta } = existingTrackIds.length
+    ? await supabase
+        .from("tracks")
+        .select("id")
+        .in("id", existingTrackIds)
+        .or("bpm.is.null,key.is.null,genre.is.null")
+    : { data: [] as any[] };
+
+  const allTracksMetadataComplete =
+    existingTrackIds.length > 0 && (incompleteMeta?.length ?? 0) === 0;
+
   return (
     <ReleaseEditorClient
       releaseId={release.id}
@@ -45,6 +56,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
       initialTracks={initialTracks}
       existingTrackIds={existingTrackIds}
       coverUrl={coverUrl}
+      allTracksMetadataComplete={allTracksMetadataComplete}
     />
   );
 }

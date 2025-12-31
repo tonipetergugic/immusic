@@ -48,6 +48,8 @@ export function TrackCard({ track }: TrackCardProps) {
   const [newBpm, setNewBpm] = useState<string>(track.bpm ? String(track.bpm) : "");
   const [newKey, setNewKey] = useState<string>(track.key ?? "");
   const [newGenre, setNewGenre] = useState<string>(track.genre ?? "");
+  const [newHasLyrics, setNewHasLyrics] = useState<boolean>(Boolean(track.has_lyrics));
+  const [newIsExplicit, setNewIsExplicit] = useState<boolean>(Boolean(track.is_explicit));
   const [editError, setEditError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -105,6 +107,8 @@ export function TrackCard({ track }: TrackCardProps) {
         bpm: bpmValue,
         key: keyValue,
         genre: newGenre.trim() === "" ? null : newGenre.trim(),
+        has_lyrics: newHasLyrics,
+        is_explicit: newIsExplicit,
       };
       await renameTrackAction(track.id, payload);
       router.refresh();
@@ -139,7 +143,12 @@ export function TrackCard({ track }: TrackCardProps) {
     };
   }, [showRenameModal, isPending, handleSaveEdit]);
 
-  const isComplete = Boolean(track?.bpm) && Boolean(track?.key) && Boolean(track?.genre);
+  const isComplete =
+    Boolean(track?.bpm) &&
+    Boolean(track?.key) &&
+    Boolean(track?.genre) &&
+    typeof track?.has_lyrics === "boolean" &&
+    typeof track?.is_explicit === "boolean";
   const isIncomplete = !isComplete;
 
   return (
@@ -232,6 +241,12 @@ export function TrackCard({ track }: TrackCardProps) {
             className="px-4 py-2 text-left text-white/80 hover:bg-white/5"
             onClick={() => {
               setEditError(null);
+              setNewTitle(track.title);
+              setNewBpm(track.bpm ? String(track.bpm) : "");
+              setNewKey(track.key ?? "");
+              setNewGenre(track.genre ?? "");
+              setNewHasLyrics(Boolean(track.has_lyrics));
+              setNewIsExplicit(Boolean(track.is_explicit));
               setShowRenameModal(true);
               setOpen(false);
             }}
@@ -251,7 +266,7 @@ export function TrackCard({ track }: TrackCardProps) {
       )}
       {showRenameModal && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               setEditError(null);
@@ -259,23 +274,32 @@ export function TrackCard({ track }: TrackCardProps) {
             }
           }}
         >
-          <div className="bg-[#1A1A1C] border border-white/10 rounded-lg p-6 w-80">
-            <h2 className="text-white text-lg font-semibold mb-2">Edit Track</h2>
+          <div className="w-full max-w-[560px] rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-[0.12em] text-white/60">Track</div>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">Edit Track</h2>
+                <p className="mt-1 text-sm text-white/60">
+                  Update metadata used for releases and discovery.
+                </p>
+              </div>
+            </div>
             <input
               type="text"
-              className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white mb-4"
+              className="mt-5 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               maxLength={100}
+              placeholder="Track title"
             />
             {/* BPM + Key */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-white/60 mb-1">BPM</label>
+                <label className="block text-xs uppercase tracking-[0.12em] text-white/60 mb-2">BPM</label>
                 <input
                   inputMode="numeric"
                   type="text"
-                  className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
                   value={newBpm}
                   list="bpm-suggestions"
                   maxLength={3}
@@ -289,10 +313,10 @@ export function TrackCard({ track }: TrackCardProps) {
               </div>
 
               <div>
-                <label className="block text-xs text-white/60 mb-1">Key</label>
+                <label className="block text-xs uppercase tracking-[0.12em] text-white/60 mb-2">Key</label>
                 <input
                   type="text"
-                  className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
                   value={newKey}
                   list="key-suggestions"
                   maxLength={3}
@@ -301,10 +325,10 @@ export function TrackCard({ track }: TrackCardProps) {
                 />
               </div>
             </div>
-            <div className="mb-4">
-              <label className="block text-xs text-white/60 mb-1">Genre</label>
+            <div className="mt-5">
+              <label className="block text-xs uppercase tracking-[0.12em] text-white/60 mb-2">Genre</label>
               <select
-                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
                 value={newGenre}
                 onChange={(e) => setNewGenre(e.target.value)}
               >
@@ -321,6 +345,33 @@ export function TrackCard({ track }: TrackCardProps) {
                 <option value="Hardstyle">Hardstyle</option>
                 <option value="Drum & Bass">Drum & Bass</option>
               </select>
+            </div>
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white/90">Contains lyrics</div>
+                  <div className="mt-0.5 text-xs text-white/60">Mark instrumental tracks as off.</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={newHasLyrics}
+                  onChange={(e) => setNewHasLyrics(e.target.checked)}
+                  className="h-5 w-5 accent-[#00FFC6]"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white/90">Explicit content</div>
+                  <div className="mt-0.5 text-xs text-white/60">Enable if the track is explicit.</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={newIsExplicit}
+                  onChange={(e) => setNewIsExplicit(e.target.checked)}
+                  className="h-5 w-5 accent-[#00FFC6]"
+                />
+              </label>
             </div>
             <datalist id="bpm-suggestions">
               <option value="120" />
@@ -362,11 +413,13 @@ export function TrackCard({ track }: TrackCardProps) {
               <option value="Bm" />
             </datalist>
             {editError && (
-              <div className="mb-3 text-sm text-red-400">{editError}</div>
+              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {editError}
+              </div>
             )}
-            <div className="flex justify-center gap-3">
+            <div className="mt-6 flex items-center justify-end gap-3">
               <button
-                className="px-4 py-2 rounded-md bg-white/10 text-white hover:bg-white/20"
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
                 onClick={() => {
                   setEditError(null);
                   setShowRenameModal(false);
@@ -375,7 +428,7 @@ export function TrackCard({ track }: TrackCardProps) {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 rounded-md bg-white/10 text-white hover:bg-white/20 disabled:opacity-50"
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
                 disabled={isPending}
                 onClick={handleSaveEdit}
               >

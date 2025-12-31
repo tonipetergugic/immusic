@@ -8,6 +8,8 @@ export type RenameTrackPayload = {
   bpm: number | null;
   key: string | null;
   genre: string | null;
+  has_lyrics: boolean;
+  is_explicit: boolean;
 };
 
 export async function deleteTrackAction(trackId: string, audioPath: string) {
@@ -61,6 +63,8 @@ export async function renameTrackAction(
       bpm: payload.bpm,
       key: payload.key,
       genre: payload.genre,
+      has_lyrics: payload.has_lyrics,
+      is_explicit: payload.is_explicit,
     })
     .eq("id", trackId)
     .eq("artist_id", user.id);

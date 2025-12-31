@@ -27,6 +27,7 @@ type ReleaseEditorClientProps = {
   existingTrackIds: string[];
   releaseData: ReleaseData;
   coverUrl: string | null;
+  allTracksMetadataComplete: boolean;
 };
 
 export default function ReleaseEditorClient({
@@ -35,6 +36,7 @@ export default function ReleaseEditorClient({
   existingTrackIds,
   releaseData,
   coverUrl,
+  allTracksMetadataComplete,
 }: ReleaseEditorClientProps) {
   const [tracks, setTracks] = useState<Track[]>(initialTracks ?? []);
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,6 +59,9 @@ export default function ReleaseEditorClient({
     return existingTrackIds;
   }, [tracks, existingTrackIds]);
 
+  const hasCover = Boolean(coverUrl);
+  const hasAtLeastOneTrack = tracks.length > 0;
+
   return (
     <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
       <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
@@ -71,6 +76,11 @@ export default function ReleaseEditorClient({
                 <div className="mt-1 text-sm font-semibold text-white/90">
                   {status === "published" ? "Published" : "Draft"}
                 </div>
+                {status === "published" ? (
+                  <div className="mt-1 text-xs text-white/60">
+                    Status: Published — visible on ImMusic
+                  </div>
+                ) : null}
               </div>
 
               <span
@@ -100,6 +110,59 @@ export default function ReleaseEditorClient({
                 This release has been modified. Re-publish to make changes public.
               </div>
               )}
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+                Pre-Publish Checklist
+              </div>
+
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/80">Cover added</span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                      hasCover
+                        ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
+                        : "border-white/15 bg-black/20 text-white/60"
+                    }`}
+                  >
+                    {hasCover ? "Ready" : "Missing"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/80">At least 1 track</span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                      hasAtLeastOneTrack
+                        ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
+                        : "border-white/15 bg-black/20 text-white/60"
+                    }`}
+                  >
+                    {hasAtLeastOneTrack ? "Ready" : "Missing"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/80">Track metadata complete</span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                      allTracksMetadataComplete
+                        ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
+                        : "border-white/15 bg-black/20 text-white/60"
+                    }`}
+                  >
+                    {allTracksMetadataComplete ? "Ready" : "Missing"}
+                  </span>
+                </div>
+              </div>
+
+              {!allTracksMetadataComplete && hasAtLeastOneTrack ? (
+                <div className="mt-3 text-xs text-white/60">
+                  Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, genre, lyrics flag, and explicit flag.
+                </div>
+              ) : null}
+            </div>
 
             <div className="mt-5 flex flex-col gap-2">
               <button
