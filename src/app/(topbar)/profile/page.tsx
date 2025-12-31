@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const [nameSaving, setNameSaving] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [role, setRole] = useState<string | null>(null);
+  const [viewerId, setViewerId] = useState<string | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,6 +42,7 @@ export default function ProfilePage() {
 
         if (isMounted) {
           setUserEmail(user.email ?? "");
+          setViewerId(user.id);
         }
 
         const { data: profile, error } = await supabase
@@ -310,6 +312,24 @@ export default function ProfilePage() {
             Manage login & security →
           </Link>
         </div>
+
+        {/* Profile Link */}
+        {viewerId ? (
+          <div className="mt-8 pt-8 border-t border-[#1A1A1C]">
+            <Link
+              href={role === "artist" ? `/dashboard/artist/${viewerId}` : `/profile/${viewerId}`}
+              className="
+                inline-flex items-center gap-2
+                text-sm font-medium
+                text-[#00FFC6]
+                hover:text-[#00E0B0]
+                transition
+              "
+            >
+              {role === "artist" ? "View your artist page" : "View your public profile"}
+            </Link>
+          </div>
+        ) : null}
 
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import FollowersModal from "@/components/FollowersModal";
@@ -16,6 +16,9 @@ export default function FollowCountsClient({
 }) {
   const router = useRouter();
 
+  const [localFollowerCount, setLocalFollowerCount] = useState(followerCount);
+  const [localFollowingCount, setLocalFollowingCount] = useState(followingCount);
+
   const supabase = useMemo(() => {
     return createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,6 +32,99 @@ export default function FollowCountsClient({
     { id: string; display_name: string | null; avatar_url: string | null; role: string | null }[]
   >([]);
   const [modalLoading, setModalLoading] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerFollowingIds, setViewerFollowingIds] = useState<Set<string>>(new Set());
+  const [toggleBusyIds, setToggleBusyIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const uid = data?.user?.id ?? null;
+      if (mounted) setViewerId(uid);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    setLocalFollowerCount(followerCount);
+  }, [followerCount]);
+
+  useEffect(() => {
+    setLocalFollowingCount(followingCount);
+  }, [followingCount]);
+
+  async function refreshViewerFollowingIds(uid: string) {
+    const { data, error } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", uid);
+
+    if (error) {
+      console.log("refreshViewerFollowingIds error", error);
+      setViewerFollowingIds(new Set());
+      return;
+    }
+
+    const ids = (data ?? []).map((r: any) => r.following_id).filter(Boolean);
+    setViewerFollowingIds(new Set(ids));
+  }
+
+  async function toggleFollow(targetId: string) {
+    if (!viewerId) return;
+    if (viewerId === targetId) return;
+
+    if (toggleBusyIds.has(targetId)) return;
+
+    const wasFollowingSnapshot = viewerFollowingIds.has(targetId);
+    const prevFollowingCountSnapshot = localFollowingCount;
+
+    const prev = new Set(viewerFollowingIds);
+    const next = new Set(viewerFollowingIds);
+
+    if (wasFollowingSnapshot) next.delete(targetId);
+    else next.add(targetId);
+
+    setViewerFollowingIds(next);
+
+    // optimistic header counts (following only)
+    if (wasFollowingSnapshot) {
+      setLocalFollowingCount(Math.max(0, prevFollowingCountSnapshot - 1));
+    } else {
+      setLocalFollowingCount(prevFollowingCountSnapshot + 1);
+    }
+
+    setToggleBusyIds(new Set([...toggleBusyIds, targetId]));
+
+    try {
+      if (wasFollowingSnapshot) {
+        const { error } = await supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", viewerId)
+          .eq("following_id", targetId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("follows")
+          .insert({ follower_id: viewerId, following_id: targetId });
+
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.log("toggleFollow error", err);
+      // rollback
+      setViewerFollowingIds(prev);
+      setLocalFollowingCount(prevFollowingCountSnapshot);
+    } finally {
+      const busy = new Set(toggleBusyIds);
+      busy.delete(targetId);
+      setToggleBusyIds(busy);
+    }
+  }
 
   async function openFollowList(kind: "followers" | "following") {
     try {
@@ -36,6 +132,10 @@ export default function FollowCountsClient({
       setModalTitle(kind === "followers" ? "Followers" : "Following");
       setModalProfiles([]);
       setModalOpen(true);
+
+      if (viewerId) {
+        await refreshViewerFollowingIds(viewerId);
+      }
 
       if (kind === "followers") {
         const { data: rows, error } = await supabase
@@ -58,7 +158,8 @@ export default function FollowCountsClient({
 
         if (pErr) throw pErr;
 
-        setModalProfiles((profs as any) ?? []);
+        const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
+        setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
       } else {
         const { data: rows, error } = await supabase
           .from("follows")
@@ -80,7 +181,8 @@ export default function FollowCountsClient({
 
         if (pErr) throw pErr;
 
-        setModalProfiles((profs as any) ?? []);
+        const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
+        setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
       }
     } catch (err) {
       console.log("openFollowList error", err);
@@ -100,7 +202,7 @@ export default function FollowCountsClient({
           className="hover:text-white transition"
         >
           <span className="text-white/90 font-semibold tabular-nums">
-            {followerCount}
+            {localFollowerCount}
           </span>{" "}
           Followers
         </button>
@@ -111,7 +213,7 @@ export default function FollowCountsClient({
           className="hover:text-white transition"
         >
           <span className="text-white/90 font-semibold tabular-nums">
-            {followingCount}
+            {localFollowingCount}
           </span>{" "}
           Following
         </button>
@@ -119,8 +221,13 @@ export default function FollowCountsClient({
 
       <FollowersModal
         open={modalOpen}
-        title={modalLoading ? `${modalTitle}…` : modalTitle}
+        title={modalTitle}
+        loading={modalLoading}
         profiles={modalProfiles}
+        viewerId={viewerId}
+        followingIds={viewerFollowingIds}
+        onToggleFollow={toggleFollow}
+        busyIds={toggleBusyIds}
         onClose={() => setModalOpen(false)}
         onProfileClick={(pid, role) => {
           setModalOpen(false);

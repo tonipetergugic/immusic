@@ -2,6 +2,7 @@
 
 import Portal from "@/components/Portal";
 import { X } from "lucide-react";
+import { useEffect, useMemo } from "react";
 
 type MiniProfile = {
   id: string;
@@ -14,15 +15,63 @@ export default function FollowersModal({
   open,
   title,
   profiles,
+  loading = false,
+  viewerId = null,
+  followingIds,
+  onToggleFollow,
+  busyIds,
   onClose,
   onProfileClick,
 }: {
   open: boolean;
   title: string;
   profiles: MiniProfile[];
+  loading?: boolean;
+  viewerId?: string | null;
+  followingIds?: Set<string>;
+  onToggleFollow?: (targetId: string) => void | Promise<void>;
+  busyIds?: Set<string>;
   onClose: () => void;
   onProfileClick?: (profileId: string, role: string | null) => void;
 }) {
+  const sortedProfiles = useMemo(() => {
+    const toLabel = (p: MiniProfile) =>
+      p.display_name ?? (p.role === "artist" ? "Artist" : "User");
+
+    return [...profiles].sort((a, b) => {
+      const la = toLabel(a).trim().toLocaleLowerCase();
+      const lb = toLabel(b).trim().toLocaleLowerCase();
+
+      const cmp = la.localeCompare(lb, undefined, { sensitivity: "base" });
+      if (cmp !== 0) return cmp;
+
+      // Stable tie-breaker
+      return a.id.localeCompare(b.id);
+    });
+  }, [profiles]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -75,16 +124,36 @@ export default function FollowersModal({
 
           {/* Body */}
           <div className="max-h-[70vh] overflow-y-auto p-2">
-            {profiles.length > 0 ? (
+            {loading ? (
+              <div className="p-10 flex flex-col items-center justify-center gap-3 text-white/60">
+                <div
+                  className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white/70 animate-spin"
+                  aria-label="Loading"
+                />
+                <div className="text-sm">Loading…</div>
+              </div>
+            ) : profiles.length > 0 ? (
               <div className="flex flex-col gap-2 p-2">
-                {profiles.map((p) => {
+                {sortedProfiles.map((p) => {
                   const label =
                     p.display_name ?? (p.role === "artist" ? "Artist" : "User");
+                  const isSelf = !!viewerId && viewerId === p.id;
                   return (
-                    <button
+                    <div
                       key={p.id}
-                      type="button"
-                      onClick={() => onProfileClick?.(p.id, p.role)}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        if (isSelf) return;
+                        onProfileClick?.(p.id, p.role);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          if (isSelf) return;
+                          onProfileClick?.(p.id, p.role);
+                        }
+                      }}
                       className="
                         w-full
                         flex items-center gap-3
@@ -96,6 +165,9 @@ export default function FollowersModal({
                         hover:border-white/20
                         transition
                         text-left
+                        cursor-pointer
+                        outline-none
+                        focus:ring-2 focus:ring-[#00FFC6]/40
                       "
                     >
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-[#1A1A1C] border border-white/10 flex items-center justify-center shrink-0">
@@ -121,10 +193,51 @@ export default function FollowersModal({
                         </div>
                       </div>
 
-                      <div className="text-xs text-white/40">
-                        View
-                      </div>
-                    </button>
+                      {viewerId && viewerId !== p.id && onToggleFollow ? (
+                        (() => {
+                          const isBusy = !!busyIds?.has(p.id);
+                          const isFollowing = !!followingIds?.has(p.id);
+                          return (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isBusy) return;
+                                onToggleFollow(p.id);
+                              }}
+                              className={`
+                                inline-flex items-center justify-center
+                                h-8 px-3
+                                rounded-full
+                                border
+                                text-xs font-semibold
+                                transition
+                                shrink-0
+                                ${
+                                  isBusy
+                                    ? "opacity-60 cursor-wait border-white/10 bg-white/[0.04] text-white/70"
+                                    : isFollowing
+                                    ? "border-white/15 bg-transparent text-white/80 hover:border-white/25 hover:bg-white/[0.04]"
+                                    : "border-[#00FFC6]/40 bg-[#00FFC6]/10 text-[#00FFC6] hover:bg-[#00FFC6]/15 hover:border-[#00FFC6]/60"
+                                }
+                              `}
+                            >
+                              {isBusy ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+                                  <span className="text-white/70">Saving</span>
+                                </span>
+                              ) : (
+                                (isFollowing ? "Following" : "Follow")
+                              )}
+                            </button>
+                          );
+                        })()
+                      ) : (
+                        <div className="text-xs text-white/40">{isSelf ? "You" : "View"}</div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

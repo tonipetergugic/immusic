@@ -53,6 +53,7 @@ src/components/PlayerBar.tsx
 src/components/TrackCard.tsx
 src/components/AddTrackModal.tsx
 src/components/SortableItem.tsx
+src/components/FollowersModal.tsx
 src/components/CoverPlaceholder.tsx
 src/components/GlobalPlayerWrapper.tsx
 src/components/PlaylistRow.tsx

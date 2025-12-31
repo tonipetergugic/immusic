@@ -56,6 +56,8 @@ export default function PublicProfilePage() {
     { id: string; display_name: string | null; avatar_url: string | null; role: string | null }[]
   >([]);
   const [modalLoading, setModalLoading] = useState(false);
+  const [viewerFollowingIds, setViewerFollowingIds] = useState<Set<string>>(new Set());
+  const [toggleBusyIds, setToggleBusyIds] = useState<Set<string>>(new Set());
 
   const isSelf = !!viewerId && !!profileId && viewerId === profileId;
   const canFollow = !!viewerId && !isSelf;
@@ -146,24 +148,98 @@ export default function PublicProfilePage() {
     };
   }, [profileId, supabase]);
 
+  async function refreshViewerFollowingIds(uid: string) {
+    const { data, error } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", uid);
+
+    if (error) {
+      console.log("refreshViewerFollowingIds error", error);
+      setViewerFollowingIds(new Set());
+      return;
+    }
+
+    const ids = (data ?? []).map((r: any) => r.following_id).filter(Boolean);
+    setViewerFollowingIds(new Set(ids));
+  }
+
   async function toggleFollow() {
     if (!profileId) return;
     if (!canFollow) return;
 
+    const wasFollowingSnapshot = following;
+    const prevFollowerCountSnapshot = followerCount;
+
     try {
       setFollowBusy(true);
-      if (following) {
-        await unfollowProfile(profileId);
+
+      // optimistic
+      if (wasFollowingSnapshot) {
         setFollowing(false);
+        setFollowerCount(Math.max(0, prevFollowerCountSnapshot - 1));
+      } else {
+        setFollowing(true);
+        setFollowerCount(prevFollowerCountSnapshot + 1);
+      }
+
+      if (wasFollowingSnapshot) {
+        await unfollowProfile(profileId);
       } else {
         await followProfile(profileId);
-        setFollowing(true);
       }
     } catch (err: any) {
       console.log("toggleFollow error", err);
+
+      // rollback to snapshots
+      setFollowing(wasFollowingSnapshot);
+      setFollowerCount(prevFollowerCountSnapshot);
+
       alert(err?.message ?? "Something went wrong");
     } finally {
       setFollowBusy(false);
+    }
+  }
+
+  async function toggleFollowInModal(targetId: string) {
+    if (!viewerId) return;
+    if (viewerId === targetId) return;
+
+    if (toggleBusyIds.has(targetId)) return;
+
+    const prev = new Set(viewerFollowingIds);
+    const next = new Set(viewerFollowingIds);
+
+    const isFollowing = next.has(targetId);
+    if (isFollowing) next.delete(targetId);
+    else next.add(targetId);
+
+    setViewerFollowingIds(next);
+    setToggleBusyIds(new Set([...toggleBusyIds, targetId]));
+
+    try {
+      if (isFollowing) {
+        const { error } = await supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", viewerId)
+          .eq("following_id", targetId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("follows")
+          .insert({ follower_id: viewerId, following_id: targetId });
+
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.log("toggleFollowInModal error", err);
+      setViewerFollowingIds(prev);
+    } finally {
+      const busy = new Set(toggleBusyIds);
+      busy.delete(targetId);
+      setToggleBusyIds(busy);
     }
   }
 
@@ -175,6 +251,10 @@ export default function PublicProfilePage() {
       setModalTitle(kind === "followers" ? "Followers" : "Following");
       setModalProfiles([]);
       setModalOpen(true);
+
+      if (viewerId) {
+        await refreshViewerFollowingIds(viewerId);
+      }
 
       if (kind === "followers") {
         const { data: rows, error } = await supabase
@@ -197,7 +277,8 @@ export default function PublicProfilePage() {
 
         if (pErr) throw pErr;
 
-        setModalProfiles((profs as any) ?? []);
+        const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
+        setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
       } else {
         const { data: rows, error } = await supabase
           .from("follows")
@@ -219,7 +300,8 @@ export default function PublicProfilePage() {
 
         if (pErr) throw pErr;
 
-        setModalProfiles((profs as any) ?? []);
+        const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
+        setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
       }
     } catch (err) {
       console.log("openFollowList error", err);
@@ -361,17 +443,30 @@ export default function PublicProfilePage() {
               type="button"
               onClick={toggleFollow}
               disabled={followBusy || loading || !profile}
-              className="
+              className={`
                 inline-flex items-center justify-center
                 h-10 px-4 rounded-full
-                bg-transparent border border-white/10
-                text-[#B3B3B3] text-sm font-medium
-                hover:text-white hover:border-white/20
+                border
+                text-sm font-semibold
                 transition
                 disabled:opacity-60 disabled:cursor-wait
-              "
+                ${
+                  followBusy
+                    ? "border-white/10 bg-white/[0.04] text-white/70"
+                    : following
+                    ? "border-white/15 bg-transparent text-white/80 hover:border-white/25 hover:bg-white/[0.04]"
+                    : "border-[#00FFC6]/40 bg-[#00FFC6]/10 text-[#00FFC6] hover:bg-[#00FFC6]/15 hover:border-[#00FFC6]/60"
+                }
+              `}
             >
-              {followBusy ? "..." : following ? "Following" : "Follow"}
+              {followBusy ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+                  <span>Saving</span>
+                </span>
+              ) : (
+                (following ? "Following" : "Follow")
+              )}
             </button>
           ) : null}
         </div>
@@ -457,8 +552,13 @@ export default function PublicProfilePage() {
 
       <FollowersModal
         open={modalOpen}
-        title={modalLoading ? `${modalTitle}…` : modalTitle}
+        title={modalTitle}
+        loading={modalLoading}
         profiles={modalProfiles}
+        viewerId={viewerId}
+        followingIds={viewerFollowingIds}
+        onToggleFollow={toggleFollowInModal}
+        busyIds={toggleBusyIds}
         onClose={() => setModalOpen(false)}
         onProfileClick={(pid, role) => {
           setModalOpen(false);

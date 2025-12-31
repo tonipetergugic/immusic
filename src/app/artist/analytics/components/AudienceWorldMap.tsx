@@ -5,7 +5,6 @@ import { zoom, zoomIdentity } from "d3-zoom";
 import type { ZoomTransform } from "d3-zoom";
 import { select } from "d3-selection";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CountryValues = Record<string, number>; // key = ISO_A3, value = listeners/streams
 
@@ -51,34 +50,43 @@ export default function AudienceWorldMap({ artistId }: { artistId: string }) {
   }, []);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-
     const run = async () => {
-      const { data, error } = await supabase
-        .from("analytics_artist_country_streams_30d")
-        .select("country_code, streams")
-        .eq("artist_id", artistId)
-        .order("streams", { ascending: false });
+      try {
+        const res = await fetch(
+          "/api/artist/analytics/country-streams?range=28d",
+          { method: "GET" }
+        );
 
-      if (error || !data) {
+        const json = await res.json();
+
+        if (!res.ok) {
+          setValues(EMPTY_VALUES);
+          setTotalStreams(0);
+          return;
+        }
+
+        const items = (json?.data?.items || []) as Array<{
+          country_code: string;
+          streams: number;
+        }>;
+
+        const next: CountryValues = {};
+        let sum = 0;
+
+        for (const r of items) {
+          const code = String(r.country_code ?? "").trim().toUpperCase();
+          const n = Number(r.streams ?? 0);
+          if (!code) continue;
+          next[code] = (next[code] ?? 0) + n;
+          sum += n;
+        }
+
+        setValues(next);
+        setTotalStreams(sum);
+      } catch {
         setValues(EMPTY_VALUES);
         setTotalStreams(0);
-        return;
       }
-
-      const next: CountryValues = {};
-      let sum = 0;
-
-      for (const r of data) {
-        const code = String(r.country_code ?? "").trim().toUpperCase();
-        const n = Number(r.streams ?? 0);
-        if (!code) continue;
-        next[code] = (next[code] ?? 0) + n;
-        sum += n;
-      }
-
-      setValues(next);
-      setTotalStreams(sum);
     };
 
     run();
