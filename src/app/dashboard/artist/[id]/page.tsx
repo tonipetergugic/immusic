@@ -121,18 +121,34 @@ export default async function ArtistPage({
     }
 
     // Erstelle PlayerTrack-Objekt mit toPlayerTrack
+    const cover_url =
+      d?.releases?.cover_path
+        ? supabase.storage
+            .from("release_covers")
+            .getPublicUrl(d.releases.cover_path).data.publicUrl ?? null
+        : null;
+
+    const audio_url =
+      trackData?.audio_path
+        ? supabase.storage
+            .from("tracks")
+            .getPublicUrl(trackData.audio_path).data.publicUrl
+        : null;
+
+    if (!audio_url) {
+      throw new Error(
+        `ArtistPage: missing audio_url for track ${trackData.id}`
+      );
+    }
+
     const playerTrack = toPlayerTrack({
       id: trackData.id,
       title: trackData.title ?? d?.track_title ?? null,
       artist_id: trackData.artist_id ?? id,
-      audio_path: trackData.audio_path ?? null,
+      audio_url,
+      cover_url,
       bpm: trackData.bpm ?? null,
       key: trackData.key ?? null,
-      releases: d?.releases ? {
-        id: d.releases.id,
-        cover_path: d.releases.cover_path ?? null,
-        status: d.releases.status ?? null,
-      } : null,
     });
     
     // Füge optionale Felder hinzu
@@ -210,7 +226,11 @@ export default async function ArtistPage({
 
   // NOTE: Do NOT use Date.now() in src (causes constant reloads). Cache-busting belongs in upload flow.
   const bannerUrl = profile.banner_url || null;
-  const avatarUrl = profile.avatar_url || null;
+  const avatarUrlBase = profile.avatar_url || null;
+  const avatarUrl =
+    avatarUrlBase
+      ? `${avatarUrlBase}${avatarUrlBase.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(profile.updated_at ?? Date.now()))}`
+      : null;
 
   return (
     <div className="w-full">

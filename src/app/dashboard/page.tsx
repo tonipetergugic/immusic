@@ -1,6 +1,7 @@
 import DashboardHomeClient from "./DashboardHomeClient";
 import { getHomeModules } from "@/lib/supabase/getHomeModules";
 import { getHomeReleases } from "@/lib/supabase/getHomeReleases";
+import { getHomePlaylists } from "@/lib/supabase/getHomePlaylists";
 
 export default async function DashboardPage() {
   const { modules, itemsByModuleId } = await getHomeModules();
@@ -24,5 +25,26 @@ export default async function DashboardPage() {
 
   const releasesById = await getHomeReleases(releaseIds);
 
-  return <DashboardHomeClient home={{ modules, itemsByModuleId: obj }} releasesById={releasesById} />;
+  const playlistModule = modules.find((m: any) => m.module_type === "playlist") ?? null;
+  const playlistItems = playlistModule ? (obj[playlistModule.id] ?? []) : [];
+
+  const playlistIds = Array.from(
+    new Set(
+      playlistItems
+        .filter((it: any) => it.item_type === "playlist")
+        .sort((a: any, b: any) => a.position - b.position)
+        .slice(0, 10)
+        .map((it: any) => it.item_id)
+    )
+  );
+
+  const playlistsById = await getHomePlaylists(playlistIds);
+
+  return (
+    <DashboardHomeClient
+      home={{ modules, itemsByModuleId: obj }}
+      releasesById={releasesById}
+      playlistsById={playlistsById}
+    />
+  );
 }

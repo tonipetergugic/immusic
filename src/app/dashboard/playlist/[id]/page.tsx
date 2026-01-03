@@ -36,6 +36,15 @@ export default async function PlaylistPage(
     return <div className="p-6 text-white">Playlist not found.</div>;
   }
 
+  const playlistCoverUrl =
+    (playlist as any)?.cover_url
+      ? supabase.storage
+          .from("playlist-covers")
+          .getPublicUrl((playlist as any).cover_url).data.publicUrl ?? null
+      : null;
+
+  (playlist as any).cover_url = playlistCoverUrl;
+
   // Playlist-Tracks laden
   const { data: playlistTracks } = await supabase
     .from("playlist_tracks")
@@ -68,6 +77,22 @@ export default async function PlaylistPage(
   const convertedTracks: PlayerTrack[] =
     (playlistTracks ?? []).map((pt) => {
       const t = pt.tracks as any;
+      const releaseObj = Array.isArray(t?.releases) ? (t.releases[0] ?? null) : (t?.releases ?? null);
+
+      const cover_url =
+        releaseObj?.cover_path
+          ? supabase.storage.from("release_covers").getPublicUrl(releaseObj.cover_path).data.publicUrl ?? null
+          : null;
+
+      const audio_url =
+        t?.audio_path
+          ? supabase.storage.from("tracks").getPublicUrl(t.audio_path).data.publicUrl
+          : null;
+
+      if (!audio_url) {
+        throw new Error("PlaylistPage: Missing audio_url for track " + (t?.id ?? "unknown"));
+      }
+
       const rtVal = t?.release_tracks;
 
       const rtArray = Array.isArray(rtVal) ? rtVal : rtVal ? [rtVal] : [];
@@ -81,7 +106,19 @@ export default async function PlaylistPage(
       const rating_avg = matched?.rating_avg ?? null;
       const rating_count = matched?.rating_count ?? 0;
 
-      const playerTrack = toPlayerTrack(pt.tracks);
+      const playerTrack = toPlayerTrack({
+        id: t.id,
+        title: t.title ?? null,
+        artist_id: t.artist_id ?? null,
+        audio_url,
+        cover_url,
+        bpm: t.bpm ?? null,
+        key: t.key ?? null,
+        // important: playlist query joins artist as "artist"
+        artist: t.artist ?? null,
+        profiles: t.profiles ?? null,
+        artist_profile: t.artist_profile ?? null,
+      });
       return {
         ...playerTrack,
         release_track_id: releaseTrackId,

@@ -1,11 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist } from "@/types/database";
-import { createBrowserClient } from "@supabase/ssr";
 
 type PlaylistOwnerJoin = {
   owner?: {
@@ -35,33 +33,7 @@ export default function PlaylistHeaderClient({
 
   const isPublic = !!playlist.is_public;
 
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
-
-  const coverPublicUrl = useMemo(() => {
-    if (!playlist.cover_url) return null;
-
-    const appendCacheBust = (url: string) => {
-      const sep = url.includes("?") ? "&" : "?";
-      return `${url}${sep}v=${Date.now()}`;
-    };
-
-    if (playlist.cover_url.startsWith("http")) {
-      return appendCacheBust(playlist.cover_url);
-    }
-
-    const { data } = supabase.storage
-      .from("playlist-covers")
-      .getPublicUrl(playlist.cover_url);
-    const publicUrl = data.publicUrl ?? null;
-    return publicUrl ? appendCacheBust(publicUrl) : null;
-  }, [playlist.cover_url, supabase]);
+  const coverPublicUrl = playlist.cover_url ?? null;
 
   return (
     <div className="rounded-xl overflow-hidden relative">

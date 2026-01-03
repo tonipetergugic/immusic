@@ -1,43 +1,56 @@
 "use client";
 
+import { useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
-import { toPlayerTrack } from "@/lib/playerTrack";
 import type { ReleaseTrackRow } from "@/types/releaseTrack";
 
 export default function ReleasePlayButton({ tracks }: { tracks: ReleaseTrackRow[] }) {
   const { playQueue, currentTrack, isPlaying, togglePlay, queue } = usePlayer();
+  const [queueTracks, setQueueTracks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const playerTracks = tracks.map((rt) =>
-    toPlayerTrack({
-      id: rt.tracks?.id ?? "",
-      title: rt.track_title || rt.tracks?.title || "Untitled Track",
-      artist_id: rt.tracks?.artist_id ?? "",
-      audio_path: rt.tracks?.audio_path ?? null,
-      releases: rt.releases
-        ? {
-            ...rt.releases,
-            status: rt.releases.status ?? "",
-          }
-        : null,
-      profiles: null,
-    })
-  );
+  const loadReleaseQueue = async () => {
+    if (!tracks.length) return [];
 
-  // Check if this release is currently playing
-  const firstTrackId = playerTracks[0]?.id;
+    const releaseId = tracks[0].release_id;
+    if (!releaseId) return [];
+
+    setLoading(true);
+
+    const res = await fetch(`/api/releases/${releaseId}/queue`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      throw new Error("Failed to load release queue");
+    }
+
+    const json = await res.json();
+    return Array.isArray(json.queue) ? json.queue : [];
+  };
+
+  const firstTrackId = queueTracks[0]?.id;
   const isCurrent =
     !!firstTrackId &&
     currentTrack?.id === firstTrackId &&
-    queue.length === playerTracks.length &&
-    queue.every((t, i) => t.id === playerTracks[i]?.id);
+    queue.length === queueTracks.length &&
+    queue.every((t, i) => t.id === queueTracks[i]?.id);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isCurrent) {
       togglePlay();
-    } else if (playerTracks.length > 0) {
-      playQueue(playerTracks, 0);
+      return;
     }
+
+    const q = await loadReleaseQueue();
+    if (!q.length) return;
+
+    setQueueTracks(q);
+    playQueue(q, 0);
   };
 
   return (

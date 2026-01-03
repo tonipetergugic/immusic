@@ -17,6 +17,7 @@ type PublicProfile = {
   location: string | null;
   bio: string | null;
   role: string | null;
+  updated_at: string | null;
 };
 
 type PublicPlaylist = {
@@ -84,7 +85,7 @@ export default function PublicProfilePage() {
 
         const { data: p, error: pErr } = await supabase
           .from("profiles")
-          .select("id, display_name, avatar_url, banner_url, location, bio, role")
+          .select("id, display_name, avatar_url, banner_url, location, bio, role, updated_at")
           .eq("id", profileId)
           .maybeSingle();
 
@@ -119,21 +120,15 @@ export default function PublicProfilePage() {
         }
 
         // playlists: public only unless owner
-        const base = supabase
-          .from("playlists")
-          .select("id, title, description, cover_url, is_public, created_at")
-          .eq("created_by", profileId)
-          .order("created_at", { ascending: false });
+        const res = await fetch(`/api/profiles/${profileId}/playlists`, { cache: "no-store" });
+        const json = await res.json();
 
-        const { data: pls, error: plsErr } =
-          user?.id && user.id === profileId
-            ? await base
-            : await base.eq("is_public", true);
-
-        if (plsErr) throw plsErr;
+        if (!res.ok) {
+          throw new Error(json?.error ?? "Failed to load playlists");
+        }
 
         if (!mounted) return;
-        setPlaylists((pls as any) ?? []);
+        setPlaylists((json?.playlists as any) ?? []);
       } catch (err) {
         console.log("PublicProfilePage load error", err);
       } finally {
@@ -312,7 +307,10 @@ export default function PublicProfilePage() {
   }
 
   const bannerUrl = profile?.banner_url ?? null;
-  const avatarUrl = profile?.avatar_url ?? null;
+
+  const avatarUrl = profile?.avatar_url
+    ? `${profile.avatar_url}${profile.avatar_url.includes("?") ? "&" : "?"}v=${encodeURIComponent(profile.updated_at ?? String(Date.now()))}`
+    : null;
 
   const colorSourceUrl = bannerUrl ?? avatarUrl ?? null;
 
@@ -498,15 +496,7 @@ export default function PublicProfilePage() {
         ) : playlists.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {playlists.map((pl) => {
-              const coverSrc =
-                pl.cover_url &&
-                (pl.cover_url.startsWith("http://") || pl.cover_url.startsWith("https://"))
-                  ? pl.cover_url
-                  : pl.cover_url
-                  ? supabase.storage
-                      .from("playlist-covers")
-                      .getPublicUrl(pl.cover_url).data.publicUrl
-                  : null;
+              const coverSrc = pl.cover_url ?? null;
 
               return (
                 <div

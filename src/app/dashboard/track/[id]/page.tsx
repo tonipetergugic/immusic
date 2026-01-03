@@ -58,11 +58,40 @@ export default async function TrackPage({
 
   if (!trackDataNormalized) return notFound();
 
-  const playerTrack = toPlayerTrack(trackDataNormalized);
+  const cover_url =
+    trackDataNormalized?.releases?.cover_path
+      ? supabase.storage
+          .from("release_covers")
+          .getPublicUrl(trackDataNormalized.releases.cover_path).data.publicUrl ?? null
+      : null;
 
-  const coverPublicUrl = playerTrack.cover_url
-    ? `${playerTrack.cover_url}${playerTrack.cover_url.includes("?") ? "&" : "?"}v=${Date.now()}`
-    : null;
+  const audio_url =
+    trackDataNormalized?.audio_path
+      ? supabase.storage
+          .from("tracks")
+          .getPublicUrl(trackDataNormalized.audio_path).data.publicUrl
+      : null;
+
+  if (!audio_url) {
+    throw new Error(
+      `TrackPage: missing audio_url for track ${trackDataNormalized.id}`
+    );
+  }
+
+  const playerTrack = toPlayerTrack({
+    id: trackDataNormalized.id,
+    title: trackDataNormalized.title ?? null,
+    artist_id: trackDataNormalized.artist_id ?? null,
+    audio_url,
+    cover_url,
+    bpm: (trackDataNormalized as any).bpm ?? null,
+    key: (trackDataNormalized as any).key ?? null,
+    artist_profile: trackDataNormalized.artist_profile ?? null,
+    profiles: (trackDataNormalized as any).profiles ?? null,
+    artist: (trackDataNormalized as any).artist ?? null,
+  });
+
+  const coverPublicUrl = playerTrack.cover_url ?? null;
 
   const { data: auth } = await supabase.auth.getUser();
   const viewerId = auth?.user?.id ?? null;

@@ -91,7 +91,19 @@ export default async function LibraryPage(props: LibraryPageProps) {
         console.error("Failed to load playlists:", error);
         playlists = [];
       } else {
-        playlists = playlistsData ?? [];
+        playlists = (playlistsData ?? []).map((p: any) => {
+          const cover_url =
+            p?.cover_url
+              ? supabase.storage
+                  .from("playlist-covers")
+                  .getPublicUrl(p.cover_url).data.publicUrl ?? null
+              : null;
+
+          return {
+            ...p,
+            cover_url,
+          };
+        });
       }
     }
   }
@@ -145,7 +157,33 @@ export default async function LibraryPage(props: LibraryPageProps) {
             : track.artist_profile ?? null,
         })) ?? [];
 
-      trackData = toPlayerTrackList(normalizedTracks);
+      const urlReadyTracks = normalizedTracks.map((t: any) => {
+        const cover_url =
+          t?.releases?.cover_path
+            ? supabase.storage
+                .from("release_covers")
+                .getPublicUrl(t.releases.cover_path).data.publicUrl ?? null
+            : null;
+
+        const audio_url =
+          t?.audio_path
+            ? supabase.storage
+                .from("tracks")
+                .getPublicUrl(t.audio_path).data.publicUrl
+            : null;
+
+        if (!audio_url) {
+          throw new Error("Library: Missing audio_url for track " + (t?.id ?? "unknown"));
+        }
+
+        return {
+          ...t,
+          cover_url,
+          audio_url,
+        };
+      });
+
+      trackData = toPlayerTrackList(urlReadyTracks);
     }
   }
 

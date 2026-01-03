@@ -3,22 +3,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import type { PlayerTrack } from "@/types/playerTrack";
-import { toPlayerTrack } from "@/lib/playerTrack";
-import type { Track } from "@/types/database";
 
-type PublishedTrackRow = Track & {
-  releases?: {
-    status?: string | null;
-    cover_path?: string | null;
-  } | null;
-  artist?: {
-    display_name: string | null;
-  } | null;
+type PublishedTrackApiRow = {
+  id: string;
+  title: string;
+  bpm: number | null;
+  key: string | null;
+  artist_id: string | null;
+  artist_name: string | null;
+  cover_url: string | null;
 };
 
 type TrackOption = {
-  raw: PublishedTrackRow;
-  player: PlayerTrack;
+  raw: PublishedTrackApiRow;
+  player: PlayerTrack | null;
 };
 
 type PlaylistAddTrackModalProps = {
@@ -28,17 +26,6 @@ type PlaylistAddTrackModalProps = {
   onTrackAdded?: (track: PlayerTrack) => void;
   existingTrackIds?: string[];
 };
-
-const TRACK_SELECT = `
-  *,
-  releases:releases!tracks_release_id_fkey!inner (
-    status,
-    cover_path
-  ),
-  artist:profiles!tracks_artist_id_fkey (
-    display_name
-  )
-`;
 
 const PLAYLIST_TRACK_SELECT = `
   position,
@@ -87,15 +74,26 @@ export default function PlaylistAddTrackModal({
     async function loadTracks() {
       setIsLoading(true);
       setErrorMessage(null);
-      const { data, error } = await supabase
-        .from("tracks")
-        .select(TRACK_SELECT)
-        .eq("releases.status", "published")
-        .order("title", { ascending: true });
+      const res = await fetch("/api/tracks/published", {
+        method: "GET",
+        cache: "no-store",
+      });
 
       if (isCancelled) {
         return;
       }
+
+      if (!res.ok) {
+        console.error("Failed to load published tracks via API:", res.status);
+        setOptions([]);
+        setErrorMessage("Tracks konnten nicht geladen werden.");
+        setIsLoading(false);
+        return;
+      }
+
+      const json = await res.json();
+      const data = (json?.tracks ?? []) as PublishedTrackApiRow[];
+      const error = null;
 
       if (error) {
         console.error("Failed to load published tracks:", error);
@@ -104,8 +102,8 @@ export default function PlaylistAddTrackModal({
       } else {
         const mapped =
           data?.map((row) => ({
-            raw: row as PublishedTrackRow,
-            player: toPlayerTrack(row as Track),
+            raw: row,
+            player: null,
           })) ?? [];
         setOptions(mapped);
       }
@@ -173,15 +171,32 @@ export default function PlaylistAddTrackModal({
 
       if (data?.tracks) {
         try {
-          const trackRecord = data.tracks as unknown as Track;
-          const playerTrack = toPlayerTrack(trackRecord);
+          const trackRecord = data.tracks as any;
+          const res = await fetch(`/api/tracks/${trackRecord.id}/player`, {
+            method: "GET",
+            cache: "no-store",
+          });
+
+          if (!res.ok) {
+            throw new Error(`Failed to load playerTrack (${res.status})`);
+          }
+
+          const json = await res.json();
+          const playerTrack = json?.playerTrack;
+          if (!playerTrack?.id) {
+            throw new Error("Invalid playerTrack payload");
+          }
           onTrackAdded?.(playerTrack);
         } catch (err) {
           console.error("Track conversion failed:", err);
-          onTrackAdded?.(option.player);
+          if (option.player) {
+            onTrackAdded?.(option.player);
+          }
         }
       } else {
-        onTrackAdded?.(option.player);
+        if (option.player) {
+          onTrackAdded?.(option.player);
+        }
       }
 
       setActionId(null);
@@ -229,24 +244,24 @@ export default function PlaylistAddTrackModal({
                 >
                   <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-neutral-800">
                     <img
-                      src={player.cover_url || "/placeholder.png"}
-                      alt={player.title}
+                      src={raw.cover_url ?? player?.cover_url ?? "/placeholder.png"}
+                      alt={raw.title || player?.title || "Track"}
                       className="h-full w-full object-cover"
                     />
                   </div>
 
                   <div className="flex flex-1 flex-col">
                     <span className="text-sm font-semibold text-white">
-                      {player.title}
+                      {player?.title || raw.title || "Untitled Track"}
                     </span>
                     <span className="text-xs text-white/60">
-                      {player.profiles?.display_name ?? raw.artist?.display_name ?? "Unknown Artist"}
+                      {player?.profiles?.display_name ?? raw.artist_name ?? "Unknown Artist"}
                     </span>
                   </div>
 
                   <div className="flex flex-col items-end text-xs text-white/60">
-                    <span>BPM: {player.bpm ?? "—"}</span>
-                    <span>Key: {player.key ?? "—"}</span>
+                    <span>BPM: {player?.bpm ?? raw.bpm ?? "—"}</span>
+                    <span>Key: {player?.key ?? raw.key ?? "—"}</span>
                   </div>
                 </div>
               );

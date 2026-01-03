@@ -20,7 +20,7 @@ export async function updateBannerAction(formData: FormData) {
     throw new Error("No banner file provided");
   }
 
-  const filePath = `banners/${user.id}.jpg`;
+  const filePath = `banners/${user.id}/banner-${crypto.randomUUID()}.jpg`;
 
   const { error: uploadError } = await supabase.storage
     .from("profile-banners")
@@ -38,7 +38,7 @@ export async function updateBannerAction(formData: FormData) {
 
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ banner_url: publicUrl })
+    .update({ banner_url: publicUrl, updated_at: new Date().toISOString() })
     .eq("id", user.id);
 
   if (updateError) {
@@ -61,7 +61,7 @@ export async function setBannerUrlAction(url: string) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ banner_url: url })
+    .update({ banner_url: url, updated_at: new Date().toISOString() })
     .eq("id", user.id);
 
   if (error) {

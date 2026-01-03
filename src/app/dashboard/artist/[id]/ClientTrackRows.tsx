@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import { toPlayerTrack } from "@/lib/playerTrack";
 import type { ReleaseTrackRow } from "@/types/releaseTrack";
 
 type ClientTrackRowsProps = {
@@ -13,23 +12,28 @@ type ClientTrackRowsProps = {
 export default function ClientTrackRows({ releaseId, tracks }: ClientTrackRowsProps) {
   const { currentTrack, playQueue } = usePlayer();
   const [expanded, setExpanded] = useState(false);
+  const [queueTracks, setQueueTracks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Convert to PlayerTrack[]
-  const playerTracks = tracks.map((rt): ReturnType<typeof toPlayerTrack> => {
-    return toPlayerTrack({
-      id: rt.tracks?.id ?? "",
-      title: rt.track_title || rt.tracks?.title || "Untitled Track",
-      artist_id: null,
-      audio_path: rt.tracks?.audio_path ?? null,
-      releases: rt.releases
-        ? {
-            ...rt.releases,
-            status: rt.releases.status ?? "",
-          }
-        : null,
-      profiles: null,
+  const ensureQueueLoaded = async () => {
+    if (queueTracks.length) return queueTracks;
+
+    setLoading(true);
+    const res = await fetch(`/api/releases/${releaseId}/queue`, {
+      method: "GET",
+      cache: "no-store",
     });
-  });
+    setLoading(false);
+
+    if (!res.ok) {
+      throw new Error(`Failed to load release queue (${res.status})`);
+    }
+
+    const json = await res.json();
+    const q = Array.isArray(json.queue) ? json.queue : [];
+    setQueueTracks(q);
+    return q;
+  };
 
   // Which items to show in collapsed mode?
   const visibleTracks: ReleaseTrackRow[] = expanded ? tracks : tracks.slice(0, 1);
@@ -45,7 +49,15 @@ export default function ClientTrackRows({ releaseId, tracks }: ClientTrackRowsPr
           return (
             <div
               key={rt.id}
-              onClick={() => playQueue(playerTracks, globalIndex)}
+              onClick={async () => {
+                try {
+                  const q = await ensureQueueLoaded();
+                  if (!q.length) return;
+                  playQueue(q, globalIndex);
+                } catch (err) {
+                  console.error("ClientTrackRows play error:", err);
+                }
+              }}
               className={`
                 flex items-center justify-between py-1 border-b border-white/5 text-sm cursor-pointer
                 ${isActive ? "text-[#00FFC6]" : "text-white/80 hover:text-white"}

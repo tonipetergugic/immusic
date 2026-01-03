@@ -1,7 +1,7 @@
 // /Users/tonipetergugic/immusic/src/app/dashboard/DashboardHomeClient.tsx
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -10,7 +10,7 @@ import { usePlayer } from "@/context/PlayerContext";
 import { getReleaseQueueForPlayer } from "@/lib/getReleaseQueue";
 import { Play, Pause } from "lucide-react";
 import type { HomeReleaseCard } from "@/lib/supabase/getHomeReleases";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { HomePlaylistCard } from "@/lib/supabase/getHomePlaylists";
 
 type HomeModule = {
   id: string;
@@ -33,13 +33,10 @@ type Props = {
     itemsByModuleId: Record<string, HomeItem[]>;
   };
   releasesById: Record<string, HomeReleaseCard>;
+  playlistsById: Record<string, HomePlaylistCard>;
 };
 
-export default function DashboardHomeClient({ home, releasesById }: Props) {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [featuredPlaylistsById, setFeaturedPlaylistsById] = useState<
-    Record<string, { id: string; title: string; description: string | null; cover_url: string | null }>
-  >({});
+export default function DashboardHomeClient({ home, releasesById, playlistsById }: Props) {
   // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
   const releaseItems = releaseModule ? home.itemsByModuleId[releaseModule.id] ?? [] : [];
@@ -49,52 +46,6 @@ export default function DashboardHomeClient({ home, releasesById }: Props) {
   const playlistItems = playlistModule
     ? home.itemsByModuleId[playlistModule.id] ?? []
     : [];
-
-  const playlistIds = useMemo(() => {
-    return Array.from(
-      new Set(
-        playlistItems
-          .filter((it) => it.item_type === "playlist")
-          .sort((a, b) => a.position - b.position)
-          .slice(0, 10)
-          .map((it) => it.item_id)
-      )
-    );
-  }, [playlistItems]);
-
-  const playlistIdsKey = useMemo(() => playlistIds.join(","), [playlistIds]);
-
-  useEffect(() => {
-    if (playlistIds.length === 0) {
-      setFeaturedPlaylistsById({});
-      return;
-    }
-
-    (async () => {
-      const { data, error } = await supabase
-        .from("playlists")
-        .select("id,title,description,cover_url")
-        .in("id", playlistIds);
-
-      if (error || !data) return;
-
-      const map: Record<
-        string,
-        { id: string; title: string; description: string | null; cover_url: string | null }
-      > = {};
-
-      for (const p of data) {
-        map[p.id] = {
-          id: p.id,
-          title: p.title,
-          description: p.description ?? null,
-          cover_url: p.cover_url ?? null,
-        };
-      }
-
-      setFeaturedPlaylistsById(map);
-    })();
-  }, [playlistIdsKey, supabase]);
 
   return (
     <div className="space-y-10">
@@ -136,7 +87,7 @@ export default function DashboardHomeClient({ home, releasesById }: Props) {
               .sort((a, b) => a.position - b.position)
               .slice(0, 10)
               .map((it) => {
-                const pl = featuredPlaylistsById[it.item_id];
+                const pl = playlistsById[it.item_id];
 
                 if (!pl) {
                   return (

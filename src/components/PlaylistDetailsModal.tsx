@@ -44,12 +44,7 @@ export default function PlaylistDetailsModal({
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
-  const currentCoverUrl = useMemo(() => {
-    if (!playlist.cover_url) return null;
-    if (playlist.cover_url.startsWith("http")) return playlist.cover_url;
-    const { data } = supabase.storage.from("playlist-covers").getPublicUrl(playlist.cover_url);
-    return data?.publicUrl ?? playlist.cover_url;
-  }, [playlist.cover_url, supabase]);
+  const currentCoverUrl = playlist.cover_url ?? null;
 
   async function handleSave() {
     setLoading(true);

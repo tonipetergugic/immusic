@@ -33,6 +33,11 @@ src/app/(topbar)/layout.tsx
 src/app/(topbar)/account
 src/app/layout.tsx
 src/app/api
+src/app/api/releases
+src/app/api/playlists
+src/app/api/tracks
+src/app/api/storage
+src/app/api/profiles
 src/app/api/artist
 src/app/page.tsx
 src/app/globals.css
@@ -80,12 +85,14 @@ src/lib/supabase
 src/lib/supabase/getHomeModules.ts
 src/lib/supabase/getUser.ts
 src/lib/supabase/getFeaturedRelease.ts
+src/lib/supabase/getHomePlaylists.ts
 src/lib/supabase/client.ts
 src/lib/supabase/getProfile.ts
 src/lib/supabase/getHomeReleases.ts
 src/lib/supabase/server.ts
 src/lib/getReleaseQueue.server.ts
 src/lib/playerTrack.ts
+src/lib/playerTrack.README.md
 src/lib/analytics
 src/lib/analytics/fetchTopTracks.client.ts
 src/lib/analytics/getArtistAnalytics.server.ts

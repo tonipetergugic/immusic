@@ -1,10 +1,8 @@
 "use client";
 
 import { Play, Pause } from "lucide-react";
-import { useState, useEffect } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import { toPlayerTrackList } from "@/lib/playerTrack";
 
 type Props = {
   playlistId: string;
@@ -12,33 +10,12 @@ type Props = {
 };
 
 export default function PlaylistPlayOverlayButton({ playlistId, size = "sm" }: Props) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const { playQueue, togglePlay, currentTrack, isPlaying } = usePlayer();
   const [isLoading, setIsLoading] = useState(false);
-  const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    async function loadTrackIds() {
-      const { data } = await supabase
-        .from("playlist_tracks")
-        .select("tracks:track_id(id)")
-        .eq("playlist_id", playlistId);
-
-      if (data) {
-        const ids = new Set(data.map((r: any) => r.tracks?.id).filter(Boolean));
-        setPlaylistTrackIds(ids);
-      }
-    }
-
-    loadTrackIds();
-  }, [playlistId, supabase]);
+  const [queueTracks, setQueueTracks] = useState<any[]>([]);
 
   const isCurrentFromThisPlaylist =
-    !!currentTrack?.id && playlistTrackIds.has(currentTrack.id);
+    !!currentTrack?.id && queueTracks.some((t: any) => t?.id === currentTrack.id);
 
   async function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -51,37 +28,19 @@ export default function PlaylistPlayOverlayButton({ playlistId, size = "sm" }: P
 
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("playlist_tracks")
-        .select(
-          `
-          position,
-          tracks:track_id (
-            id,
-            title,
-            artist_id,
-            audio_path,
-            bpm,
-            key,
-            releases:release_id (
-              id,
-              cover_path,
-              status
-            ),
-            profiles:artist_id (
-              display_name
-            )
-          )
-        `
-        )
-        .eq("playlist_id", playlistId)
-        .order("position", { ascending: true });
+      const res = await fetch(`/api/playlists/${playlistId}/queue`, {
+        method: "GET",
+        cache: "no-store",
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error(`Failed to load playlist queue (${res.status})`);
+      }
 
-      const rows = (data ?? []) as any[];
-      const tracks = rows.map((r) => r.tracks).filter(Boolean);
-      const playerTracks = toPlayerTrackList(tracks);
+      const json = await res.json();
+      const playerTracks = Array.isArray(json.queue) ? json.queue : [];
+
+      setQueueTracks(playerTracks);
 
       if (playerTracks.length > 0) {
         playQueue(playerTracks, 0);

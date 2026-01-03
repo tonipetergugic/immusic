@@ -20,6 +20,42 @@ export default function BannerUpload({
   const supabase = createSupabaseBrowserClient();
   console.log("Supabase client initialized:", supabase);
 
+  async function cleanupOtherFilesInPrefix(params: {
+    bucket: string;
+    prefix: string;
+    keepFullPath: string;
+  }) {
+    try {
+      const { bucket, prefix, keepFullPath } = params;
+
+      const { data: listed, error: listErr } = await supabase.storage
+        .from(bucket)
+        .list(prefix, { limit: 100, offset: 0 });
+
+      if (listErr) {
+        console.log("[cleanup] list failed:", listErr);
+        return;
+      }
+
+      const toDelete =
+        (listed ?? [])
+          .map((f) => `${prefix}/${f.name}`)
+          .filter((fullPath) => fullPath !== keepFullPath);
+
+      if (toDelete.length === 0) return;
+
+      const { error: delErr } = await supabase.storage.from(bucket).remove(toDelete);
+      if (delErr) {
+        console.log("[cleanup] remove failed:", delErr);
+        return;
+      }
+
+      console.log(`[cleanup] removed ${toDelete.length} old file(s) from ${bucket}/${prefix}`);
+    } catch (e) {
+      console.log("[cleanup] unexpected error:", e);
+    }
+  }
+
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ): Promise<void> => {
@@ -30,11 +66,13 @@ export default function BannerUpload({
     setErrorMessage(null);
 
     try {
-      const filePath = `${userId}/banner.jpg`;
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
+      const filePath = `${userId}/banner-${crypto.randomUUID()}.${safeExt}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("profile-banners")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { upsert: false });
 
       console.log("Upload raw result:", uploadData, uploadError);
 
@@ -44,6 +82,12 @@ export default function BannerUpload({
         setErrorMessage(uploadError.message);
         return;
       }
+
+      await cleanupOtherFilesInPrefix({
+        bucket: "profile-banners",
+        prefix: userId,
+        keepFullPath: filePath, // keep the banner file that was just uploaded
+      });
 
       const { data: publicData } = supabase.storage
         .from("profile-banners")

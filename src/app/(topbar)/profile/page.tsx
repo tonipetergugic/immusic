@@ -24,6 +24,43 @@ export default function ProfilePage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // Helper: best-effort cleanup of old files in a bucket prefix, keeping only the newest uploaded file
+  async function cleanupOtherFilesInPrefix(params: {
+    bucket: string;
+    prefix: string; // e.g. `${user.id}`
+    keepFullPath: string; // e.g. `${user.id}/xyz.png`
+  }) {
+    try {
+      const { bucket, prefix, keepFullPath } = params;
+
+      const { data: listed, error: listErr } = await supabase.storage
+        .from(bucket)
+        .list(prefix, { limit: 100, offset: 0 });
+
+      if (listErr) {
+        console.log("[cleanup] list failed:", listErr);
+        return;
+      }
+
+      const toDelete =
+        (listed ?? [])
+          .map((f) => `${prefix}/${f.name}`)
+          .filter((fullPath) => fullPath !== keepFullPath);
+
+      if (toDelete.length === 0) return;
+
+      const { error: delErr } = await supabase.storage.from(bucket).remove(toDelete);
+      if (delErr) {
+        console.log("[cleanup] remove failed:", delErr);
+        return;
+      }
+
+      console.log(`[cleanup] removed ${toDelete.length} old file(s) from ${bucket}/${prefix}`);
+    } catch (e) {
+      console.log("[cleanup] unexpected error:", e);
+    }
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -47,12 +84,19 @@ export default function ProfilePage() {
 
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("avatar_url, display_name, role")
+          .select("avatar_url, display_name, role, updated_at")
           .eq("id", user.id)
           .single();
 
         if (!error && isMounted) {
-          setAvatarUrl(profile?.avatar_url ?? null);
+          const base = profile?.avatar_url ?? null;
+          const ver = profile?.updated_at ? String(profile.updated_at) : null;
+
+          setAvatarUrl(
+            base
+              ? `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(ver ?? String(Date.now()))}`
+              : null
+          );
           setRole(profile?.role ?? null);
           if (profile?.display_name) {
             setDisplayName(profile.display_name);
@@ -134,10 +178,14 @@ export default function ProfilePage() {
               }
 
               // Upload file
+              const ext = (file.name.split(".").pop() || "png").toLowerCase();
+              const filePath = `${user.id}/${Date.now()}.${ext}`;
+
               const { error: uploadError } = await supabase.storage
                 .from("avatars")
-                .upload(`${user.id}/avatar.png`, file, {
-                  upsert: true,
+                .upload(filePath, file, {
+                  upsert: false,
+                  contentType: file.type || undefined,
                 });
 
               if (uploadError) {
@@ -147,17 +195,29 @@ export default function ProfilePage() {
                 return;
               }
 
+              // BEST-EFFORT CLEANUP: delete old avatar files in this user folder (keep only the new one)
+              await cleanupOtherFilesInPrefix({
+                bucket: "avatars",
+                prefix: user.id,
+                keepFullPath: filePath,
+              });
+
               // Get public URL
               const { data: publicUrl } = supabase.storage
                 .from("avatars")
-                .getPublicUrl(`${user.id}/avatar.png`);
+                .getPublicUrl(filePath);
 
               const url = publicUrl.publicUrl;
 
-              // Update DB via Server Action
+              // Update DB via Server Action (store the cache-busted URL)
               await updateAvatar(url);
 
+              // Update UI
               setAvatarUrl(url);
+
+              // notify Topbar (and any other listeners) to refetch versioned avatar_url
+              window.dispatchEvent(new CustomEvent("avatarUpdated"));
+
               setLoading(false);
             }}
           />
@@ -198,6 +258,7 @@ export default function ProfilePage() {
                 setLoading(true);
                 await deleteAvatar();
                 setAvatarUrl(null);
+                window.dispatchEvent(new CustomEvent("avatarUpdated"));
                 setLoading(false);
               }}
               className="

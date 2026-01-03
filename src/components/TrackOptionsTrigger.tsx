@@ -89,16 +89,11 @@ function AddToPlaylistModal({
         setPlaylists([]);
       } else {
         const mapped = (data as PlaylistRow[]).map((pl) => {
-          if (!pl.cover_url) return pl;
-
-          const { data: publicData } = supabase
-            .storage
-            .from("playlist-covers")
-            .getPublicUrl(pl.cover_url);
+          const coverPublicUrl = pl.cover_url ?? null;
 
           return {
             ...pl,
-            cover_public_url: publicData?.publicUrl ?? null,
+            cover_public_url: coverPublicUrl,
           };
         });
         setPlaylists(mapped);

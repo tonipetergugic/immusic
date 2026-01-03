@@ -1,11 +1,4 @@
 import { PlayerTrack } from "@/types/playerTrack";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 type ProfileLike = {
   display_name?: string | null;
@@ -17,14 +10,8 @@ type TrackLike = {
   id: string;
   title?: string | null;
   artist_id?: string | null;
-  cover_url?: string | null;
-  releases?: {
-    id?: string;
-    cover_path?: string | null;
-    status?: string | null;
-  } | null;
-  audio_url?: string | null;
-  audio_path?: string | null;
+  audio_url: string;            // MUSS serverseitig gesetzt sein
+  cover_url?: string | null;    // darf null sein
   bpm?: number | null;
   key?: string | null;
   profiles?: ProfileSource;
@@ -42,7 +29,13 @@ function normalizeProfile(profile?: ProfileSource): ProfileLike | null {
 
 export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack {
   if (!track?.id) {
-    throw new Error("Cannot convert track without an id");
+    throw new Error("toPlayerTrack: missing track.id");
+  }
+
+  if (!track.audio_url) {
+    throw new Error(
+      `toPlayerTrack: missing audio_url for track ${track.id} (server bug)`
+    );
   }
 
   const profileSource =
@@ -51,26 +44,12 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     normalizeProfile(track.artist) ??
     null;
 
-  const coverUrl =
-    track.releases?.cover_path && supabase
-      ? supabase.storage
-          .from("release_covers")
-          .getPublicUrl(track.releases.cover_path).data.publicUrl
-      : null;
-
-  let audioPublicUrl = track.audio_url ?? "";
-
-  if (!audioPublicUrl && track.audio_path && supabase) {
-    const { data } = supabase.storage.from("tracks").getPublicUrl(track.audio_path);
-    audioPublicUrl = data.publicUrl ?? "";
-  }
-
   return {
     id: track.id,
     title: track.title ?? "Untitled Track",
     artist_id: track.artist_id ?? "",
-    cover_url: coverUrl,
-    audio_url: audioPublicUrl,
+    audio_url: track.audio_url,
+    cover_url: track.cover_url ?? null,
     bpm: track.bpm ?? null,
     key: track.key ?? null,
     profiles: profileSource
@@ -81,7 +60,9 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
   };
 }
 
-export function toPlayerTrackList(tracks: TrackLike[] | null | undefined): PlayerTrack[] {
+export function toPlayerTrackList(
+  tracks: TrackLike[] | null | undefined
+): PlayerTrack[] {
   if (!tracks) return [];
   return tracks.map((track) => toPlayerTrack(track));
 }

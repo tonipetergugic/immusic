@@ -12,6 +12,12 @@ import {
   Shield,
 } from "lucide-react";
 
+function versionedUrl(base: string | null, updatedAt: string | null | undefined) {
+  if (!base) return null;
+  if (!updatedAt) return base;
+  return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(updatedAt)}`;
+}
+
 export default function Topbar() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -39,7 +45,7 @@ export default function Topbar() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, display_name, avatar_url")
+        .select("role, display_name, avatar_url, updated_at")
         .eq("id", user.id)
         .single();
 
@@ -48,7 +54,8 @@ export default function Topbar() {
         window.dispatchEvent(new CustomEvent("roleUpdated", { detail: profile.role }));
       }
       if (profile?.display_name) setDisplayName(profile.display_name);
-      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+      
+      setAvatarUrl(versionedUrl(profile?.avatar_url ?? null, profile?.updated_at));
     }
 
     loadUser();
@@ -73,6 +80,32 @@ export default function Topbar() {
       );
     };
   }, []);
+
+  useEffect(() => {
+    async function handleAvatarUpdate() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("avatar_url, updated_at")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setAvatarUrl(versionedUrl(profile.avatar_url ?? null, profile.updated_at));
+      }
+    }
+
+    window.addEventListener("avatarUpdated", handleAvatarUpdate);
+
+    return () => {
+      window.removeEventListener("avatarUpdated", handleAvatarUpdate);
+    };
+  }, [supabase]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

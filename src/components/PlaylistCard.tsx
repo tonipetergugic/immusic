@@ -3,10 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Pause } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import { toPlayerTrackList } from "@/lib/playerTrack";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type PlaylistCardProps = {
   id: string;
@@ -21,61 +19,35 @@ export default function PlaylistCard({
   description,
   cover_url,
 }: PlaylistCardProps) {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-
-  const [publicCoverUrl, setPublicCoverUrl] = useState<string | null>(null);
+  const coverPublicUrl =
+    cover_url && (cover_url.startsWith("http://") || cover_url.startsWith("https://"))
+      ? cover_url
+      : null;
   const { playQueue, togglePlay, pause, currentTrack, isPlaying } = usePlayer();
   const [isPlayLoading, setIsPlayLoading] = useState(false);
   const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!cover_url) return;
-
-    const { data } = supabase.storage
-      .from("playlist-covers")
-      .getPublicUrl(cover_url);
-
-    setPublicCoverUrl(data.publicUrl ?? null);
-  }, [cover_url]);
 
   const isCurrentFromThisPlaylist =
     !!currentTrack?.id && playlistTrackIds.has(currentTrack.id);
 
   async function loadPlaylistQueue() {
-    const { data, error } = await supabase
-      .from("playlist_tracks")
-      .select(
-        `
-        position,
-        tracks:track_id (
-          id,
-          title,
-          artist_id,
-          audio_path,
-          bpm,
-          key,
-          releases:release_id (
-            id,
-            cover_path,
-            status
-          ),
-          profiles:artist_id (
-            display_name
-          )
-        )
-      `
-      )
-      .eq("playlist_id", id)
-      .order("position", { ascending: true });
+    const res = await fetch(`/api/playlists/${id}/queue`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
 
-    if (error) throw error;
+    if (!res.ok) {
+      throw new Error(`Failed to load playlist queue (${res.status})`);
+    }
 
-    const rows = (data ?? []) as any[];
-    const tracks = rows.map((r) => r.tracks).filter(Boolean);
+    const json = (await res.json()) as { queue?: any[] };
 
-    setPlaylistTrackIds(new Set(tracks.map((t: any) => t.id)));
+    const queue = Array.isArray(json.queue) ? json.queue : [];
 
-    return toPlayerTrackList(tracks);
+    setPlaylistTrackIds(new Set(queue.map((t: any) => t.id).filter(Boolean)));
+
+    return queue;
   }
 
   return (
@@ -95,9 +67,9 @@ export default function PlaylistCard({
       "
     >
       <div className="relative w-full aspect-square rounded-xl overflow-hidden">
-        {publicCoverUrl ? (
+        {coverPublicUrl ? (
           <Image
-            src={publicCoverUrl}
+            src={coverPublicUrl}
             alt={title}
             fill
             className="
