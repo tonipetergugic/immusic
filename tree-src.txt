@@ -6,6 +6,7 @@ src/types/vendor.d.ts
 src/types/playerTrack.ts
 src/types/database.ts
 src/types/supabase.ts
+src/.DS_Store
 src/context
 src/context/PlayerContext.tsx
 src/app
@@ -81,6 +82,7 @@ src/lib/supabase/getUser.ts
 src/lib/supabase/getFeaturedRelease.ts
 src/lib/supabase/client.ts
 src/lib/supabase/getProfile.ts
+src/lib/supabase/getHomeReleases.ts
 src/lib/supabase/server.ts
 src/lib/getReleaseQueue.server.ts
 src/lib/playerTrack.ts

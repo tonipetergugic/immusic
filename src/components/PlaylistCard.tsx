@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Pause } from "lucide-react";
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useMemo, useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import { toPlayerTrackList } from "@/lib/playerTrack";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type PlaylistCardProps = {
   id: string;
@@ -21,10 +21,7 @@ export default function PlaylistCard({
   description,
   cover_url,
 }: PlaylistCardProps) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [publicCoverUrl, setPublicCoverUrl] = useState<string | null>(null);
   const { playQueue, togglePlay, pause, currentTrack, isPlaying } = usePlayer();

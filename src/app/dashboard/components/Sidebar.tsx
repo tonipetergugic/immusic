@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Library, PlusCircle, Mic } from "lucide-react";
-import { useEffect } from "react";
 import CreatePlaylistModal from "@/components/CreatePlaylistModal";
-import { createBrowserClient } from "@supabase/ssr";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -14,28 +12,17 @@ export default function Sidebar() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    async function loadRole() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (data?.role) setRole(data.role);
+    function handleRoleUpdate(e: Event) {
+      const ce = e as CustomEvent;
+      const nextRole = typeof ce.detail === "string" ? ce.detail : null;
+      setRole(nextRole);
     }
 
-    loadRole();
+    window.addEventListener("roleUpdated", handleRoleUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener("roleUpdated", handleRoleUpdate as EventListener);
+    };
   }, []);
 
   return (

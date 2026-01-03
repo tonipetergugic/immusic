@@ -43,7 +43,10 @@ export default function Topbar() {
         .eq("id", user.id)
         .single();
 
-      if (profile?.role) setRole(profile.role);
+      if (profile?.role) {
+        setRole(profile.role);
+        window.dispatchEvent(new CustomEvent("roleUpdated", { detail: profile.role }));
+      }
       if (profile?.display_name) setDisplayName(profile.display_name);
       if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
     }

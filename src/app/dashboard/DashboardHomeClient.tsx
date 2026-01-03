@@ -1,15 +1,16 @@
 // /Users/tonipetergugic/immusic/src/app/dashboard/DashboardHomeClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import PlaylistCard from "@/components/PlaylistCard";
-import { createBrowserClient } from "@supabase/ssr";
 import { usePlayer } from "@/context/PlayerContext";
 import { getReleaseQueueForPlayer } from "@/lib/getReleaseQueue";
 import { Play, Pause } from "lucide-react";
+import type { HomeReleaseCard } from "@/lib/supabase/getHomeReleases";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type HomeModule = {
   id: string;
@@ -26,24 +27,16 @@ type HomeItem = {
   position: number;
 };
 
-type ReleaseCardData = {
-  id: string;
-  title: string;
-  cover_url: string | null;
-  artist_id: string | null;
-  artist_name: string | null;
-  release_type: string | null;
-};
-
 type Props = {
   home: {
     modules: HomeModule[];
     itemsByModuleId: Record<string, HomeItem[]>;
   };
-  featuredRelease?: unknown;
+  releasesById: Record<string, HomeReleaseCard>;
 };
 
-export default function DashboardHomeClient({ home }: Props) {
+export default function DashboardHomeClient({ home, releasesById }: Props) {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [featuredPlaylistsById, setFeaturedPlaylistsById] = useState<
     Record<string, { id: string; title: string; description: string | null; cover_url: string | null }>
   >({});
@@ -57,8 +50,8 @@ export default function DashboardHomeClient({ home }: Props) {
     ? home.itemsByModuleId[playlistModule.id] ?? []
     : [];
 
-  useEffect(() => {
-    const ids = Array.from(
+  const playlistIds = useMemo(() => {
+    return Array.from(
       new Set(
         playlistItems
           .filter((it) => it.item_type === "playlist")
@@ -67,22 +60,21 @@ export default function DashboardHomeClient({ home }: Props) {
           .map((it) => it.item_id)
       )
     );
+  }, [playlistItems]);
 
-    if (ids.length === 0) {
+  const playlistIdsKey = useMemo(() => playlistIds.join(","), [playlistIds]);
+
+  useEffect(() => {
+    if (playlistIds.length === 0) {
       setFeaturedPlaylistsById({});
       return;
     }
-
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     (async () => {
       const { data, error } = await supabase
         .from("playlists")
         .select("id,title,description,cover_url")
-        .in("id", ids);
+        .in("id", playlistIds);
 
       if (error || !data) return;
 
@@ -102,7 +94,7 @@ export default function DashboardHomeClient({ home }: Props) {
 
       setFeaturedPlaylistsById(map);
     })();
-  }, [playlistItems]);
+  }, [playlistIdsKey, supabase]);
 
   return (
     <div className="space-y-10">
@@ -120,7 +112,11 @@ export default function DashboardHomeClient({ home }: Props) {
               .sort((a, b) => a.position - b.position)
               .slice(0, 10)
               .map((it) => (
-                <ExtraReleaseCard key={it.id} releaseId={it.item_id} />
+                <ExtraReleaseCard
+                  key={it.id}
+                  releaseId={it.item_id}
+                  data={releasesById[it.item_id] ?? null}
+                />
               ))}
           </div>
         )}
@@ -172,66 +168,19 @@ export default function DashboardHomeClient({ home }: Props) {
   );
 }
 
-function ExtraReleaseCard({ releaseId }: { releaseId: string }) {
-  const [data, setData] = useState<ReleaseCardData | null>(null);
+function ExtraReleaseCard({
+  releaseId,
+  data,
+}: {
+  releaseId: string;
+  data: HomeReleaseCard | null;
+}) {
   const { playQueue, togglePlay, pause, currentTrack, isPlaying } = usePlayer();
   const [isPlayLoading, setIsPlayLoading] = useState(false);
   const [firstTrackId, setFirstTrackId] = useState<string | null>(null);
   const router = useRouter();
 
   const isCurrent = !!firstTrackId && currentTrack?.id === firstTrackId;
-
-  useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    (async () => {
-      const { data: rel, error } = await supabase
-        .from("releases")
-        .select("id,title,cover_path,status,artist_id,release_type")
-        .eq("id", releaseId)
-        .single();
-
-      if (error || !rel) return;
-
-      let cover_url: string | null = null;
-      if (rel.cover_path) {
-        const { data: pub } = supabase.storage
-          .from("release_covers")
-          .getPublicUrl(rel.cover_path);
-        cover_url = pub.publicUrl ?? null;
-      }
-
-      let artist_name: string | null = null;
-      if (rel.artist_id) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("id", rel.artist_id)
-          .single();
-        artist_name = prof?.display_name ?? null;
-      }
-
-      // Preload first track id for play/pause indicator
-      try {
-        const q = await getReleaseQueueForPlayer(releaseId);
-        if (q[0]?.id) setFirstTrackId(q[0].id);
-      } catch {
-        // ignore
-      }
-
-      setData({
-        id: rel.id,
-        title: rel.title ?? "Untitled",
-        cover_url,
-        artist_id: rel.artist_id ?? null,
-        artist_name,
-        release_type: rel.release_type ?? null,
-      });
-    })();
-  }, [releaseId]);
 
   if (!data) {
     return (
@@ -242,6 +191,8 @@ function ExtraReleaseCard({ releaseId }: { releaseId: string }) {
       </div>
     );
   }
+
+  // NOTE: firstTrackId is set on first play click (no preload), to avoid N+1 queries.
 
   return (
     <div
