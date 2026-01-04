@@ -80,7 +80,7 @@ src/components/PlaylistCard.tsx
 src/components/TrackOptionsTrigger.tsx
 src/components/DeleteReleaseModal.tsx
 src/lib
-src/lib/getReleaseQueue.ts
+src/lib/playlistCovers.server.ts
 src/lib/supabase
 src/lib/supabase/getHomeModules.ts
 src/lib/supabase/getUser.ts

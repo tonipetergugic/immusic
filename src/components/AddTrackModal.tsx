@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addTrackToReleaseAction } from "@/app/artist/releases/[id]/actions";
 
 export default function AddTrackModal({
@@ -14,10 +14,7 @@ export default function AddTrackModal({
   onTrackAdded?: (track: any) => void;
 }) {
   const [tracks, setTracks] = useState<any[]>([]);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {

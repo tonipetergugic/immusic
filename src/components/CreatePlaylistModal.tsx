@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function CreatePlaylistModal({
   isOpen,
@@ -18,10 +18,7 @@ export default function CreatePlaylistModal({
 
   if (!isOpen) return null;
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createSupabaseBrowserClient();
 
   async function handleCreate() {
     if (!title.trim()) return;

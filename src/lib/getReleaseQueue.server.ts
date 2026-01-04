@@ -1,5 +1,6 @@
 import { PlayerTrack } from "@/types/playerTrack";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { toPlayerTrackList } from "@/lib/playerTrack";
 
 // SERVER-ONLY: darf in Client Components NICHT importiert werden!
 export async function getReleaseQueueForPlayerServer(
@@ -56,7 +57,8 @@ export async function getReleaseQueueForPlayerServer(
   /**
    * 3) PlayerTrack Queue bauen
    */
-  const queue: PlayerTrack[] = (data ?? [])
+  // Build explicit mapper inputs (no spreading DB rows)
+  const inputs = (data ?? [])
     .map((row: any) => {
       const t = row.tracks;
       if (!t?.id || !t?.audio_path || !t?.artist_id) return null;
@@ -65,20 +67,33 @@ export async function getReleaseQueueForPlayerServer(
         .from("tracks")
         .getPublicUrl(t.audio_path);
 
+      const audio_url = audioPublic?.publicUrl ?? null;
+      if (!audio_url) return null;
+
       return {
         id: t.id,
-        title: t.title,
-        artist_id: t.artist_id,
-        audio_url: audioPublic.publicUrl,
+        title: t.title ?? null,
+        artist_id: t.artist_id ?? null,
+        audio_url,
         cover_url,
         bpm: t.bpm ?? null,
         key: t.key ?? null,
         profiles: t.profiles ?? null,
+        // keep linkage fields available for later merge
         release_id: releaseId,
-        release_track_id: row.id,
-      } satisfies PlayerTrack;
+        release_track_id: row.id ?? null,
+      };
     })
-    .filter(Boolean) as PlayerTrack[];
+    .filter(Boolean) as any[];
+
+  const mapped = toPlayerTrackList(inputs);
+
+  // Re-attach linkage fields (toPlayerTrackList does not preserve these extras)
+  const queue: PlayerTrack[] = mapped.map((pt, idx) => ({
+    ...pt,
+    release_id: inputs[idx]?.release_id ?? null,
+    release_track_id: inputs[idx]?.release_track_id ?? null,
+  }));
 
   return queue;
 }

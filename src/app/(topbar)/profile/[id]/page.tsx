@@ -308,9 +308,10 @@ export default function PublicProfilePage() {
 
   const bannerUrl = profile?.banner_url ?? null;
 
-  const avatarUrl = profile?.avatar_url
-    ? `${profile.avatar_url}${profile.avatar_url.includes("?") ? "&" : "?"}v=${encodeURIComponent(profile.updated_at ?? String(Date.now()))}`
-    : null;
+  const avatarUrl =
+    profile?.avatar_url && profile?.updated_at
+      ? `${profile.avatar_url}${profile.avatar_url.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(profile.updated_at))}`
+      : profile?.avatar_url ?? null;
 
   const colorSourceUrl = bannerUrl ?? avatarUrl ?? null;
 

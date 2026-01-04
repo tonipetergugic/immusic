@@ -49,26 +49,59 @@ export default async function ArtistPage({
   const followerCountNum = followerCount ?? 0;
   const followingCountNum = followingCount ?? 0;
 
-  const { data: releases } = await supabase
-    .from("releases")
-    .select("id, title, cover_path, release_type, status, created_at")
-    .eq("artist_id", id)
-    .eq("status", "published")
-    .order("created_at", { ascending: false });
+  const [
+    { data: releases },
+    { data: publicPlaylists },
+    { data: topTracksRaw },
+    { data: releaseTracks },
+  ] = await Promise.all([
+    supabase
+      .from("releases")
+      .select("id, title, cover_path, release_type, status, created_at")
+      .eq("artist_id", id)
+      .eq("status", "published")
+      .order("created_at", { ascending: false }),
 
-  const { data: publicPlaylists } = await supabase
-    .from("playlists")
-    .select("id, title, cover_url, created_at")
-    .eq("created_by", id)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
+    supabase
+      .from("playlists")
+      .select("id, title, cover_url, created_at")
+      .eq("created_by", id)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false }),
 
-  const { data: topTracksRaw } = await supabase
-    .from("analytics_artist_top_tracks_30d")
-    .select("track_id, streams, unique_listeners")
-    .eq("artist_id", id)
-    .order("streams", { ascending: false })
-    .limit(10);
+    supabase
+      .from("analytics_artist_top_tracks_30d")
+      .select("track_id, streams, unique_listeners")
+      .eq("artist_id", id)
+      .order("streams", { ascending: false })
+      .limit(10),
+
+    supabase
+      .from("release_tracks")
+      .select(
+        `
+        id,
+        release_id,
+        position,
+        track_title,
+        tracks:tracks!release_tracks_track_id_fkey(
+          id,
+          title,
+          audio_path,
+          artist_id
+        ),
+        releases:releases!release_tracks_release_id_fkey(
+          id,
+          cover_path,
+          title,
+          status,
+          artist_id
+        )
+      `
+      )
+      .eq("releases.artist_id", id)
+      .eq("releases.status", "published"),
+  ]);
 
   const topTrackIds = (topTracksRaw ?? []).map((r) => r.track_id);
 
@@ -102,8 +135,13 @@ export default async function ArtistPage({
     topTracksDetails = rows ?? [];
   }
 
+  const topTracksDetailsById: Record<string, any> = {};
+  for (const row of topTracksDetails) {
+    if (row?.track_id) topTracksDetailsById[row.track_id] = row;
+  }
+
   const topTracks = (topTracksRaw ?? []).map((a) => {
-    const d = topTracksDetails.find((x) => x.track_id === a.track_id) || null;
+    const d = topTracksDetailsById[a.track_id] ?? null;
     const trackData = d?.tracks;
     
     if (!trackData) {
@@ -174,32 +212,6 @@ export default async function ArtistPage({
     };
   });
 
-  const { data: releaseTracks } = await supabase
-    .from("release_tracks")
-    .select(
-      `
-        id,
-        release_id,
-        position,
-        track_title,
-        tracks:tracks!release_tracks_track_id_fkey(
-          id,
-          title,
-          audio_path,
-          artist_id
-        ),
-        releases:releases!release_tracks_release_id_fkey(
-          id,
-          cover_path,
-          title,
-          status,
-          artist_id
-        )
-      `
-    )
-    .eq("releases.artist_id", id)
-    .eq("releases.status", "published");
-
   const tracksByRelease: Record<string, any[]> = {};
   (releaseTracks ?? []).forEach((rt) => {
     if (!tracksByRelease[rt.release_id]) tracksByRelease[rt.release_id] = [];
@@ -228,9 +240,9 @@ export default async function ArtistPage({
   const bannerUrl = profile.banner_url || null;
   const avatarUrlBase = profile.avatar_url || null;
   const avatarUrl =
-    avatarUrlBase
-      ? `${avatarUrlBase}${avatarUrlBase.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(profile.updated_at ?? Date.now()))}`
-      : null;
+    avatarUrlBase && profile.updated_at
+      ? `${avatarUrlBase}${avatarUrlBase.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(profile.updated_at))}`
+      : avatarUrlBase;
 
   return (
     <div className="w-full">

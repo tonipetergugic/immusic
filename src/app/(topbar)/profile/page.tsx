@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AvatarDropzone from "@/components/AvatarDropzone";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateAvatar, deleteAvatar, updateDisplayName } from "./actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,10 +19,7 @@ export default function ProfilePage() {
   const [role, setRole] = useState<string | null>(null);
   const [viewerId, setViewerId] = useState<string | null>(null);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createSupabaseBrowserClient();
 
   // Helper: best-effort cleanup of old files in a bucket prefix, keeping only the newest uploaded file
   async function cleanupOtherFilesInPrefix(params: {
@@ -93,9 +90,9 @@ export default function ProfilePage() {
           const ver = profile?.updated_at ? String(profile.updated_at) : null;
 
           setAvatarUrl(
-            base
-              ? `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(ver ?? String(Date.now()))}`
-              : null
+            base && ver
+              ? `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(ver)}`
+              : base
           );
           setRole(profile?.role ?? null);
           if (profile?.display_name) {

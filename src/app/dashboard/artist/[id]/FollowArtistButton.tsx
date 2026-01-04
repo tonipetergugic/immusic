@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { followProfile, unfollowProfile, isFollowingProfile } from "@/app/(topbar)/profile/actions";
 
 export default function FollowArtistButton({ artistId }: { artistId: string }) {
@@ -10,10 +10,7 @@ export default function FollowArtistButton({ artistId }: { artistId: string }) {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     let mounted = true;

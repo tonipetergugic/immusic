@@ -2,17 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
 
 export default function AccountPage() {
   const router = useRouter();
 
   const supabase = useMemo(() => {
-    return createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    return createSupabaseBrowserClient();
   }, []);
 
   const [currentEmail, setCurrentEmail] = useState<string>("");

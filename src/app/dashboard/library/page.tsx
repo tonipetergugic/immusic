@@ -8,6 +8,7 @@ import { createSupabaseServerClient as createClient } from "@/lib/supabase/serve
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist, Profile } from "@/types/database";
 import { toPlayerTrackList } from "@/lib/playerTrack";
+import { buildPlaylistCoverUrlServer } from "@/lib/playlistCovers.server";
 
 export const metadata: Metadata = {
   title: "Library | ImMusic",
@@ -92,12 +93,10 @@ export default async function LibraryPage(props: LibraryPageProps) {
         playlists = [];
       } else {
         playlists = (playlistsData ?? []).map((p: any) => {
-          const cover_url =
-            p?.cover_url
-              ? supabase.storage
-                  .from("playlist-covers")
-                  .getPublicUrl(p.cover_url).data.publicUrl ?? null
-              : null;
+          const cover_url = buildPlaylistCoverUrlServer({
+            supabase,
+            cover_path: p?.cover_url ?? null,
+          });
 
           return {
             ...p,
@@ -124,6 +123,8 @@ export default async function LibraryPage(props: LibraryPageProps) {
           audio_path,
           created_at,
           artist_id,
+          bpm,
+          key,
           releases:releases!tracks_release_id_fkey(
             id,
             cover_path,
@@ -157,7 +158,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
             : track.artist_profile ?? null,
         })) ?? [];
 
-      const urlReadyTracks = normalizedTracks.map((t: any) => {
+      const playerTrackInputs = (normalizedTracks ?? []).map((t: any) => {
         const cover_url =
           t?.releases?.cover_path
             ? supabase.storage
@@ -169,21 +170,29 @@ export default async function LibraryPage(props: LibraryPageProps) {
           t?.audio_path
             ? supabase.storage
                 .from("tracks")
-                .getPublicUrl(t.audio_path).data.publicUrl
+                .getPublicUrl(t.audio_path).data.publicUrl ?? null
             : null;
 
         if (!audio_url) {
-          throw new Error("Library: Missing audio_url for track " + (t?.id ?? "unknown"));
+          throw new Error(
+            "Library: Missing audio_url for track " + (t?.id ?? "unknown")
+          );
         }
 
+        // IMPORTANT: explicit allowed fields only (NO spreading DB rows)
         return {
-          ...t,
-          cover_url,
+          id: t.id,
+          title: t.title ?? null,
+          artist_id: t.artist_id ?? null,
           audio_url,
+          cover_url,
+          bpm: t.bpm ?? null,
+          key: t.key ?? null,
+          artist_profile: t.artist_profile ?? null,
         };
       });
 
-      trackData = toPlayerTrackList(urlReadyTracks);
+      trackData = toPlayerTrackList(playerTrackInputs as any);
     }
   }
 

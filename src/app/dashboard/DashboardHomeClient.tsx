@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import PlaylistCard from "@/components/PlaylistCard";
 import { usePlayer } from "@/context/PlayerContext";
-import { getReleaseQueueForPlayer } from "@/lib/getReleaseQueue";
 import { Play, Pause } from "lucide-react";
 import type { HomeReleaseCard } from "@/lib/supabase/getHomeReleases";
 import type { HomePlaylistCard } from "@/lib/supabase/getHomePlaylists";
@@ -35,6 +34,30 @@ type Props = {
   releasesById: Record<string, HomeReleaseCard>;
   playlistsById: Record<string, HomePlaylistCard>;
 };
+
+async function fetchReleaseQueueForPlayer(releaseId: string) {
+  const res = await fetch(`/api/releases/${releaseId}/queue`, { method: "GET" });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Failed to fetch release queue (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  // support both response shapes:
+  // - PlayerTrack[]
+  // - { tracks: PlayerTrack[] }
+  const tracks =
+    Array.isArray(data)
+      ? data
+      : Array.isArray(data?.queue)
+      ? data.queue
+      : Array.isArray(data?.tracks)
+      ? data.tracks
+      : [];
+
+  return tracks;
+}
 
 export default function DashboardHomeClient({ home, releasesById, playlistsById }: Props) {
   // Releases section (from home_modules + home_module_items)
@@ -219,7 +242,7 @@ function ExtraReleaseCard({
 
               try {
                 setIsPlayLoading(true);
-                const queue = await getReleaseQueueForPlayer(releaseId);
+                const queue = await fetchReleaseQueueForPlayer(releaseId);
                 if (queue.length === 0) return;
                 setFirstTrackId(queue[0].id);
                 playQueue(queue, 0);
