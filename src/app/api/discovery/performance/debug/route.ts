@@ -84,7 +84,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const trackBucket = fnv1a(`${data.track_id}:${dayKey}`) % 7;
+    const trackBucket = fnv1a(`${trackId}:${dayKey}`) % 7;
     const eligibleToday = trackBucket === currentBucket;
 
     const reason = eligibleToday
