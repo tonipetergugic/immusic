@@ -35,6 +35,8 @@ src/app/layout.tsx
 src/app/api
 src/app/api/releases
 src/app/api/playlists
+src/app/api/discovery
+src/app/api/ratings
 src/app/api/tracks
 src/app/api/storage
 src/app/api/profiles
@@ -53,6 +55,9 @@ src/app/artist/upload
 src/app/artist/analytics
 src/app/login
 src/app/login/page.tsx
+src/app/debug
+src/app/debug/exposure-test
+src/app/debug/README.md
 src/components
 src/components/PlaylistSettingsTrigger.tsx
 src/components/PlayerBar.tsx
@@ -81,6 +86,9 @@ src/components/TrackOptionsTrigger.tsx
 src/components/DeleteReleaseModal.tsx
 src/lib
 src/lib/playlistCovers.server.ts
+src/lib/discovery
+src/lib/discovery/fetchPerformanceDiscovery.client.ts
+src/lib/discovery/fetchDevelopmentDiscovery.client.ts
 src/lib/supabase
 src/lib/supabase/getHomeModules.ts
 src/lib/supabase/getUser.ts

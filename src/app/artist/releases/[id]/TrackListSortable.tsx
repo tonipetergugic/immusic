@@ -15,8 +15,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
+import { useRouter } from "next/navigation";
 import { reorderReleaseTracksAction, removeTrackFromReleaseAction } from "./actions";
+import { CheckCircle2, XCircle } from "lucide-react";
+import Tooltip from "@/components/Tooltip";
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
 
@@ -24,11 +27,19 @@ function SortableTrackItem({
   track,
   setTracks,
   onReleaseModified,
+  eligibilityByTrackId,
+  onRefresh,
 }: {
   track: Track;
   setTracks: Dispatch<SetStateAction<Track[]>>;
   onReleaseModified?: () => void;
+  eligibilityByTrackId?: Record<
+    string,
+    { is_development: boolean; exposure_completed: boolean; rating_count: number }
+  >;
+  onRefresh?: () => void;
 }) {
+  const [devPending, setDevPending] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: track.track_id });
 
   const style = {
@@ -36,11 +47,52 @@ function SortableTrackItem({
     transition,
   };
 
+  const e = eligibilityByTrackId?.[track.track_id];
+  const isDevOk = !!e?.is_development;
+  const isExposureOk = !!e?.exposure_completed;
+  const ratingCount = typeof e?.rating_count === "number" ? e.rating_count : 0;
+
+  const isEligible = isDevOk && isExposureOk && ratingCount >= 3;
+
+  const missingLabel = !isDevOk
+    ? "Need Dev"
+    : !isExposureOk
+    ? "Need Exposure"
+    : ratingCount < 3
+    ? `Need ${3 - ratingCount} rating(s)`
+    : null;
+
+  const tooltipText = isEligible
+    ? "This track currently satisfies all Earned Credits gates (Development + Exposure + 3+ ratings)."
+    : !isDevOk
+    ? "To become eligible: Put this track into Development Discovery."
+    : !isExposureOk
+    ? "To become eligible: Complete Guaranteed Exposure for this track."
+    : ratingCount < 3
+    ? "To become eligible: Collect at least 3 unique listener ratings in Development Discovery."
+    : "Not eligible yet.";
+
+  const devLabel = isDevOk ? "Dev ✓" : "Dev ✕";
+  const exposureLabel = isExposureOk ? "Exposure ✓" : "Exposure ✕";
+  const ratingsLabel = `Ratings ${ratingCount}/3`;
+
+  const nextStep =
+    isEligible ? null :
+    !isDevOk ? { label: "Enable Development (not available yet)", href: null } :
+    !isExposureOk ? { label: "Check Guaranteed Exposure", href: "/artist/dashboard" } :
+    ratingCount < 3 ? { label: "Collect more ratings (Development)", href: "/artist/dashboard" } :
+    null;
+
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="rounded border border-[#27272A] bg-[#18181B] p-3 text-sm flex items-center justify-between"
+      className={`rounded border p-3 text-sm flex items-center justify-between transition
+  ${isEligible
+    ? "border-[#00FFC6]/35 bg-[#00FFC6]/[0.06] shadow-[0_0_0_1px_rgba(0,255,198,0.18),0_20px_60px_rgba(0,255,198,0.10)]"
+    : "border-[#27272A] bg-[#18181B]"
+  }
+`}
     >
       <div className="flex items-center gap-3">
         <div className="cursor-grab text-gray-400 select-none" {...attributes} {...listeners}>
@@ -51,21 +103,92 @@ function SortableTrackItem({
           <p className="text-xs text-gray-500">Position: {track.position}</p>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={async () => {
-          await removeTrackFromReleaseAction(track.release_id, track.track_id);
-          setTracks((prev) =>
-            prev
-              .filter((t) => t.track_id !== track.track_id)
-              .map((t, index) => ({ ...t, position: index + 1 })),
-          );
-          onReleaseModified?.();
-        }}
-        className="text-red-400 hover:text-red-300 text-xs ml-4"
-      >
-        Remove
-      </button>
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <Tooltip label={tooltipText}>
+            <div className="flex items-center justify-end gap-2 cursor-help">
+              {isEligible ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
+                  <span className="text-xs font-semibold text-white">Eligible</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 text-white/40" />
+                  <span className="text-xs font-semibold text-white/70">Not eligible</span>
+                </>
+              )}
+            </div>
+          </Tooltip>
+
+          <div className="mt-0.5 text-[11px] text-white/40">
+            {devLabel} · {exposureLabel} · {ratingsLabel}
+          </div>
+
+          {isEligible ? (
+            <div className="mt-1 text-[11px] text-[#00FFC6]/90">
+              Eligible — ready to generate Earned Credits (Development).
+            </div>
+          ) : null}
+
+          {!isDevOk ? (
+            <button
+              type="button"
+              disabled={devPending}
+              onClick={async () => {
+                try {
+                  setDevPending(true);
+                  const res = await fetch(`/api/tracks/${track.track_id}/move-to-development`, {
+                    method: "POST",
+                  });
+
+                  if (!res.ok) {
+                    const msg = await res.text().catch(() => "");
+                    alert(msg || "Failed to enable Development.");
+                    return;
+                  }
+
+                  onRefresh?.();
+                } finally {
+                  setDevPending(false);
+                }
+              }}
+              className="mt-2 inline-flex items-center justify-end text-[11px] font-semibold text-[#00FFC6] hover:text-[#00E0B0] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Enable Development →
+            </button>
+          ) : nextStep ? (
+            nextStep.href ? (
+              <a
+                href={nextStep.href}
+                className="mt-1 inline-block text-[11px] text-[#00FFC6] hover:text-[#00E0B0] transition"
+              >
+                Next step: {nextStep.label} →
+              </a>
+            ) : (
+              <span className="mt-1 inline-block text-[11px] text-white/45">
+                Next step: {nextStep.label}
+              </span>
+            )
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          onClick={async () => {
+            await removeTrackFromReleaseAction(track.release_id, track.track_id);
+            setTracks((prev) =>
+              prev
+                .filter((t) => t.track_id !== track.track_id)
+                .map((t, index) => ({ ...t, position: index + 1 })),
+            );
+            onReleaseModified?.();
+          }}
+          className="text-red-400 hover:text-red-300 text-xs ml-4"
+        >
+          Remove
+        </button>
+      </div>
     </li>
   );
 }
@@ -75,6 +198,10 @@ type TrackListSortableProps = {
   tracks: Track[];
   setTracks: Dispatch<SetStateAction<Track[]>>;
   onReleaseModified?: () => void;
+  eligibilityByTrackId?: Record<
+    string,
+    { is_development: boolean; exposure_completed: boolean; rating_count: number }
+  >;
 };
 
 export default function TrackListSortable({
@@ -82,7 +209,9 @@ export default function TrackListSortable({
   tracks,
   setTracks,
   onReleaseModified,
+  eligibilityByTrackId,
 }: TrackListSortableProps) {
+  const router = useRouter();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -133,6 +262,8 @@ export default function TrackListSortable({
               track={track}
               setTracks={setTracks}
               onReleaseModified={onReleaseModified}
+              eligibilityByTrackId={eligibilityByTrackId}
+              onRefresh={() => router.refresh()}
             />
           ))}
         </ul>

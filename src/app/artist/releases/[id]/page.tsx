@@ -6,6 +6,18 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="text-white p-6">
+        <h1 className="text-2xl font-bold">Please login</h1>
+      </div>
+    );
+  }
+
   const { data: release, error } = await supabase
     .from("releases")
     .select("id, title, release_type, cover_path, created_at, status")
@@ -33,6 +45,36 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const initialTracks = tracks ?? [];
   const existingTrackIds = initialTracks.map((t) => t.track_id);
 
+  const { data: eligibilityRows, error: eligibilityError } = existingTrackIds.length
+    ? await supabase
+        .from("analytics_development_signals")
+        .select("track_id, is_development, exposure_completed, rating_count")
+        .eq("artist_id", user.id)
+        .in("track_id", existingTrackIds)
+    : { data: [] as any[], error: null };
+
+  if (eligibilityError) {
+    throw eligibilityError;
+  }
+
+  const eligibilityByTrackId = (eligibilityRows ?? []).reduce(
+    (
+      acc: Record<
+        string,
+        { is_development: boolean; exposure_completed: boolean; rating_count: number }
+      >,
+      r: any
+    ) => {
+      acc[r.track_id] = {
+        is_development: !!r.is_development,
+        exposure_completed: !!r.exposure_completed,
+        rating_count: typeof r.rating_count === "number" ? r.rating_count : 0,
+      };
+      return acc;
+    },
+    {}
+  );
+
   const { data: incompleteMeta } = existingTrackIds.length
     ? await supabase
         .from("tracks")
@@ -57,6 +99,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
       existingTrackIds={existingTrackIds}
       coverUrl={coverUrl}
       allTracksMetadataComplete={allTracksMetadataComplete}
+      eligibilityByTrackId={eligibilityByTrackId}
     />
   );
 }

@@ -1,7 +1,19 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { BarChart3, ChevronRight, Disc3, Music2, Upload, User } from "lucide-react";
+import {
+  BarChart3,
+  ChevronRight,
+  Disc3,
+  Music2,
+  Upload,
+  User,
+  CheckCircle2,
+  XCircle,
+  Info,
+  Minus,
+} from "lucide-react";
+import Tooltip from "@/components/Tooltip";
 
 export default async function ArtistDashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -20,11 +32,107 @@ export default async function ArtistDashboardPage() {
     .eq("profile_id", user.id)
     .single();
 
+  const { data: earned, error: earnedError } = await supabase
+    .from("artist_earned_credits")
+    .select("balance")
+    .eq("profile_id", user.id)
+    .single();
+
+  if (earnedError && earnedError.code !== "PGRST116") {
+    throw earnedError;
+  }
+
+  const earnedBalance = earned?.balance ?? 0;
+
   if (creditsError && creditsError.code !== "PGRST116") {
     throw creditsError;
   }
 
   const balance = credits?.balance ?? 0;
+
+  // --- Earned Credits Ledger (read-only) ---
+  type EarnedTxRow = {
+    id: string;
+    delta: number;
+    reason: string | null;
+    source: string | null;
+    created_at: string;
+  };
+
+  const { data: earnedTxRaw, error: earnedTxError } = await supabase
+    .from("artist_earned_credit_transactions")
+    .select("id, delta, reason, source, created_at")
+    .eq("profile_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (earnedTxError) {
+    throw earnedTxError;
+  }
+
+  const earnedTx = (earnedTxRaw ?? []) as EarnedTxRow[];
+
+  // --- Premium Credits Ledger (read-only) ---
+  type PremiumTxRow = {
+    id: string;
+    delta: number;
+    reason: string | null;
+    source: string | null;
+    created_at: string;
+  };
+
+  const { data: premiumTxRaw, error: premiumTxError } = await supabase
+    .from("artist_credit_transactions")
+    .select("id, delta, reason, source, created_at")
+    .eq("profile_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (premiumTxError) {
+    throw premiumTxError;
+  }
+
+  const premiumTx = (premiumTxRaw ?? []) as PremiumTxRow[];
+
+  const { data: devSignalsRaw, error: devSignalsError } = await supabase
+    .from("analytics_development_signals")
+    .select("is_development, exposure_completed, rating_count")
+    .eq("artist_id", user.id);
+
+  if (devSignalsError) {
+    throw devSignalsError;
+  }
+
+  const devSignals = devSignalsRaw ?? [];
+
+  const developmentTrackCount = devSignals.reduce(
+    (sum, r) => sum + (r.is_development ? 1 : 0),
+    0
+  );
+
+  const exposureCompletedCount = devSignals.reduce(
+    (sum, r) => sum + (r.exposure_completed ? 1 : 0),
+    0
+  );
+
+  const totalDevRatingsCount = devSignals.reduce(
+    (sum, r) => sum + (typeof r.rating_count === "number" ? r.rating_count : 0),
+    0
+  );
+
+  const isDevOk = developmentTrackCount > 0;
+  const isExposureOk = exposureCompletedCount > 0;
+  const isRatingsOk = totalDevRatingsCount >= 3;
+
+  const isEarnedEligible = isDevOk && isExposureOk && isRatingsOk;
+
+  const missingLabel = !isDevOk
+    ? "Need: at least 1 Development track"
+    : !isExposureOk
+    ? "Need: completed Guaranteed Exposure"
+    : !isRatingsOk
+    ? "Need: 3+ Development ratings"
+    : null;
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -221,25 +329,319 @@ export default async function ArtistDashboardPage() {
               Last updated: {lastUpdatedLabel}
             </p>
           </div>
-          <div className="mt-8 mb-28 -mx-2 overflow-x-auto">
-            <div className="flex gap-12 px-2 min-w-max">
-              <Stat label="Total Streams" value={formatNumber(totalStreams)} />
-              <Stat
-                label="Ø Streams / Track"
-                value={formatNumber(Math.round(avgStreamsPerTrack))}
-              />
-              <Stat label="Releases" value={formatNumber(totalReleases)} />
-              <Stat label="Tracks" value={formatNumber(totalTracks)} />
-              <Stat label="Ø Rating" value={avgRating.toFixed(2).replace(".", ",")} />
-              <Stat
-                label="Ratings (Count)"
-                value={formatNumber(totalRatingsCount)}
-              />
-              <Stat label="Credit Balance" value={formatNumber(balance)} />
-              <Stat label="Status" value="Active" hint="Public" />
-            </div>
+          <div className="mt-8 mb-28 space-y-10">
+
+  {/* Row 1 – Performance */}
+  <div className="px-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-8 gap-x-10">
+    <Stat label="Total Streams" value={formatNumber(totalStreams)} />
+    <Stat label="Ø Streams / Track" value={formatNumber(Math.round(avgStreamsPerTrack))} />
+    <Stat label="Releases" value={formatNumber(totalReleases)} />
+    <Stat label="Tracks" value={formatNumber(totalTracks)} />
+    <Stat label="Ø Rating" value={avgRating.toFixed(2).replace(".", ",")} />
+    <Stat label="Ratings (Count)" value={formatNumber(totalRatingsCount)} />
+  </div>
+
+  {/* Row 2 – Credits & Development */}
+  <div className='px-2 pt-10 border-t border-white/5 grid grid-cols-6 gap-x-12 gap-y-8 text-center'>
+
+    <div className="lg:col-start-1">
+      <Tooltip label="Premium Credits are bought system energy. They increase visibility and push duration.">
+        <div className="inline-block">
+          <Stat label="Premium Credits" value={formatNumber(balance)} />
+        </div>
+      </Tooltip>
+    </div>
+
+    <div className="lg:col-start-2">
+      <Tooltip label="Earned Credits are gained through real listener feedback, ratings and retention. They unlock performance discovery.">
+        <div className="inline-block">
+          <Stat label="Earned Credits" value={formatNumber(earnedBalance)} />
+        </div>
+      </Tooltip>
+    </div>
+
+    <div className="lg:col-start-3">
+      <Stat label="Dev Tracks" value={formatNumber(developmentTrackCount)} />
+    </div>
+
+    <div className="lg:col-start-4">
+      <Stat label="Exposure Completed" value={formatNumber(exposureCompletedCount)} />
+    </div>
+
+    <div className="lg:col-start-5">
+      <Stat label="Dev Ratings" value={formatNumber(totalDevRatingsCount)} />
+    </div>
+
+    <div className="lg:col-start-6">
+      <Stat label="Status" value="Active" />
+    </div>
+  </div>
+
+  {/* Earned Credits Eligibility (V1) */}
+  <div className="px-2 mt-10">
+    <div className="rounded-xl bg-[#121216] border border-white/5 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-semibold text-white">Earned Credits – Eligibility (V1)</h3>
+          <p className="mt-1 text-xs text-[#B3B3B3]">
+            Earned Credits can only be generated through Development Discovery after fair exposure.
+          </p>
+        </div>
+
+        <div className="text-right">
+          <div className="flex items-center justify-end gap-2">
+            {isEarnedEligible ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
+                <p className="text-sm font-semibold text-white">Eligible</p>
+              </>
+            ) : (
+              <>
+                <XCircle className="h-4 w-4 text-white/40" />
+                <p className="text-sm font-semibold text-white">Not eligible</p>
+              </>
+            )}
           </div>
+
+          <p className="mt-1 text-[11px] text-white/35">
+            {missingLabel ?? "All gates satisfied"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        {/* Gate 1: Development tracks exist */}
+        <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">Development active</p>
+            <p className="mt-0.5 text-xs text-[#B3B3B3]">
+              Development tracks: <span className="text-white/70">{developmentTrackCount}</span> / 1
+            </p>
+          </div>
+          {developmentTrackCount > 0 ? (
+            <CheckCircle2 className="h-5 w-5 text-[#00FFC6]" />
+          ) : (
+            <XCircle className="h-5 w-5 text-white/30" />
+          )}
+        </div>
+
+        {/* Gate 2: Exposure completed */}
+        <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">Guaranteed Exposure completed</p>
+            <p className="mt-0.5 text-xs text-[#B3B3B3]">
+              Exposure completed: <span className="text-white/70">{exposureCompletedCount}</span> / 1
+            </p>
+          </div>
+          {exposureCompletedCount > 0 ? (
+            <CheckCircle2 className="h-5 w-5 text-[#00FFC6]" />
+          ) : (
+            <XCircle className="h-5 w-5 text-white/30" />
+          )}
+        </div>
+
+        {/* Gate 3: Minimum ratings */}
+        <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">Minimum ratings reached</p>
+            <p className="mt-0.5 text-xs text-[#B3B3B3]">
+              Dev ratings: <span className="text-white/70">{totalDevRatingsCount}</span> / 3
+            </p>
+          </div>
+          {totalDevRatingsCount >= 3 ? (
+            <CheckCircle2 className="h-5 w-5 text-[#00FFC6]" />
+          ) : (
+            <XCircle className="h-5 w-5 text-white/30" />
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">Info</p>
+            <p className="mt-0.5 text-xs text-[#B3B3B3]">
+              Streams alone never generate Earned Credits.
+            </p>
+          </div>
+          <Info className="h-5 w-5 text-white/50" />
+        </div>
+      </div>
+
+      <div className="mt-4 text-xs text-white/35">
+        Tip: Complete Guaranteed Exposure and collect at least 3 ratings on a Development track to unlock Earned Credit generation.
+      </div>
+    </div>
+  </div>
+
+  <div className="px-2">
+    <details className="rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
+      <summary className="cursor-pointer select-none px-5 py-3 text-sm text-[#B3B3B3] hover:text-white transition">
+        What counts / What doesn't (Earned Credits V1)
+      </summary>
+
+      <div className="border-t border-white/5 px-5 py-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white">
+              <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
+              Counts
+            </p>
+            <ul className="mt-2 space-y-1 text-xs text-[#B3B3B3]">
+              <li>Unique listener ratings (Development)</li>
+              <li>Retention (only together with at least 1 rating)</li>
+              <li>Only after Guaranteed Exposure is completed</li>
+            </ul>
+          </div>
+
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white">
+              <XCircle className="h-4 w-4 text-white/50" />
+              Doesn't count
+            </p>
+            <ul className="mt-2 space-y-1 text-xs text-[#B3B3B3]">
+              <li>Streams alone</li>
+              <li>Premium Credits</li>
+              <li>Uploads, edits, self-interactions</li>
+              <li>Performance Discovery activity</li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="mt-4 text-[11px] text-white/35">
+          Earned Credits are a permission signal. They never affect charts, ratings, or rankings.
+        </p>
+      </div>
+    </details>
+  </div>
+
+</div>
         </section>
+
+      <section className="mt-16">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Earned */}
+          <div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Earned Credits History</h2>
+                <p className="mt-1 text-xs text-[#B3B3B3]">
+                  Last 20 transactions (read-only)
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[11px] text-white/35">
+                  {earnedTx[0]
+                    ? `Last: ${earnedTx[0].delta >= 0 ? "+" : ""}${formatNumber(
+                        earnedTx[0].delta
+                      )} · ${new Date(earnedTx[0].created_at).toLocaleString("de-DE")}`
+                    : "No history yet"}
+                </p>
+              </div>
+            </div>
+
+            <details className="mt-4 rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
+              <summary className="cursor-pointer select-none px-4 py-3 text-sm text-[#B3B3B3] hover:text-white transition">
+                Show history
+              </summary>
+
+              <div className="border-t border-white/5">
+                {earnedTx.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {earnedTx.map((tx) => (
+                      <div key={tx.id} className="px-4 py-3 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {tx.reason ?? "Earned Credits"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[#B3B3B3]">
+                            {new Date(tx.created_at).toLocaleString("de-DE")}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold text-white">
+                            {tx.delta >= 0 ? "+" : ""}
+                            {formatNumber(tx.delta)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-white/35">
+                            {tx.source ?? "system"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4">
+                    <p className="text-sm text-[#B3B3B3]">No transactions yet.</p>
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+
+          {/* Premium */}
+          <div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Premium Credits History</h2>
+                <p className="mt-1 text-xs text-[#B3B3B3]">
+                  Last 20 transactions (read-only)
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[11px] text-white/35">
+                  {premiumTx[0]
+                    ? `Last: ${premiumTx[0].delta >= 0 ? "+" : ""}${formatNumber(
+                        premiumTx[0].delta
+                      )} · ${new Date(premiumTx[0].created_at).toLocaleString("de-DE")}`
+                    : "No history yet"}
+                </p>
+              </div>
+            </div>
+
+            <details className="mt-4 rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
+              <summary className="cursor-pointer select-none px-4 py-3 text-sm text-[#B3B3B3] hover:text-white transition">
+                Show history
+              </summary>
+
+              <div className="border-t border-white/5">
+                {premiumTx.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {premiumTx.map((tx) => (
+                      <div key={tx.id} className="px-4 py-3 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {tx.reason ?? "Premium Credits"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[#B3B3B3]">
+                            {new Date(tx.created_at).toLocaleString("de-DE")}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold text-white">
+                            {tx.delta >= 0 ? "+" : ""}
+                            {formatNumber(tx.delta)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-white/35">
+                            {tx.source ?? "system"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4">
+                    <p className="text-sm text-[#B3B3B3]">No transactions yet.</p>
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
 
         <section className="mt-16">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
