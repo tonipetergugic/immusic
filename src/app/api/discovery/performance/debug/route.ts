@@ -95,7 +95,7 @@ export async function GET(req: Request) {
       {
         ok: true,
         data: {
-          ...data,
+          row: data ?? null,
           dayKey,
           currentBucket,
           trackBucket,
