@@ -45,6 +45,54 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const initialTracks = tracks ?? [];
   const existingTrackIds = initialTracks.map((t) => t.track_id);
 
+  // --- Premium Credits (for Boost UI) ---
+  const { data: creditsRow, error: creditsErr } = await supabase
+    .from("artist_credits")
+    .select("balance")
+    .eq("profile_id", user.id)
+    .single();
+
+  if (creditsErr && creditsErr.code !== "PGRST116") {
+    throw creditsErr;
+  }
+
+  const premiumBalance = creditsRow?.balance ?? 0;
+
+  // --- Track status lookup (performance only toggle) ---
+  const { data: statusRows, error: statusErr } = existingTrackIds.length
+    ? await supabase
+        .from("tracks")
+        .select("id, status")
+        .in("id", existingTrackIds)
+    : { data: [] as any[], error: null };
+
+  if (statusErr) {
+    throw statusErr;
+  }
+
+  const trackStatusById = (statusRows ?? []).reduce((acc: Record<string, string>, r: any) => {
+    acc[r.id] = String(r.status ?? "");
+    return acc;
+  }, {});
+
+  // --- Boost opt-in states ---
+  const { data: boostRows, error: boostErr } = existingTrackIds.length
+    ? await supabase
+        .from("artist_track_boost_optin")
+        .select("track_id, enabled")
+        .eq("artist_id", user.id)
+        .in("track_id", existingTrackIds)
+    : { data: [] as any[], error: null };
+
+  if (boostErr) {
+    throw boostErr;
+  }
+
+  const boostEnabledById = (boostRows ?? []).reduce((acc: Record<string, boolean>, r: any) => {
+    acc[r.track_id] = !!r.enabled;
+    return acc;
+  }, {});
+
   const { data: eligibilityRows, error: eligibilityError } = existingTrackIds.length
     ? await supabase
         .from("analytics_development_signals")
@@ -100,6 +148,9 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
       coverUrl={coverUrl}
       allTracksMetadataComplete={allTracksMetadataComplete}
       eligibilityByTrackId={eligibilityByTrackId}
+      premiumBalance={premiumBalance}
+      trackStatusById={trackStatusById}
+      boostEnabledById={boostEnabledById}
     />
   );
 }

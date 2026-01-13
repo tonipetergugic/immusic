@@ -32,6 +32,9 @@ type ReleaseEditorClientProps = {
     string,
     { is_development: boolean; exposure_completed: boolean; rating_count: number }
   >;
+  premiumBalance: number;
+  trackStatusById: Record<string, string>;
+  boostEnabledById: Record<string, boolean>;
 };
 
 export default function ReleaseEditorClient({
@@ -42,6 +45,9 @@ export default function ReleaseEditorClient({
   coverUrl,
   allTracksMetadataComplete,
   eligibilityByTrackId,
+  premiumBalance,
+  trackStatusById,
+  boostEnabledById,
 }: ReleaseEditorClientProps) {
   const [tracks, setTracks] = useState<Track[]>(initialTracks ?? []);
   const [modalOpen, setModalOpen] = useState(false);
@@ -313,6 +319,9 @@ export default function ReleaseEditorClient({
                   setTracks={setTracks}
                   onReleaseModified={markAsDraft}
                   eligibilityByTrackId={eligibilityByTrackId}
+                  premiumBalance={premiumBalance}
+                  trackStatusById={trackStatusById}
+                  boostEnabledById={boostEnabledById}
                 />
               )}
             </div>

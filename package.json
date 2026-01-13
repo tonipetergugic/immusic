@@ -24,6 +24,7 @@
     "react-dom": "18.2.0",
     "react-simple-maps": "^3.0.0",
     "recharts": "^3.6.0",
+    "stripe": "^20.1.2",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

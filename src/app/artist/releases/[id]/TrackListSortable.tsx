@@ -29,6 +29,9 @@ function SortableTrackItem({
   onReleaseModified,
   eligibilityByTrackId,
   onRefresh,
+  premiumBalance,
+  status,
+  initialBoostEnabled,
 }: {
   track: Track;
   setTracks: Dispatch<SetStateAction<Track[]>>;
@@ -38,8 +41,16 @@ function SortableTrackItem({
     { is_development: boolean; exposure_completed: boolean; rating_count: number }
   >;
   onRefresh?: () => void;
+  premiumBalance: number;
+  status: string | null;
+  initialBoostEnabled: boolean;
 }) {
   const [devPending, setDevPending] = useState(false);
+  const [boostPending, setBoostPending] = useState(false);
+  const [boostEnabled, setBoostEnabled] = useState<boolean>(initialBoostEnabled);
+
+  const isPerformance = status === "performance";
+  const boostDisabled = !isPerformance || premiumBalance <= 0 || boostPending;
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: track.track_id });
 
   const style = {
@@ -99,7 +110,16 @@ function SortableTrackItem({
           |||
         </div>
         <div className="flex flex-col">
-          <p className="font-medium">{track.track_title}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{track.track_title}</p>
+
+            {boostEnabled ? (
+              <span className="inline-flex items-center rounded-full border border-[#00FFC6]/35 bg-[#00FFC6]/[0.10] px-2 py-0.5 text-[10px] font-semibold text-[#00FFC6]">
+                Boost ON
+              </span>
+            ) : null}
+          </div>
+
           <p className="text-xs text-gray-500">Position: {track.position}</p>
         </div>
       </div>
@@ -124,6 +144,64 @@ function SortableTrackItem({
           <div className="mt-0.5 text-[11px] text-white/40">
             {devLabel} · {exposureLabel} · {ratingsLabel}
           </div>
+
+          {isPerformance ? (
+            <div className="mt-3 flex items-center justify-end gap-3">
+              <div className="text-right">
+                <p className="text-[11px] font-semibold text-white/80">Boost</p>
+                <p className="mt-0.5 text-[11px] text-white/35">
+                  Boost uses credits only when it is actively used.
+                </p>
+                {premiumBalance <= 0 ? (
+                  <p className="mt-0.5 text-[11px] text-white/35">
+                    Disabled — no Premium Credits.
+                  </p>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                disabled={boostDisabled}
+                onClick={async () => {
+                  const next = !boostEnabled;
+                  setBoostPending(true);
+                  setBoostEnabled(next);
+
+                  try {
+                    const res = await fetch("/api/artist/boost", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ track_id: track.track_id, enabled: next }),
+                    });
+
+                    if (!res.ok) {
+                      const msg = await res.text().catch(() => "");
+                      alert(msg || "Failed to update Boost.");
+                      setBoostEnabled(!next); // rollback
+                      return;
+                    }
+
+                    onRefresh?.();
+                  } finally {
+                    setBoostPending(false);
+                  }
+                }}
+                className={[
+                  "relative inline-flex h-6 w-11 items-center rounded-full transition",
+                  boostDisabled ? "opacity-50 cursor-not-allowed bg-white/10" : boostEnabled ? "bg-[#00FFC6]" : "bg-white/15",
+                ].join(" ")}
+                aria-pressed={boostEnabled}
+                aria-label="Toggle boost"
+              >
+                <span
+                  className={[
+                    "inline-block h-5 w-5 transform rounded-full bg-black/70 transition",
+                    boostEnabled ? "translate-x-5" : "translate-x-1",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
+          ) : null}
 
           {isEligible ? (
             <div className="mt-1 text-[11px] text-[#00FFC6]/90">
@@ -202,6 +280,9 @@ type TrackListSortableProps = {
     string,
     { is_development: boolean; exposure_completed: boolean; rating_count: number }
   >;
+  premiumBalance: number;
+  trackStatusById: Record<string, string>;
+  boostEnabledById: Record<string, boolean>;
 };
 
 export default function TrackListSortable({
@@ -210,6 +291,9 @@ export default function TrackListSortable({
   setTracks,
   onReleaseModified,
   eligibilityByTrackId,
+  premiumBalance,
+  trackStatusById,
+  boostEnabledById,
 }: TrackListSortableProps) {
   const router = useRouter();
   const sensors = useSensors(
@@ -264,6 +348,9 @@ export default function TrackListSortable({
               onReleaseModified={onReleaseModified}
               eligibilityByTrackId={eligibilityByTrackId}
               onRefresh={() => router.refresh()}
+              premiumBalance={premiumBalance}
+              status={trackStatusById[track.track_id] ?? null}
+              initialBoostEnabled={!!boostEnabledById[track.track_id]}
             />
           ))}
         </ul>

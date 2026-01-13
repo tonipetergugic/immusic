@@ -41,6 +41,7 @@ src/app/api/tracks
 src/app/api/storage
 src/app/api/profiles
 src/app/api/artist
+src/app/api/billing
 src/app/page.tsx
 src/app/globals.css
 src/app/artist
@@ -91,6 +92,7 @@ src/lib/discovery/fetchPerformanceDiscovery.client.ts
 src/lib/discovery/fetchDevelopmentDiscovery.client.ts
 src/lib/supabase
 src/lib/supabase/getHomeModules.ts
+src/lib/supabase/admin.ts
 src/lib/supabase/getUser.ts
 src/lib/supabase/getFeaturedRelease.ts
 src/lib/supabase/getHomePlaylists.ts
@@ -105,3 +107,5 @@ src/lib/analytics
 src/lib/analytics/fetchTopTracks.client.ts
 src/lib/analytics/getArtistAnalytics.server.ts
 src/lib/analytics/fetchArtistAnalytics.client.ts
+src/lib/stripe
+src/lib/stripe/server.ts
