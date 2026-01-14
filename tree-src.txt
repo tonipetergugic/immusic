@@ -42,7 +42,9 @@ src/app/api/storage
 src/app/api/profiles
 src/app/api/artist
 src/app/api/billing
-src/app/page.tsx
+src/app/(landing)
+src/app/(landing)/layout.tsx
+src/app/(landing)/page.tsx
 src/app/globals.css
 src/app/artist
 src/app/artist/releases
