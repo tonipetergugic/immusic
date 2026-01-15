@@ -253,23 +253,6 @@ export default function TrackOptionsMenu({
         return;
       }
 
-      if (action === "go_release") {
-        const releaseId = (track as any)?.release_id ?? null;
-        if (!releaseId) {
-          // Fallback to track page if release_id is missing
-          if (!trackId) {
-            setToast("Release ID missing.");
-            return;
-          }
-          router.push(`/dashboard/track/${trackId}`);
-          onClose();
-          return;
-        }
-        router.push(`/dashboard/release/${releaseId}`);
-        onClose();
-        return;
-      }
-
       if (action === "share") {
         const url = getShareUrl();
         if (!url) {
