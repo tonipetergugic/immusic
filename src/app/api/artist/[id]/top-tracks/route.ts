@@ -3,8 +3,9 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   const artistId = params.id;
   if (!artistId) {
     return NextResponse.json(
