@@ -14,6 +14,7 @@ type TrackLike = {
   cover_url?: string | null;    // darf null sein
   bpm?: number | null;
   key?: string | null;
+  genre?: string | null;
   profiles?: ProfileSource;
   artist?: ProfileSource;
   artist_profile?: ProfileSource;
@@ -52,6 +53,7 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     cover_url: track.cover_url ?? null,
     bpm: track.bpm ?? null,
     key: track.key ?? null,
+    genre: track.genre ?? null,
     profiles: profileSource
       ? {
           display_name: profileSource.display_name ?? null,

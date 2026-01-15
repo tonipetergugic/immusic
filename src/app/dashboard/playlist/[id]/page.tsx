@@ -114,6 +114,7 @@ export default async function PlaylistPage(
         cover_url,
         bpm: t.bpm ?? null,
         key: t.key ?? null,
+        genre: t.genre ?? null,
         // important: playlist query joins artist as "artist"
         artist: t.artist ?? null,
         profiles: t.profiles ?? null,
@@ -121,6 +122,7 @@ export default async function PlaylistPage(
       });
       return {
         ...playerTrack,
+        release_id: t.release_id ?? null,
         release_track_id: releaseTrackId,
         rating_avg,
         rating_count,

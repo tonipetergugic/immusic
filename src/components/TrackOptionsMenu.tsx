@@ -18,6 +18,7 @@ type TrackOptionsMenuProps = {
   showGoToArtist?: boolean;
   showGoToRelease?: boolean;
   releaseId?: string | null;
+  context?: "default" | "playlist";
 };
 
 type MenuAction =
@@ -25,7 +26,6 @@ type MenuAction =
   | "toggle_library"
   | "share"
   | "go_artist"
-  | "go_track"
   | "go_release"
   | "remove";
 
@@ -40,6 +40,7 @@ export default function TrackOptionsMenu({
   showGoToArtist = true,
   showGoToRelease = false,
   releaseId = null,
+  context = "default",
 }: TrackOptionsMenuProps) {
   const router = useRouter();
 
@@ -117,18 +118,14 @@ export default function TrackOptionsMenu({
       items.push({ label: "Go to Artist", action: "go_artist" });
     }
 
-    if (showGoToRelease && releaseId) {
-      items.push({ label: "Go to Release Page", action: "go_release" });
-    }
+    items.push({ label: "Go to Release Page", action: "go_release" });
 
-    items.push({ label: "Go to Track Page", action: "go_track" });
-
-    if (onRemove) {
+    if (context === "playlist" && onRemove) {
       items.push({ label: "Remove from Playlist", action: "remove" });
     }
 
     return items;
-  }, [isSaved, onRemove, showGoToArtist, showGoToRelease, releaseId]);
+  }, [isSaved, onRemove, showGoToArtist, showGoToRelease, releaseId, context]);
 
   const getShareUrl = () => {
     if (!trackId) return null;
@@ -229,12 +226,19 @@ export default function TrackOptionsMenu({
         return;
       }
 
-      if (action === "go_track") {
-        if (!trackId) {
-          setToast("Track ID missing.");
+      if (action === "go_release") {
+        const releaseId = (track as any)?.release_id ?? null;
+        if (!releaseId) {
+          // Fallback to track page if release_id is missing
+          if (!trackId) {
+            setToast("Release ID missing.");
+            return;
+          }
+          router.push(`/dashboard/track/${trackId}`);
+          onClose();
           return;
         }
-        router.push(`/dashboard/track/${trackId}`);
+        router.push(`/dashboard/release/${releaseId}`);
         onClose();
         return;
       }
@@ -250,8 +254,15 @@ export default function TrackOptionsMenu({
       }
 
       if (action === "go_release") {
+        const releaseId = (track as any)?.release_id ?? null;
         if (!releaseId) {
-          setToast("Release ID missing.");
+          // Fallback to track page if release_id is missing
+          if (!trackId) {
+            setToast("Release ID missing.");
+            return;
+          }
+          router.push(`/dashboard/track/${trackId}`);
+          onClose();
           return;
         }
         router.push(`/dashboard/release/${releaseId}`);

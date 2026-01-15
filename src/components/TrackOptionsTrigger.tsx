@@ -86,7 +86,17 @@ function AddToPlaylistModal({
         setPlaylists([]);
       } else {
         const mapped = (data as PlaylistRow[]).map((pl) => {
-          const coverPublicUrl = pl.cover_url ?? null;
+          let coverPublicUrl: string | null = null;
+
+          if (pl.cover_url) {
+            // cover_url is a storage path -> build public URL on client
+            const { data: pub } = supabase
+              .storage
+              .from("playlist-covers")
+              .getPublicUrl(pl.cover_url);
+
+            coverPublicUrl = pub?.publicUrl ?? null;
+          }
 
           return {
             ...pl,
@@ -359,6 +369,7 @@ export default function TrackOptionsTrigger({
               showGoToArtist={showGoToArtist}
               showGoToRelease={showGoToRelease}
               releaseId={releaseId}
+              context={onRemove ? "playlist" : "default"}
             />,
             document.body
           )

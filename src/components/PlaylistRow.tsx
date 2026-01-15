@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import type { PlayerTrack } from "@/types/playerTrack";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
-import { rateReleaseTrackAction } from "@/app/dashboard/playlist/[id]/actions";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import TrackRatingInline from "@/components/TrackRatingInline";
+import TrackRowBase from "@/components/TrackRowBase";
 
 export default function PlaylistRow({
   track,
@@ -21,165 +18,23 @@ export default function PlaylistRow({
   onDelete?: () => void;
   user: any | null;
 }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [agg, setAgg] = useState<{
-    rating_avg: number | null;
-    rating_count: number;
-    stream_count: number;
-  }>({
-    rating_avg: track.rating_avg ?? null,
-    rating_count: track.rating_count ?? 0,
-    stream_count: (track as any)?.stream_count ?? 0,
-  });
-  const [myStars, setMyStars] = useState<number | null>(track.my_stars ?? null);
-  const [hover, setHover] = useState<number | null>(null);
-  const supabase = createSupabaseBrowserClient();
   const router = useRouter();
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: active,
-  } = useSortable({ id: track.id });
-
-  const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition:
-      transition ||
-      "transform 120ms cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 150ms ease",
-    zIndex: active ? 200 : 1,
+  const style = {
     position: "relative",
-    opacity: active ? 0.96 : 1,
-    boxShadow: active
-      ? "0 10px 28px rgba(0, 0, 0, 0.5)"
-      : "0 2px 6px rgba(0, 0, 0, 0.15)",
+    zIndex: 1,
+    opacity: 1,
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
     borderRadius: "8px",
-    backgroundColor: active ? "rgba(65, 65, 65, 0.65)" : "",
-    scale: active ? "1.025" : "1.00",
-    top: active ? "-2px" : "0px",
-  };
+  } as const;
 
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
-  const displayStars = myStars ?? Math.floor(agg.rating_avg ?? 0);
-  const effective = hover ?? displayStars;
-
-  useEffect(() => {
-    setAgg({
-      rating_avg: track.rating_avg ?? null,
-      rating_count: track.rating_count ?? 0,
-      stream_count: (track as any)?.stream_count ?? 0,
-    });
-  }, [track.release_track_id, track.rating_avg, track.rating_count]);
-
-  useEffect(() => {
-    if (!track.release_track_id) return;
-
-    const channel = supabase
-      .channel(`rt:${track.release_track_id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "release_tracks",
-          filter: `id=eq.${track.release_track_id}`,
-        },
-        (payload) => {
-          const newRow = payload.new as {
-            rating_avg?: number | null;
-            rating_count?: number | null;
-            stream_count?: number | null;
-          };
-
-          setAgg((prev) => ({
-            rating_avg: newRow.rating_avg ?? prev.rating_avg,
-            rating_count: newRow.rating_count ?? prev.rating_count,
-            stream_count: newRow.stream_count ?? prev.stream_count,
-          }));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase, track.release_track_id]);
-
-  async function refreshAgg() {
-    if (!track.release_track_id) return;
-
-    const { data, error } = await supabase
-      .from("release_tracks")
-      .select("rating_avg,rating_count,stream_count")
-      .eq("id", track.release_track_id)
-      .single();
-
-    if (error || !data) {
-      console.error("refreshAgg error", error ?? new Error("No data"));
-      return;
-    }
-
-    setAgg({
-      rating_avg: data.rating_avg,
-      rating_count: data.rating_count,
-      stream_count: data.stream_count ?? 0,
-    });
-  }
-
-  function showNotice(message: string) {
-    window.dispatchEvent(new CustomEvent("immusic:notice", { detail: { message } }));
-  }
-
-  function mapNotice(raw: string) {
-    const m = raw.toLowerCase();
-    if (m.includes("30 second")) return "Please listen at least 30 seconds to rate this track.";
-    if (m.includes("listener")) return "Only listeners can rate tracks.";
-    return "Rating failed. Please try again.";
-  }
-
-  useEffect(() => {
-    if (track.release_track_id) {
-      void refreshAgg();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function handleRate(stars: number) {
-    if (submitting) return;
-    if (!track.release_track_id) return;
-
-    try {
-      setSubmitting(true);
-      const formData = new FormData();
-      formData.set("releaseTrackId", track.release_track_id);
-      formData.set("stars", String(stars));
-
-      const result = await rateReleaseTrackAction(formData);
-
-      if (!result?.ok) {
-        const msg = mapNotice(result?.error ?? "");
-        showNotice(msg);
-        return;
-      }
-
-      setMyStars(stars);
-      await refreshAgg();
-    } catch (err) {
-      console.error("RATE ERROR", err);
-      const raw = err instanceof Error ? err.message : "";
-      showNotice(mapNotice(raw));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   function goToTrack(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    router.push(`/dashboard/track/${track.id}`);
+    const releaseId = (track as any)?.release_id ?? null;
+    router.push(releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${track.id}`);
   }
 
   function goToArtist(e: React.MouseEvent) {
@@ -191,49 +46,24 @@ export default function PlaylistRow({
 
   return (
     <div
-      ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className="
-        group 
-        grid grid-cols-[24px_64px_1fr_36px]
-        md:grid-cols-[40px_80px_1fr_70px_70px_80px]
-        items-center 
-        gap-x-4 md:gap-x-3
-        px-4 py-2 
-        rounded-lg 
-        bg-neutral-900/40 
-        hover:bg-neutral-800/50 
-        border border-neutral-800 
-        transition-all
-        cursor-grab active:cursor-grabbing
-        hover:shadow-[0_4px_12px_rgba(0,0,0,0.35)]
-        hover:border-neutral-700
-      "
+      className="cursor-default"
     >
-      {/* Index */}
-      <p className="text-white/50 text-[11px] tabular-nums">{currentIndex + 1}</p>
-
-      {/* Cover + Play Overlay */}
-      <div className="w-16 h-16 rounded-md overflow-hidden relative group bg-neutral-700 justify-self-start">
-        <img
-          src={track.cover_url || "/placeholder.png"}
-          alt={track.title}
-          className="w-full h-full object-cover"
-        />
-
-        <PlayOverlayButton
-          track={track}
-          index={Math.max(currentIndex, 0)}
-          tracks={tracks}
-        />
-      </div>
-
-      {/* Title / Meta */}
-      <div className="min-w-0 ml-1 sm:ml-0 pl-2 sm:pl-0 flex flex-col gap-1 justify-self-start">
-        {/* Line 1: Title */}
-        <div className="flex items-center min-w-0">
+      <TrackRowBase
+        track={track}
+        index={Math.max(currentIndex, 0)}
+        tracks={tracks}
+        coverSize="md"
+        leadingSlot={
+          <div
+            className="text-white/50 text-[11px] tabular-nums px-1 py-1 rounded"
+            aria-label="Track position"
+            title="Track position"
+          >
+            {currentIndex + 1}
+          </div>
+        }
+        titleSlot={
           <button
             type="button"
             onPointerDown={(e) => {
@@ -242,96 +72,57 @@ export default function PlaylistRow({
             }}
             onClick={goToTrack}
             className="
-              text-left text-[13px] font-semibold text-white truncate
-              hover:text-[#00FFC6] transition-colors
-              focus:outline-none
-            "
+            text-left text-[13px] font-semibold text-white truncate
+            hover:text-[#00FFC6] transition-colors
+            focus:outline-none
+          "
             title={track.title}
           >
             {track.title}
           </button>
-        </div>
-
-        {/* Line 2: Artist(s) only */}
-        {track.profiles?.display_name ? (
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={goToArtist}
-            className="
-              mt-1 text-left text-xs text-white/60 truncate
-              hover:text-[#00FFC6] hover:underline underline-offset-2
-              transition-colors
-              focus:outline-none
-            "
-            title={track.profiles.display_name}
-          >
-            {track.profiles.display_name}
-          </button>
-        ) : (
-          <div className="mt-1 text-xs text-white/40 truncate">
-            Unknown artist
-          </div>
-        )}
-
-        {/* Line 3: Track meta (track-related) */}
-        <div className="mt-2 flex items-center gap-2 min-w-0">
-          {user && track.release_track_id ? (
-            <div className="flex items-center gap-2 text-xs text-neutral-500">
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    disabled={submitting}
-                    onMouseEnter={() => setHover(n)}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void handleRate(n);
-                    }}
-                    className={`transition-colors ${
-                      submitting ? "opacity-60 cursor-not-allowed" : "hover:text-[#00FFC6]"
-                    } ${effective >= n ? "text-[#00FFC6]" : "text-neutral-600"}`}
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
-
-              {agg.rating_count && agg.rating_count > 0 ? (
-                <span className="tabular-nums whitespace-nowrap">
-                  {Number(agg.rating_avg ?? 0).toFixed(1)} ({agg.rating_count})
-                </span>
-              ) : (
-                <span className="text-neutral-600 whitespace-nowrap">No ratings</span>
-              )}
-            </div>
+        }
+        subtitleSlot={
+          track.profiles?.display_name ? (
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={goToArtist}
+              className="
+            mt-1 text-left text-xs text-white/60 truncate
+            hover:text-[#00FFC6] hover:underline underline-offset-2
+            transition-colors
+            focus:outline-none
+          "
+              title={track.profiles.display_name}
+            >
+              {track.profiles.display_name}
+            </button>
+          ) : (
+            <div className="mt-1 text-xs text-white/40 truncate">Unknown artist</div>
+          )
+        }
+        metaSlot={
+          track.release_track_id ? (
+            <TrackRatingInline
+              releaseTrackId={track.release_track_id}
+              initialAvg={(track as any).rating_avg ?? null}
+              initialCount={(track as any).rating_count ?? 0}
+              initialStreams={(track as any).stream_count ?? 0}
+              initialMyStars={(track as any).my_stars ?? null}
+              showStreamsOnDesktopOnly={true}
+            />
           ) : (
             <span className="text-xs text-white/60">★</span>
-          )}
-
-          <span className="text-xs text-white/30">·</span>
-
-          <span className="hidden md:inline text-xs text-white/50 whitespace-nowrap">
-            {agg.stream_count ?? 0} streams
-          </span>
-        </div>
-      </div>
-
-      {/* BPM */}
-      <p className="hidden md:block text-white/50 text-sm">{track.bpm ?? "—"}</p>
-
-      {/* Key */}
-      <p className="hidden md:block text-white/50 text-sm">{track.key ?? "—"}</p>
-
-      {/* Options */}
-      <div className="flex items-center justify-end min-w-[44px] min-h-[44px]">
-        <TrackOptionsTrigger track={track} onRemove={onDelete} tracks={tracks} />
-      </div>
+          )
+        }
+        bpmSlot={<span>{track.bpm ?? "—"}</span>}
+        keySlot={<span>{track.key ?? "—"}</span>}
+        genreSlot={null}
+        actionsSlot={<TrackOptionsTrigger track={track} onRemove={onDelete} tracks={tracks} />}
+      />
     </div>
   );
 }

@@ -1,18 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Play, Pause, Music } from "lucide-react";
 import { usePlayer } from "@/context/PlayerContext";
@@ -307,12 +295,6 @@ export default function PlaylistClient({
     setPlayerTracks((prev) => [...prev, enriched]);
   }
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    })
-  );
-
   const { playQueue, togglePlay, isPlaying, currentTrack, queue } = usePlayer();
   const isThisPlaylistQueueActive =
     !!currentTrack &&
@@ -467,66 +449,20 @@ export default function PlaylistClient({
         </div>
 
         {playerTracks.length ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={async ({ active, over }) => {
-              if (!isOwner) return;
-              if (!over || active.id === over.id) return;
-
-              const oldIndex = playerTracks.findIndex((t) => t.id === active.id);
-              const newIndex = playerTracks.findIndex((t) => t.id === over.id);
-
-              const newPlayerTracks = arrayMove(playerTracks, oldIndex, newIndex);
-              const newLocalTracks = arrayMove(
-                localTracks,
-                localTracks.findIndex((t) => t.tracks.id === active.id),
-                localTracks.findIndex((t) => t.tracks.id === over.id)
-              );
-
-              setPlayerTracks(newPlayerTracks);
-              setLocalTracks(newLocalTracks);
-
-              const updates = newLocalTracks.map((item, index) => ({
-                playlist_id: localPlaylist.id,
-                track_id: item.tracks.id,
-                position: index + 1,
-              }));
-
-              for (const row of updates) {
-                const { error } = await supabase
-                  .from("playlist_tracks")
-                  .update({ position: row.position })
-                  .eq("playlist_id", row.playlist_id)
-                  .eq("track_id", row.track_id);
-
-                if (error) {
-                  console.error("Position update error:", error);
-                  break;
-                }
-              }
-            }}
-          >
-            <SortableContext
-              items={playerTracks.map((t) => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-2">
-                {playerTracks.map((track, index) => (
-                  <PlaylistRow
-                    key={track.id}
-                    track={track}
-                    tracks={playerTracks}
-                    user={user}
-                  onDelete={() => {
-                    if (!isOwner) return;
-                    void onDeleteTrack(track.id);
-                  }}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <div className="space-y-2">
+            {playerTracks.map((track) => (
+              <PlaylistRow
+                key={track.id}
+                track={track}
+                tracks={playerTracks}
+                user={user}
+                onDelete={() => {
+                  if (!isOwner) return;
+                  void onDeleteTrack(track.id);
+                }}
+              />
+            ))}
+          </div>
         ) : (
           <div className="rounded-xl border border-neutral-900 bg-neutral-950/30 p-8">
             <div className="flex flex-col items-center text-center gap-3">

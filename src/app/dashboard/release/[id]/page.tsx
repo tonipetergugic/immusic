@@ -59,7 +59,8 @@ export default async function ReleaseDetailPage({
         title,
         duration,
         bpm,
-        key
+        key,
+        genre
       )
     `
     )
@@ -120,13 +121,16 @@ export default async function ReleaseDetailPage({
                   title: row.track?.title ?? null,
                   bpm: row.track?.bpm ?? null,
                   key: row.track?.key ?? null,
+                  genre: row.track?.genre ?? null,
                 }}
                 artistId={release.artist_id}
+                artistName={artistName}
                 ratingAvg={row.rating_avg ?? null}
                 ratingCount={row.rating_count ?? null}
                 streamCount={row.stream_count ?? 0}
                 duration={row.track?.duration ?? null}
                 releaseTrackId={row.id}
+                releaseCoverUrl={coverUrl}
               />
             ))}
           </div>

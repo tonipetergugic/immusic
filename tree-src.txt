@@ -80,9 +80,11 @@ src/components/DeletePlaylistModal.tsx
 src/components/PlaylistSettingsMenu.tsx
 src/components/Portal.tsx
 src/components/PlayOverlayButton.tsx
+src/components/TrackRatingInline.tsx
 src/components/AudioDropzone.tsx
 src/components/PlaylistAddTrackModal.tsx
 src/components/PlaylistDetailsModal.tsx
+src/components/TrackRowBase.tsx
 src/components/AvatarDropzone.tsx
 src/components/PlaylistCard.tsx
 src/components/TrackOptionsTrigger.tsx

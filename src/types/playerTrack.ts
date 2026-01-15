@@ -6,6 +6,7 @@ export type PlayerTrack = {
   audio_url: string;
   bpm?: number | null;
   key?: string | null;
+  genre?: string | null;
   profiles?: {
     display_name?: string | null;
   };

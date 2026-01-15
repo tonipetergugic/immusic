@@ -7,6 +7,16 @@ export type DevelopmentDiscoveryItem = {
   artist_name: string | null;
   cover_path: string | null;
   audio_path: string;
+  genre: string | null;
+  bpm: number | null;
+  key: string | null;
+
+  // Rating/Streams (from release_tracks)
+  release_track_id: string | null;
+  rating_avg: number | null;
+  rating_count: number;
+  stream_count: number;
+  my_stars: number | null;
 
   exposure: {
     target_listeners: number;

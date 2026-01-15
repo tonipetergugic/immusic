@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Pause } from "lucide-react";
-import { usePlayer } from "@/context/PlayerContext";
+import PlayOverlayButton from "@/components/PlayOverlayButton";
 import type { PlayerTrack } from "@/types/playerTrack";
 
 type Props = {
@@ -13,21 +12,14 @@ type Props = {
 };
 
 export default function TrackCard({ track, index, tracks }: Props) {
-  const { currentTrack, isPlaying, togglePlay, playQueue } = usePlayer();
+  // play handled by PlayOverlayButton (standardized)
 
-  const isThisTrackActive = currentTrack?.id === track.id;
-
-  const handleClick = () => {
-    if (isThisTrackActive) {
-      togglePlay();
-    } else {
-      playQueue(tracks, index);
-    }
-  };
+  const releaseId = (track as any)?.release_id ?? null;
+  const href = releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${track.id}`;
 
   return (
     <Link
-      href={`/dashboard/track/${track.id}`}
+      href={href}
       className="
         group relative 
         bg-[#111112] 
@@ -61,40 +53,12 @@ export default function TrackCard({ track, index, tracks }: Props) {
           )}
         </div>
 
-        <div
-          className="
-            absolute inset-0 flex items-center justify-center
-            opacity-0 group-hover:opacity-100
-            transition-all duration-300
-          "
-        >
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleClick();
-            }}
-            className="
-              w-14 h-14 rounded-full
-              bg-[#00FFC6] hover:bg-[#00E0B0]
-              flex items-center justify-center
-              shadow-[0_0_20px_rgba(0,255,198,0.40)]
-              backdrop-blur-md
-            "
-            aria-label={isThisTrackActive && isPlaying ? "Pause track" : "Play track"}
-          >
-            {isThisTrackActive && isPlaying ? (
-              <Pause size={26} className="text-black" />
-            ) : (
-              <Play size={26} className="text-black" />
-            )}
-          </button>
-        </div>
+        <PlayOverlayButton
+          size="lg"
+          track={track}
+          tracks={tracks}
+          index={index}
+        />
       </div>
 
       <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
