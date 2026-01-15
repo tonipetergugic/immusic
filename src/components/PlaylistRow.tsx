@@ -20,14 +20,6 @@ export default function PlaylistRow({
 }) {
   const router = useRouter();
 
-  const style = {
-    position: "relative",
-    zIndex: 1,
-    opacity: 1,
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
-    borderRadius: "8px",
-  } as const;
-
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
 
   function goToTrack(e: React.MouseEvent) {
@@ -45,10 +37,7 @@ export default function PlaylistRow({
   }
 
   return (
-    <div
-      style={style}
-      className="cursor-default"
-    >
+    <div className="cursor-default">
       <TrackRowBase
         track={track}
         index={Math.max(currentIndex, 0)}

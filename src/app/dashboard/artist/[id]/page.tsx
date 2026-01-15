@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
@@ -8,6 +9,7 @@ import SaveArtistButton from "./SaveArtistButton";
 import FollowArtistButton from "./FollowArtistButton";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import TrackRowBase from "@/components/TrackRowBase";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import PlaylistPlayOverlayButton from "./PlaylistPlayOverlayButton";
 import FollowCountsClient from "./FollowCountsClient";
@@ -52,7 +54,6 @@ export default async function ArtistPage({
   const [
     { data: releases },
     { data: publicPlaylists },
-    { data: topTracksRaw },
     { data: releaseTracks },
   ] = await Promise.all([
     supabase
@@ -68,13 +69,6 @@ export default async function ArtistPage({
       .eq("created_by", id)
       .eq("is_public", true)
       .order("created_at", { ascending: false }),
-
-    supabase
-      .from("analytics_artist_top_tracks_30d")
-      .select("track_id, streams, unique_listeners")
-      .eq("artist_id", id)
-      .order("streams", { ascending: false })
-      .limit(10),
 
     supabase
       .from("release_tracks")
@@ -103,7 +97,61 @@ export default async function ArtistPage({
       .eq("releases.status", "published"),
   ]);
 
-  const topTrackIds = (topTracksRaw ?? []).map((r) => r.track_id);
+  type TopTracksApiOk = {
+    ok: true;
+    tracks: Array<{
+      track_id: string;
+      streams: number | null;
+      unique_listeners: number | null;
+      listened_seconds: number | null;
+      ratings_count: number | null;
+      rating_avg: number | null;
+    }>;
+  };
+
+  let topTracksRawApi: TopTracksApiOk["tracks"] = [];
+
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "http";
+    const origin = host ? `${proto}://${host}` : "";
+
+    const url = `${origin}/api/artist/${id}/top-tracks`;
+
+    const res = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const rawText = await res.text();
+
+    let json: any = null;
+    try {
+      json = rawText ? JSON.parse(rawText) : null;
+    } catch (e) {
+      console.error("Top tracks API returned non-JSON:", {
+        status: res.status,
+        statusText: res.statusText,
+        body: rawText?.slice(0, 500) ?? "",
+      });
+    }
+
+    if (res.ok && json?.ok === true && Array.isArray(json.tracks)) {
+      topTracksRawApi = json.tracks;
+    } else {
+      console.error("Top tracks API failed:", {
+        status: res.status,
+        statusText: res.statusText,
+        body: rawText?.slice(0, 500) ?? "",
+        json,
+      });
+    }
+  } catch (e) {
+    console.error("Top tracks API error:", e);
+  }
+
+  const topTrackIds = topTracksRawApi.map((r) => r.track_id);
 
   let topTracksDetails: any[] = [];
   if (topTrackIds.length > 0) {
@@ -140,7 +188,7 @@ export default async function ArtistPage({
     if (row?.track_id) topTracksDetailsById[row.track_id] = row;
   }
 
-  const topTracks = (topTracksRaw ?? []).map((a) => {
+  const topTracks = topTracksRawApi.map((a) => {
     const d = topTracksDetailsById[a.track_id] ?? null;
     const trackData = d?.tracks;
     
@@ -149,6 +197,7 @@ export default async function ArtistPage({
       return {
         track_id: a.track_id,
         streams: a.streams ?? 0,
+        unique_listeners: a.unique_listeners ?? 0,
         track_title: d?.track_title ?? null,
         cover_path: d?.releases?.cover_path ?? null,
         rating_avg: d?.rating_avg ?? null,
@@ -203,10 +252,11 @@ export default async function ArtistPage({
     return {
       track_id: a.track_id,
       streams: a.streams ?? 0,
+      unique_listeners: a.unique_listeners ?? 0,
       track_title: d?.track_title ?? null,
       cover_path: d?.releases?.cover_path ?? null,
-      rating_avg: d?.rating_avg ?? null,
-      rating_count: d?.rating_count ?? 0,
+      rating_avg: a.rating_avg ?? d?.rating_avg ?? null,
+      rating_count: a.ratings_count ?? d?.rating_count ?? 0,
       release_id: d?.releases?.id ?? null,
       playerTrack,
     };
@@ -531,88 +581,61 @@ export default async function ArtistPage({
                 const queueIndex = playerTracksQueue.findIndex((pt) => pt.id === t.track_id);
 
                 return (
-                  <div
+                  <TrackRowBase
                     key={t.track_id}
-                    className="
-                      flex items-center gap-4
-                      px-5 py-4
-                      rounded-2xl
-                      border border-white/10
-                      bg-white/[0.03]
-                      hover:bg-white/[0.05]
-                      hover:border-white/20
-                      transition
-                    "
-                  >
-                    {/* Index */}
-                    <div className="w-6 text-sm text-white/50 tabular-nums">
-                      {idx + 1}
-                    </div>
-
-                    {/* Cover */}
-                    <div className="relative group w-14 h-14 -my-1 rounded-xl overflow-hidden border border-white/10 bg-black/20 shrink-0">
-                      {coverUrl ? (
-                        <img
-                          src={coverUrl}
-                          alt={t.track_title ?? "Track cover"}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-neutral-800" />
-                      )}
-                      <PlayOverlayButton
-                        track={t.playerTrack}
-                        index={queueIndex >= 0 ? queueIndex : undefined}
-                        tracks={playerTracksQueue}
-                      />
-                    </div>
-
-                    {/* Title */}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-white font-medium truncate">
-                        {t.track_title ?? "Unknown track"}
+                    track={t.playerTrack}
+                    index={queueIndex}
+                    tracks={playerTracksQueue}
+                    coverUrl={coverUrl}
+                    leadingSlot={
+                      <span className="text-white/50 text-sm tabular-nums">
+                        {idx + 1}
+                      </span>
+                    }
+                    subtitleSlot={
+                      <div
+                        key={`artist-${t.track_id}`}
+                        className="mt-1 text-left text-xs text-white/60 truncate"
+                      >
+                        {profile.display_name ?? "Unknown Artist"}
                       </div>
-                      {t.rating_avg !== null && t.rating_count > 0 ? (
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex items-center gap-[2px] leading-none">
-                            {[1, 2, 3, 4, 5].map((i) => {
-                              const filled = i <= Math.round(Number(t.rating_avg));
-                              return (
-                                <span
-                                  key={i}
-                                  className={filled ? "text-[#00FFC6] text-sm" : "text-white/25 text-sm"}
-                                  aria-hidden="true"
-                                >
-                                  ★
-                                </span>
-                              );
-                            })}
+                    }
+                    metaSlot={
+                      <div key={`meta-${t.track_id}`}>
+                        {t.rating_avg !== null && t.rating_count > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-[2px] leading-none">
+                              {[1, 2, 3, 4, 5].map((i) => {
+                                const filled = i <= Math.round(Number(t.rating_avg));
+                                return (
+                                  <span
+                                    key={`star-${t.track_id}-${i}`}
+                                    className={filled ? "text-[#00FFC6] text-sm" : "text-white/25 text-sm"}
+                                    aria-hidden="true"
+                                  >
+                                    ★
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            <div className="text-xs text-white/50 tabular-nums">
+                              {Number(t.rating_avg).toFixed(1)} ({t.rating_count})
+                            </div>
                           </div>
-
-                          <div className="text-xs text-white/50 tabular-nums">
-                            {Number(t.rating_avg).toFixed(1)} ({t.rating_count})
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-white/40 mt-1">No ratings yet</div>
-                      )}
-                    </div>
-
-                    {/* Streams */}
-                    <div className="text-sm text-white/70 tabular-nums">
-                      {t.streams} streams
-                    </div>
-
-                    {/* Options Menu */}
-                    <div className="shrink-0">
+                        ) : (
+                          <div className="text-xs text-white/40">No ratings yet</div>
+                        )}
+                      </div>
+                    }
+                    actionsSlot={
                       <TrackOptionsTrigger
                         track={t.playerTrack}
                         showGoToArtist={false}
                         showGoToRelease={true}
                         releaseId={t.release_id}
                       />
-                    </div>
-                  </div>
+                    }
+                  />
                 );
               })}
             </div>

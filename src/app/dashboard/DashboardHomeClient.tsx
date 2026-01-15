@@ -431,10 +431,20 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                     <TrackRowBase
                       key={trackId ?? `${idx}`}
                       track={rowTrack}
-                      index={idx}
+                      index={0}
                       tracks={[] as any}
                       coverUrl={coverUrl}
                       coverSize="md"
+                      getQueue={
+                        releaseId
+                          ? async () => {
+                              const queue = await fetchReleaseQueueForPlayer(releaseId);
+                              if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
+                              const startIndex = queue.findIndex((t: any) => t?.id === trackId);
+                              return { tracks: queue as any, index: Math.max(0, startIndex) };
+                            }
+                          : undefined
+                      }
                       leadingSlot={idx + 1}
                       titleSlot={
                         <div className="flex items-center min-w-0">
@@ -505,29 +515,9 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                           showGoToRelease={true}
                           releaseId={releaseId}
                         />
-                      }
-                      coverOverlaySlot={
-                        trackId && releaseId ? (
-                          <PlayOverlayButton
-                            size="sm"
-                            track={{ id: trackId } as any}
-                            currentTrackId={trackId}
-                            getQueue={async () => {
-                              const queue = await fetchReleaseQueueForPlayer(releaseId);
-                              if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
-
-                              const startIndex = Math.max(
-                                0,
-                                queue.findIndex((t: any) => t?.id === trackId)
-                              );
-
-                              return { tracks: queue as any, index: startIndex };
-                            }}
-                          />
-                        ) : null
-                      }
-                    />
-                  );
+                    }
+                  />
+                );
                 })}
               </div>
             )}
@@ -603,10 +593,20 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                   <TrackRowBase
                     key={trackId ?? `${idx}`}
                     track={rowTrack}
-                    index={idx}
-                    tracks={[] as any}
+                    index={0}
+                    tracks={[rowTrack] as any}
                     coverUrl={coverUrl}
                     coverSize="md"
+                    getQueue={
+                      trackId && releaseId
+                        ? async () => {
+                            const queue = await fetchReleaseQueueForPlayer(releaseId);
+                            if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
+                            const startIndex = queue.findIndex((t: any) => t?.id === trackId);
+                            return { tracks: queue as any, index: Math.max(0, startIndex) };
+                          }
+                        : undefined
+                    }
                     leadingSlot={idx + 1}
                     titleSlot={
                       <div className="flex items-center min-w-0">
