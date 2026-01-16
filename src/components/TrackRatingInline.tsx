@@ -55,10 +55,16 @@ function showNotice(message: string) {
 
 function mapNotice(code?: ApiErrorCode, raw?: string) {
   if (code === "UNAUTHORIZED") return "Please log in to rate tracks.";
-  if (code === "WINDOW_CLOSED") return "Ratings window is not open for this track.";
+  if (code === "WINDOW_CLOSED") return "Please listen at least 30 seconds to rate this track.";
   if (code === "RATINGS_NOT_ALLOWED_STATUS") return "Ratings are only allowed for development tracks.";
   if (code === "ALREADY_RATED") return "You have already rated this track.";
-  if (code === "NOT_ELIGIBLE") return "Please listen at least 30 seconds to rate this track.";
+  if (code === "NOT_ELIGIBLE") {
+    const m = (raw ?? "").toLowerCase();
+    if (m.includes("only listeners") || m.includes("only listener") || m.includes("listeners can rate")) {
+      return "Only listeners can rate tracks.";
+    }
+    return "Please listen at least 30 seconds to rate this track.";
+  }
   // fallback (legacy raw parsing)
   const m = (raw ?? "").toLowerCase();
   if (m.includes("30s") || m.includes("30 second")) return "Please listen at least 30 seconds to rate this track.";
@@ -91,6 +97,7 @@ export default function TrackRatingInline({
 
   const alreadyRated = myStars !== null;
   const [tapInfoOpen, setTapInfoOpen] = useState(false);
+  const [confirmOpenFor, setConfirmOpenFor] = useState<number | null>(null);
 
   const displayStars = useMemo(() => {
     // PlaylistRow: myStars wins; otherwise derived from avg
@@ -100,12 +107,14 @@ export default function TrackRatingInline({
   const effectiveStars = hover ?? displayStars;
 
   const eligible = useMemo(() => {
-    // A) disabled when not eligible
-    // treat null as false until proven true
+    // Eligibility rules (Phase 2):
+    // - listener-only is enforced by backend (eligibility.can_rate)
+    // - listen threshold (>=30s)
+    // NOTE: window_open is intentionally ignored (kept in response but never used).
     const canRate = Boolean(eligibility.can_rate);
-    const windowOpen = Boolean(eligibility.window_open);
-    const listened = typeof eligibility.listened_seconds === "number" ? eligibility.listened_seconds : 0;
-    return canRate && windowOpen && listened >= 30;
+    const listened =
+      typeof eligibility.listened_seconds === "number" ? eligibility.listened_seconds : 0;
+    return canRate && listened >= 30;
   }, [eligibility]);
 
   function openTapInfo() {
@@ -152,6 +161,9 @@ export default function TrackRatingInline({
     try {
       setSubmitting(true);
 
+      // Speichere myStars vor dem API-Call, um zu prüfen, ob es das erste Rating war
+      const wasFirstRating = myStars === null;
+
       const res = await fetch("/api/ratings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -165,6 +177,20 @@ export default function TrackRatingInline({
         showNotice(mapNotice(errObj.code, errObj.error));
         return;
       }
+
+      // Nach erfolgreichem ersten Rating: Hinweis
+      if (wasFirstRating) {
+        window.dispatchEvent(
+          new CustomEvent("immusic:notice", {
+            detail: {
+              message: "Thanks for rating! Your rating is final and helps the artist improve.",
+            },
+          })
+        );
+      }
+
+      // Confirm schließen nach erfolgreichem Rating
+      setConfirmOpenFor(null);
 
       // optimistic + refresh aggregate
       setMyStars(stars);
@@ -256,7 +282,7 @@ export default function TrackRatingInline({
                 onMouseLeave={() => setHover(null)}
                 onClick={(e) => {
                   e.stopPropagation();
-                  void handleRate(n);
+                  setConfirmOpenFor(n);
                 }}
                 className={[
                   "transition-colors",
@@ -272,6 +298,46 @@ export default function TrackRatingInline({
           })}
         </div>
       )}
+
+      {confirmOpenFor !== null ? (
+        <div
+          className="fixed z-[96] left-1/2 top-[70%] -translate-x-1/2 w-[320px] max-w-[92vw]
+            rounded-2xl border border-white/10 bg-[#0E0E10] p-4 text-sm text-white
+            shadow-[0_0_40px_rgba(0,0,0,0.65)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="font-semibold text-white">Confirm rating</div>
+          <div className="mt-2 text-white/70 text-xs leading-relaxed">
+            Your rating is final. Please confirm before submitting.
+          </div>
+
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/80 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmOpenFor(null);
+              }}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              className="px-3 py-2 rounded-xl bg-[#00FFC6] hover:bg-[#00E0B0] text-xs font-semibold text-black transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                const stars = confirmOpenFor;
+                setConfirmOpenFor(null);
+                if (typeof stars === "number") void handleRate(stars);
+              }}
+            >
+              Rate
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {tapInfoOpen ? (
         <span

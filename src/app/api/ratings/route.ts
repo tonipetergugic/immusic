@@ -36,6 +36,23 @@ export async function POST(req: Request) {
     return err("UNAUTHORIZED", "Unauthorized", 401);
   }
 
+  // ROLE GATE: Only listeners can rate
+  const { data: meProfile, error: meProfErr } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (meProfErr) {
+    return err("INTERNAL_ERROR", "Failed to load profile role", 500);
+  }
+
+  const myRole = (meProfile as any)?.role as string | null;
+
+  if (myRole !== "listener") {
+    return err("NOT_ELIGIBLE", "Only listeners can rate tracks.", 403);
+  }
+
   let body: Body = {};
   try {
     body = (await req.json()) as Body;
@@ -92,11 +109,10 @@ export async function POST(req: Request) {
   }
 
   const win = winRows && winRows.length > 0 ? winRows[0] : null;
+  // NOTE: Ratings-Window ist aktuell deprecated (wir nutzen nur 30s + can_rate + 1 rating/track)
+  // Wir lesen es ggf. noch zu Debug-Zwecken, aber blocken NICHT mehr.
   const windowOpen = Boolean(win?.window_open);
-
-  if (!windowOpen) {
-    return err("WINDOW_CLOSED", "Ratings window is not open for this track.", 403);
-  }
+  void windowOpen;
 
   // PHASE 19 Gate 2: Qualifiziertes Hören + can_rate
   const { data: lsRows, error: lsErr } = await supabase
@@ -118,24 +134,27 @@ export async function POST(req: Request) {
     return err("NOT_ELIGIBLE", "Not eligible to rate (requires >=30s listen and can_rate=true).", 403);
   }
 
-  // PHASE 19 Gate 3: Maximal 1 Rating pro User & Track (no updates)
+  // PHASE 19 Gate 3: Maximal 1 Rating pro User & Track (final, keine Updates)
   const { data: ratedRows, error: ratedErr } = await supabase
-    .from("user_track_ratings")
-    .select("user_id, track_id")
+    .from("track_ratings")
+    .select("id")
     .eq("user_id", user.id)
-    .eq("track_id", trackId)
+    .eq("release_track_id", releaseTrackId)
     .limit(1);
 
   if (ratedErr) {
     return err("INTERNAL_ERROR", "Failed to check existing rating", 500);
   }
 
-  const alreadyRated = ratedRows && ratedRows.length > 0;
-  if (alreadyRated) {
-    return err("ALREADY_RATED", "You have already rated this track.", 409);
+  if (ratedRows && ratedRows.length > 0) {
+    return err(
+      "ALREADY_RATED",
+      "You have already rated this track. Ratings are final.",
+      409
+    );
   }
 
-  // Insert rating (no updates allowed)
+  // Insert rating (final)
   const { data: insertedRows, error: insertError } = await supabase
     .from("track_ratings")
     .insert({
@@ -201,17 +220,20 @@ export async function GET(req: Request) {
   let can_rate: boolean | null = null;
   let listened_seconds: number | null = null;
 
-  if (trackId) {
-    const { data: winRows } = await supabase
-      .from("ratings_window_tracks")
-      .select("window_open")
-      .eq("track_id", trackId)
-      .limit(1);
-
-    window_open = winRows && winRows.length > 0 ? Boolean(winRows[0]?.window_open) : false;
-  }
+  // NOTE: Ratings-Window ist aktuell deprecated (wir nutzen nur 30s + can_rate + 1 rating/track).
+  // Damit der Client (TrackRatingInline) nicht blockiert, liefern wir window_open immer true.
+  window_open = true;
 
   if (user && trackId) {
+    // ROLE GATE: Only listeners can rate (UI eligibility)
+    const { data: meProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const myRole = (meProfile as any)?.role as string | null;
+
     const { data: lsRows } = await supabase
       .from("track_listen_state")
       .select("listened_seconds, can_rate")
@@ -221,7 +243,9 @@ export async function GET(req: Request) {
 
     const ls = lsRows && lsRows.length > 0 ? lsRows[0] : null;
     listened_seconds = typeof (ls as any)?.listened_seconds === "number" ? (ls as any).listened_seconds : 0;
-    can_rate = Boolean((ls as any)?.can_rate);
+
+    // If not listener -> force can_rate false
+    can_rate = myRole === "listener" ? Boolean((ls as any)?.can_rate) : false;
   }
 
   return NextResponse.json({
