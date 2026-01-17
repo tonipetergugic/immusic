@@ -6,12 +6,30 @@ import { usePathname, useRouter } from "next/navigation";
 import { Home, Library, PlusCircle, Mic } from "lucide-react";
 import CreatePlaylistModal from "@/components/CreatePlaylistModal";
 
-export default function Sidebar() {
+export default function Sidebar({
+  variant = "desktop",
+  onNavigate,
+}: {
+  variant?: "desktop" | "drawer";
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+  const isDrawer = variant === "drawer";
+
   useEffect(() => {
+    // Init role from cache (needed for Mobile Drawer re-mount)
+    try {
+      const cached = window.localStorage.getItem("immusic:role");
+      if (cached && (cached === "artist" || cached === "admin" || cached === "listener")) {
+        setRole(cached);
+      }
+    } catch {
+      // ignore (private mode / blocked storage)
+    }
+
     function handleRoleUpdate(e: Event) {
       const ce = e as CustomEvent;
       const nextRole = typeof ce.detail === "string" ? ce.detail : null;
@@ -27,28 +45,47 @@ export default function Sidebar() {
 
   return (
     <div
-      className="
-        fixed 
-        top-0 
-        left-0 
-        h-full 
-        w-60 
-        bg-[#0B0B0D] 
-        border-r border-[#1A1A1C] 
-        p-4 
-        flex 
-        flex-col 
-        gap-2
-        z-30
-      "
+      className={[
+        isDrawer
+          ? `
+            relative
+            h-full
+            w-full
+            bg-transparent
+            p-4
+            flex
+            flex-col
+            gap-2
+          `
+          : `
+            fixed
+            top-0
+            left-0
+            h-full
+            w-60
+            bg-[#0B0B0D]
+            border-r border-[#1A1A1C]
+            p-4
+            flex
+            flex-col
+            gap-2
+            z-30
+          `,
+      ].join(" ")}
     >
 
-      <SidebarItem href="/dashboard" icon={<Home size={20} />} label="Home" />
+      <SidebarItem
+        href="/dashboard"
+        icon={<Home size={20} />}
+        label="Home"
+        onClick={() => onNavigate?.()}
+      />
       <SidebarItem
         href="/dashboard/library"
         icon={<Library size={20} />}
         label="Library"
         matchPrefix
+        onClick={() => onNavigate?.()}
       />
       <SidebarItem
         icon={<PlusCircle size={20} />}
@@ -57,7 +94,7 @@ export default function Sidebar() {
       />
 
       {/* Artist Bereich */}
-      {role === "artist" || role === "admin" ? (
+      {isDrawer ? null : role === "artist" || role === "admin" ? (
         <SidebarItem
           href="/artist/dashboard"
           icon={<Mic size={20} />}
@@ -113,13 +150,14 @@ function SidebarItem({
       : pathname === href
     : false;
 
-  const clickHandler =
-    onClick ??
-    (href
-      ? () => {
-          router.push(href);
-        }
-      : undefined);
+  const clickHandler = () => {
+    if (onClick) {
+      onClick();
+    }
+    if (href) {
+      router.push(href);
+    }
+  };
 
   return (
     <div

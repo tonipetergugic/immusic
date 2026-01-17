@@ -80,11 +80,8 @@ export default function MobileSidebarDrawer() {
             </div>
 
             {/* Same Sidebar content */}
-            <div
-              className="h-full overflow-y-auto"
-              onClick={() => setOpen(false)}
-            >
-              <Sidebar />
+            <div className="h-full overflow-y-auto">
+              <Sidebar variant="drawer" onNavigate={() => setOpen(false)} />
             </div>
           </div>
         </div>
