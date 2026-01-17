@@ -1,17 +1,14 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
-import ClientTrackRows from "./ClientTrackRows";
-import ReleasePlayButton from "./ReleasePlayButton";
 import SaveArtistButton from "./SaveArtistButton";
+import ReleaseCard, { type ReleaseCardData } from "@/components/ReleaseCard";
 import FollowArtistButton from "./FollowArtistButton";
+import PlaylistCard from "@/components/PlaylistCard";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
-import PlayOverlayButton from "@/components/PlayOverlayButton";
 import TrackRowBase from "@/components/TrackRowBase";
 import { toPlayerTrack } from "@/lib/playerTrack";
-import PlaylistPlayOverlayButton from "./PlaylistPlayOverlayButton";
 import FollowCountsClient from "./FollowCountsClient";
 
 export default async function ArtistPage({
@@ -223,9 +220,11 @@ export default async function ArtistPage({
         : null;
 
     if (!audio_url) {
-      throw new Error(
-        `ArtistPage: missing audio_url for track ${trackData.id}`
-      );
+      console.error("ArtistPage: missing audio_url, skipping track", {
+        track_id: trackData.id,
+        audio_path: trackData.audio_path ?? null,
+      });
+      return null;
     }
 
     const playerTrack = toPlayerTrack({
@@ -260,7 +259,18 @@ export default async function ArtistPage({
       release_id: d?.releases?.id ?? null,
       playerTrack,
     };
-  });
+  })
+    .filter(Boolean) as Array<{
+      track_id: string;
+      streams: number;
+      unique_listeners: number;
+      track_title: string | null;
+      cover_path: string | null;
+      rating_avg: number | null;
+      rating_count: number;
+      release_id: string | null;
+      playerTrack: any;
+    }>;
 
   const tracksByRelease: Record<string, any[]> = {};
   (releaseTracks ?? []).forEach((rt) => {
@@ -297,56 +307,79 @@ export default async function ArtistPage({
   return (
     <div className="w-full">
       {/* Header */}
-      <div className="w-full max-w-[1200px] mx-auto px-6 pt-6">
-        <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
-          {bannerUrl ? (
-            <img
-              src={bannerUrl}
-              alt="Artist Banner"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-white/5 via-white/[0.06] to-white/5" />
-          )}
+      <div className="relative w-full">
+        {/* Full-width bloom background (mobile fill) */}
+        <div
+          className="
+            pointer-events-none
+            absolute inset-0
+            bg-[#0E0E10]
+          "
+        />
+        <div
+          className="
+            pointer-events-none
+            absolute inset-0
+            opacity-80
+            blur-[60px]
+            bg-[radial-gradient(circle_at_20%_20%,rgba(0,255,198,0.18),transparent_55%),radial-gradient(circle_at_80%_10%,rgba(0,255,198,0.10),transparent_55%)]
+          "
+        />
 
-          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80" />
-
-          <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 flex items-center gap-6">
-            <div className="shrink-0">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={profile.display_name}
-                  className="w-28 h-28 md:w-36 md:h-36 rounded-full object-cover border-4 border-white/15 shadow-2xl"
-                />
-              ) : (
-                <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-white/10 border-4 border-white/10" />
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-xl truncate">
-                {profile.display_name}
-              </h1>
-
-              {profile.location ? (
-                <p className="mt-2 text-sm md:text-base text-white/70 drop-shadow-md">
-                  {profile.location}
-                </p>
-              ) : null}
-
-              <FollowCountsClient
-                profileId={id}
-                followerCount={followerCountNum}
-                followingCount={followingCountNum}
+        {/* Keep content constrained */}
+        <div className="w-full pt-6">
+          <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+            {bannerUrl ? (
+              <img
+                src={bannerUrl}
+                alt="Artist Banner"
+                className="w-full h-full object-cover"
               />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-white/5 via-white/[0.06] to-white/5" />
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80" />
+
+            <div className="absolute left-4 right-4 bottom-4 md:left-8 md:right-8 md:top-1/2 md:bottom-auto md:-translate-y-1/2 flex items-start md:items-center gap-4 md:gap-6">
+              <div className="shrink-0 hidden md:block">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={profile.display_name}
+                    className="w-36 h-36 rounded-full object-cover border-4 border-white/15 shadow-2xl"
+                  />
+                ) : (
+                  <div className="w-36 h-36 rounded-full bg-white/10 border-4 border-white/10" />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-xl truncate">
+                  {profile.display_name}
+                </h1>
+
+                {profile.location ? (
+                  <p className="mt-1 text-sm md:text-base text-white/70 drop-shadow-md">
+                    {profile.location}
+                  </p>
+                ) : null}
+
+                <div className="mt-2 md:mt-3">
+                  <FollowCountsClient
+                    profileId={id}
+                    followerCount={followerCountNum}
+                    followingCount={followingCountNum}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Actions + Social (inline) + Bio */}
-      <div className="w-full max-w-[1200px] mx-auto px-6 mt-6">
+      <div className="w-full max-w-[1600px] px-0 mt-6">
         <div className="flex flex-wrap items-center gap-5">
           {canSaveArtist ? (
             <SaveArtistButton artistId={id} initialSaved={initialSaved} />
@@ -417,7 +450,7 @@ export default async function ArtistPage({
       </div>
 
       {/* Releases */}
-      <div className="w-full max-w-[1200px] mx-auto px-6 mt-10 pb-12">
+      <div className="w-full max-w-[1600px] px-0 mt-10 pb-12">
         <div className="flex items-end justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-white">Releases</h2>
           <div className="text-sm text-[#B3B3B3]">
@@ -426,7 +459,7 @@ export default async function ArtistPage({
         </div>
 
         {releases && releases.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-4">
             {releases.map((rel) => {
               const coverUrl = rel.cover_path
                 ? supabase.storage
@@ -434,55 +467,21 @@ export default async function ArtistPage({
                     .getPublicUrl(rel.cover_path).data.publicUrl
                 : null;
 
-              const relTracks = tracksByRelease[rel.id] || [];
+              const cardData: ReleaseCardData = {
+                id: rel.id,
+                title: rel.title,
+                cover_url: coverUrl,
+                release_type: rel.release_type ?? null,
+                artist_id: id,
+                artist_name: profile.display_name ?? "Unknown Artist",
+              };
 
               return (
-                <div
+                <ReleaseCard
                   key={rel.id}
-                  className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-colors border border-white/10 hover:border-white/20 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md"
-                >
-                  <div className="relative">
-                    <div className="relative group overflow-hidden rounded-xl border border-white/10 bg-black/20">
-                      <Link href={`/dashboard/release/${rel.id}`} className="block">
-                        {coverUrl ? (
-                          <img
-                            src={coverUrl}
-                            alt={rel.title}
-                            className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                          />
-                        ) : (
-                          <div className="w-full aspect-square bg-neutral-800" />
-                        )}
-                      </Link>
-
-                      {/* Play Overlay – exakt bounded to cover */}
-                      <div
-                        className="
-                          absolute inset-0 flex items-center justify-center
-                          opacity-0 group-hover:opacity-100
-                          transition-all duration-300
-                        "
-                      >
-                        <ReleasePlayButton tracks={relTracks} />
-                      </div>
-                    </div>
-
-                    <Link href={`/dashboard/release/${rel.id}`} className="block">
-                      <div className="min-w-0 mt-4">
-                        <h3 className="text-base font-semibold text-white truncate">
-                          {rel.title}
-                        </h3>
-                        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/50">
-                          {rel.release_type}
-                        </p>
-                      </div>
-                    </Link>
-                  </div>
-
-                  <div className="h-px bg-white/10 my-1" />
-
-                  <ClientTrackRows releaseId={rel.id} tracks={relTracks} />
-                </div>
+                  releaseId={rel.id}
+                  data={cardData}
+                />
               );
             })}
           </div>
@@ -502,7 +501,7 @@ export default async function ArtistPage({
           </div>
 
           {publicPlaylists && publicPlaylists.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-4">
               {publicPlaylists.map((pl) => {
                 const coverUrl = pl.cover_url
                   ? supabase.storage
@@ -511,36 +510,13 @@ export default async function ArtistPage({
                   : null;
 
                 return (
-                  <div
+                  <PlaylistCard
                     key={pl.id}
-                    className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-colors border border-white/10 hover:border-white/20 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md"
-                  >
-                    <div className="relative group overflow-hidden rounded-xl border border-white/10 bg-black/20">
-                      <Link href={`/dashboard/playlist/${pl.id}`} className="block">
-                        {coverUrl ? (
-                          <img
-                            src={coverUrl}
-                            alt={pl.title}
-                            className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                          />
-                        ) : (
-                          <div className="w-full aspect-square bg-neutral-800" />
-                        )}
-                      </Link>
-                      <PlaylistPlayOverlayButton playlistId={pl.id} size="lg" />
-                    </div>
-
-                    <Link href={`/dashboard/playlist/${pl.id}`} className="block">
-                      <div className="min-w-0">
-                        <h3 className="text-base font-semibold text-white truncate">
-                          {pl.title}
-                        </h3>
-                        <p className="mt-1 text-[11px] uppercase tracking-wide text-white/50">
-                          Public playlist
-                        </p>
-                      </div>
-                    </Link>
-                  </div>
+                    id={pl.id}
+                    title={pl.title}
+                    description={null}
+                    cover_url={coverUrl}
+                  />
                 );
               })}
             </div>
@@ -561,7 +537,7 @@ export default async function ArtistPage({
           </div>
 
           {topTracks && topTracks.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 w-full">
               {topTracks.map((t, idx) => {
                 const coverUrl = t.cover_path
                   ? supabase.storage

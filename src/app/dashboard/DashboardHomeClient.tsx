@@ -2,15 +2,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import PlaylistCard from "@/components/PlaylistCard";
-import PlayOverlayButton from "@/components/PlayOverlayButton";
 import TrackRowBase from "@/components/TrackRowBase";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
+import ReleaseCard, { type ReleaseCardData } from "@/components/ReleaseCard";
 import TrackRatingInline from "@/components/TrackRatingInline";
-import { usePlayer } from "@/context/PlayerContext";
 import type { HomeReleaseCard } from "@/lib/supabase/getHomeReleases";
 import type { HomePlaylistCard } from "@/lib/supabase/getHomePlaylists";
 import { fetchPerformanceDiscovery } from "@/lib/discovery/fetchPerformanceDiscovery.client";
@@ -50,30 +47,6 @@ type Props = {
   performanceReleaseIds: string[];
   performancePlaylistIds: string[];
 };
-
-async function fetchReleaseQueueForPlayer(releaseId: string) {
-  const res = await fetch(`/api/releases/${releaseId}/queue`, { method: "GET" });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to fetch release queue (${res.status}): ${text}`);
-  }
-
-  const data = await res.json();
-  // support both response shapes:
-  // - PlayerTrack[]
-  // - { tracks: PlayerTrack[] }
-  const tracks =
-    Array.isArray(data)
-      ? data
-      : Array.isArray(data?.queue)
-      ? data.queue
-      : Array.isArray(data?.tracks)
-      ? data.tracks
-      : [];
-
-  return tracks;
-}
 
 export default function DashboardHomeClient({
   home,
@@ -456,14 +429,28 @@ export default function DashboardHomeClient({
               <p className="text-white/40">No releases configured for Home yet.</p>
             ) : (
               <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
-                {homeReleaseIds.slice(0, 10).map((rid) => (
-                  <div key={rid} className="shrink-0 w-[150px] snap-start">
-                    <ExtraReleaseCard
-                      releaseId={rid}
-                      data={releasesById[rid] ?? null}
-                    />
-                  </div>
-                ))}
+                {homeReleaseIds.slice(0, 10).map((rid) => {
+                  const data = releasesById[rid] ?? null;
+                  return (
+                    <div key={rid} className="shrink-0 w-[150px] snap-start">
+                      <ReleaseCard
+                        releaseId={rid}
+                        data={
+                          data
+                            ? ({
+                                id: data.id,
+                                title: data.title,
+                                cover_url: data.cover_url ?? null,
+                                release_type: data.release_type ?? null,
+                                artist_id: data.artist_id ?? null,
+                                artist_name: data.artist_name ?? null,
+                              } satisfies ReleaseCardData)
+                            : null
+                        }
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -672,14 +659,28 @@ export default function DashboardHomeClient({
               <h2 className="text-xl font-semibold">Performance Releases</h2>
 
               <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
-                {performanceReleaseIds.slice(0, 10).map((rid) => (
-                  <div key={rid} className="shrink-0 w-[150px] snap-start">
-                    <ExtraReleaseCard
-                      releaseId={rid}
-                      data={releasesById[rid] ?? null}
-                    />
-                  </div>
-                ))}
+                {performanceReleaseIds.slice(0, 10).map((rid) => {
+                  const data = releasesById[rid] ?? null;
+                  return (
+                    <div key={rid} className="shrink-0 w-[150px] snap-start">
+                      <ReleaseCard
+                        releaseId={rid}
+                        data={
+                          data
+                            ? ({
+                                id: data.id,
+                                title: data.title,
+                                cover_url: data.cover_url ?? null,
+                                release_type: data.release_type ?? null,
+                                artist_id: data.artist_id ?? null,
+                                artist_name: data.artist_name ?? null,
+                              } satisfies ReleaseCardData)
+                            : null
+                        }
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -891,114 +892,4 @@ export default function DashboardHomeClient({
     </div>
   );
 }
-
-function ExtraReleaseCard({
-  releaseId,
-  data,
-}: {
-  releaseId: string;
-  data: HomeReleaseCard | null;
-}) {
-  const { playQueue, togglePlay, pause, currentTrack, isPlaying } = usePlayer();
-  const [firstTrackId, setFirstTrackId] = useState<string | null>(null);
-  const router = useRouter();
-
-  const isCurrent = !!firstTrackId && currentTrack?.id === firstTrackId;
-
-  if (!data) {
-    return (
-      <div className="bg-[#111112] p-3 rounded-xl border border-transparent">
-        <div className="w-full aspect-square rounded-xl bg-white/10" />
-        <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
-        <div className="mt-2 h-3 w-1/2 bg-white/10 rounded" />
-      </div>
-    );
-  }
-
-  // NOTE: firstTrackId is set on first play click (no preload), to avoid N+1 queries.
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => router.push(`/dashboard/release/${data.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          router.push(`/dashboard/release/${data.id}`);
-        }
-      }}
-      className="
-        group relative 
-        bg-[#111112] 
-        p-2 rounded-xl
-        transition-all
-        hover:scale-[1.015]
-        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-        border border-transparent
-        hover:border-[#00FFC622]
-        cursor-pointer
-        block
-        outline-none
-      "
-    >
-      <div className="relative w-full aspect-square rounded-xl overflow-hidden">
-        {/* Release type badge (top-right) */}
-        {data.release_type && (
-          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md bg-black/65 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/90 border border-white/10 backdrop-blur">
-            {data.release_type}
-          </div>
-        )}
-        {data.cover_url ? (
-          <Image
-            src={data.cover_url}
-            alt={data.title}
-            fill
-            className="
-              object-cover rounded-xl
-              transition-all duration-300
-              group-hover:brightness-110
-              group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]
-            "
-          />
-        ) : (
-          <div className="w-full h-full bg-neutral-800 rounded-xl" />
-        )}
-
-        {/* Hover Play (standardized) */}
-        <PlayOverlayButton
-          size="lg"
-          // dummy track object; we only need an id for current matching
-          track={{ id: firstTrackId ?? releaseId } as any}
-          currentTrackId={firstTrackId ?? undefined}
-          getQueue={async () => {
-            const queue = await fetchReleaseQueueForPlayer(releaseId);
-            if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
-            setFirstTrackId(queue[0].id);
-            return { tracks: queue as any, index: 0 };
-          }}
-        />
-      </div>
-
-      <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
-        {data.title}
-      </h3>
-
-      {data.artist_id ? (
-        <Link
-          href={`/dashboard/artist/${data.artist_id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="text-[11px] text-white/50 truncate hover:text-[#00FFC6] transition-colors block"
-        >
-          {data.artist_name ?? "Unknown Artist"}
-        </Link>
-      ) : (
-        <p className="text-[11px] text-white/50 truncate">
-          {data.artist_name ?? "Unknown Artist"}
-        </p>
-      )}
-    </div>
-  );
-}
-
 

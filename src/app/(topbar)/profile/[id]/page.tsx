@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { followProfile, unfollowProfile, isFollowingProfile } from "../actions";
-import PlaylistPlayOverlayButton from "@/app/dashboard/artist/[id]/PlaylistPlayOverlayButton";
+import PlaylistCard from "@/components/PlaylistCard";
 import FollowersModal from "@/components/FollowersModal";
 
 type PublicProfile = {
@@ -497,40 +496,14 @@ export default function PublicProfilePage() {
         ) : playlists.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {playlists.map((pl) => {
-              const coverSrc = pl.cover_url ?? null;
-
               return (
-                <div
+                <PlaylistCard
                   key={pl.id}
-                  className="rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-colors border border-white/10 hover:border-white/20 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md"
-                >
-                  <div className="relative group overflow-hidden rounded-xl border border-white/10 bg-black/20">
-                    <Link href={`/dashboard/playlist/${pl.id}`} className="block">
-                      {coverSrc ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={coverSrc}
-                          alt={pl.title}
-                          className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                        />
-                      ) : (
-                        <div className="w-full aspect-square bg-neutral-800" />
-                      )}
-                    </Link>
-                    <PlaylistPlayOverlayButton playlistId={pl.id} size="lg" />
-                  </div>
-
-                  <Link href={`/dashboard/playlist/${pl.id}`} className="block">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-white truncate">
-                        {pl.title}
-                      </h3>
-                      <p className="mt-1 text-[11px] uppercase tracking-wide text-white/50">
-                        {pl.is_public ? "Public" : "Private"}
-                      </p>
-                    </div>
-                  </Link>
-                </div>
+                  id={pl.id}
+                  title={pl.title}
+                  description={pl.is_public ? "Public playlist" : "Private playlist"}
+                  cover_url={pl.cover_url ?? null}
+                />
               );
             })}
           </div>

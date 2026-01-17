@@ -68,6 +68,7 @@ src/components/TrackCard.tsx
 src/components/AddTrackModal.tsx
 src/components/SortableItem.tsx
 src/components/FollowersModal.tsx
+src/components/ArtistCard.tsx
 src/components/CoverPlaceholder.tsx
 src/components/GlobalPlayerWrapper.tsx
 src/components/PlaylistRow.tsx
@@ -76,6 +77,7 @@ src/components/CreatePlaylistModal.tsx
 src/components/TrackOptionsMenu.tsx
 src/components/Tooltip.tsx
 src/components/CoverDropzone.tsx
+src/components/ReleaseCard.tsx
 src/components/DeletePlaylistModal.tsx
 src/components/PlaylistSettingsMenu.tsx
 src/components/Portal.tsx
