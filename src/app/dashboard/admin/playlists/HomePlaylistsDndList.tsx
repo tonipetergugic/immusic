@@ -34,6 +34,12 @@ export default function HomePlaylistsDndList({
   initialOrder: string[]; // home_module_items.id in aktueller Reihenfolge
   children: ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
@@ -90,6 +96,8 @@ export default function HomePlaylistsDndList({
       return next;
     });
   }
+
+  if (!mounted) return null;
 
   return (
     <DndContext

@@ -147,12 +147,26 @@ export default function TrackRatingInline({
     }
   }
 
+  const hasInitial = useMemo(() => {
+    return (
+      initialMyStars !== null ||
+      initialAvg !== null ||
+      (typeof initialCount === "number" && initialCount > 0) ||
+      (typeof initialStreams === "number" && initialStreams > 0)
+    );
+  }, [initialMyStars, initialAvg, initialCount, initialStreams]);
+
   useEffect(() => {
     if (!releaseTrackId) return;
     if (readOnly) return;
+
+    // Important: avoid N+1 GETs. If the parent already provided initial summary,
+    // we skip the initial refresh and only refresh after a POST (rating) action.
+    if (hasInitial) return;
+
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [releaseTrackId, readOnly]);
+  }, [releaseTrackId, readOnly, hasInitial]);
 
   async function handleRate(stars: number) {
     if (readOnly) return;

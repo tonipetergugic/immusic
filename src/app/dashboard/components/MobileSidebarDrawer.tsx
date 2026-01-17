@@ -55,18 +55,22 @@ export default function MobileSidebarDrawer() {
               shadow-2xl
             "
           >
-            <div className="flex items-center justify-between p-4 border-b border-neutral-900">
+            <div className="flex items-center justify-between px-4 pb-4 pt-[calc(env(safe-area-inset-top)+16px)] border-b border-neutral-900">
               <span className="text-sm font-semibold text-white/90">Menu</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
                 className="
+                  fixed
+                  right-6
+                  top-[calc(env(safe-area-inset-top)+12px)]
+                  z-[100]
                   inline-flex items-center justify-center
                   h-10 w-10 rounded-full
                   border border-neutral-800
-                  bg-neutral-900/40
-                  text-white/80
+                  bg-neutral-900/60
+                  text-white/90
                   hover:text-white hover:border-neutral-700
                   transition
                 "

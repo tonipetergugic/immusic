@@ -1,7 +1,7 @@
 // /Users/tonipetergugic/immusic/src/app/dashboard/DashboardHomeClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -11,18 +11,22 @@ import TrackRowBase from "@/components/TrackRowBase";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import { usePlayer } from "@/context/PlayerContext";
-import { Play, Pause } from "lucide-react";
 import type { HomeReleaseCard } from "@/lib/supabase/getHomeReleases";
 import type { HomePlaylistCard } from "@/lib/supabase/getHomePlaylists";
 import { fetchPerformanceDiscovery } from "@/lib/discovery/fetchPerformanceDiscovery.client";
-import { fetchDevelopmentDiscovery } from "@/lib/discovery/fetchDevelopmentDiscovery.client";
 import type { DevelopmentDiscoveryItem } from "@/lib/discovery/fetchDevelopmentDiscovery.client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { PlayerTrack } from "@/types/playerTrack";
 
 type HomeModule = {
   id: string;
   title: string;
-  module_type: "release" | "playlist" | "mixed";
+  module_type:
+    | "release"
+    | "playlist"
+    | "mixed"
+    | "performance_release"
+    | "performance_playlist";
   position: number;
 };
 
@@ -41,6 +45,10 @@ type Props = {
   };
   releasesById: Record<string, HomeReleaseCard>;
   playlistsById: Record<string, HomePlaylistCard>;
+  homeReleaseIds: string[];
+  homePlaylistIds: string[];
+  performanceReleaseIds: string[];
+  performancePlaylistIds: string[];
 };
 
 async function fetchReleaseQueueForPlayer(releaseId: string) {
@@ -67,24 +75,32 @@ async function fetchReleaseQueueForPlayer(releaseId: string) {
   return tracks;
 }
 
-export default function DashboardHomeClient({ home, releasesById, playlistsById }: Props) {
-  const supabase = createSupabaseBrowserClient();
+export default function DashboardHomeClient({
+  home,
+  releasesById,
+  playlistsById,
+  homeReleaseIds,
+  homePlaylistIds,
+  performanceReleaseIds,
+  performancePlaylistIds,
+}: Props) {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
-  const { playQueue, togglePlay, pause, currentTrack, isPlaying } = usePlayer();
-  const [perfPlayLoadingId, setPerfPlayLoadingId] = useState<string | null>(null);
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
   const [devItems, setDevItems] = useState<DevelopmentDiscoveryItem[]>([]);
   const [devLoading, setDevLoading] = useState(false);
   const [devError, setDevError] = useState<string | null>(null);
   const [devGenre, setDevGenre] = useState<string>("all");
+  const [performanceGenre, setPerformanceGenre] = useState<string>("all");
   const [performanceItems, setPerformanceItems] = useState<any[]>([]);
   const [performanceLoading, setPerformanceLoading] = useState(false);
   const [performanceError, setPerformanceError] = useState<string | null>(null);
   const [perfArtistMap, setPerfArtistMap] = useState<Record<string, string>>({});
   const [perfReleaseTrackMap, setPerfReleaseTrackMap] = useState<Record<string, { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }>>({});
-  const [perfMyStarsMap, setPerfMyStarsMap] = useState<Record<string, number>>({});
-  const [perfTrackMetaMap, setPerfTrackMetaMap] = useState<Record<string, { bpm: number | null; key: string | null; genre: string | null }>>({});
+  const [perfTrackMetaMap, setPerfTrackMetaMap] = useState<
+    Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null }>
+  >({});
 
   useEffect(() => {
     if (discoveryMode !== "performance") return;
@@ -98,11 +114,6 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
 
         const items = await fetchPerformanceDiscovery(30);
 
-        if (Array.isArray(items) && items.length > 0) {
-          console.log("[perf] first item:", items[0]);
-          console.log("[perf] keys:", Object.keys(items[0] ?? {}));
-        }
-
         if (!cancelled) setPerformanceItems(items);
 
         try {
@@ -114,17 +125,18 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
           if (trackIds.length > 0) {
             const { data: tmeta, error: tmetaErr } = await supabase
               .from("tracks")
-              .select("id, bpm, key, genre")
+              .select("id, bpm, key, genre, audio_path")
               .in("id", trackIds);
 
             if (!tmetaErr && tmeta) {
-              const m: Record<string, { bpm: number | null; key: string | null; genre: string | null }> = {};
+              const m: Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null }> = {};
               for (const t of tmeta as any[]) {
                 if (!t?.id) continue;
                 m[t.id] = {
                   bpm: t.bpm ?? null,
                   key: t.key ?? null,
                   genre: t.genre ?? null,
+                  audio_path: t.audio_path ?? null,
                 };
               }
               if (!cancelled) setPerfTrackMetaMap(m);
@@ -228,13 +240,108 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
 
   // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
-  const releaseItems = releaseModule ? home.itemsByModuleId[releaseModule.id] ?? [] : [];
   const playlistModule =
     home.modules.find((m) => m.module_type === "playlist") ?? null;
 
-  const playlistItems = playlistModule
-    ? home.itemsByModuleId[playlistModule.id] ?? []
-    : [];
+  // Performance Genre Filter
+  const performanceGenreOptions = Array.from(
+    new Set(
+      (performanceItems ?? [])
+        .map((it) => {
+          const trackId = it.track_id;
+          const genre = perfTrackMetaMap?.[trackId]?.genre ?? null;
+          return genre && genre.trim() ? genre.trim() : "Unknown";
+        })
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const performanceItemsFiltered =
+    performanceGenre === "all"
+      ? performanceItems
+      : performanceItems.filter((it) => {
+          const trackId = it.track_id;
+          const genre = perfTrackMetaMap?.[trackId]?.genre ?? "Unknown";
+          const genreLower = (genre || "Unknown").toLowerCase().trim();
+          return genreLower === performanceGenre.toLowerCase();
+        });
+
+  const devQueue = useMemo(() => {
+    return devItems.slice(0, 20).map((it) => {
+      const trackId = it.track_id;
+      const title = it.title || "Untitled";
+      const artist = it.artist_name ?? "—";
+      const releaseId = it.release_id;
+
+      const coverUrl = it.cover_path
+        ? supabase.storage.from("release_covers").getPublicUrl(it.cover_path).data.publicUrl
+        : null;
+
+      const audioUrl = it.audio_path
+        ? supabase.storage.from("tracks").getPublicUrl(it.audio_path).data.publicUrl
+        : null;
+
+      return {
+        id: trackId,
+        artist_id: it.artist_id,
+        title,
+        cover_url: coverUrl,
+        audio_url: audioUrl,
+        audio_path: it.audio_path ?? null,
+        profiles: { display_name: artist },
+        release_id: releaseId,
+        release_track_id: it.release_track_id ?? null,
+        rating_avg: it.rating_avg ?? null,
+        rating_count: it.rating_count ?? 0,
+        stream_count: it.stream_count ?? 0,
+        my_stars: it.my_stars ?? null,
+        bpm: it.bpm ?? null,
+        key: it.key ?? null,
+        // genre bleibt im UI-Slot über it.genre, nicht zwingend Teil von PlayerTrack
+      } as unknown as PlayerTrack;
+    });
+  }, [devItems, supabase]);
+
+  const perfQueue = useMemo(() => {
+    return performanceItemsFiltered.map((it) => {
+      const trackId = it.track_id;
+      const title = it.track_title || "Untitled";
+      const artistId = it.artist_id;
+      const releaseId = it.release_id;
+
+      const artistName = perfArtistMap[artistId] ?? "Unknown Artist";
+
+      const coverUrl = it.release_cover_path
+        ? supabase.storage.from("release_covers").getPublicUrl(it.release_cover_path).data.publicUrl
+        : null;
+
+      const audioPath = perfTrackMetaMap?.[trackId]?.audio_path ?? null;
+
+      const audioUrl = audioPath
+        ? supabase.storage.from("tracks").getPublicUrl(audioPath).data.publicUrl
+        : null;
+
+      const rtKey = `${releaseId}:${trackId}`;
+      const rt = perfReleaseTrackMap[rtKey];
+
+      return {
+        id: trackId,
+        artist_id: artistId,
+        title,
+        cover_url: coverUrl,
+        audio_url: audioUrl,
+        audio_path: audioPath,
+        profiles: { display_name: artistName },
+        release_id: releaseId,
+        release_track_id: rt?.release_track_id ?? null,
+        rating_avg: rt?.rating_avg ?? (it.rating_avg ?? null),
+        rating_count: rt?.rating_count ?? (it.rating_count ?? 0),
+        stream_count: rt?.stream_count ?? (it.streams_30d ?? 0),
+        bpm: perfTrackMetaMap?.[trackId]?.bpm ?? null,
+        key: perfTrackMetaMap?.[trackId]?.key ?? null,
+      } as unknown as PlayerTrack;
+    });
+  }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase]);
 
   return (
     <div className="space-y-6">
@@ -277,21 +384,18 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
               {releaseModule?.title ?? "Releases"}
             </h2>
 
-            {releaseItems.length === 0 ? (
+            {homeReleaseIds.length === 0 ? (
               <p className="text-white/40">No releases configured for Home yet.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 items-start">
-                {releaseItems
-                  .filter((it) => it.item_type === "release")
-                  .sort((a, b) => a.position - b.position)
-                  .slice(0, 10)
-                  .map((it) => (
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+                {homeReleaseIds.slice(0, 10).map((rid) => (
+                  <div key={rid} className="shrink-0 w-[150px] snap-start">
                     <ExtraReleaseCard
-                      key={it.id}
-                      releaseId={it.item_id}
-                      data={releasesById[it.item_id] ?? null}
+                      releaseId={rid}
+                      data={releasesById[rid] ?? null}
                     />
-                  ))}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -301,46 +405,43 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
               {playlistModule?.title ?? "Playlists"}
             </h2>
 
-            {playlistItems.length === 0 ? (
+            {homePlaylistIds.length === 0 ? (
               <p className="text-white/40">No playlists configured for Home yet.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 items-start">
-                {playlistItems
-                  .filter((it) => it.item_type === "playlist")
-                  .sort((a, b) => a.position - b.position)
-                  .slice(0, 10)
-                  .map((it) => {
-                    const pl = playlistsById[it.item_id];
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+                {homePlaylistIds.slice(0, 10).map((pid) => {
+                  const pl = playlistsById[pid];
 
-                    if (!pl) {
-                      return (
-                        <div
-                          key={it.id}
-                          className="bg-[#111112] p-3 rounded-xl border border-transparent"
-                        >
-                          <div className="w-full aspect-square rounded-xl bg-white/10" />
-                          <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
-                          <div className="mt-2 h-3 w-1/2 bg-white/10 rounded" />
-                        </div>
-                      );
-                    }
-
+                  if (!pl) {
                     return (
+                      <div
+                        key={pid}
+                        className="shrink-0 w-[150px] snap-start bg-[#111112] p-3 rounded-xl border border-transparent"
+                      >
+                        <div className="w-full aspect-square rounded-xl bg-white/10" />
+                        <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
+                        <div className="mt-2 h-3 w-1/2 bg-white/10 rounded" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={pid} className="shrink-0 w-[150px] snap-start">
                       <PlaylistCard
-                        key={it.id}
                         id={pl.id}
                         title={pl.title}
                         description={pl.description}
                         cover_url={pl.cover_url}
                       />
-                    );
-                  })}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-end justify-between gap-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Development Tracks</h2>
                 <p className="text-sm text-white/50">
@@ -348,14 +449,14 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                 </p>
               </div>
 
-              <div className="shrink-0">
+              <div className="w-full md:w-[220px]">
                 <label className="sr-only" htmlFor="dev-genre">Genre</label>
                 <select
                   id="dev-genre"
                   value={devGenre}
                   onChange={(e) => setDevGenre(e.target.value)}
                   className="
-                    h-10 rounded-full px-4 text-sm
+                    w-full h-10 rounded-full px-4 text-sm
                     bg-black/25 border border-white/10
                     text-white/80
                     focus:outline-none focus:ring-2 focus:ring-[#00FFC655]
@@ -401,50 +502,22 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
               </div>
             ) : (
               <div className="space-y-2">
-                {devItems.slice(0, 20).map((it, idx) => {
-                  const trackId = it.track_id;
-                  const title = it.title || "Untitled";
-                  const artist = it.artist_name ?? "—";
-                  const releaseId = it.release_id;
-
-                  const coverUrl = it.cover_path
-                    ? supabase.storage.from("release_covers").getPublicUrl(it.cover_path).data.publicUrl
-                    : null;
-
-                  const rowTrack = {
-                    id: trackId,
-                    artist_id: it.artist_id,
-                    title,
-                    cover_url: coverUrl,
-                    profiles: { display_name: artist },
-                    release_id: releaseId,
-                    release_track_id: it.release_track_id ?? null,
-                    rating_avg: it.rating_avg ?? null,
-                    rating_count: it.rating_count ?? 0,
-                    stream_count: it.stream_count ?? 0,
-                    my_stars: it.my_stars ?? null,
-                    bpm: it.bpm ?? null,
-                    key: it.key ?? null,
-                  } as any;
+                {devQueue.map((rowTrack, idx) => {
+                  const trackId = rowTrack.id;
+                  const releaseId = rowTrack.release_id ?? null;
+                  const title = rowTrack.title ?? "Untitled";
+                  const artist = (rowTrack as any)?.profiles?.display_name ?? "—";
+                  const coverUrl = rowTrack.cover_url ?? null;
 
                   return (
                     <TrackRowBase
                       key={trackId ?? `${idx}`}
-                      track={rowTrack}
-                      index={0}
-                      tracks={[] as any}
+                      track={rowTrack as any}
+                      index={idx}
+                      tracks={devQueue as any}
                       coverUrl={coverUrl}
                       coverSize="md"
-                      getQueue={
-                        releaseId
-                          ? async () => {
-                              const queue = await fetchReleaseQueueForPlayer(releaseId);
-                              if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
-                              const startIndex = queue.findIndex((t: any) => t?.id === trackId);
-                              return { tracks: queue as any, index: Math.max(0, startIndex) };
-                            }
-                          : undefined
-                      }
+                      // getQueue ENTFERNT (nur eine Queue-Quelle)
                       leadingSlot={idx + 1}
                       titleSlot={
                         <div className="flex items-center min-w-0">
@@ -455,7 +528,6 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                               e.stopPropagation();
                             }}
                             onClick={() => {
-                              const releaseId = rowTrack.release_id ?? null;
                               router.push(releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${trackId}`);
                             }}
                             className="
@@ -470,14 +542,14 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                         </div>
                       }
                       subtitleSlot={
-                        it.artist_id ? (
+                        rowTrack.artist_id ? (
                           <button
                             type="button"
                             onPointerDown={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                             }}
-                            onClick={() => router.push(`/dashboard/artist/${it.artist_id}`)}
+                            onClick={() => router.push(`/dashboard/artist/${rowTrack.artist_id}`)}
                             className="
                               mt-1 text-left text-xs text-white/60 truncate
                               hover:text-[#00FFC6] hover:underline underline-offset-2
@@ -493,31 +565,31 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                         )
                       }
                       metaSlot={
-                        rowTrack.release_track_id ? (
+                        (rowTrack as any).release_track_id ? (
                           <TrackRatingInline
-                            releaseTrackId={rowTrack.release_track_id}
-                            initialAvg={rowTrack.rating_avg}
-                            initialCount={rowTrack.rating_count}
-                            initialStreams={rowTrack.stream_count}
-                            initialMyStars={rowTrack.my_stars}
+                            releaseTrackId={(rowTrack as any).release_track_id}
+                            initialAvg={(rowTrack as any).rating_avg}
+                            initialCount={(rowTrack as any).rating_count}
+                            initialStreams={(rowTrack as any).stream_count}
+                            initialMyStars={(rowTrack as any).my_stars}
                           />
                         ) : (
                           <span className="text-xs text-white/60">★</span>
                         )
                       }
-                      bpmSlot={<span className="text-white/50 text-sm">{rowTrack.bpm ?? "—"}</span>}
-                      keySlot={<span className="text-white/50 text-sm">{rowTrack.key ?? "—"}</span>}
-                      genreSlot={<span className="text-white/50 text-sm">{it.genre ?? "—"}</span>}
+                      bpmSlot={<span className="text-white/50 text-sm">{(rowTrack as any).bpm ?? "—"}</span>}
+                      keySlot={<span className="text-white/50 text-sm">{(rowTrack as any).key ?? "—"}</span>}
+                      genreSlot={<span className="text-white/50 text-sm">{(devItems[idx] as any)?.genre ?? "—"}</span>}
                       actionsSlot={
                         <TrackOptionsTrigger
                           track={rowTrack as any}
                           showGoToArtist={true}
                           showGoToRelease={true}
-                          releaseId={releaseId}
+                          releaseId={releaseId ?? undefined}
                         />
-                    }
-                  />
-                );
+                      }
+                    />
+                  );
                 })}
               </div>
             )}
@@ -525,12 +597,92 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
         </div>
       ) : (
         /* Performance (minimal list from performance_discovery_candidates via API) */
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Performance Discovery</h2>
-            <p className="text-sm text-white/50">
-              Tracks appear here once they have verified listener engagement and ratings.
-            </p>
+        <div className="space-y-8">
+          {/* Performance Releases (admin-curated) */}
+          {performanceReleaseIds.length > 0 ? (
+            <div className="space-y-4 pb-2">
+              <h2 className="text-xl font-semibold">Performance Releases</h2>
+
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+                {performanceReleaseIds.slice(0, 10).map((rid) => (
+                  <div key={rid} className="shrink-0 w-[150px] snap-start">
+                    <ExtraReleaseCard
+                      releaseId={rid}
+                      data={releasesById[rid] ?? null}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Performance Playlists (admin-curated only) */}
+          {performancePlaylistIds.length > 0 ? (
+            <div className="space-y-4 pb-2">
+              <h2 className="text-xl font-semibold">Performance Playlists</h2>
+
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+                {performancePlaylistIds.slice(0, 10).map((pid) => {
+                  const pl = playlistsById[pid];
+
+                  if (!pl) {
+                    return (
+                      <div
+                        key={pid}
+                        className="shrink-0 w-[150px] snap-start bg-[#111112] p-3 rounded-xl border border-transparent"
+                      >
+                        <div className="w-full aspect-square rounded-xl bg-white/10" />
+                        <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
+                        <div className="mt-2 h-3 w-1/2 bg-white/10 rounded" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={pid} className="shrink-0 w-[150px] snap-start">
+                      <PlaylistCard
+                        id={pl.id}
+                        title={pl.title}
+                        description={pl.description}
+                        cover_url={pl.cover_url}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Performance Discovery (text must sit above tracks, not above releases) */}
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Performance Discovery</h2>
+                <p className="text-sm text-white/50">
+                  Tracks appear here once they have verified listener engagement and ratings.
+                </p>
+              </div>
+
+              <div className="w-full md:w-[220px]">
+                <label className="sr-only" htmlFor="perf-genre">Genre</label>
+                <select
+                  id="perf-genre"
+                  value={performanceGenre}
+                  onChange={(e) => setPerformanceGenre(e.target.value)}
+                  className="
+                    w-full h-10 rounded-full px-4 text-sm
+                    bg-black/25 border border-white/10
+                    text-white/80
+                    focus:outline-none focus:ring-2 focus:ring-[#00FFC655]
+                  "
+                >
+                  <option value="all">All genres</option>
+                  {performanceGenreOptions.map((g) => (
+                    <option key={g} value={g.toLowerCase()}>{g}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           {performanceLoading ? (
@@ -561,52 +713,22 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
             </div>
           ) : (
             <div className="space-y-2">
-              {performanceItems.map((it, idx) => {
-                const trackId = it.track_id;
-                const title = it.track_title || "Untitled";
-                const artistId = it.artist_id;
-                const releaseId = it.release_id;
-
-                const artistName = perfArtistMap[artistId] ?? "Unknown Artist";
-
-                const coverUrl = it.release_cover_path
-                  ? supabase.storage.from("release_covers").getPublicUrl(it.release_cover_path).data.publicUrl
-                  : null;
-
-                const rtKey = `${releaseId}:${trackId}`;
-                const rt = perfReleaseTrackMap[rtKey];
-
-                const rowTrack = {
-                  id: trackId,
-                  artist_id: artistId,
-                  title,
-                  cover_url: coverUrl,
-                  profiles: { display_name: artistName },
-                  release_id: releaseId,
-                  release_track_id: rt?.release_track_id ?? null,
-                  rating_avg: rt?.rating_avg ?? (it.rating_avg ?? null),
-                  rating_count: rt?.rating_count ?? (it.rating_count ?? 0),
-                  stream_count: rt?.stream_count ?? (it.streams_30d ?? 0),
-                } as any;
+              {perfQueue.map((rowTrack, idx) => {
+                const trackId = rowTrack.id;
+                const releaseId = rowTrack.release_id ?? null;
+                const title = rowTrack.title ?? "Untitled";
+                const artistName = (rowTrack as any)?.profiles?.display_name ?? "Unknown Artist";
+                const coverUrl = rowTrack.cover_url ?? null;
 
                 return (
                   <TrackRowBase
                     key={trackId ?? `${idx}`}
-                    track={rowTrack}
-                    index={0}
-                    tracks={[rowTrack] as any}
+                    track={rowTrack as any}
+                    index={idx}
+                    tracks={perfQueue as any}
                     coverUrl={coverUrl}
                     coverSize="md"
-                    getQueue={
-                      trackId && releaseId
-                        ? async () => {
-                            const queue = await fetchReleaseQueueForPlayer(releaseId);
-                            if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
-                            const startIndex = queue.findIndex((t: any) => t?.id === trackId);
-                            return { tracks: queue as any, index: Math.max(0, startIndex) };
-                          }
-                        : undefined
-                    }
+                    // getQueue ENTFERNT (nur eine Queue-Quelle)
                     leadingSlot={idx + 1}
                     titleSlot={
                       <div className="flex items-center min-w-0">
@@ -617,7 +739,6 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                             e.stopPropagation();
                           }}
                           onClick={() => {
-                            const releaseId = rowTrack.release_id ?? null;
                             router.push(releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${trackId}`);
                           }}
                           className="
@@ -632,14 +753,14 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                       </div>
                     }
                     subtitleSlot={
-                      artistId ? (
+                      rowTrack.artist_id ? (
                         <button
                           type="button"
                           onPointerDown={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                           }}
-                          onClick={() => router.push(`/dashboard/artist/${artistId}`)}
+                          onClick={() => router.push(`/dashboard/artist/${rowTrack.artist_id}`)}
                           className="
                             mt-1 text-left text-xs text-white/60 truncate
                             hover:text-[#00FFC6] hover:underline underline-offset-2
@@ -655,13 +776,13 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                       )
                     }
                     metaSlot={
-                      rowTrack.release_track_id ? (
+                      (rowTrack as any).release_track_id ? (
                         <TrackRatingInline
                           readOnly={true}
-                          releaseTrackId={rowTrack.release_track_id}
-                          initialAvg={rowTrack.rating_avg}
-                          initialCount={rowTrack.rating_count}
-                          initialStreams={rowTrack.stream_count}
+                          releaseTrackId={(rowTrack as any).release_track_id}
+                          initialAvg={(rowTrack as any).rating_avg}
+                          initialCount={(rowTrack as any).rating_count}
+                          initialStreams={(rowTrack as any).stream_count}
                           initialMyStars={null}
                         />
                       ) : (
@@ -673,42 +794,23 @@ export default function DashboardHomeClient({ home, releasesById, playlistsById 
                         track={rowTrack as any}
                         showGoToArtist={true}
                         showGoToRelease={true}
-                        releaseId={releaseId}
+                        releaseId={releaseId ?? undefined}
                       />
                     }
-                    coverOverlaySlot={
-                      trackId && releaseId ? (
-                        <PlayOverlayButton
-                          size="sm"
-                          track={{ id: trackId } as any}
-                          currentTrackId={trackId}
-                          getQueue={async () => {
-                            const queue = await fetchReleaseQueueForPlayer(releaseId);
-                            if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
-
-                            const startIndex = Math.max(
-                              0,
-                              queue.findIndex((t: any) => t?.id === trackId)
-                            );
-
-                            return { tracks: queue as any, index: startIndex };
-                          }}
-                        />
-                      ) : null
-                    }
+                    // coverOverlaySlot ENTFERNT (kein doppelter PlayOverlayButton)
                     bpmSlot={
                       <span className="text-white/50 text-sm tabular-nums">
-                        {perfTrackMetaMap[trackId]?.bpm ?? "—"}
+                        {(rowTrack as any).bpm ?? "—"}
                       </span>
                     }
                     keySlot={
                       <span className="text-white/50 text-sm">
-                        {perfTrackMetaMap[trackId]?.key ?? "—"}
+                        {(rowTrack as any).key ?? "—"}
                       </span>
                     }
                     genreSlot={
                       <span className="text-white/50 text-sm truncate">
-                        {perfTrackMetaMap[trackId]?.genre ?? "—"}
+                        {(perfTrackMetaMap as any)?.[trackId]?.genre ?? "—"}
                       </span>
                     }
                   />
@@ -775,7 +877,7 @@ function ExtraReleaseCard({
       <div className="relative w-full aspect-square rounded-xl overflow-hidden">
         {/* Release type badge (top-right) */}
         {data.release_type && (
-          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md bg-black/65 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/90 border border-white/10 backdrop-blur">
+          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md bg-black/65 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/90 border border-white/10 backdrop-blur">
             {data.release_type}
           </div>
         )}
@@ -810,7 +912,7 @@ function ExtraReleaseCard({
         />
       </div>
 
-      <h3 className="mt-2 text-sm font-semibold text-white/90 line-clamp-2 min-h-0">
+      <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
         {data.title}
       </h3>
 
@@ -818,12 +920,12 @@ function ExtraReleaseCard({
         <Link
           href={`/dashboard/artist/${data.artist_id}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-xs text-white/50 truncate hover:text-[#00FFC6] transition-colors block"
+          className="text-[11px] text-white/50 truncate hover:text-[#00FFC6] transition-colors block"
         >
           {data.artist_name ?? "Unknown Artist"}
         </Link>
       ) : (
-        <p className="text-xs text-white/50 truncate">
+        <p className="text-[11px] text-white/50 truncate">
           {data.artist_name ?? "Unknown Artist"}
         </p>
       )}

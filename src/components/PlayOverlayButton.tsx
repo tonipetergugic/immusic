@@ -9,7 +9,7 @@ type PlayOverlayButtonProps = {
   track: PlayerTrack;
 
   // Visual size (rows vs cards). Default: "sm"
-  size?: "sm" | "lg";
+  size?: "sm" | "md" | "lg";
 
   // Optional: if the "current" identity differs from track.id (e.g. release card uses first track id)
   currentTrackId?: string;
@@ -32,6 +32,21 @@ export default function PlayOverlayButton({
 }: PlayOverlayButtonProps) {
   const { currentTrack, isPlaying, playTrack, togglePlay, playQueue } = usePlayer();
   const [loading, setLoading] = useState(false);
+
+  const SIZE = size ?? "sm";
+  const sizeClass =
+    SIZE === "sm"
+      ? "w-9 h-9"
+      : SIZE === "md"
+      ? "w-10 h-10"
+      : "w-11 h-11"; // lg default
+
+  const iconClass =
+    SIZE === "sm"
+      ? "w-4 h-4"
+      : SIZE === "md"
+      ? "w-4 h-4"
+      : "w-5 h-5";
 
   const effectiveId = currentTrackId ?? track.id;
   const isCurrent = currentTrack?.id === effectiveId;
@@ -93,9 +108,12 @@ export default function PlayOverlayButton({
           "pointer-events-auto",
           "rounded-full border border-[#00FFC655] bg-black/55 backdrop-blur",
           "flex items-center justify-center transition-transform duration-200 sm:group-hover:scale-105",
-          size === "lg"
-            ? "h-14 w-14 shadow-[0_0_26px_rgba(0,255,198,0.30)]"
-            : "h-10 w-10 shadow-[0_0_18px_rgba(0,255,198,0.25)]",
+          sizeClass,
+          SIZE === "lg"
+            ? "shadow-[0_0_26px_rgba(0,255,198,0.30)]"
+            : SIZE === "md"
+            ? "shadow-[0_0_20px_rgba(0,255,198,0.28)]"
+            : "shadow-[0_0_18px_rgba(0,255,198,0.25)]",
         ].join(" ")}
         aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
       >
@@ -103,13 +121,13 @@ export default function PlayOverlayButton({
           <div
             className={[
               "animate-pulse rounded-sm bg-[#00FFC6]",
-              size === "lg" ? "h-5 w-5" : "h-4 w-4",
+              iconClass,
             ].join(" ")}
           />
         ) : isCurrent && isPlaying ? (
-          <Pause className="text-[#00FFC6]" size={size === "lg" ? 26 : 20} />
+          <Pause className={["text-[#00FFC6]", iconClass].join(" ")} />
         ) : (
-          <Play className="text-[#00FFC6]" size={size === "lg" ? 26 : 20} />
+          <Play className={["text-[#00FFC6]", iconClass].join(" ")} />
         )}
       </button>
     </div>

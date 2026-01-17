@@ -293,9 +293,8 @@ export default function Topbar() {
           </div>
         )}
 
-        <span className="text-white/85 text-sm font-light">
-          {displayName ??
-            (userEmail ? userEmail.split("@")[0] : "")}
+        <span className="hidden md:inline text-white/85 text-sm font-light">
+          {displayName ?? (userEmail ? userEmail.split("@")[0] : "")}
         </span>
 
         {role === "admin" && (

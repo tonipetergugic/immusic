@@ -1,31 +1,58 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import HomePlaylistsDndItem from "./HomePlaylistsDndItem";
 import HomePlaylistsDndList from "./HomePlaylistsDndList";
 import AvailablePlaylistsSearch from "./AvailablePlaylistsSearch";
 import CoverPlaceholder from "@/components/CoverPlaceholder";
 
-async function addPlaylistToHome(playlistId: string) {
+async function getHomeModuleIdByType(supabase: any, moduleType: string) {
+  const { data, error } = await supabase
+    .from("home_modules")
+    .select("id")
+    .eq("module_type", moduleType)
+    .limit(1);
+
+  if (error) {
+    throw new Error(`home_modules query failed: ${error.message} (${error.code})`);
+  }
+
+  const id = (data as any[])?.[0]?.id;
+  if (!id) {
+    throw new Error(`Missing home_modules entry for module_type='${moduleType}'.`);
+  }
+
+  return id as string;
+}
+
+async function getPlaylistHomeModuleId(supabase: any) {
+  const { data, error } = await supabase
+    .from("home_modules")
+    .select("id")
+    .eq("module_type", "playlist")
+    .limit(1);
+
+  if (error) {
+    throw new Error(`home_modules query failed: ${error.message} (${error.code})`);
+  }
+
+  const id = (data as any[])?.[0]?.id;
+  if (!id) {
+    throw new Error("Missing home_modules entry for module_type='playlist'.");
+  }
+
+  return id as string;
+}
+
+async function addPlaylistToHome(moduleId: string, playlistId: string) {
   "use server";
 
   const supabase = await createSupabaseServerClient();
 
-  function getPlaylistCoverSrc(pathOrUrl: string | null | undefined) {
-    const v = (pathOrUrl ?? "").trim();
-    if (!v) return null;
-
-    // Wenn bereits absolute URL gespeichert ist, direkt nutzen
-    if (v.startsWith("http://") || v.startsWith("https://")) return v;
-
-    // Sonst als Storage-Pfad behandeln
-    const { data } = supabase.storage.from("playlist-covers").getPublicUrl(v);
-    return data?.publicUrl ?? null;
-  }
-
   const { data: maxPos } = await supabase
     .from("home_module_items")
     .select("position")
-    .eq("module_id", "366d5c08-f540-4020-a741-3ed320155965")
+    .eq("module_id", moduleId)
     .order("position", { ascending: false })
     .limit(1)
     .single();
@@ -42,18 +69,23 @@ async function addPlaylistToHome(playlistId: string) {
     throw new Error("Failed to load playlist title for home insert.");
   }
 
-  await supabase.from("home_module_items").insert({
-    module_id: "366d5c08-f540-4020-a741-3ed320155965",
+  const { error: insErr } = await supabase.from("home_module_items").insert({
+    module_id: moduleId,
     item_type: "playlist",
     item_id: playlistId,
     item_title: pl.title,
     position: nextPosition,
   });
 
+  if (insErr) {
+    throw new Error(`Failed to add playlist to home: ${insErr.message} (${insErr.code})`);
+  }
+
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/admin/playlists");
 }
 
-async function removePlaylistFromHome(playlistId: string) {
+async function removePlaylistFromHome(moduleId: string, playlistId: string) {
   "use server";
 
   const supabase = await createSupabaseServerClient();
@@ -61,7 +93,7 @@ async function removePlaylistFromHome(playlistId: string) {
   const { error } = await supabase
     .from("home_module_items")
     .delete()
-    .eq("module_id", "366d5c08-f540-4020-a741-3ed320155965")
+    .eq("module_id", moduleId)
     .eq("item_type", "playlist")
     .eq("item_id", playlistId);
 
@@ -76,12 +108,15 @@ async function removePlaylistFromHome(playlistId: string) {
 export default async function AdminPlaylistsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; mode?: string }>;
 }) {
   const sp = await searchParams;
   const q = (sp?.q ?? "").toLowerCase().trim();
+  const mode = sp?.mode === "performance" ? "performance" : "development";
+  const moduleType = mode === "performance" ? "performance_playlist" : "playlist";
 
   const supabase = await createSupabaseServerClient();
+  const moduleId = await getHomeModuleIdByType(supabase, moduleType);
 
   const BUCKET_PLAYLIST_COVERS = "playlist-covers";
 
@@ -107,24 +142,32 @@ export default async function AdminPlaylistsPage({
   const { data: homeItems } = await supabase
     .from("home_module_items")
     .select("id, item_id, position")
-    .eq("module_id", "366d5c08-f540-4020-a741-3ed320155965")
+    .eq("module_id", moduleId)
     .eq("item_type", "playlist")
     .order("position", { ascending: true });
 
   const featuredIds = new Set((homeItems ?? []).map((r) => r.item_id));
 
-  const { data: playlists } = await supabase
+  let playlistsQuery = supabase
     .from("playlists")
     .select(
       "id, title, is_public, created_at, cover_url, profiles:created_by(display_name, email)"
     )
     .order("created_at", { ascending: false });
 
+  if (mode === "performance") {
+    playlistsQuery = playlistsQuery.eq("is_public", true);
+  }
+
+  const { data: playlists } = await playlistsQuery;
+
   const homePlaylists =
     homeItems
       ?.map((item) => {
         const playlist = playlists?.find((pl) => pl.id === item.item_id);
         if (!playlist) return null;
+
+        if (mode === "performance" && !playlist.is_public) return null;
 
         return { ...playlist, homeItemId: item.id, position: item.position };
       })
@@ -143,7 +186,45 @@ export default async function AdminPlaylistsPage({
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-      <h2 className="text-lg font-semibold mb-3">Home: Push Playlists</h2>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 className="text-lg font-semibold">Home: Push Playlists</h2>
+          <div className="text-xs text-white/60 mt-1">
+            Mode: <span className="text-white/80 font-semibold">{mode}</span>
+          </div>
+        </div>
+
+        <div className="inline-flex rounded-full border border-white/10 bg-black/25 p-1">
+          <a
+            href={`/dashboard/admin/playlists?mode=development${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            className={[
+              "px-4 py-2 rounded-full text-xs font-semibold transition",
+              mode === "development"
+                ? "bg-[#0B1614] text-white/90 border border-[#00FFC655]"
+                : "text-white/60 hover:text-white/80",
+            ].join(" ")}
+          >
+            Development
+          </a>
+          <a
+            href={`/dashboard/admin/playlists?mode=performance${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            className={[
+              "px-4 py-2 rounded-full text-xs font-semibold transition",
+              mode === "performance"
+                ? "bg-[#0B1614] text-white/90 border border-[#00FFC655]"
+                : "text-white/60 hover:text-white/80",
+            ].join(" ")}
+          >
+            Performance
+          </a>
+        </div>
+      </div>
+
+      {mode === "performance" ? (
+        <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-white/70">
+          Performance Playlists are curated by admins. Only <span className="text-white/85 font-semibold">public</span> playlists can be selected.
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -158,7 +239,7 @@ export default async function AdminPlaylistsPage({
 
           {homePlaylists.length > 0 ? (
             <HomePlaylistsDndList
-              moduleId="366d5c08-f540-4020-a741-3ed320155965"
+              moduleId={moduleId}
               initialOrder={homePlaylists.map((x) => x.homeItemId)}
             >
               {homePlaylists.map((pl) => {
@@ -171,7 +252,7 @@ export default async function AdminPlaylistsPage({
                       key={pl.id}
                       action={async () => {
                         "use server";
-                        await addPlaylistToHome(pl.id);
+                        await addPlaylistToHome(moduleId, pl.id);
                       }}
                       className="flex items-center justify-between rounded-md bg-black/30 px-3 py-2 min-h-[72px]"
                     >
@@ -204,7 +285,7 @@ export default async function AdminPlaylistsPage({
                           type="submit"
                           formAction={async () => {
                             "use server";
-                            await removePlaylistFromHome(pl.id);
+                            await removePlaylistFromHome(moduleId, pl.id);
                           }}
                           className="w-24 h-8 self-center text-xs rounded-md flex items-center justify-center bg-red-500/10 text-red-300 hover:bg-red-500/20 transition"
                         >
@@ -249,7 +330,7 @@ export default async function AdminPlaylistsPage({
                   key={pl.id}
                   action={async () => {
                     "use server";
-                    await addPlaylistToHome(pl.id);
+                    await addPlaylistToHome(moduleId, pl.id);
                   }}
                   className="flex items-center justify-between rounded-md bg-black/30 px-3 py-2 min-h-[72px]"
                 >
@@ -282,7 +363,7 @@ export default async function AdminPlaylistsPage({
                       type="submit"
                       formAction={async () => {
                         "use server";
-                        await removePlaylistFromHome(pl.id);
+                        await removePlaylistFromHome(moduleId, pl.id);
                       }}
                       className="w-24 h-8 self-center text-xs rounded-md flex items-center justify-center bg-red-500/10 text-red-300 hover:bg-red-500/20 transition"
                     >

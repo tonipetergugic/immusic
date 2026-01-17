@@ -93,12 +93,12 @@ export default function PlaylistCard({
         />
       </div>
 
-      <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
+      <h3 className="mt-2 text-[13px] font-semibold text-white/90 truncate">
         {title}
       </h3>
 
       {description && (
-        <p className="text-xs text-white/50 truncate">{description}</p>
+        <p className="text-[11px] text-white/50 truncate">{description}</p>
       )}
     </Link>
   );
