@@ -3,7 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import PlaylistCard from "@/components/PlaylistCard";
-import TrackCard from "@/components/TrackCard";
+import TrackRowBase from "@/components/TrackRowBase";
+import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
+import TrackRatingInline from "@/components/TrackRatingInline";
 import ArtistCard from "@/components/ArtistCard";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -23,7 +25,8 @@ type LibraryPageProps = {
 
 export default async function LibraryPage(props: LibraryPageProps) {
   const searchParams = await props.searchParams;
-  const currentTab = searchParams?.tab || "playlists";
+  const sp = searchParams ?? {};
+  const currentTab = sp.tab || "playlists";
 
   const tabs = [
     { key: "playlists", label: "Playlists" },
@@ -31,7 +34,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
     { key: "artists", label: "Artists" },
   ];
 
-  if (!searchParams?.tab) {
+  if (!sp.tab) {
     redirect("/dashboard/library?tab=playlists");
   }
 
@@ -48,6 +51,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
   let playlists: Playlist[] = [];
   let trackData: PlayerTrack[] = [];
   let artists: Profile[] = [];
+  let releaseTrackIdByTrackId = new Map<string, string>();
 
   // -----------------------------
   // PLAYLISTS (own + saved)
@@ -126,6 +130,11 @@ export default async function LibraryPage(props: LibraryPageProps) {
           artist_id,
           bpm,
           key,
+          genre,
+          release_tracks:release_tracks!release_tracks_track_id_fkey(
+            id,
+            release_id
+          ),
           releases:releases!tracks_release_id_fkey(
             id,
             cover_path,
@@ -141,23 +150,44 @@ export default async function LibraryPage(props: LibraryPageProps) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Failed to load library_tracks:", error);
+      console.error("Failed to load library_tracks:", {
+        message: (error as any)?.message,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint,
+        code: (error as any)?.code,
+      });
       trackData = [];
     } else {
-      const tracks = (savedRows ?? [])
-        .map((row: any) => row.tracks)
-        .filter(Boolean);
-
       const normalizedTracks =
-        tracks.map((track: any) => ({
-          ...track,
-          releases: Array.isArray(track.releases)
-            ? track.releases[0] ?? null
-            : track.releases ?? null,
-          artist_profile: Array.isArray(track.artist_profile)
-            ? track.artist_profile[0] ?? null
-            : track.artist_profile ?? null,
-        })) ?? [];
+        (savedRows ?? [])
+          .map((row: any) => {
+            const t = row.tracks;
+            if (!t) return null;
+
+            const rt = Array.isArray(t.release_tracks)
+              ? t.release_tracks[0] ?? null
+              : t.release_tracks ?? null;
+
+            return {
+              ...t,
+              // needed for rating + navigation
+              release_track_id: rt?.id ?? null,
+              release_id: rt?.release_id ?? t?.release_id ?? null,
+
+              releases: Array.isArray(t.releases) ? t.releases[0] ?? null : t.releases ?? null,
+              artist_profile: Array.isArray(t.artist_profile)
+                ? t.artist_profile[0] ?? null
+                : t.artist_profile ?? null,
+            };
+          })
+          .filter(Boolean) ?? [];
+
+      releaseTrackIdByTrackId = new Map<string, string>();
+      for (const t of normalizedTracks as any[]) {
+        if (t?.id && t?.release_track_id) {
+          releaseTrackIdByTrackId.set(String(t.id), String(t.release_track_id));
+        }
+      }
 
       const playerTrackInputs = (normalizedTracks ?? []).map((t: any) => {
         const cover_url =
@@ -189,6 +219,9 @@ export default async function LibraryPage(props: LibraryPageProps) {
           cover_url,
           bpm: t.bpm ?? null,
           key: t.key ?? null,
+          genre: (t as any).genre ?? null,
+          release_id: (t as any).release_id ?? null,
+          release_track_id: (t as any).release_track_id ?? null,
           artist_profile: t.artist_profile ?? null,
         };
       });
@@ -234,43 +267,89 @@ export default async function LibraryPage(props: LibraryPageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">
-          Your Library
-        </h1>
-        <p className="text-sm text-neutral-400">
-          Collect your favourite playlists, tracks and artists in one place.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <div
+        className="
+          relative overflow-hidden
+          -mx-4 sm:-mx-6 lg:-mx-8
+          px-4 sm:px-6 lg:px-8
+          pt-10
+          pb-16
+        "
+      >
+        {/* Layer 1: Grundgradient */}
+        <div
+          aria-hidden="true"
+          className="
+            absolute inset-0
+            bg-gradient-to-r
+            from-[#0B1614]
+            via-[#0B1614]
+            to-[#06212A]
+          "
+        />
 
-      <section>
-        {/* Tabs */}
-        <div className="border-b border-white/5">
-          <nav className="flex gap-6 text-sm">
-            {tabs.map((tab) => {
-              const isActive = currentTab === tab.key;
-              return (
-                <Link
-                  key={tab.key}
-                  href={`/dashboard/library?tab=${tab.key}`}
-                  className={`pb-3 transition-colors ${
-                    isActive
-                      ? "text-white font-medium border-b-2 border-[#00FFC6]"
-                      : "text-neutral-400 hover:text-white"
-                  }`}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Layer 2: Radial Glow (oben rechts, subtil) */}
+        <div
+          aria-hidden="true"
+          className="
+            absolute inset-0
+            bg-[radial-gradient(90%_140%_at_80%_15%,rgba(0,255,198,0.22),transparent_60%)]
+          "
+        />
+
+        {/* Layer 3: LANGER Bottom-Fade in Home-Background */}
+        <div
+          aria-hidden="true"
+          className="
+            absolute inset-x-0 bottom-0
+            h-40
+            bg-gradient-to-b
+            from-transparent
+            via-[#0B0B0D]/70
+            to-[#0B0B0D]
+          "
+        />
+
+        {/* Content layer */}
+        <div className="relative z-10">
+          <header className="flex flex-col gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-white">
+              Your Library
+            </h1>
+            <p className="text-sm text-neutral-400">
+              Collect your favourite playlists, tracks and artists in one place.
+            </p>
+          </header>
+
+          {/* Tabs (moved into header to match Home header height) */}
+          <div className="mt-10 border-b border-white/5">
+            <nav className="flex gap-6 text-sm">
+              {tabs.map((tab) => {
+                const isActive = currentTab === tab.key;
+                return (
+                  <Link
+                    key={tab.key}
+                    href={`/dashboard/library?tab=${tab.key}`}
+                    className={`pb-3 transition-colors ${
+                      isActive
+                        ? "text-white font-medium border-b-2 border-[#00FFC6]"
+                        : "text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    {tab.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
         </div>
+      </div>
 
-        <div className="pt-6">
+      <section className="pt-0 -mt-2 sm:mt-0">
           {/* PLAYLISTS */}
           {currentTab === "playlists" && (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2 sm:gap-3 items-start pt-6">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2 sm:gap-3 items-start">
               {playlists.length > 0 ? (
                 playlists.map((playlist) => (
                   <PlaylistCard
@@ -291,21 +370,33 @@ export default async function LibraryPage(props: LibraryPageProps) {
 
           {/* TRACKS */}
           {currentTab === "tracks" && (
-            <div className="pt-6">
+            <div className="pt-2">
               {trackData.length > 0 ? (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2 sm:gap-3 items-start">
+                <div className="flex flex-col gap-3">
                   {trackData.map((track, index) => (
-                    <TrackCard
+                    <TrackRowBase
                       key={track.id}
                       track={track}
                       index={index}
                       tracks={trackData}
+                      coverSize="sm"
+                      leadingSlot={<span className="text-white/50 text-[11px] tabular-nums">{index + 1}</span>}
+                      metaSlot={
+                        releaseTrackIdByTrackId.get(String(track.id)) ? (
+                          <TrackRatingInline releaseTrackId={releaseTrackIdByTrackId.get(String(track.id)) as string} />
+                        ) : null
+                      }
+                      bpmSlot={<span>{track.bpm ?? "—"}</span>}
+                      keySlot={<span>{track.key ?? "—"}</span>}
+                      // Genre: TrackRowBase nutzt intern track.genre, falls vorhanden
+                      genreSlot={null}
+                      actionsSlot={<TrackOptionsTrigger track={track} />}
                     />
                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-neutral-400">
-                  No saved tracks yet. Use “Save to Library” on a track.
+                  No saved tracks yet. Use "Save to Library" on a track.
                 </p>
               )}
             </div>
@@ -330,7 +421,6 @@ export default async function LibraryPage(props: LibraryPageProps) {
               )}
             </div>
           )}
-        </div>
       </section>
     </div>
   );

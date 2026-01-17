@@ -455,7 +455,7 @@ export default function DashboardHomeClient({
             {homeReleaseIds.length === 0 ? (
               <p className="text-white/40">No releases configured for Home yet.</p>
             ) : (
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+              <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
                 {homeReleaseIds.slice(0, 10).map((rid) => (
                   <div key={rid} className="shrink-0 w-[150px] snap-start">
                     <ExtraReleaseCard
@@ -476,7 +476,7 @@ export default function DashboardHomeClient({
             {homePlaylistIds.length === 0 ? (
               <p className="text-white/40">No playlists configured for Home yet.</p>
             ) : (
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+              <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
                 {homePlaylistIds.slice(0, 10).map((pid) => {
                   const pl = playlistsById[pid];
 
@@ -671,7 +671,7 @@ export default function DashboardHomeClient({
             <div className="space-y-4 pb-2">
               <h2 className="text-xl font-semibold">Performance Releases</h2>
 
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+              <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
                 {performanceReleaseIds.slice(0, 10).map((rid) => (
                   <div key={rid} className="shrink-0 w-[150px] snap-start">
                     <ExtraReleaseCard
@@ -689,7 +689,7 @@ export default function DashboardHomeClient({
             <div className="space-y-4 pb-2">
               <h2 className="text-xl font-semibold">Performance Playlists</h2>
 
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 snap-x snap-mandatory">
+              <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
                 {performancePlaylistIds.slice(0, 10).map((pid) => {
                   const pl = playlistsById[pid];
 

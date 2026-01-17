@@ -233,7 +233,7 @@ export default function PlayerBar() {
             cursor-pointer
           "
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Cover */}
             <div className="w-11 h-11 rounded-md overflow-hidden bg-neutral-900 shrink-0">
               {currentTrack.cover_url ? (
@@ -251,8 +251,8 @@ export default function PlayerBar() {
             </div>
 
             {/* Track Info */}
-            <div className="min-w-0">
-              <div className="text-white/90 text-[13px] font-medium truncate">
+            <div className="min-w-0 flex-1">
+              <div className="text-white/90 text-[13px] font-medium truncate max-w-full">
                 {currentTrack.title}
               </div>
               <div className="text-white/50 text-[11px] truncate">
