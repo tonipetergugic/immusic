@@ -10,6 +10,22 @@ import DeletePlaylistModal from "@/components/DeletePlaylistModal";
 import PlaylistDetailsModal from "@/components/PlaylistDetailsModal";
 import PlaylistAddTrackModal from "@/components/PlaylistAddTrackModal";
 import PlaylistHeaderClient from "./PlaylistHeaderClient";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { reorderPlaylistTracksAction } from "./actions";
 
 import { Playlist, PlaylistTrack } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -41,6 +57,64 @@ export default function PlaylistClient({
   );
 
   const isOwner = !!user?.id && user.id === (localPlaylist as any).created_by;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  );
+
+  function moveBothStates(activeId: string, overId: string) {
+    setPlayerTracks((prev) => {
+      const oldIndex = prev.findIndex((t) => t.id === activeId);
+      const newIndex = prev.findIndex((t) => t.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+
+    // keep localTracks in sync (uses playlist_tracks join shape)
+    setLocalTracks((prev) => {
+      const oldIndex = prev.findIndex((t) => (t as any)?.tracks?.id === activeId);
+      const newIndex = prev.findIndex((t) => (t as any)?.tracks?.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  }
+
+  async function onDragEnd(e: DragEndEvent) {
+    if (!isOwner) return;
+
+    const activeId = String(e.active?.id ?? "");
+    const overId = String(e.over?.id ?? "");
+
+    if (!activeId || !overId || activeId === overId) return;
+
+    // 1) Optimistic UI
+    moveBothStates(activeId, overId);
+
+    // 2) Persist positions based on NEW playerTracks order (after state update we need the next order)
+    // Build order from current DOM intention: compute next order via arrayMove on snapshot
+    const snapshot = [...playerTracks];
+    const oldIndex = snapshot.findIndex((t) => t.id === activeId);
+    const newIndex = snapshot.findIndex((t) => t.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const next = arrayMove(snapshot, oldIndex, newIndex);
+    const payload = next.map((t, idx) => ({ track_id: t.id, position: idx + 1 }));
+
+    const res = await reorderPlaylistTracksAction(localPlaylist.id, payload);
+
+    if (!res.ok) {
+      console.error("Failed to reorder playlist tracks:", res.error);
+      // rollback (restore snapshot)
+      setPlayerTracks(snapshot);
+      // rollback localTracks best-effort based on snapshot ids
+      setLocalTracks((prev) => {
+        const byId = new Map(prev.map((row) => [(row as any)?.tracks?.id, row]));
+        return snapshot.map((t) => byId.get(t.id)).filter(Boolean) as any;
+      });
+    }
+  }
 
   const [isSavedToLibrary, setIsSavedToLibrary] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
@@ -306,6 +380,43 @@ export default function PlaylistClient({
     return null;
   }
 
+  function SortablePlaylistRow({
+    track,
+    tracks,
+    user,
+    onDelete,
+  }: {
+    track: PlayerTrack;
+    tracks: PlayerTrack[];
+    user: any | null;
+    onDelete?: () => void;
+  }) {
+    const { attributes, listeners, setNodeRef, transform, transition } =
+      useSortable({ id: track.id });
+
+    const style: React.CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="w-full"
+        {...attributes}
+        {...listeners}
+      >
+        <PlaylistRow
+          track={track}
+          tracks={tracks}
+          user={user}
+          onDelete={onDelete}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PlaylistHeaderClient
@@ -450,20 +561,45 @@ export default function PlaylistClient({
         </div>
 
         {playerTracks.length ? (
-          <div className="flex flex-col">
-            {playerTracks.map((track) => (
-              <PlaylistRow
-                key={track.id}
-                track={track}
-                tracks={playerTracks}
-                user={user}
-                onDelete={() => {
-                  if (!isOwner) return;
-                  void onDeleteTrack(track.id);
-                }}
-              />
-            ))}
-          </div>
+          isOwner ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={onDragEnd}
+            >
+              <SortableContext items={playerTracks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col">
+                  {playerTracks.map((track) => (
+                    <SortablePlaylistRow
+                      key={track.id}
+                      track={track}
+                      tracks={playerTracks}
+                      user={user}
+                      onDelete={() => {
+                        if (!isOwner) return;
+                        void onDeleteTrack(track.id);
+                      }}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="flex flex-col">
+              {playerTracks.map((track) => (
+                <PlaylistRow
+                  key={track.id}
+                  track={track}
+                  tracks={playerTracks}
+                  user={user}
+                  onDelete={() => {
+                    if (!isOwner) return;
+                    void onDeleteTrack(track.id);
+                  }}
+                />
+              ))}
+            </div>
+          )
         ) : (
           <div className="rounded-xl border border-neutral-900 bg-neutral-950/30 p-8">
             <div className="flex flex-col items-center text-center gap-3">

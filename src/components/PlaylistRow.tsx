@@ -48,11 +48,7 @@ export default function PlaylistRow({
         coverSize="md"
         className="border-b-0" // ✅ border comes from wrapper (DnD wrapper), not from TrackRowBase
         leadingSlot={
-          <div
-            className="text-white/50 text-[11px] tabular-nums px-1 py-1 rounded"
-            aria-label="Track position"
-            title="Track position"
-          >
+          <div className="text-white/50 text-[11px] tabular-nums px-1 py-1">
             {currentIndex + 1}
           </div>
         }
