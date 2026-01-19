@@ -372,7 +372,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
           {currentTab === "tracks" && (
             <div className="pt-2">
               {trackData.length > 0 ? (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col">
                   {trackData.map((track, index) => (
                     <TrackRowBase
                       key={track.id}

@@ -26,6 +26,7 @@ export async function createReleaseAction(formData: FormData) {
       artist_id: user.id,
       title,
       release_type: releaseType,
+      release_date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
       cover_path: null,
     })
     .select("id")

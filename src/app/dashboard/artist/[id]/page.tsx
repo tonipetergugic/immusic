@@ -537,7 +537,7 @@ export default async function ArtistPage({
           </div>
 
           {topTracks && topTracks.length > 0 ? (
-            <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-col w-full">
               {topTracks.map((t, idx) => {
                 const coverUrl = t.cover_path
                   ? supabase.storage

@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Image from "next/image";
 import Link from "next/link";
-import ReleaseDetailClient from "./ReleaseDetailClient";
+import ReleaseBackButton from "./ReleaseBackButton";
 import ReleaseTrackRowClient from "./ReleaseTrackRowClient";
 
 export default async function ReleaseDetailPage({
@@ -21,6 +21,8 @@ export default async function ReleaseDetailPage({
       title,
       cover_path,
       artist_id,
+      release_date,
+      release_type,
       profiles:artist_id ( display_name )
     `
     )
@@ -29,9 +31,9 @@ export default async function ReleaseDetailPage({
 
   if (error || !release) {
     return (
-      <div className="p-6 text-white">
-        <div className="text-sm text-neutral-400 mb-3">
-          <Link href="/dashboard">← Back</Link>
+      <div className="text-white">
+        <div className="mb-3">
+          <ReleaseBackButton fallbackHref="/dashboard" />
         </div>
         <h1 className="text-xl font-semibold">Release not found</h1>
       </div>
@@ -70,27 +72,54 @@ export default async function ReleaseDetailPage({
   const artistName =
     (release as any)?.profiles?.display_name ?? "Unknown Artist";
 
+  const trackCount = items?.length ?? 0;
+  const totalSeconds = (items ?? []).reduce(
+    (sum: number, row: any) => sum + (row?.track?.duration ?? 0),
+    0
+  );
+
+  function formatTotalDuration(sec: number) {
+    if (!sec || sec <= 0) return null;
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    const mm = String(m).padStart(h > 0 ? 2 : 1, "0");
+    const ss = String(s).padStart(2, "0");
+    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+  }
+
+  function formatReleaseDate(d: any) {
+    if (!d) return null;
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return null;
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(dt);
+  }
+
   return (
-    <div className="p-6 text-white">
-      <div className="text-sm text-neutral-400 mb-4">
-        <Link href="/dashboard">← Back</Link>
+    <div className="text-white">
+      <div className="mb-4">
+        <ReleaseBackButton fallbackHref="/dashboard" />
       </div>
 
-      <div className="flex gap-8 items-start">
-        <div className="relative h-56 w-56 rounded-2xl overflow-hidden bg-neutral-900 shrink-0">
-          {coverUrl ? (
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+        {coverUrl ? (
+          <div className="relative w-[220px] sm:w-[260px] md:w-[320px] aspect-square overflow-hidden rounded-2xl">
             <Image
               src={coverUrl}
-              alt={`${release.title} cover`}
+              alt={release.title}
               fill
               className="object-cover"
-              sizes="224px"
+              sizes="(max-width: 640px) 220px, (max-width: 1024px) 260px, 320px"
               priority
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
-        <div className="min-w-0">
+        <div className="min-w-0 w-full">
           <div className="text-sm text-neutral-400">Release</div>
           <h1 className="text-2xl font-bold truncate">{release.title}</h1>
           <a
@@ -99,8 +128,29 @@ export default async function ReleaseDetailPage({
           >
             {artistName}
           </a>
-          <div className="mt-3">
-            <ReleaseDetailClient releaseId={releaseId} />
+          <div className="mt-2 text-sm text-neutral-400 flex flex-wrap items-center gap-x-2">
+            {release.release_type ? (
+              <span className="capitalize">{release.release_type}</span>
+            ) : null}
+            {release.release_type ? <span className="text-neutral-600">·</span> : null}
+
+            {formatReleaseDate(release.release_date) ? (
+              <>
+                <span>Released {formatReleaseDate(release.release_date)}</span>
+                <span className="text-neutral-600">·</span>
+              </>
+            ) : null}
+
+            <span>
+              {trackCount} {trackCount === 1 ? "track" : "tracks"}
+            </span>
+
+            {formatTotalDuration(totalSeconds) ? (
+              <>
+                <span className="text-neutral-600">·</span>
+                <span>{formatTotalDuration(totalSeconds)}</span>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -109,7 +159,7 @@ export default async function ReleaseDetailPage({
         <h2 className="text-lg font-semibold mb-3">Tracks</h2>
 
         {items?.length ? (
-          <div className="divide-y divide-neutral-800 rounded-xl overflow-hidden border border-neutral-800">
+          <div className="divide-y divide-white/10">
             {items.map((row: any, index: number) => (
               <ReleaseTrackRowClient
                 key={row.id}

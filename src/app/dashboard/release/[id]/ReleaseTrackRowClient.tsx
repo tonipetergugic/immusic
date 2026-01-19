@@ -86,7 +86,11 @@ export default function ReleaseTrackRowClient({
         index={startIndex}
         tracks={queue}
         coverSize="md"
-        leadingSlot={null}
+        leadingSlot={
+          <span className="text-white/50 text-[11px] tabular-nums">
+            {positionLabel}
+          </span>
+        }
         titleSlot={
           <button
             type="button"
