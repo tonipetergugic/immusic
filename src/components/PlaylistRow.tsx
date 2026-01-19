@@ -37,12 +37,16 @@ export default function PlaylistRow({
   }
 
   return (
-    <div className="cursor-default">
+    <div className={[
+      "cursor-default",
+      "border-b border-white/10 last:border-b-0", // ✅ divider line between rows
+    ].join(" ")}>
       <TrackRowBase
         track={track}
         index={Math.max(currentIndex, 0)}
         tracks={tracks}
         coverSize="md"
+        className="border-b-0" // ✅ border comes from wrapper (DnD wrapper), not from TrackRowBase
         leadingSlot={
           <div
             className="text-white/50 text-[11px] tabular-nums px-1 py-1 rounded"

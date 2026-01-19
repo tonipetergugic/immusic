@@ -427,7 +427,7 @@ export default function PlaylistClient({
       </div>
 
       {/* Tracks */}
-      <div className="space-y-3 rounded-xl bg-neutral-950/40 border border-neutral-900 p-3 md:p-4 -mx-3 md:mx-0">
+      <div className="mt-6">
         <div
           className="
             grid grid-cols-[24px_64px_1fr_36px]
@@ -436,6 +436,7 @@ export default function PlaylistClient({
             gap-x-4 md:gap-x-3
             text-xs text-white/50 uppercase tracking-wide
             px-4 py-2
+            border-b border-white/10
           "
         >
           <span>#</span>
@@ -449,7 +450,7 @@ export default function PlaylistClient({
         </div>
 
         {playerTracks.length ? (
-          <div className="space-y-2">
+          <div className="flex flex-col">
             {playerTracks.map((track) => (
               <PlaylistRow
                 key={track.id}
