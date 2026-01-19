@@ -556,7 +556,7 @@ export default function DashboardHomeClient({
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="">
                 {devQueue.map((rowTrack, idx) => {
                   const trackId = rowTrack.id;
                   const releaseId = rowTrack.release_id ?? null;

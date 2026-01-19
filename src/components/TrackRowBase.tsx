@@ -138,12 +138,12 @@ export default function TrackRowBase({
       </div>
 
       {/* Main: title/artist + meta */}
-      <div className="min-w-0 ml-1 sm:ml-0 pl-2 sm:pl-0 flex flex-col gap-1 justify-self-start">
+      <div className="min-w-0 ml-1 sm:ml-0 pl-2 sm:pl-0 flex flex-col gap-0 justify-self-start">
         {/* Line 1: Title */}
         {titleSlot ? (
           titleSlot
         ) : (
-          <Link href={to} className="text-left text-[13px] font-semibold text-white truncate hover:text-[#00FFC6] transition-colors">
+          <Link href={to} className="text-left text-[13px] font-semibold leading-tight text-white truncate hover:text-[#00FFC6] transition-colors">
             {track.title ?? "Untitled"}
           </Link>
         )}
@@ -152,13 +152,13 @@ export default function TrackRowBase({
         {subtitleSlot ? (
           subtitleSlot
         ) : (
-          <div className="mt-1 text-left text-xs text-white/60 truncate">
+          <div className="text-left text-xs leading-tight text-white/60 truncate">
             {track.profiles?.display_name ?? "Unknown Artist"}
           </div>
         )}
 
         {/* Line 3: Meta */}
-        {metaSlot ? <div className="mt-2">{metaSlot}</div> : null}
+        {metaSlot ? <div className="mt-1">{metaSlot}</div> : null}
       </div>
 
       {showDesktopCols ? (
