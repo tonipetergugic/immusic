@@ -11,6 +11,9 @@ type PlayOverlayButtonProps = {
   // Visual size (rows vs cards). Default: "sm"
   size?: "sm" | "md" | "lg";
 
+  // Render style: overlay (default) or standalone (for headers etc.)
+  variant?: "overlay" | "standalone";
+
   // Optional: if the "current" identity differs from track.id (e.g. release card uses first track id)
   currentTrackId?: string;
 
@@ -25,6 +28,7 @@ type PlayOverlayButtonProps = {
 export default function PlayOverlayButton({
   track,
   size = "sm",
+  variant = "overlay",
   currentTrackId,
   index,
   tracks,
@@ -39,14 +43,14 @@ export default function PlayOverlayButton({
       ? "w-9 h-9"
       : SIZE === "md"
       ? "w-10 h-10"
-      : "w-11 h-11"; // lg default
+      : "w-14 h-14"; // lg – größer für Track Header
 
   const iconClass =
     SIZE === "sm"
       ? "w-4 h-4"
       : SIZE === "md"
       ? "w-4 h-4"
-      : "w-5 h-5";
+      : "w-6 h-6";
 
   const effectiveId = currentTrackId ?? track.id;
   const isCurrent = currentTrack?.id === effectiveId;
@@ -82,6 +86,45 @@ export default function PlayOverlayButton({
     playTrack(track);
   };
 
+  const button = (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void handleClick();
+      }}
+      className={[
+        "pointer-events-auto",
+        "rounded-full border border-[#00FFC655] bg-black/55 backdrop-blur",
+        "flex items-center justify-center transition-transform duration-200 sm:group-hover:scale-105",
+        sizeClass,
+        SIZE === "lg"
+          ? "shadow-[0_0_26px_rgba(0,255,198,0.30)]"
+          : SIZE === "md"
+          ? "shadow-[0_0_20px_rgba(0,255,198,0.28)]"
+          : "shadow-[0_0_18px_rgba(0,255,198,0.25)]",
+      ].join(" ")}
+      aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
+    >
+      {loading ? (
+        <div className={["animate-pulse rounded-sm bg-[#00FFC6]", iconClass].join(" ")} />
+      ) : isCurrent && isPlaying ? (
+        <Pause className={["text-[#00FFC6]", iconClass].join(" ")} />
+      ) : (
+        <Play className={["text-[#00FFC6]", iconClass].join(" ")} />
+      )}
+    </button>
+  );
+
+  if (variant === "standalone") {
+    return button;
+  }
+
   return (
     <div
       className="
@@ -93,43 +136,7 @@ export default function PlayOverlayButton({
         pointer-events-none
       "
     >
-      <button
-        type="button"
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          void handleClick();
-        }}
-        className={[
-          "pointer-events-auto",
-          "rounded-full border border-[#00FFC655] bg-black/55 backdrop-blur",
-          "flex items-center justify-center transition-transform duration-200 sm:group-hover:scale-105",
-          sizeClass,
-          SIZE === "lg"
-            ? "shadow-[0_0_26px_rgba(0,255,198,0.30)]"
-            : SIZE === "md"
-            ? "shadow-[0_0_20px_rgba(0,255,198,0.28)]"
-            : "shadow-[0_0_18px_rgba(0,255,198,0.25)]",
-        ].join(" ")}
-        aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
-      >
-        {loading ? (
-          <div
-            className={[
-              "animate-pulse rounded-sm bg-[#00FFC6]",
-              iconClass,
-            ].join(" ")}
-          />
-        ) : isCurrent && isPlaying ? (
-          <Pause className={["text-[#00FFC6]", iconClass].join(" ")} />
-        ) : (
-          <Play className={["text-[#00FFC6]", iconClass].join(" ")} />
-        )}
-      </button>
+      {button}
     </div>
   );
 }

@@ -381,6 +381,23 @@ export default async function LibraryPage(props: LibraryPageProps) {
                       tracks={trackData}
                       coverSize="sm"
                       leadingSlot={<span className="text-white/50 text-[11px] tabular-nums">{index + 1}</span>}
+                      subtitleSlot={
+                        track.artist_id ? (
+                          <Link
+                            href={`/dashboard/artist/${track.artist_id}`}
+                            className="
+                              mt-1 text-left text-xs text-white/60 truncate
+                              hover:text-[#00FFC6] hover:underline underline-offset-2
+                              transition-colors
+                            "
+                            title={track.profiles?.display_name ?? "Unknown Artist"}
+                          >
+                            {track.profiles?.display_name ?? "Unknown Artist"}
+                          </Link>
+                        ) : (
+                          <div className="mt-1 text-xs text-white/40 truncate">Unknown artist</div>
+                        )
+                      }
                       metaSlot={
                         releaseTrackIdByTrackId.get(String(track.id)) ? (
                           <TrackRatingInline releaseTrackId={releaseTrackIdByTrackId.get(String(track.id)) as string} />

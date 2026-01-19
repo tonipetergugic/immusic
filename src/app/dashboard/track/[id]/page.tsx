@@ -3,7 +3,8 @@ import Image from "next/image";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { toPlayerTrack } from "@/lib/playerTrack";
-import PlayButton from "./PlayButton";
+import PlayOverlayButton from "@/components/PlayOverlayButton";
+import BackLink from "@/components/BackLink";
 import LyricsEditor from "./LyricsEditor";
 
 export default async function TrackPage({
@@ -125,7 +126,7 @@ export default async function TrackPage({
   return (
     <div className="w-full">
       {/* HERO */}
-      <div className="relative rounded-xl overflow-hidden">
+      <div className="relative overflow-hidden -mx-3 sm:-mx-4 lg:-mx-8 rounded-none">
         {/* BACKGROUND BLOOM (wie Playlist) */}
         <div
           className="
@@ -156,6 +157,9 @@ export default async function TrackPage({
 
         {/* CONTENT */}
         <div className="relative px-4 md:px-8 pt-10 pb-14">
+          <div className="mb-6">
+            <BackLink />
+          </div>
           <div className="flex flex-col md:flex-row md:items-end gap-8">
             {/* Cover */}
             <div className="shrink-0">
@@ -199,7 +203,7 @@ export default async function TrackPage({
 
               {/* Actions */}
               <div className="mt-6 flex items-center gap-4">
-                <PlayButton track={playerTrack} />
+                <PlayOverlayButton track={playerTrack} size="lg" variant="standalone" />
               </div>
             </div>
           </div>
@@ -208,9 +212,9 @@ export default async function TrackPage({
 
       {/* CONTENT */}
       <div className="px-4 md:px-8 pb-16">
-        <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-14">
+        <div className="mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,720px)_360px] gap-14">
           {/* LEFT: Lyrics */}
-          <div className="lg:col-span-2">
+          <div>
             <LyricsEditor
               trackId={playerTrack.id}
               initialLyrics={trackDataNormalized.lyrics ?? null}
@@ -219,52 +223,62 @@ export default async function TrackPage({
             />
           </div>
 
-          {/* RIGHT: Details (ohne Box) */}
-          <aside className="lg:col-span-1">
-            <div className="text-white/90 font-semibold mb-4">Details</div>
+        {/* RIGHT: Details (ohne Box) */}
+        <aside>
+          <h3 className="text-sm font-semibold text-white/80 mb-4">
+            Track info
+          </h3>
 
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-white/40">Artist</span>
-                <span className="text-white/80 truncate">{artistName}</span>
-              </div>
-
-              {releaseTitle ? (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-white/40">Release</span>
-                  <span className="text-white/80 truncate">{releaseTitle}</span>
-                </div>
-              ) : null}
-
-              {releaseDate ? (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-white/40">Release date</span>
-                  <span className="text-white/80">{releaseDate}</span>
-                </div>
-              ) : null}
-
-              {playerTrack.bpm ? (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-white/40">BPM</span>
-                  <span className="text-white/80">{playerTrack.bpm}</span>
-                </div>
-              ) : null}
-
-              {playerTrack.key ? (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-white/40">Key</span>
-                  <span className="text-white/80">{playerTrack.key}</span>
-                </div>
-              ) : null}
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-white/40">Track ID</span>
-                <span className="text-white/80 font-mono text-xs truncate">
-                  {playerTrack.id}
-                </span>
-              </div>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs uppercase tracking-wide text-white/40">
+                Artist
+              </span>
+              <span className="text-sm text-white/90 truncate">{artistName}</span>
             </div>
-          </aside>
+
+            {releaseTitle ? (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs uppercase tracking-wide text-white/40">
+                  Release
+                </span>
+                <span className="text-sm text-white/90 truncate">{releaseTitle}</span>
+              </div>
+            ) : null}
+
+            {releaseDate ? (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs uppercase tracking-wide text-white/40">
+                  Released
+                </span>
+                <span className="text-sm text-white/90">{releaseDate}</span>
+              </div>
+            ) : null}
+
+            {playerTrack.bpm ? (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-white/40">BPM</span>
+                <span className="text-sm text-white/90">{playerTrack.bpm}</span>
+              </div>
+            ) : null}
+
+            {playerTrack.key ? (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-white/40">Key</span>
+                <span className="text-sm text-white/90">{playerTrack.key}</span>
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs uppercase tracking-wide text-white/40">
+                ID
+              </span>
+              <span className="text-sm text-white/90 font-mono text-xs truncate">
+                {playerTrack.id}
+              </span>
+            </div>
+          </div>
+        </aside>
         </div>
       </div>
     </div>

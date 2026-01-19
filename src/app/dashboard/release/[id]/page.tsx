@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Image from "next/image";
 import Link from "next/link";
-import ReleaseBackButton from "./ReleaseBackButton";
+import BackLink from "@/components/BackLink";
 import ReleaseTrackRowClient from "./ReleaseTrackRowClient";
 
 export default async function ReleaseDetailPage({
@@ -101,56 +101,103 @@ export default async function ReleaseDetailPage({
 
   return (
     <div className="text-white">
-      <div className="mb-4">
-        <ReleaseBackButton fallbackHref="/dashboard" />
-      </div>
+      {/* HERO (wie Track) */}
+      <div className="relative overflow-hidden -mx-3 sm:-mx-4 lg:-mx-8 rounded-none">
+        {/* BACKGROUND BLOOM */}
+        <div
+          className="
+            absolute inset-0 bg-cover bg-center
+            blur-[50px] opacity-80 brightness-125 saturate-125
+            pointer-events-none
+          "
+          style={{
+            backgroundImage: coverUrl ? `url('${coverUrl}')` : undefined,
+          }}
+        />
 
-      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-        {coverUrl ? (
-          <div className="relative w-[220px] sm:w-[260px] md:w-[320px] aspect-square overflow-hidden rounded-2xl">
-            <Image
-              src={coverUrl}
-              alt={release.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 220px, (max-width: 1024px) 260px, 320px"
-              priority
-            />
+        {/* DARK OVERLAY */}
+        <div className="absolute inset-0 bg-[rgba(0,0,0,0.45)] pointer-events-none" />
+
+        {/* SOFT FADE (nach unten auslaufend) */}
+        <div
+          className="
+            absolute inset-0
+            bg-gradient-to-b
+            from-[rgba(0,0,0,0.00)]
+            via-[rgba(0,0,0,0.25)]
+            via-[rgba(0,0,0,0.45)]
+            to-[rgba(14,14,16,0.95)]
+            pointer-events-none
+          "
+        />
+
+        {/* CONTENT */}
+        <div className="relative px-4 md:px-8 pt-8 pb-12">
+          <div className="mb-6">
+            <BackLink />
           </div>
-        ) : null}
 
-        <div className="min-w-0 w-full">
-          <div className="text-sm text-neutral-400">Release</div>
-          <h1 className="text-2xl font-bold truncate">{release.title}</h1>
-          <a
-            href={`/dashboard/artist/${release.artist_id}`}
-            className="mt-1 inline-block text-neutral-300 hover:text-[#00FFC6] transition cursor-pointer"
-          >
-            {artistName}
-          </a>
-          <div className="mt-2 text-sm text-neutral-400 flex flex-wrap items-center gap-x-2">
-            {release.release_type ? (
-              <span className="capitalize">{release.release_type}</span>
-            ) : null}
-            {release.release_type ? <span className="text-neutral-600">·</span> : null}
+          <div className="flex flex-col md:flex-row md:items-end gap-8">
+            {/* Cover */}
+            <div className="shrink-0">
+              {coverUrl ? (
+                <Image
+                  src={coverUrl}
+                  alt={release.title}
+                  width={320}
+                  height={320}
+                  priority
+                  className="rounded-xl shadow-2xl object-cover w-[220px] h-[220px] md:w-[280px] md:h-[280px]"
+                />
+              ) : (
+                <div className="rounded-xl bg-neutral-800 w-[220px] h-[220px] md:w-[280px] md:h-[280px] shadow-2xl" />
+              )}
+            </div>
 
-            {formatReleaseDate(release.release_date) ? (
-              <>
-                <span>Released {formatReleaseDate(release.release_date)}</span>
-                <span className="text-neutral-600">·</span>
-              </>
-            ) : null}
+            {/* Title / Meta */}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/70 font-medium mb-2">
+                {release.release_type ? (
+                  <span className="capitalize">{release.release_type}</span>
+                ) : (
+                  "Release"
+                )}
+              </div>
 
-            <span>
-              {trackCount} {trackCount === 1 ? "track" : "tracks"}
-            </span>
+              <h1 className="text-5xl md:text-7xl font-black text-white leading-none break-words">
+                {release.title}
+              </h1>
 
-            {formatTotalDuration(totalSeconds) ? (
-              <>
-                <span className="text-neutral-600">·</span>
-                <span>{formatTotalDuration(totalSeconds)}</span>
-              </>
-            ) : null}
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
+                <a
+                  href={`/dashboard/artist/${release.artist_id}`}
+                  className="text-white font-semibold text-base md:text-lg hover:text-[#00FFC6] transition-colors"
+                >
+                  {artistName}
+                </a>
+
+                {formatReleaseDate(release.release_date) ? (
+                  <>
+                    <span className="text-white/40">•</span>
+                    <span>Released {formatReleaseDate(release.release_date)}</span>
+                  </>
+                ) : null}
+
+                <span className="text-white/40">•</span>
+                <span>
+                  {trackCount} {trackCount === 1 ? "track" : "tracks"}
+                </span>
+
+                {formatTotalDuration(totalSeconds) ? (
+                  <>
+                    <span className="text-white/40">•</span>
+                    <span>{formatTotalDuration(totalSeconds)}</span>
+                  </>
+                ) : null}
+              </div>
+
+              {/* bewusst: KEIN globaler Play-Button im Release-Header */}
+            </div>
           </div>
         </div>
       </div>
