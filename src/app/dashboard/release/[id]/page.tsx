@@ -33,7 +33,7 @@ export default async function ReleaseDetailPage({
     return (
       <div className="text-white">
         <div className="mb-3">
-          <ReleaseBackButton fallbackHref="/dashboard" />
+          <BackLink />
         </div>
         <h1 className="text-xl font-semibold">Release not found</h1>
       </div>
