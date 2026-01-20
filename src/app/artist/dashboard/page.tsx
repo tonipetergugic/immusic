@@ -8,6 +8,7 @@ import {
   Music2,
   Upload,
   User,
+  ExternalLink,
 } from "lucide-react";
 import Tooltip from "@/components/Tooltip";
 
@@ -178,16 +179,10 @@ export default async function ArtistDashboardPage() {
   const formatNumber = (value: number) => value.toLocaleString("de-DE");
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-white">
-        Welcome {artistName} to ImMusic
-      </h1>
-      <p className="text-sm text-[#B3B3B3]">
-        Your hub for releases, uploads and analytics.
-      </p>
-
+    <div className="space-y-8">
+      {/* Spotify-style hero */}
       <div className="rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
-        <div className="relative h-48 md:h-64">
+        <div className="relative h-56 md:h-72">
           {bannerUrl ? (
             <div
               className="absolute inset-0"
@@ -201,46 +196,45 @@ export default async function ArtistDashboardPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-[#00FFC6]/15 via-white/5 to-[#00FFC6]/10" />
           )}
 
-          {/* Dark overlay for readability */}
+          {/* overlays */}
           <div className="absolute inset-0 bg-black/35" />
-          {/* Bottom gradient for text */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
-          {/* Text on banner */}
-          <div className="absolute left-0 right-0 top-28 md:top-36 px-8 md:px-10">
-            {!bannerUrl && (
-              <p className="text-xs text-white/60 mb-2">Banner not set yet</p>
-            )}
+          {/* content */}
+          <div className="absolute inset-0 flex items-end px-6 md:px-10 pb-6 md:pb-8">
+            <div className="w-full">
+              {!bannerUrl && (
+                <p className="text-xs text-white/60 mb-2">Banner not set yet</p>
+              )}
 
-            <p className="text-4xl md:text-6xl xl:text-7xl font-semibold text-white leading-tight tracking-tight">
-              {artistName}
-            </p>
+              <p className="text-sm text-white/80">
+                Welcome to ImMusic
+              </p>
+
+              <p className="mt-1 text-4xl md:text-6xl xl:text-7xl font-semibold text-white leading-tight tracking-tight">
+                {artistName}
+              </p>
+
+              <p className="mt-2 text-sm text-white/70">
+                Your hub for releases, uploads and analytics.
+              </p>
+
+              <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                {isProfileIncomplete ? (
+                  <p className="text-sm text-[#B3B3B3]">
+                    Tip: Complete your artist profile for a better public page.
+                    <Link
+                      href="/artist/profile"
+                      className="ml-2 text-[#00FFC6] hover:text-[#00E0B0] transition-colors"
+                    >
+                      Go to Profile →
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mt-10">
-        <p className="text-sm text-white/80">
-          Your public artist page is live.
-          <Link
-            href={publicArtistHref}
-            className="ml-2 text-[#00FFC6] hover:text-[#00E0B0] transition-colors"
-          >
-            View page →
-          </Link>
-        </p>
-
-        {isProfileIncomplete ? (
-          <p className="text-sm text-[#B3B3B3]">
-            Tip: Complete your artist profile for a better public page.
-            <Link
-              href="/artist/profile"
-              className="ml-2 text-[#00FFC6] hover:text-[#00E0B0] transition-colors"
-            >
-              Go to Profile →
-            </Link>
-          </p>
-        ) : null}
       </div>
 
       <div className="space-y-3">
@@ -252,105 +246,54 @@ export default async function ArtistDashboardPage() {
             </p>
           </div>
           <div className="mt-8 mb-28 space-y-10">
+          {/* Row 1 – Performance + Credits */}
+          <div className="px-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-y-8 gap-x-10">
+            {/* Featured via typography */}
+            <Stat
+              label="Total Streams"
+              value={formatNumber(totalStreams)}
+              valueClassName="text-3xl md:text-4xl font-semibold text-white"
+            />
 
-  {/* Row 1 – Performance */}
-  <div className="px-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-8 gap-x-10">
-    <Stat label="Total Streams" value={formatNumber(totalStreams)} />
-    <Stat label="Ø Streams / Track" value={formatNumber(Math.round(avgStreamsPerTrack))} />
-    <Stat label="Releases" value={formatNumber(totalReleases)} />
-    <Stat label="Tracks" value={formatNumber(totalTracks)} />
-    <Stat label="Ø Rating" value={avgRating.toFixed(2).replace(".", ",")} />
-    <Stat label="Ratings (Count)" value={formatNumber(totalRatingsCount)} />
-  </div>
+            <Stat
+              label="Ø Streams / Track"
+              value={formatNumber(Math.round(avgStreamsPerTrack))}
+            />
 
-  {/* Row 2 – Credits & Development */}
-  <div className='px-2 pt-10 border-t border-white/5 grid grid-cols-6 gap-x-12 gap-y-8 text-center'>
+            <Stat
+              label="Releases"
+              value={formatNumber(totalReleases)}
+            />
 
-    <div className="lg:col-start-1">
-      <Tooltip label="Premium Credits are system energy. Boost can use them to increase visibility in Performance Discovery.">
-        <div className="inline-block">
-          <Stat label="Premium Credits" value={formatNumber(balance)} />
-          <p className="mt-2 text-[11px] text-white/35 text-center">
-            Buy credits — coming soon
-          </p>
-        </div>
-      </Tooltip>
-    </div>
+            <Stat
+              label="Tracks"
+              value={formatNumber(totalTracks)}
+            />
 
-    <div className="lg:col-start-2">
-      <Stat label="Status" value="Active" />
-    </div>
-  </div>
+            <Stat
+              label="Ø Rating"
+              value={avgRating.toFixed(2).replace(".", ",")}
+            />
 
-</div>
+            <Stat
+              label="Ratings (Count)"
+              value={formatNumber(totalRatingsCount)}
+            />
+
+            <Tooltip label="Premium Credits are system energy. Boost can use them to increase visibility in Performance Discovery.">
+              <div>
+                <Stat
+                  label="Premium Credits"
+                  value={formatNumber(balance)}
+                  valueClassName="text-3xl md:text-4xl font-semibold text-[#00FFC6]"
+                />
+              </div>
+            </Tooltip>
+          </div>
+          </div>
         </section>
 
-      <section className="mt-16">
-        <div className="grid grid-cols-1 gap-6">
-          {/* Premium */}
-          <div>
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Premium Credits History</h2>
-                <p className="mt-1 text-xs text-[#B3B3B3]">
-                  Last 20 transactions (read-only)
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-[11px] text-white/35">
-                  {premiumTx[0]
-                    ? `Last: ${premiumTx[0].delta >= 0 ? "+" : ""}${formatNumber(
-                        premiumTx[0].delta
-                      )} · ${new Date(premiumTx[0].created_at).toLocaleString("de-DE")}`
-                    : "No history yet"}
-                </p>
-              </div>
-            </div>
-
-            <details className="mt-4 rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
-              <summary className="cursor-pointer select-none px-4 py-3 text-sm text-[#B3B3B3] hover:text-white transition">
-                Show history
-              </summary>
-
-              <div className="border-t border-white/5">
-                {premiumTx.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {premiumTx.map((tx) => (
-                      <div key={tx.id} className="px-4 py-3 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">
-                            {tx.reason ?? "Premium Credits"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-[#B3B3B3]">
-                            {new Date(tx.created_at).toLocaleString("de-DE")}
-                          </p>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          <p className="text-sm font-semibold text-white">
-                            {tx.delta >= 0 ? "+" : ""}
-                            {formatNumber(tx.delta)}
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-white/35">
-                            {tx.source ?? "system"}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="px-4 py-4">
-                    <p className="text-sm text-[#B3B3B3]">No transactions yet.</p>
-                  </div>
-                )}
-              </div>
-            </details>
-          </div>
-        </div>
-      </section>
-
-        <section className="mt-16">
+        <section className="pt-2">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Quality */}
             <div>
@@ -363,7 +306,7 @@ export default async function ArtistDashboardPage() {
                   qualityTracks.map((t) => (
                     <div
                       key={`q-${t.title}`}
-                      className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3"
+                      className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 transition hover:bg-white/[0.04]"
                     >
                       {t.coverUrl ? (
                         <img
@@ -410,7 +353,7 @@ export default async function ArtistDashboardPage() {
                   performanceTracks.map((t) => (
                     <div
                       key={`p-${t.title}`}
-                      className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3"
+                      className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 transition hover:bg-white/[0.04]"
                     >
                       {t.coverUrl ? (
                         <img
@@ -449,43 +392,123 @@ export default async function ArtistDashboardPage() {
         </section>
       </div>
 
-      <section className="space-y-4 mt-16">
+      <SectionDivider />
+
+      <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
           <h2 className="text-lg font-semibold text-white">Artist Menu</h2>
           <p className="text-sm text-[#B3B3B3]">Jump to the tools you need.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 items-stretch">
-          <MenuTile
-            href="/artist/releases"
-            title="Releases"
-            description="Manage your releases and publish updates."
-            icon={<Disc3 className="h-6 w-6" />}
-          />
+          {/* Row 1 – Primary */}
           <MenuTile
             href="/artist/upload"
             title="Upload"
             description="Upload new tracks and prepare releases."
             icon={<Upload className="h-6 w-6" />}
           />
+
+          <MenuTile
+            href="/artist/releases"
+            title="Releases"
+            description="Manage your releases and publish updates."
+            icon={<Disc3 className="h-6 w-6" />}
+          />
+
           <MenuTile
             href="/artist/my-tracks"
             title="My Tracks"
             description="Edit tracks, metadata and status."
             icon={<Music2 className="h-6 w-6" />}
           />
+
+          {/* Row 2 – Secondary */}
           <MenuTile
             href="/artist/analytics"
             title="Analytics"
             description="Streams, ratings and audience insights."
             icon={<BarChart3 className="h-6 w-6" />}
           />
+
           <MenuTile
             href="/artist/profile"
             title="Profile"
             description="Update your banner, name and settings."
             icon={<User className="h-6 w-6" />}
           />
+
+          <MenuTile
+            href={publicArtistHref}
+            title="Public Page"
+            description="View your public artist profile as listeners see it."
+            icon={<ExternalLink className="h-6 w-6" />}
+          />
+        </div>
+      </section>
+
+      <section className="pt-6">
+        <div className="grid grid-cols-1 gap-6">
+          {/* Premium */}
+          <div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Premium Credits History</h2>
+                <p className="mt-1 text-xs text-[#B3B3B3]">
+                  Last 20 transactions (read-only)
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[11px] text-white/35">
+                  {premiumTx[0]
+                    ? `Last: ${premiumTx[0].delta >= 0 ? "+" : ""}${formatNumber(
+                        premiumTx[0].delta
+                      )} · ${new Date(premiumTx[0].created_at).toLocaleString("de-DE")}`
+                    : "No history yet"}
+                </p>
+              </div>
+            </div>
+
+            <details className="mt-4">
+              <summary className="cursor-pointer select-none text-sm text-[#B3B3B3] hover:text-white transition list-none">
+                ▶ Show history
+              </summary>
+
+              <div className="mt-4 rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
+                {premiumTx.length > 0 ? (
+                  <div className="divide-y divide-white/5">
+                    {premiumTx.map((tx) => (
+                      <div key={tx.id} className="px-4 py-3 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {tx.reason ?? "Premium Credits"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[#B3B3B3]">
+                            {new Date(tx.created_at).toLocaleString("de-DE")}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold text-white">
+                            {tx.delta >= 0 ? "+" : ""}
+                            {formatNumber(tx.delta)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-white/35">
+                            {tx.source ?? "system"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4">
+                    <p className="text-sm text-[#B3B3B3]">No transactions yet.</p>
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
         </div>
       </section>
     </div>
@@ -510,22 +533,34 @@ function KpiCard({
   );
 }
 
+function SectionDivider() {
+  return (
+    <div className="h-10" />
+  );
+}
+
 function Stat({
   label,
   value,
   hint,
+  valueClassName,
 }: {
   label: string;
   value: string;
   hint?: string;
+  valueClassName?: string;
 }) {
   return (
-    <div className="relative group text-center">
-      <p className="text-3xl font-semibold text-white leading-none transition group-hover:text-[#00FFC6]">
+    <div className="relative group text-center h-16 flex flex-col items-center justify-end">
+      <p
+        className={`text-3xl font-semibold leading-none transition group-hover:text-[#00FFC6] ${
+          valueClassName ?? "text-white"
+        }`}
+      >
         {value}
       </p>
 
-      <p className="mt-2 text-xs uppercase tracking-wide text-white/40">
+      <p className="mt-2 text-xs uppercase tracking-wide text-white/40 leading-none">
         {label}
       </p>
     </div>
