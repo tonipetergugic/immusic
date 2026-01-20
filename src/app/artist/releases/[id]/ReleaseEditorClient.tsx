@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import ReleaseCoverUploader from "./ReleaseCoverUploader";
-import TrackListSortable from "./TrackListSortable";
+const TrackListSortable = dynamic(() => import("./TrackListSortable"), {
+  ssr: false,
+});
 import AddTrackModal from "./AddTrackModal";
 import { updateReleaseTitleAction } from "./updateReleaseTitleAction";
 import { updateReleaseTypeAction } from "./updateReleaseTypeAction";
@@ -76,9 +79,10 @@ export default function ReleaseEditorClient({
   return (
     <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
       <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
-        {/* Left column: Cover + Actions */}
-        <div className="space-y-5">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        {/* Left column: Lifecycle / control (no cards, minimalist flow) */}
+        <div className="space-y-10">
+          {/* Status */}
+          <div>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="text-xs uppercase tracking-[0.12em] text-white/60">
@@ -95,12 +99,11 @@ export default function ReleaseEditorClient({
               </div>
 
               <span
-                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium backdrop-blur
-        ${
-          status === "published"
-            ? "border-[#00FFC6]/40 bg-[#00FFC6]/10 text-[#00FFC6]"
-            : "border-white/15 bg-black/20 text-white/70"
-        }`}
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium backdrop-blur ${
+                  status === "published"
+                    ? "border-[#00FFC6]/40 bg-[#00FFC6]/10 text-[#00FFC6]"
+                    : "border-white/15 bg-black/20 text-white/70"
+                }`}
               >
                 {status === "published" ? "Live" : "Ready"}
               </span>
@@ -120,60 +123,61 @@ export default function ReleaseEditorClient({
               <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
                 This release has been modified. Re-publish to make changes public.
               </div>
-              )}
+            )}
+          </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-              <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-                Pre-Publish Checklist
-              </div>
-
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-white/80">Cover added</span>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                      hasCover
-                        ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
-                        : "border-white/15 bg-black/20 text-white/60"
-                    }`}
-                  >
-                    {hasCover ? "Ready" : "Missing"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-white/80">At least 1 track</span>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                      hasAtLeastOneTrack
-                        ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
-                        : "border-white/15 bg-black/20 text-white/60"
-                    }`}
-                  >
-                    {hasAtLeastOneTrack ? "Ready" : "Missing"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-white/80">Track metadata complete</span>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                      allTracksMetadataComplete
-                        ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
-                        : "border-white/15 bg-black/20 text-white/60"
-                    }`}
-                  >
-                    {allTracksMetadataComplete ? "Ready" : "Missing"}
-                  </span>
-                </div>
-              </div>
-
-              {!allTracksMetadataComplete && hasAtLeastOneTrack ? (
-                <div className="mt-3 text-xs text-white/60">
-                  Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, genre, lyrics flag, and explicit flag.
-                </div>
-              ) : null}
+          {/* Pre-Publish Checklist */}
+          <div>
+            <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+              Pre-Publish Checklist
             </div>
+
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-white/80">Cover added</span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                    hasCover
+                      ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
+                      : "border-white/15 bg-black/20 text-white/60"
+                  }`}
+                >
+                  {hasCover ? "Ready" : "Missing"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-white/80">At least 1 track</span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                    hasAtLeastOneTrack
+                      ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
+                      : "border-white/15 bg-black/20 text-white/60"
+                  }`}
+                >
+                  {hasAtLeastOneTrack ? "Ready" : "Missing"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-white/80">Track metadata complete</span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                    allTracksMetadataComplete
+                      ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
+                      : "border-white/15 bg-black/20 text-white/60"
+                  }`}
+                >
+                  {allTracksMetadataComplete ? "Ready" : "Missing"}
+                </span>
+              </div>
+            </div>
+
+            {!allTracksMetadataComplete && hasAtLeastOneTrack ? (
+              <div className="mt-3 text-xs text-white/60">
+                Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, genre, lyrics flag, and explicit flag.
+              </div>
+            ) : null}
 
             <div className="mt-5 flex flex-col gap-2">
               <button
@@ -195,7 +199,8 @@ export default function ReleaseEditorClient({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          {/* Danger Zone */}
+          <div>
             <div className="text-xs uppercase tracking-[0.12em] text-white/60">
               Danger Zone
             </div>
@@ -215,7 +220,7 @@ export default function ReleaseEditorClient({
 
         {/* Right column: Title / Meta / Tracks */}
         <div className="min-w-0">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+          <div>
             <input
               className="w-full bg-transparent text-3xl font-semibold tracking-tight outline-none border-b border-white/10 focus:border-[#00FFC6]/60 transition pb-3"
               value={title}
@@ -270,17 +275,17 @@ export default function ReleaseEditorClient({
                   const d = new Date(releaseData.created_at);
                   const formatted =
                     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ` +
-                    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
                   return formatted;
                 })()}
               </div>
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-0 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+          <section className="mt-10">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">Tracklist</h2>
+                <h2 className="text-lg font-semibold tracking-tight text-white/90">Tracklist</h2>
                 <div className="mt-1 text-sm text-[#B3B3B3]">{tracks.length} tracks</div>
               </div>
 
@@ -294,9 +299,9 @@ export default function ReleaseEditorClient({
               </button>
             </div>
 
-            <div className="px-2 sm:px-4 py-3">
+            <div className="mt-5">
               {tracks.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8">
+                <div className="px-1 sm:px-2 py-10">
                   <div className="text-xs uppercase tracking-[0.12em] text-white/60">
                     Tracklist
                   </div>
@@ -313,19 +318,21 @@ export default function ReleaseEditorClient({
                   </div>
                 </div>
               ) : (
-                <TrackListSortable
-                  releaseId={releaseId}
-                  tracks={tracks}
-                  setTracks={setTracks}
-                  onReleaseModified={markAsDraft}
-                  eligibilityByTrackId={eligibilityByTrackId}
-                  premiumBalance={premiumBalance}
-                  trackStatusById={trackStatusById}
-                  boostEnabledById={boostEnabledById}
-                />
+                <div className="px-0 sm:px-1">
+                  <TrackListSortable
+                    releaseId={releaseId}
+                    tracks={tracks}
+                    setTracks={setTracks}
+                    onReleaseModified={markAsDraft}
+                    eligibilityByTrackId={eligibilityByTrackId}
+                    premiumBalance={premiumBalance}
+                    trackStatusById={trackStatusById}
+                    boostEnabledById={boostEnabledById}
+                  />
+                </div>
               )}
             </div>
-          </div>
+          </section>
         </div>
       </div>
 

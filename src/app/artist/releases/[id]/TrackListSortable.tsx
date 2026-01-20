@@ -105,167 +105,131 @@ function SortableTrackItem({
   }
 `}
     >
-      <div className="flex items-center gap-3">
-        <div className="cursor-grab text-gray-400 select-none" {...attributes} {...listeners}>
+      <div className="flex min-w-0 items-start gap-4">
+        <div
+          className="mt-0.5 cursor-grab select-none text-white/35 hover:text-white/55 transition"
+          {...attributes}
+          {...listeners}
+        >
           |||
         </div>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <p className="font-medium">{track.track_title}</p>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="min-w-0 truncate text-[16px] font-semibold text-white">
+              {track.track_title}
+            </p>
 
             {boostEnabled ? (
-              <span className="inline-flex items-center rounded-full border border-[#00FFC6]/35 bg-[#00FFC6]/[0.10] px-2 py-0.5 text-[10px] font-semibold text-[#00FFC6]">
+              <span className="shrink-0 inline-flex items-center rounded-full border border-[#00FFC6]/35 bg-[#00FFC6]/[0.10] px-2 py-0.5 text-[10px] font-semibold text-[#00FFC6]">
                 Boost ON
               </span>
             ) : null}
           </div>
 
-          <p className="text-xs text-gray-500">Position: {track.position}</p>
+          <div className="mt-1 text-[11px] text-white/45">
+            Position <span className="text-white/70">{track.position}</span>
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="text-right">
-          <Tooltip label={tooltipText}>
-            <div className="flex items-center justify-end gap-2 cursor-help">
-              {isEligible ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
-                  <span className="text-xs font-semibold text-white">Eligible</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4 text-white/40" />
-                  <span className="text-xs font-semibold text-white/70">Not eligible</span>
-                </>
-              )}
-            </div>
-          </Tooltip>
 
-          <div className="mt-0.5 text-[11px] text-white/40">
-            {devLabel} · {exposureLabel} · {ratingsLabel}
+      <div className="flex items-start gap-6">
+        <div className="grid grid-rows-2 gap-2 text-right">
+          {/* Row 1: Signals (left) + Eligibility (right) */}
+          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+            <div className="text-[15px] font-semibold text-white/80">
+              <span>{devLabel}</span>
+              <span className="mx-3 text-white/30">•</span>
+              <span>{exposureLabel}</span>
+              <span className="mx-3 text-white/30">•</span>
+              <span>{ratingsLabel}</span>
+            </div>
+
+            <Tooltip label={tooltipText}>
+              <div className="inline-flex items-center justify-end gap-2 cursor-help">
+                {isEligible ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
+                    <span className="text-sm font-semibold text-[#00FFC6]">Eligible</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4 text-white/40" />
+                    <span className="text-sm font-semibold text-white/70">Not eligible</span>
+                  </>
+                )}
+              </div>
+            </Tooltip>
           </div>
 
-          {isPerformance ? (
-            <div className="mt-3 flex items-center justify-end gap-3">
-              <div className="text-right">
-                <p className="text-[11px] font-semibold text-white/80">Boost</p>
-                <p className="mt-0.5 text-[11px] text-white/35">
-                  Boost uses credits only when it is actively used.
-                </p>
-                {premiumBalance <= 0 ? (
-                  <p className="mt-0.5 text-[11px] text-white/35">
-                    Disabled — no Premium Credits.
-                  </p>
-                ) : null}
-              </div>
+          {/* Row 2: Next step (left) + Remove (right) */}
+          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+            <div>
+              {isEligible ? (
+                <div className="text-[11px] text-[#00FFC6]/80">
+                  Eligible — ready to generate Earned Credits (Development).
+                </div>
+              ) : null}
 
-              <button
-                type="button"
-                disabled={boostDisabled}
-                onClick={async () => {
-                  const next = !boostEnabled;
-                  setBoostPending(true);
-                  setBoostEnabled(next);
+              {!isDevOk ? (
+                <button
+                  type="button"
+                  disabled={devPending}
+                  onClick={async () => {
+                    try {
+                      setDevPending(true);
+                      const res = await fetch(`/api/tracks/${track.track_id}/move-to-development`, {
+                        method: "POST",
+                      });
 
-                  try {
-                    const res = await fetch("/api/artist/boost", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ track_id: track.track_id, enabled: next }),
-                    });
+                      if (!res.ok) {
+                        const msg = await res.text().catch(() => "");
+                        alert(msg || "Failed to enable Development.");
+                        return;
+                      }
 
-                    if (!res.ok) {
-                      const msg = await res.text().catch(() => "");
-                      alert(msg || "Failed to update Boost.");
-                      setBoostEnabled(!next); // rollback
-                      return;
+                      onRefresh?.();
+                    } finally {
+                      setDevPending(false);
                     }
-
-                    onRefresh?.();
-                  } finally {
-                    setBoostPending(false);
-                  }
-                }}
-                className={[
-                  "relative inline-flex h-6 w-11 items-center rounded-full transition",
-                  boostDisabled ? "opacity-50 cursor-not-allowed bg-white/10" : boostEnabled ? "bg-[#00FFC6]" : "bg-white/15",
-                ].join(" ")}
-                aria-pressed={boostEnabled}
-                aria-label="Toggle boost"
-              >
-                <span
-                  className={[
-                    "inline-block h-5 w-5 transform rounded-full bg-black/70 transition",
-                    boostEnabled ? "translate-x-5" : "translate-x-1",
-                  ].join(" ")}
-                />
-              </button>
+                  }}
+                  className="inline-flex items-center justify-end text-[11px] font-semibold text-[#00FFC6] hover:text-[#00E0B0] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Enable Development →
+                </button>
+              ) : nextStep ? (
+                nextStep.href ? (
+                  <a
+                    href={nextStep.href}
+                    className="inline-block text-[13px] font-semibold text-[#00FFC6] hover:text-[#00E0B0] transition"
+                  >
+                    Next step: <span className="text-[#00FFC6]">{nextStep.label}</span>
+                  </a>
+                ) : (
+                  <span className="inline-block text-[13px] font-semibold text-[#00FFC6]">
+                    Next step: {nextStep.label}
+                  </span>
+                )
+              ) : null}
             </div>
-          ) : null}
 
-          {isEligible ? (
-            <div className="mt-1 text-[11px] text-[#00FFC6]/90">
-              Eligible — ready to generate Earned Credits (Development).
-            </div>
-          ) : null}
-
-          {!isDevOk ? (
             <button
               type="button"
-              disabled={devPending}
               onClick={async () => {
-                try {
-                  setDevPending(true);
-                  const res = await fetch(`/api/tracks/${track.track_id}/move-to-development`, {
-                    method: "POST",
-                  });
-
-                  if (!res.ok) {
-                    const msg = await res.text().catch(() => "");
-                    alert(msg || "Failed to enable Development.");
-                    return;
-                  }
-
-                  onRefresh?.();
-                } finally {
-                  setDevPending(false);
-                }
+                await removeTrackFromReleaseAction(track.release_id, track.track_id);
+                setTracks((prev) =>
+                  prev
+                    .filter((t) => t.track_id !== track.track_id)
+                    .map((t, index) => ({ ...t, position: index + 1 })),
+                );
+                onReleaseModified?.();
               }}
-              className="mt-2 inline-flex items-center justify-end text-[11px] font-semibold text-[#00FFC6] hover:text-[#00E0B0] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[12px] font-semibold text-red-200/90 transition hover:bg-red-500/10 hover:border-red-500/40"
             >
-              Enable Development →
+              Remove
             </button>
-          ) : nextStep ? (
-            nextStep.href ? (
-              <a
-                href={nextStep.href}
-                className="mt-1 inline-block text-[11px] text-[#00FFC6] hover:text-[#00E0B0] transition"
-              >
-                Next step: {nextStep.label} →
-              </a>
-            ) : (
-              <span className="mt-1 inline-block text-[11px] text-white/45">
-                Next step: {nextStep.label}
-              </span>
-            )
-          ) : null}
+          </div>
         </div>
-
-        <button
-          type="button"
-          onClick={async () => {
-            await removeTrackFromReleaseAction(track.release_id, track.track_id);
-            setTracks((prev) =>
-              prev
-                .filter((t) => t.track_id !== track.track_id)
-                .map((t, index) => ({ ...t, position: index + 1 })),
-            );
-            onReleaseModified?.();
-          }}
-          className="text-red-400 hover:text-red-300 text-xs ml-4"
-        >
-          Remove
-        </button>
       </div>
     </li>
   );

@@ -1,7 +1,32 @@
 "use client";
 
 import { createReleaseAction } from "./actions";
-import { Plus } from "lucide-react";
+import { useFormStatus } from "react-dom";
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={[
+        "group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition",
+        "hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)]",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60",
+        pending ? "opacity-60 cursor-not-allowed hover:shadow-none" : "",
+      ].join(" ")}
+    >
+      {pending ? (
+        <span
+          className="inline-flex h-4 w-4 animate-spin items-center justify-center rounded-full border border-white/30 border-t-[#00FFC6]"
+          aria-hidden
+        />
+      ) : null}
+      <span>{pending ? "Creating…" : "Create Release"}</span>
+    </button>
+  );
+}
 
 export default function CreateReleasePage() {
   return (
@@ -17,7 +42,7 @@ export default function CreateReleasePage() {
 
       <form
         action={createReleaseAction}
-        className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-8"
+        className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md p-6 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_90px_rgba(0,0,0,0.55)]"
       >
         <div className="grid gap-8">
           {/* Title */}
@@ -31,7 +56,7 @@ export default function CreateReleasePage() {
               type="text"
               required
               placeholder="e.g. Come On"
-              className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur-md px-4 py-3 text-base text-white outline-none transition placeholder:text-white/35 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
             />
           </div>
 
@@ -39,31 +64,39 @@ export default function CreateReleasePage() {
           <div>
             <div className="text-sm font-medium text-white/80">Release type</div>
 
-            <div className="mt-3 inline-flex rounded-full bg-white/[0.04] p-1">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { value: "single", label: "Single", desc: "1–2 tracks" },
                 { value: "ep", label: "EP", desc: "3–6 tracks" },
                 { value: "album", label: "Album", desc: "7+ tracks" },
               ].map((option) => (
-                <label key={option.value} className="group relative flex flex-col items-center px-1">
+                <label
+                  key={option.value}
+                  className="group relative flex flex-col items-center gap-2"
+                >
                   <input
                     type="radio"
                     name="release_type"
                     value={option.value}
                     required
+                    defaultChecked={option.value === "single"}
                     className="peer sr-only"
                   />
 
                   <span
                     className="
-            inline-flex items-center justify-center
-            px-4 py-2 text-sm font-semibold
-            rounded-full cursor-pointer
-            text-white/60
+            inline-flex min-w-[140px] items-center justify-center
+            rounded-xl border border-white/10
+            bg-white/[0.04] backdrop-blur-md
+            px-6 py-2.5
+            text-sm font-semibold
+            cursor-pointer
+            text-white/80
             transition
-            hover:text-white
-            peer-checked:bg-[#00FFC6]
-            peer-checked:text-black
+            hover:bg-white/[0.06]
+            peer-checked:border-[#00FFC6]/60
+            peer-checked:bg-[#00FFC6]/15
+            peer-checked:text-[#00FFC6]
           "
                   >
                     {option.label}
@@ -71,10 +104,10 @@ export default function CreateReleasePage() {
 
                   <span
                     className="
-            mt-1 text-xs
-            text-white/40
+            text-xs text-white/45
+            text-center
             transition
-            peer-checked:text-[#00FFC6]
+            peer-checked:text-white/70
           "
                   >
                     {option.desc}
@@ -85,18 +118,8 @@ export default function CreateReleasePage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="submit"
-              className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-            >
-              <Plus
-                size={16}
-                strokeWidth={2.5}
-                className="text-white/70 transition group-hover:text-[#00FFC6]"
-              />
-              <span>Create Release</span>
-            </button>
+          <div className="flex items-center justify-center pt-4">
+            <SubmitButton />
           </div>
         </div>
       </form>
