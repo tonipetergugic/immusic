@@ -65,7 +65,8 @@ export default async function PlaylistPage(
           id,
           release_id,
           rating_avg,
-          rating_count
+          rating_count,
+          stream_count
         )
       )
     `
@@ -105,6 +106,7 @@ export default async function PlaylistPage(
       const releaseTrackId = matched?.id ?? null;
       const rating_avg = matched?.rating_avg ?? null;
       const rating_count = matched?.rating_count ?? 0;
+      const stream_count = matched?.stream_count ?? 0;
 
       const playerTrack = toPlayerTrack({
         id: t.id,
@@ -126,6 +128,7 @@ export default async function PlaylistPage(
         release_track_id: releaseTrackId,
         rating_avg,
         rating_count,
+        stream_count,
       };
     });
 
@@ -159,12 +162,12 @@ export default async function PlaylistPage(
   }
 
   return (
-    <div className="flex w-full">  
+    <div className="flex w-full overflow-x-hidden touch-pan-y min-w-0">  
       {/* Linker Bereich */}
-      <div className="flex-1 flex flex-col px-6 pt-4 pb-2 max-w-[1500px] mx-auto">
+      <div className="flex-1 min-w-0 w-full flex flex-col pt-4 pb-2 max-w-[1500px] mx-auto">
 
         {/* Trackliste scrollt NICHT separat → gehört zum globalen Scroll */}
-        <div>
+        <div className="min-w-0">
           <PlaylistClient
             playlist={playlist}
             playlistTracks={playlistTracks ?? []}

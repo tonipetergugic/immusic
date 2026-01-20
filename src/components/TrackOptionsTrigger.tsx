@@ -173,12 +173,12 @@ function AddToPlaylistModal({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-lg rounded-xl border border-[#2A2A2D] bg-[#1A1A1D] p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify_between gap-3">
-          <div className="flex flex-col">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)]">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <h2 className="text-xl font-semibold text-white">Add to playlist</h2>
-            <p className="text-sm text-white/60">
+            <p className="mt-1 text-sm text-white/60">
               Choose a playlist for{" "}
               <span className="text-white/80">{track?.title ?? "this track"}</span>
             </p>
@@ -187,13 +187,13 @@ function AddToPlaylistModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-[#2A2A2D] px-3 py-2 text-sm font-semibold text-white/80 hover:bg-[#343438] transition"
+            className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             Close
           </button>
         </div>
 
-        <div className="max-h-[440px] space-y-2 overflow-y-auto pr-1">
+        <div className="max-h-[440px] space-y-3 overflow-y-auto pr-1">
           {loading && <p className="text-sm text-white/60">Loading playlists…</p>}
 
           {!loading && playlists.length === 0 && (
@@ -205,19 +205,20 @@ function AddToPlaylistModal({
           {!loading &&
             playlists.map((pl) => {
               const isBusy = busyId === pl.id;
+
               return (
                 <button
                   key={pl.id}
                   type="button"
                   onClick={() => void addToPlaylist(pl.id)}
                   disabled={!!busyId}
-                  className={`w-full text-left flex items-center gap-3 rounded-lg border border-[#2A2A2D] bg-[#1E1E20] px-4 py-3 transition ${
+                  className={`w-full text-left flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition ${
                     isBusy
                       ? "opacity-60 cursor-wait"
-                      : "hover:border-[#00FFC6] cursor-pointer"
+                      : "hover:bg-white/[0.06] hover:border-[#00FFC6]/60 cursor-pointer"
                   }`}
                 >
-                  <div className="h-10 w-10 flex-shrink-0 rounded-md overflow-hidden bg-neutral-800">
+                  <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
                     {pl.cover_public_url ? (
                       <img
                         src={pl.cover_public_url}
@@ -225,12 +226,12 @@ function AddToPlaylistModal({
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="h-full w-full bg-neutral-700" />
+                      <div className="h-full w-full bg-white/[0.04]" />
                     )}
                   </div>
 
-                  <div className="flex flex-1 flex-col">
-                    <span className="text-sm font-semibold text-white">
+                  <div className="flex flex-1 flex-col min-w-0">
+                    <span className="text-sm font-semibold text-white truncate">
                       {pl.title ?? "Untitled playlist"}
                     </span>
                     {pl.description && (
@@ -240,7 +241,7 @@ function AddToPlaylistModal({
                     )}
                   </div>
 
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-white/60">
                     {isBusy ? "Adding…" : "Add"}
                   </span>
                 </button>
@@ -257,7 +258,7 @@ export default function TrackOptionsTrigger({
   track,
   onRemove,
   showGoToArtist = true,
-  showGoToRelease = false,
+  showGoToRelease = true,
   releaseId = null,
 }: TrackOptionsTriggerProps) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);

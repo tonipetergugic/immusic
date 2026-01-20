@@ -407,7 +407,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
                       keySlot={<span>{track.key ?? "—"}</span>}
                       // Genre: TrackRowBase nutzt intern track.genre, falls vorhanden
                       genreSlot={null}
-                      actionsSlot={<TrackOptionsTrigger track={track} />}
+                      actionsSlot={<TrackOptionsTrigger track={track} showGoToRelease={false} />}
                     />
                   ))}
                 </div>

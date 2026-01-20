@@ -568,7 +568,7 @@ export default function PlaylistClient({
               onDragEnd={onDragEnd}
             >
               <SortableContext items={playerTracks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                <div className="flex flex-col">
+                <div className="flex flex-col divide-y divide-white/10">
                   {playerTracks.map((track) => (
                     <SortablePlaylistRow
                       key={track.id}
@@ -585,7 +585,7 @@ export default function PlaylistClient({
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex flex-col divide-y divide-white/10">
               {playerTracks.map((track) => (
                 <PlaylistRow
                   key={track.id}
@@ -659,7 +659,20 @@ export default function PlaylistClient({
             onClose={() => setDetailsOpen(false)}
             playlist={localPlaylist}
             onUpdated={(updated) => {
-              setLocalPlaylist((prev) => ({ ...prev, ...updated }));
+              setLocalPlaylist((prev) => {
+                let coverUrl = updated.cover_url ?? null;
+
+                // Wenn Modal nur den relativen Storage-Pfad liefert, sofort in Public URL umwandeln,
+                // damit Header & Background direkt updaten.
+                if (coverUrl && !/^https?:\/\//i.test(coverUrl)) {
+                  coverUrl =
+                    supabase.storage
+                      .from("playlist-covers")
+                      .getPublicUrl(coverUrl).data.publicUrl ?? null;
+                }
+
+                return { ...prev, ...updated, cover_url: coverUrl };
+              });
             }}
           />
           <PlaylistAddTrackModal

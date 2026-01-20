@@ -38,7 +38,7 @@ export default function TrackOptionsMenu({
   onAddToPlaylist,
   position,
   showGoToArtist = true,
-  showGoToRelease = false,
+  showGoToRelease = true,
   releaseId = null,
   context = "default",
 }: TrackOptionsMenuProps) {
@@ -118,7 +118,9 @@ export default function TrackOptionsMenu({
       items.push({ label: "Go to Artist", action: "go_artist" });
     }
 
-    items.push({ label: "Go to Release Page", action: "go_release" });
+    if (showGoToRelease) {
+      items.push({ label: "Go to Release Page", action: "go_release" });
+    }
 
     if (context === "playlist" && onRemove) {
       items.push({ label: "Remove from Playlist", action: "remove" });
@@ -274,7 +276,7 @@ export default function TrackOptionsMenu({
       data-track-options-menu
       role="menu"
       aria-label={`Options for ${track?.title || "track"}`}
-      className="absolute z-50 w-56 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl p-2"
+      className="absolute z-50 w-56 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)] p-2"
       style={{
         top: position.top,
         left: position.left,
@@ -288,7 +290,7 @@ export default function TrackOptionsMenu({
             type="button"
             onClick={() => void handleItemClick(item.action)}
             role="menuitem"
-            className="px-3 py-2 text-sm text-white/80 rounded-md hover:bg-neutral-800/50 transition text-left cursor-pointer w-full"
+            className="w-full text-left px-3 py-2.5 text-sm text-white/80 rounded-xl border border-transparent transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             {item.label}
           </button>
@@ -296,7 +298,7 @@ export default function TrackOptionsMenu({
       </div>
 
       {toast ? (
-        <div className="mt-2 rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white/70">
+        <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm px-3 py-2 text-xs text-white/70">
           {toast}
         </div>
       ) : null}

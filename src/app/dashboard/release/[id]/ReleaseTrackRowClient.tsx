@@ -155,6 +155,7 @@ export default function ReleaseTrackRowClient({
                 id: track.id,
                 artist_id: artistId,
               }}
+              showGoToRelease={false}
             />
           </div>
         }

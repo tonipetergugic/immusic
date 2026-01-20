@@ -64,11 +64,11 @@ export default function PlaylistDetailsModal({
       }
 
       const ext = file.name.split(".").pop();
-      const path = `${playlist.id}/cover.${ext}`;
+      const path = `${playlist.id}/cover-${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("playlist-covers")
-        .upload(path, file);
+        .upload(path, file, { upsert: false });
 
       if (!uploadError) {
         // Store only the relative path in DB (best practice)
@@ -138,9 +138,19 @@ export default function PlaylistDetailsModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999999] flex items-center justify-center">
-      <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl w-[420px] shadow-2xl text-white space-y-5">
-        <h2 className="text-xl font-semibold">Edit Playlist Details</h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999999] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="w-full max-w-[560px] rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)] space-y-5 max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+            Playlist
+          </div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">
+            Edit Playlist Details
+          </h2>
+          <p className="mt-1 text-sm text-white/60">
+            Update cover, title and description.
+          </p>
+        </div>
 
         <div className="space-y-3">
           <p className="text-sm text-white/60">Cover</p>
@@ -184,16 +194,7 @@ export default function PlaylistDetailsModal({
           {playlist.cover_url && !previewUrl && (
             <button
               onClick={handleRemoveCover}
-              className="
-      flex items-center gap-3 w-full 
-      bg-neutral-900/60 
-      border border-neutral-800 
-      hover:bg-neutral-800/60 
-      hover:border-red-400/40
-      transition-all duration-200
-      rounded-lg px-4 py-3 mt-1
-      text-red-400 hover:text-red-300 text-sm font-medium
-    "
+              className="inline-flex items-center gap-3 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-red-300/90 transition hover:bg-white/[0.06] hover:border-red-400/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
             >
               <Trash2 size={18} className="text-red-400" />
               <span>Remove current cover</span>
@@ -206,7 +207,7 @@ export default function PlaylistDetailsModal({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-3 rounded-lg bg-neutral-800 text-white outline-none border border-neutral-700 focus:border-[#00FFC6]"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
           />
         </div>
 
@@ -215,14 +216,14 @@ export default function PlaylistDetailsModal({
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-3 h-20 rounded-lg bg-neutral-800 text-white resize-none outline-none border border-neutral-700 focus:border-[#00FFC6]"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 resize-none h-28"
           />
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-white/60 hover:text-white"
+            className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             Cancel
           </button>
@@ -230,7 +231,7 @@ export default function PlaylistDetailsModal({
           <button
             disabled={loading}
             onClick={handleSave}
-            className="px-4 py-2 rounded-md bg-[#00FFC6] hover:bg-[#00E0B0] text-black font-semibold disabled:opacity-40"
+            className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             {loading ? "Saving…" : "Save"}
           </button>

@@ -37,10 +37,7 @@ export default function PlaylistRow({
   }
 
   return (
-    <div className={[
-      "cursor-default",
-      "border-b border-white/10 last:border-b-0", // ✅ divider line between rows
-    ].join(" ")}>
+    <div className="cursor-default">
       <TrackRowBase
         track={track}
         index={Math.max(currentIndex, 0)}
