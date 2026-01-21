@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, ArrowRight, RotateCcw } from "lucide-react";
+import { Plus, ArrowRight, RotateCcw, Upload as UploadIcon } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
 import { submitToQueueAction } from "./actions";
@@ -83,11 +83,20 @@ export default function ArtistUploadPage() {
   }
 
   return (
-    <div className="w-full max-w-[900px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight">Upload Track</h1>
+    <div className="mx-auto w-full max-w-[900px] px-6 py-6 pb-40 text-white lg:px-10 lg:py-8 lg:pb-48">
+      {/* Header (visual hero) */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#00FFC6]/10 via-white/[0.02] to-transparent px-6 py-7 sm:px-8 sm:py-8">
+        {/* soft shapes */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#00FFC6]/10 blur-3xl" />
+          <div className="absolute -top-16 right-[-120px] h-72 w-72 rounded-full bg-[#00FFC6]/6 blur-3xl" />
+        </div>
+
+        <div className="relative">
+          <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+            <UploadIcon className="h-7 w-7 text-[#00FFC6]" aria-hidden="true" />
+            <span>Upload Track</span>
+          </h1>
           <p className="mt-2 text-sm text-[#B3B3B3]">
             Upload your audio file and submit it for quality control.
           </p>
@@ -95,10 +104,10 @@ export default function ArtistUploadPage() {
       </div>
 
       {/* Panel */}
-      <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
+      <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_-1px_0_0_rgba(255,255,255,0.06)] sm:p-8">
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-white/80" htmlFor="track-title">
+          <label className="block text-lg font-semibold text-white" htmlFor="track-title">
             Track title
           </label>
           <input
@@ -118,14 +127,15 @@ export default function ArtistUploadPage() {
 
         {/* Dropzone */}
         <div className="mt-6">
-          <div className="text-sm font-medium text-white/80">Audio file</div>
-
+        <div className="mt-8 text-lg font-semibold text-white">
+          Audio file
+          </div>
           <p className="mt-2 text-sm text-[#B3B3B3]">
             Recommended for now: <span className="text-white/80">MP3 (320 kbps)</span>, 44.1 kHz or 48 kHz, stereo.
           </p>
-          <p className="mt-2 text-xs text-white/60 leading-relaxed">
-            Most streaming platforms re-encode audio into efficient streaming formats.
-            A high-quality MP3 (320 kbps) is perceptually very close to the original and fully sufficient for streaming.
+          <p className="mt-2 text-xs leading-relaxed text-white/60">
+            Most streaming platforms re-encode audio into efficient streaming formats. A high-quality MP3 (320 kbps) is
+            perceptually very close to the original and fully sufficient for streaming.
           </p>
 
           <div className="mt-3">
@@ -136,23 +146,19 @@ export default function ArtistUploadPage() {
             <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-                    Selected file
-                  </div>
-                  <div className="mt-2 text-sm text-white/90 break-all">
-                    {file.name}
-                  </div>
+                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">Selected file</div>
+                  <div className="mt-2 break-all text-sm text-white/90">{file.name}</div>
                   <div className="mt-1 text-sm text-[#B3B3B3]">
                     {(file.name.split(".").pop() || "").toUpperCase()} · {formatMB(file.size)} MB
                   </div>
                 </div>
 
                 {(file.name.split(".").pop() || "").toLowerCase() === "mp3" ? (
-                  <span className="shrink-0 inline-flex items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
                     MP3 detected
                   </span>
                 ) : (
-                  <span className="shrink-0 inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
                     MP3 320 kbps recommended
                   </span>
                 )}
@@ -160,15 +166,17 @@ export default function ArtistUploadPage() {
             </div>
           ) : null}
 
-          <label className="mt-6 flex items-start gap-3 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/[0.04] px-4 py-3 ring-1 ring-[#00FFC6]/20">
+          <label className="mt-6 flex items-start gap-3 rounded-xl border border-[#00FFC6]/30 bg-gradient-to-br from-[#00FFC6]/[0.06] via-[#00FFC6]/[0.03] to-transparent px-4 py-3 shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]">
+
             <input
               type="checkbox"
               checked={rightsAccepted}
               onChange={(e) => setRightsAccepted(e.target.checked)}
               className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/[0.03] accent-[#00FFC6]"
             />
-            <span className="text-sm font-medium text-white/90 leading-relaxed">
-              I confirm that I own or control all rights to this recording and that it does not contain any copyrighted material used without permission.
+            <span className="text-sm font-medium leading-relaxed text-white/90">
+              I confirm that I own or control all rights to this recording and that it does not contain any copyrighted
+              material used without permission.
             </span>
           </label>
         </div>
@@ -179,7 +187,7 @@ export default function ArtistUploadPage() {
             <button
               onClick={handleUpload}
               disabled={uploading || title.trim().length === 0 || !rightsAccepted}
-              className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+              className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
               type="button"
             >
               <Plus size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
@@ -191,15 +199,11 @@ export default function ArtistUploadPage() {
             <div className="mt-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-                    Uploaded to storage
-                  </div>
-                  <div className="mt-2 text-sm text-[#B3B3B3] break-all">
-                    {audioPath}
-                  </div>
+                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">Uploaded to storage</div>
+                  <div className="mt-2 break-all text-sm text-[#B3B3B3]">{audioPath}</div>
                 </div>
 
-                <span className="shrink-0 inline-flex items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
+                <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
                   Ready
                 </span>
               </div>
@@ -227,7 +231,7 @@ export default function ArtistUploadPage() {
                 <button
                   type="submit"
                   disabled={!rightsAccepted}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
                 >
                   <ArrowRight size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
                   Submit to QC
@@ -240,3 +244,4 @@ export default function ArtistUploadPage() {
     </div>
   );
 }
+
