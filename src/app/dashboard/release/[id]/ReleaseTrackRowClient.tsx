@@ -162,7 +162,7 @@ export default function ReleaseTrackRowClient({
               track={{
                 ...(track as any),
                 id: track.id,
-                artist_id: artistId,
+                artist_id: (artists?.[0]?.id ?? null),
               }}
               showGoToRelease={false}
             />
