@@ -4,13 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  User,
-  CreditCard,
-  Settings,
-  LogOut,
-  Shield,
-} from "lucide-react";
+import { User, CreditCard, Settings, LogOut, Shield, Mail } from "lucide-react";
 
 function versionedUrl(base: string | null, updatedAt: string | null | undefined) {
   if (!base) return null;
@@ -271,6 +265,23 @@ export default function Topbar() {
               >
                 <Settings size={16} />
                 Settings
+              </Link>
+
+              <Link
+                href="/artist/invites"
+                role="menuitem"
+                className="
+                  flex items-center gap-3
+                  px-3 py-2
+                  rounded-lg
+                  text-sm text-white/80
+                  hover:bg-white/5
+                  transition
+                "
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Mail size={16} className="text-white/70" />
+                <span>Messages</span>
               </Link>
 
               <div className="my-2 h-px bg-[#1A1A1C]" />

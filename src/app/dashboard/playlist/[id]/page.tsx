@@ -59,7 +59,15 @@ export default async function PlaylistPage(
           cover_path
         ),
         artist:profiles!tracks_artist_id_fkey (
+          id,
           display_name
+        ),
+        track_collaborators (
+          role,
+          profiles:profile_id (
+            id,
+            display_name
+          )
         ),
         release_tracks:release_tracks!release_tracks_track_id_fkey (
           id,
@@ -122,13 +130,39 @@ export default async function PlaylistPage(
         profiles: t.profiles ?? null,
         artist_profile: t.artist_profile ?? null,
       });
+
+      const ownerArtist =
+        t?.artist?.id && t?.artist?.display_name
+          ? { id: String(t.artist.id), display_name: String(t.artist.display_name) }
+          : null;
+
+      const collabArtists = Array.isArray(t?.track_collaborators)
+        ? t.track_collaborators
+            .map((c: any) =>
+              c?.profiles?.id && c?.profiles?.display_name
+                ? { id: String(c.profiles.id), display_name: String(c.profiles.display_name) }
+                : null
+            )
+            .filter(Boolean)
+        : [];
+
+      const artistsRaw = [ownerArtist, ...collabArtists].filter(Boolean) as {
+        id: string;
+        display_name: string;
+      }[];
+
+      const artists = Array.from(new Map(artistsRaw.map((a) => [a.id, a])).values());
+
       return {
         ...playerTrack,
+        artists,
         release_id: t.release_id ?? null,
         release_track_id: releaseTrackId,
         rating_avg,
         rating_count,
         stream_count,
+        track_collaborators: t.track_collaborators ?? null,
+        artist: t.artist ?? null,
       };
     });
 

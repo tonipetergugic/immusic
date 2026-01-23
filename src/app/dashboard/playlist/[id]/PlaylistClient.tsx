@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Play, Pause, Music } from "lucide-react";
-import { usePlayer } from "@/context/PlayerContext";
 import PlaylistSettingsTrigger from "@/components/PlaylistSettingsTrigger";
 import PlaylistRow from "@/components/PlaylistRow";
 import DeletePlaylistModal from "@/components/DeletePlaylistModal";
@@ -29,6 +28,26 @@ import { reorderPlaylistTracksAction } from "./actions";
 
 import { Playlist, PlaylistTrack } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
+
+/**
+ * ⚠️ ARCHITECTURE GUARD – READ BEFORE CHANGING ⚠️
+ *
+ * This component MUST NOT use `usePlayer()` or subscribe to player-related state
+ * (e.g. isPlaying, currentTrack, queue, time updates).
+ *
+ * Reason:
+ * - Player state updates very frequently
+ * - Subscribing here causes the entire PlaylistClient to re-render
+ * - This triggers re-measurements inside DndContext / SortableContext
+ * - Result: visible flickering in owner playlists with Drag & Drop enabled
+ *
+ * Player-related logic MUST live inside:
+ * - PlaylistRow
+ * - TrackRowBase
+ * - PlayOverlayButton
+ *
+ * Keep PlaylistClient data-only (playlist, tracks, DnD wiring).
+ */
 
 export default function PlaylistClient({
   playlist,
@@ -369,12 +388,6 @@ export default function PlaylistClient({
     setPlayerTracks((prev) => [...prev, enriched]);
   }
 
-  const { playQueue, togglePlay, isPlaying, currentTrack, queue } = usePlayer();
-  const isThisPlaylistQueueActive =
-    !!currentTrack &&
-    queue.length === playerTracks.length &&
-    queue.every((t, i) => t.id === playerTracks[i]?.id);
-  const showPause = isThisPlaylistQueueActive && isPlaying;
 
   if (!isClient) {
     return null;
@@ -396,7 +409,7 @@ export default function PlaylistClient({
 
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
-      transition,
+      transition: undefined,
     };
 
     return (
@@ -447,28 +460,13 @@ export default function PlaylistClient({
               w-full sm:w-auto
               min-w-[132px]
             "
-            // TODO: wire this to your global player "play playlist" action
-            onClick={() => {
-              if (!playerTracks.length) return;
-
-              const sameQueue =
-                queue.length === playerTracks.length &&
-                queue.every((t, i) => t.id === playerTracks[i]?.id);
-
-              if (sameQueue && currentTrack) {
-                togglePlay();
-                return;
-              }
-
-              playQueue(playerTracks, 0);
-            }}
           >
             <span className="inline-flex w-4 items-center justify-center">
-              {showPause ? <Pause size={18} /> : <Play size={18} />}
+              <Play size={18} />
             </span>
 
             <span className="inline-block w-[52px] text-left">
-              {showPause ? "Pause" : "Play"}
+              Play
             </span>
           </button>
 

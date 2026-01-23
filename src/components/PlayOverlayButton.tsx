@@ -100,14 +100,10 @@ export default function PlayOverlayButton({
       }}
       className={[
         "pointer-events-auto",
-        "rounded-full border border-[#00FFC655] bg-black/55 backdrop-blur",
-        "flex items-center justify-center transition-transform duration-200 sm:group-hover:scale-105",
+        "rounded-full border border-[#00FFC655] bg-black/55",
+        "flex items-center justify-center",
         sizeClass,
-        SIZE === "lg"
-          ? "shadow-[0_0_26px_rgba(0,255,198,0.30)]"
-          : SIZE === "md"
-          ? "shadow-[0_0_20px_rgba(0,255,198,0.28)]"
-          : "shadow-[0_0_18px_rgba(0,255,198,0.25)]",
+        "shadow-[0_0_18px_rgba(0,255,198,0.22)]",
       ].join(" ")}
       aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
     >
@@ -132,7 +128,7 @@ export default function PlayOverlayButton({
         flex items-center justify-center
         bg-black/35
         opacity-100 sm:opacity-0 sm:group-hover:opacity-100
-        transition-all duration-200
+        transition-opacity duration-200 will-change-[opacity]
         pointer-events-none
       "
     >

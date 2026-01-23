@@ -5,11 +5,15 @@ import { TrackCard } from "./TrackCard";
 
 type Track = {
   id: string;
+  artist_id: string;
   title: string;
+  version: string | null;
   audio_path: string;
   bpm: number | null;
   key: string | null;
   genre: string | null;
+  has_lyrics: boolean;
+  is_explicit: boolean;
 };
 
 type TrackListClientProps = {
@@ -19,8 +23,11 @@ type TrackListClientProps = {
 export default function TrackListClient({ tracks }: TrackListClientProps) {
   const [query, setQuery] = useState("");
 
+  const q = query.toLowerCase();
+
   const filtered = tracks.filter((track) =>
-    track.title.toLowerCase().includes(query.toLowerCase())
+    track.title.toLowerCase().includes(q) ||
+    (track.version ?? "").toLowerCase().includes(q)
   );
 
   return (

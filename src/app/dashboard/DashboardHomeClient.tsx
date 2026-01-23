@@ -597,7 +597,31 @@ export default function DashboardHomeClient({
                         </div>
                       }
                       subtitleSlot={
-                        rowTrack.artist_id ? (
+                        Array.isArray((rowTrack as any)?.artists) && (rowTrack as any).artists.length > 0 ? (
+                          <div className="mt-1 text-left text-xs text-white/60 truncate">
+                            {(rowTrack as any).artists.map((a: any, idx: number, arr: any[]) => (
+                              <span key={a.id}>
+                                <button
+                                  type="button"
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={() => router.push(`/dashboard/artist/${String(a.id)}`)}
+                                  className="
+                                    hover:text-[#00FFC6] hover:underline underline-offset-2
+                                    transition-colors
+                                    focus:outline-none
+                                  "
+                                  title={String(a.display_name)}
+                                >
+                                  {String(a.display_name)}
+                                </button>
+                                {idx < arr.length - 1 ? ", " : null}
+                              </span>
+                            ))}
+                          </div>
+                        ) : rowTrack.artist_id ? (
                           <button
                             type="button"
                             onPointerDown={(e) => {

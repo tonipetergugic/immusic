@@ -14,7 +14,9 @@ export default async function MyTracksPage() {
 
   const { data, error } = await supabase
     .from("tracks")
-    .select("id,title,audio_path,bpm,key,genre,has_lyrics,is_explicit")
+    .select(
+      "id,title,artist_id,version,audio_path,bpm,key,genre,has_lyrics,is_explicit"
+    )
     .eq("artist_id", user.id)
     .eq("status", "approved")
     .order("created_at", { ascending: false });

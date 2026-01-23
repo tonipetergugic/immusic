@@ -88,6 +88,25 @@ export async function GET(req: Request) {
 
   if (profilesErr) debugWarnings.push(`profiles: ${profilesErr.message}`);
 
+  const { data: collabs, error: collabsErr } = trackIds.length
+    ? await supabase
+        .from("track_collaborators")
+        .select("track_id, profiles:profile_id ( id, display_name )")
+        .in("track_id", trackIds)
+    : { data: [], error: null };
+
+  if (collabsErr) debugWarnings.push(`track_collaborators: ${collabsErr.message}`);
+
+  const collabsByTrackId = new Map<string, { id: string; display_name: string }[]>();
+  (collabs ?? []).forEach((row: any) => {
+    const tid = row?.track_id;
+    const p = row?.profiles;
+    if (!tid || !p?.id) return;
+    const arr = collabsByTrackId.get(tid) ?? [];
+    arr.push({ id: String(p.id), display_name: String(p.display_name ?? "Unknown Artist") });
+    collabsByTrackId.set(tid, arr);
+  });
+
   // Aggregates + release_track_id nachladen (für Ratings/Streams UI)
   const { data: releaseTracks, error: rtErr } = trackIds.length
     ? await supabase
@@ -145,6 +164,20 @@ export async function GET(req: Request) {
 
     const releaseTrackId = rt?.id ?? null;
 
+    const ownerArtist = r.artist_id
+      ? { id: String(r.artist_id), display_name: String(prof?.display_name ?? "Unknown Artist") }
+      : null;
+
+    const collabArtists = collabsByTrackId.get(r.track_id) ?? [];
+
+    const artists = Array.from(
+      new Map(
+        [ownerArtist, ...collabArtists]
+          .filter(Boolean)
+          .map((a: any) => [a.id, a]),
+      ).values(),
+    );
+
     const item: any = {
       track_id: r.track_id,
       release_id: r.release_id,
@@ -164,6 +197,8 @@ export async function GET(req: Request) {
       genre: t?.genre ?? null,
       bpm: t?.bpm ?? null,
       key: t?.key ?? null,
+
+      artists,
 
       exposure: {
         target_listeners: r.target_listeners,

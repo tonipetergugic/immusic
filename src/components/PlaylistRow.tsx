@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useRouter } from "next/navigation";
 import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
@@ -7,7 +8,7 @@ import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
 
-export default function PlaylistRow({
+function PlaylistRow({
   track,
   onDelete,
   tracks,
@@ -34,6 +35,12 @@ export default function PlaylistRow({
     e.stopPropagation();
 
     router.push(`/dashboard/artist/${track.artist_id}`);
+  }
+
+  function goToArtistId(artistId: string, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/dashboard/artist/${artistId}`);
   }
 
   return (
@@ -68,7 +75,31 @@ export default function PlaylistRow({
           </button>
         }
         subtitleSlot={
-          track.profiles?.display_name ? (
+          Array.isArray((track as any)?.artists) && (track as any).artists.length > 0 ? (
+            <div className="mt-1 text-left text-xs text-white/60 truncate">
+              {(track as any).artists.map((a: any, idx: number) => (
+                <span key={a.id}>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => goToArtistId(String(a.id), e)}
+                    className="
+                      hover:text-[#00FFC6] hover:underline underline-offset-2
+                      transition-colors
+                      focus:outline-none
+                    "
+                    title={String(a.display_name)}
+                  >
+                    {String(a.display_name)}
+                  </button>
+                  {idx < (track as any).artists.length - 1 ? ", " : null}
+                </span>
+              ))}
+            </div>
+          ) : track.profiles?.display_name ? (
             <button
               type="button"
               onPointerDown={(e) => {
@@ -112,3 +143,5 @@ export default function PlaylistRow({
     </div>
   );
 }
+
+export default memo(PlaylistRow);

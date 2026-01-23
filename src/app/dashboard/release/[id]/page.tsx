@@ -62,7 +62,19 @@ export default async function ReleaseDetailPage({
         duration,
         bpm,
         key,
-        genre
+        genre,
+        artist_id,
+        artist:profiles!tracks_artist_id_fkey (
+          id,
+          display_name
+        ),
+        track_collaborators (
+          role,
+          profiles:profile_id (
+            id,
+            display_name
+          )
+        )
       )
     `
     )
@@ -220,8 +232,26 @@ export default async function ReleaseDetailPage({
                   key: row.track?.key ?? null,
                   genre: row.track?.genre ?? null,
                 }}
-                artistId={release.artist_id}
-                artistName={artistName}
+                artists={Array.from(
+                  new Map(
+                    [
+                      row?.track?.artist?.id && row?.track?.artist?.display_name
+                        ? { id: String(row.track.artist.id), display_name: String(row.track.artist.display_name) }
+                        : null,
+                      ...(Array.isArray(row?.track?.track_collaborators)
+                        ? row.track.track_collaborators
+                            .map((c: any) =>
+                              c?.profiles?.id && c?.profiles?.display_name
+                                ? { id: String(c.profiles.id), display_name: String(c.profiles.display_name) }
+                                : null,
+                            )
+                            .filter(Boolean)
+                        : []),
+                    ]
+                      .filter(Boolean)
+                      .map((a: any) => [a.id, a]),
+                  ).values(),
+                )}
                 ratingAvg={row.rating_avg ?? null}
                 ratingCount={row.rating_count ?? null}
                 streamCount={row.stream_count ?? 0}

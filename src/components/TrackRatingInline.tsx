@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Tooltip from "@/components/Tooltip";
 
 type ApiErrorCode =
@@ -49,6 +49,10 @@ type TrackRatingInlineProps = {
   readOnly?: boolean;
 };
 
+function isRatingsOk(x: RatingsGetOk | RatingsErr): x is RatingsGetOk {
+  return x.ok === true;
+}
+
 function showNotice(message: string) {
   window.dispatchEvent(new CustomEvent("immusic:notice", { detail: { message } }));
 }
@@ -72,7 +76,7 @@ function mapNotice(code?: ApiErrorCode, raw?: string) {
   return "Rating failed. Please try again.";
 }
 
-export default function TrackRatingInline({
+function TrackRatingInline({
   releaseTrackId,
   initialAvg = null,
   initialCount = 0,
@@ -95,14 +99,21 @@ export default function TrackRatingInline({
     listened_seconds: number | null;
   }>({ window_open: null, can_rate: null, listened_seconds: null });
 
-  const alreadyRated = myStars !== null;
+  const [hydrated, setHydrated] = useState(false);
+
+  const didInitialFetchRef = useRef<string | null>(null);
+
+  const effectiveMyStars = hydrated ? myStars : initialMyStars;
+  const alreadyRated = effectiveMyStars !== null;
   const [tapInfoOpen, setTapInfoOpen] = useState(false);
   const [confirmOpenFor, setConfirmOpenFor] = useState<number | null>(null);
 
   const displayStars = useMemo(() => {
     // PlaylistRow: myStars wins; otherwise derived from avg
-    return readOnly ? Math.floor(avg ?? 0) : (myStars ?? Math.floor(avg ?? 0));
-  }, [myStars, avg, readOnly]);
+    const effectiveAvg = hydrated ? avg : initialAvg;
+    const effectiveMyStars = hydrated ? myStars : initialMyStars;
+    return readOnly ? Math.floor(effectiveAvg ?? 0) : (effectiveMyStars ?? Math.floor(effectiveAvg ?? 0));
+  }, [myStars, avg, initialAvg, initialMyStars, hydrated, readOnly]);
 
   const effectiveStars = hover ?? displayStars;
 
@@ -122,28 +133,47 @@ export default function TrackRatingInline({
     window.setTimeout(() => setTapInfoOpen(false), 1800);
   }
 
-  async function refresh() {
-    const res = await fetch(`/api/ratings?releaseTrackId=${encodeURIComponent(releaseTrackId)}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-    });
+  async function refresh(signal?: AbortSignal) {
+    try {
+      const res = await fetch(
+        `/api/ratings?releaseTrackId=${encodeURIComponent(releaseTrackId)}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          signal,
+        }
+      );
 
-    const json = (await res.json()) as RatingsGetOk | RatingsErr;
+      const json = (await res.json()) as RatingsGetOk | RatingsErr;
 
-    if (!json || json.ok !== true) {
-      const errObj = json as RatingsErr;
-      // If unauthorized, we still show non-interactive baseline
-      if (res.status !== 401) showNotice(mapNotice(errObj.code, errObj.error));
-      return;
-    }
+      if (!json || !isRatingsOk(json)) {
+        const errObj = json as RatingsErr;
+        if (res.status !== 401) showNotice(mapNotice(errObj.code, errObj.error));
+        return;
+      }
 
-    setAvg(json.summary.rating_avg ?? null);
-    setCount(json.summary.rating_count ?? 0);
-    setStreams(json.summary.stream_count ?? 0);
-    if (!readOnly) {
-      setMyStars(json.my_stars ?? null);
-      setEligibility(json.eligibility ?? { window_open: null, can_rate: null, listened_seconds: null });
+      const nextAvg = json.summary.rating_avg ?? null;
+      const nextCount = json.summary.rating_count ?? 0;
+      const nextStreams = json.summary.stream_count ?? 0;
+
+      setAvg((prev) => (prev === nextAvg ? prev : nextAvg));
+      setCount((prev) => (prev === nextCount ? prev : nextCount));
+      setStreams((prev) => (prev === nextStreams ? prev : nextStreams));
+      if (!readOnly) {
+        const nextMy = json.my_stars ?? null;
+        setMyStars((prev) => (prev === nextMy ? prev : nextMy));
+        setEligibility(
+          json.eligibility ?? { window_open: null, can_rate: null, listened_seconds: null }
+        );
+      }
+
+      setHydrated(true);
+    } catch (e: any) {
+      // Abort is expected during unmount / rerender; ignore silently.
+      if (e?.name === "AbortError") return;
+      const raw = e instanceof Error ? e.message : "";
+      showNotice(mapNotice(undefined, raw));
     }
   }
 
@@ -160,11 +190,19 @@ export default function TrackRatingInline({
     if (!releaseTrackId) return;
     if (readOnly) return;
 
-    // Important: avoid N+1 GETs. If the parent already provided initial summary,
-    // we skip the initial refresh and only refresh after a POST (rating) action.
+    // If the parent provided initial summary, we skip the initial refresh.
     if (hasInitial) return;
 
-    void refresh();
+    // Run only once per releaseTrackId to avoid loops in playlists / rerenders.
+    if (didInitialFetchRef.current === releaseTrackId) return;
+    didInitialFetchRef.current = releaseTrackId;
+
+    const ac = new AbortController();
+    void refresh(ac.signal);
+
+    return () => {
+      ac.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [releaseTrackId, readOnly, hasInitial]);
 
@@ -176,7 +214,7 @@ export default function TrackRatingInline({
       setSubmitting(true);
 
       // Speichere myStars vor dem API-Call, um zu prüfen, ob es das erste Rating war
-      const wasFirstRating = myStars === null;
+      const wasFirstRating = effectiveMyStars === null;
 
       const res = await fetch("/api/ratings", {
         method: "POST",
@@ -218,6 +256,11 @@ export default function TrackRatingInline({
   }
 
   if (!releaseTrackId) return null;
+
+  const shownAvg = hydrated ? avg : initialAvg;
+  const shownCount = hydrated ? count : initialCount;
+  const shownStreams = hydrated ? streams : initialStreams;
+  const shownMyStars = hydrated ? myStars : initialMyStars;
 
   return (
     <div className="flex items-center gap-2 text-xs text-neutral-500">
@@ -361,13 +404,13 @@ export default function TrackRatingInline({
         </span>
       ) : null}
 
-      {count && count > 0 ? (
+      {shownCount && shownCount > 0 ? (
         <span className="tabular-nums whitespace-nowrap">
           <span className="text-[#00FFC6] font-semibold">
-            Ø {Number(avg ?? 0).toFixed(1)}
+            Ø {Number(shownAvg ?? 0).toFixed(1)}
           </span>{" "}
           <span className="text-white/50">
-            ({count})
+            ({shownCount})
           </span>
         </span>
       ) : (
@@ -382,8 +425,10 @@ export default function TrackRatingInline({
           showStreamsOnDesktopOnly ? "hidden md:inline" : "",
         ].join(" ")}
       >
-        {streams ?? 0} streams
+        {shownStreams ?? 0} streams
       </span>
     </div>
   );
 }
+
+export default memo(TrackRatingInline);

@@ -33,8 +33,7 @@ export default function ReleaseTrackRowClient({
   startIndex,
   positionLabel,
   track,
-  artistId,
-  artistName,
+  artists,
   ratingAvg,
   ratingCount,
   duration,
@@ -46,8 +45,7 @@ export default function ReleaseTrackRowClient({
   startIndex: number;
   positionLabel: string;
   track: { id: string; title: string | null; bpm: number | null; key: string | null; genre: string | null };
-  artistId: string;
-  artistName: string;
+  artists: { id: string; display_name: string }[];
   ratingAvg: number | null;
   ratingCount: number | null;
   duration: string | null;
@@ -76,7 +74,7 @@ export default function ReleaseTrackRowClient({
           {
             id: track.id,
             title: track.title ?? null,
-            artist_id: artistId ?? null,
+            artist_id: (artists?.[0]?.id ?? null) as any,
             release_id: releaseId,
             bpm: track.bpm ?? null,
             key: track.key ?? null,
@@ -113,26 +111,37 @@ export default function ReleaseTrackRowClient({
           </button>
         }
         subtitleSlot={
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/dashboard/artist/${artistId}`);
-            }}
-            className="
-              mt-1 text-left text-xs text-white/60 truncate
-              hover:text-[#00FFC6] hover:underline underline-offset-2
-              transition-colors
-              focus:outline-none
-            "
-            title={artistName}
-          >
-            {artistName}
-          </button>
+          Array.isArray(artists) && artists.length > 0 ? (
+            <div className="mt-1 text-left text-xs text-white/60 truncate">
+              {artists.map((a, idx) => (
+                <span key={a.id}>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push(`/dashboard/artist/${a.id}`);
+                    }}
+                    className="
+                      hover:text-[#00FFC6] hover:underline underline-offset-2
+                      transition-colors
+                      focus:outline-none
+                    "
+                    title={a.display_name}
+                  >
+                    {a.display_name}
+                  </button>
+                  {idx < artists.length - 1 ? ", " : null}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-1 text-xs text-white/40 truncate">Unknown artist</div>
+          )
         }
         metaSlot={
           <TrackRatingInline
