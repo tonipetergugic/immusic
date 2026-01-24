@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { respondToInviteAction } from "./actions";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 type InviteRow = {
   id: string;
@@ -84,8 +85,7 @@ export default async function ArtistInvitesPage() {
                   <div className="mt-1 text-xs text-white/50">
                     Track:{" "}
                     <span className="text-white/80">
-                      {inv.track?.title ?? "Unknown track"}
-                      {inv.track?.version ? ` (${inv.track.version})` : ""}
+                      {formatTrackTitle(inv.track?.title, (inv.track as any)?.version)}
                     </span>
                   </div>
                 </div>

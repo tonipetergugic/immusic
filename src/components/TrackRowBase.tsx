@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 type TrackRowBaseProps = {
   track: PlayerTrack;
@@ -144,7 +145,7 @@ export default function TrackRowBase({
           titleSlot
         ) : (
           <Link href={to} className="text-left text-[13px] font-semibold leading-tight text-white truncate hover:text-[#00FFC6] transition-colors">
-            {track.title ?? "Untitled"}
+            {formatTrackTitle(track.title, (track as any).version)}
           </Link>
         )}
 

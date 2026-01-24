@@ -82,7 +82,8 @@ export default async function ArtistPage({
           id,
           title,
           audio_path,
-          artist_id
+          artist_id,
+          version
         ),
         releases:releases!release_tracks_release_id_fkey(
           id,
@@ -215,7 +216,8 @@ export default async function ArtistPage({
           audio_path,
           artist_id,
           bpm,
-          key
+          key,
+          version
         ),
         releases:releases!release_tracks_release_id_fkey (
           id,
@@ -307,6 +309,7 @@ export default async function ArtistPage({
       cover_url,
       bpm: trackData.bpm ?? null,
       key: trackData.key ?? null,
+      version: trackData.version ?? null,
     });
     
     // Füge optionale Felder hinzu

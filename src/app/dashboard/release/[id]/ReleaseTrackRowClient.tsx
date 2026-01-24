@@ -8,6 +8,7 @@ import TrackRowBase from "@/components/TrackRowBase";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import { getReleaseQueueAction } from "./actions";
 import type { PlayerTrack } from "@/types/playerTrack";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 const queueCache = new Map<string, PlayerTrack[]>();
 const inflight = new Map<string, Promise<PlayerTrack[]>>();
@@ -44,7 +45,7 @@ export default function ReleaseTrackRowClient({
   releaseId: string;
   startIndex: number;
   positionLabel: string;
-  track: { id: string; title: string | null; bpm: number | null; key: string | null; genre: string | null };
+  track: { id: string; title: string | null; bpm: number | null; key: string | null; genre: string | null; version: string | null };
   artists: { id: string; display_name: string }[];
   ratingAvg: number | null;
   ratingCount: number | null;
@@ -105,9 +106,9 @@ export default function ReleaseTrackRowClient({
             hover:text-[#00FFC6] transition-colors
             focus:outline-none
           "
-            title={track.title ?? ""}
+            title={formatTrackTitle(track.title, (track as any).version)}
           >
-            {track.title ?? "—"}
+            {formatTrackTitle(track.title, (track as any).version)}
           </button>
         }
         subtitleSlot={

@@ -45,6 +45,7 @@ export async function getReleaseQueueForPlayerServer(
         artist_id,
         bpm,
         key,
+        version,
         profiles:artist_id ( display_name )
       )
     `

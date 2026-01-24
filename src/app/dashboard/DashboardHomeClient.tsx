@@ -14,6 +14,7 @@ import { fetchPerformanceDiscovery } from "@/lib/discovery/fetchPerformanceDisco
 import type { DevelopmentDiscoveryItem } from "@/lib/discovery/fetchDevelopmentDiscovery.client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 type HomeModule = {
   id: string;
@@ -72,7 +73,7 @@ export default function DashboardHomeClient({
   const [perfArtistMap, setPerfArtistMap] = useState<Record<string, string>>({});
   const [perfReleaseTrackMap, setPerfReleaseTrackMap] = useState<Record<string, { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }>>({});
   const [perfTrackMetaMap, setPerfTrackMetaMap] = useState<
-    Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null }>
+    Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null }>
   >({});
   // Multi-artist (collabs) for Home TrackRows
   const [trackArtistsMap, setTrackArtistsMap] = useState<Record<string, { id: string; display_name: string }[]>>({});
@@ -100,11 +101,11 @@ export default function DashboardHomeClient({
           if (trackIds.length > 0) {
             const { data: tmeta, error: tmetaErr } = await supabase
               .from("tracks")
-              .select("id, bpm, key, genre, audio_path")
+              .select("id, title, bpm, key, genre, audio_path, version")
               .in("id", trackIds);
 
             if (!tmetaErr && tmeta) {
-              const m: Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null }> = {};
+              const m: Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null }> = {};
               for (const t of tmeta as any[]) {
                 if (!t?.id) continue;
                 m[t.id] = {
@@ -112,6 +113,7 @@ export default function DashboardHomeClient({
                   key: t.key ?? null,
                   genre: t.genre ?? null,
                   audio_path: t.audio_path ?? null,
+                  version: t.version ?? null,
                 };
               }
               if (!cancelled) setPerfTrackMetaMap(m);
@@ -321,6 +323,7 @@ export default function DashboardHomeClient({
         id: trackId,
         artist_id: it.artist_id,
         title,
+        version: (it as any)?.version ?? null,
         cover_url: coverUrl,
         audio_url: audioUrl,
         audio_path: it.audio_path ?? null,
@@ -376,11 +379,13 @@ export default function DashboardHomeClient({
 
       const rtKey = `${releaseId}:${trackId}`;
       const rt = perfReleaseTrackMap[rtKey];
+      const meta = perfTrackMetaMap?.[trackId];
 
       return {
         id: trackId,
         artist_id: artistId,
         title,
+        version: (meta as any)?.version ?? null,
         cover_url: coverUrl,
         audio_url: audioUrl,
         audio_path: audioPath,
@@ -687,9 +692,9 @@ export default function DashboardHomeClient({
                               hover:text-[#00FFC6] transition-colors
                               focus:outline-none
                             "
-                            title={title}
+                            title={formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
                           >
-                            {title}
+                            {formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
                           </button>
                         </div>
                       }
@@ -936,9 +941,9 @@ export default function DashboardHomeClient({
                             hover:text-[#00FFC6] transition-colors
                             focus:outline-none
                           "
-                          title={title}
+                          title={formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
                         >
-                          {title}
+                          {formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
                         </button>
                       </div>
                     }

@@ -125,6 +125,7 @@ export default async function PlaylistPage(
         bpm: t.bpm ?? null,
         key: t.key ?? null,
         genre: t.genre ?? null,
+        version: t.version ?? null,
         // important: playlist query joins artist as "artist"
         artist: t.artist ?? null,
         profiles: t.profiles ?? null,

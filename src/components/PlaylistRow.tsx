@@ -7,6 +7,7 @@ import PlayOverlayButton from "@/components/PlayOverlayButton";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 function PlaylistRow({
   track,
@@ -69,9 +70,9 @@ function PlaylistRow({
             hover:text-[#00FFC6] transition-colors
             focus:outline-none
           "
-            title={track.title}
+            title={formatTrackTitle(track.title, (track as any).version)}
           >
-            {track.title}
+            {formatTrackTitle(track.title, (track as any).version)}
           </button>
         }
         subtitleSlot={

@@ -126,6 +126,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
         tracks:tracks!library_tracks_track_id_fkey(
           id,
           title,
+          version,
           audio_path,
           created_at,
           artist_id,
@@ -180,6 +181,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
             return {
               ...t,
               // needed for rating + navigation
+              version: t.version ?? null,
               release_track_id: rt?.id ?? null,
               release_id: rt?.release_id ?? t?.release_id ?? null,
 
@@ -242,6 +244,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
         return {
           id: t.id,
           title: t.title ?? null,
+          version: t.version ?? null,
           artist_id: t.artist_id ?? null,
           audio_url,
           cover_url,
@@ -410,7 +413,8 @@ export default async function LibraryPage(props: LibraryPageProps) {
               {trackData.length > 0 ? (
                 <div className="flex flex-col">
                   {trackData.map((track, index) => (
-                    <TrackRowBase
+                    <React.Fragment key={track.id}>
+                      <TrackRowBase
                       key={`trackrow:${String(track.id)}:${index}`}
                       track={track}
                       index={index}
@@ -469,6 +473,7 @@ export default async function LibraryPage(props: LibraryPageProps) {
                       genreSlot={null}
                       actionsSlot={<TrackOptionsTrigger track={track} showGoToRelease={false} />}
                     />
+                    </React.Fragment>
                   ))}
                 </div>
               ) : (

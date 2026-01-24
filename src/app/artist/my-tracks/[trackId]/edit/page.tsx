@@ -42,7 +42,7 @@ export default async function EditTrackPage({
           track={{
             id: track.id,
             title: track.title,
-            version: track.version ?? "ORIGINAL",
+            version: track.version ?? "None",
             bpm: track.bpm,
             key: track.key,
             genre: track.genre,

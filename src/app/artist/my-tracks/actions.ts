@@ -122,7 +122,7 @@ export async function renameTrackAction(
       genre: payload.genre,
       has_lyrics: payload.has_lyrics,
       is_explicit: payload.is_explicit,
-      version: payload.version ?? "ORIGINAL",
+      version: (payload.version && payload.version !== "" ? payload.version : "None"),
     })
     .eq("id", trackId)
     .eq("artist_id", user.id);

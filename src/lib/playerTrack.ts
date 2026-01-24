@@ -9,6 +9,7 @@ type ProfileSource = ProfileLike | ProfileLike[] | null | undefined;
 type TrackLike = {
   id: string;
   title?: string | null;
+  version?: string | null;
   artist_id?: string | null;
   audio_url: string;            // MUSS serverseitig gesetzt sein
   cover_url?: string | null;    // darf null sein
@@ -45,9 +46,12 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     normalizeProfile(track.artist) ??
     null;
 
+  const resultVersion = (track as any).version ?? null;
+
   return {
     id: track.id,
     title: track.title ?? "Untitled Track",
+    version: resultVersion,
     artist_id: track.artist_id ?? "",
     audio_url: track.audio_url,
     cover_url: track.cover_url ?? null,

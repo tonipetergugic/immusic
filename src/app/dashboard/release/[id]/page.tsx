@@ -63,6 +63,7 @@ export default async function ReleaseDetailPage({
         bpm,
         key,
         genre,
+        version,
         artist_id,
         artist:profiles!tracks_artist_id_fkey (
           id,
@@ -231,6 +232,7 @@ export default async function ReleaseDetailPage({
                   bpm: row.track?.bpm ?? null,
                   key: row.track?.key ?? null,
                   genre: row.track?.genre ?? null,
+                  version: row.track?.version ?? null,
                 }}
                 artists={Array.from(
                   new Map(

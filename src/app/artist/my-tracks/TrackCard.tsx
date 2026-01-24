@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Music, MoreVertical, CheckCircle2, AlertCircle } from "lucide-react";
 import { deleteTrackAction } from "./actions";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 type Track = {
   id: string;
@@ -85,12 +86,8 @@ export function TrackCard({ track }: TrackCardProps) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <div className="truncate text-sm font-semibold text-white">
-                {track.title}
+                {formatTrackTitle(track.title, (track as any).version)}
               </div>
-
-              <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-semibold text-white/70">
-                {(track.version ?? "ORIGINAL").replaceAll("_", " ")}
-              </span>
             </div>
 
             <div className="mt-0.5 truncate text-xs text-[#B3B3B3]">

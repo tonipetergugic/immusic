@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import type { PlayerTrack } from "@/types/playerTrack";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 type Props = {
   track: PlayerTrack;
@@ -62,7 +63,7 @@ export default function TrackCard({ track, index, tracks }: Props) {
       </div>
 
       <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
-        {track.title}
+        {formatTrackTitle(track.title, (track as any).version)}
       </h3>
       <p className="text-xs text-white/50 truncate">
         {track.profiles?.display_name ?? "Unknown Artist"}

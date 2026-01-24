@@ -71,7 +71,7 @@ export async function GET(req: Request) {
 
   // Optional: Metadaten nachladen (wenn Spalten/Tables abweichen, Feed bleibt trotzdem nutzbar)
   const { data: tracks, error: tracksErr } = trackIds.length
-    ? await supabase.from("tracks").select("id,title,audio_path,genre,bpm,key").in("id", trackIds)
+    ? await supabase.from("tracks").select("id,title,audio_path,genre,bpm,key,version").in("id", trackIds)
     : { data: [], error: null };
 
   if (tracksErr) debugWarnings.push(`tracks: ${tracksErr.message}`);
@@ -197,6 +197,7 @@ export async function GET(req: Request) {
       genre: t?.genre ?? null,
       bpm: t?.bpm ?? null,
       key: t?.key ?? null,
+      version: t?.version ?? null,
 
       artists,
 

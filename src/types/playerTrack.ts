@@ -1,6 +1,7 @@
 export type PlayerTrack = {
   id: string;
   title: string;
+  version?: string | null;
   artist_id: string;
   artists?: { id: string; display_name: string }[];
   cover_url: string | null;
