@@ -14,6 +14,7 @@ type Track = {
   genre: string | null;
   has_lyrics: boolean;
   is_explicit: boolean;
+  status: "approved" | "development" | "performance";
 };
 
 type TrackListClientProps = {
@@ -25,10 +26,24 @@ export default function TrackListClient({ tracks }: TrackListClientProps) {
 
   const q = query.toLowerCase();
 
-  const filtered = tracks.filter((track) =>
-    track.title.toLowerCase().includes(q) ||
-    (track.version ?? "").toLowerCase().includes(q)
-  );
+  const statusRank: Record<Track["status"], number> = {
+    approved: 0,
+    development: 1,
+    performance: 2,
+  };
+
+  const filtered = tracks
+    .filter(
+      (track) =>
+        track.title.toLowerCase().includes(q) ||
+        (track.version ?? "").toLowerCase().includes(q)
+    )
+    .sort((a, b) => {
+      const ra = statusRank[a.status];
+      const rb = statusRank[b.status];
+      if (ra !== rb) return ra - rb;
+      return a.title.localeCompare(b.title);
+    });
 
   return (
     <div className="space-y-6 max-w-[900px] mx-auto">

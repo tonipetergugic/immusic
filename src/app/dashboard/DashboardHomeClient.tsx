@@ -74,6 +74,8 @@ export default function DashboardHomeClient({
   const [perfTrackMetaMap, setPerfTrackMetaMap] = useState<
     Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null }>
   >({});
+  // Multi-artist (collabs) for Home TrackRows
+  const [trackArtistsMap, setTrackArtistsMap] = useState<Record<string, { id: string; display_name: string }[]>>({});
 
   useEffect(() => {
     if (discoveryMode !== "performance") return;
@@ -211,6 +213,67 @@ export default function DashboardHomeClient({
     };
   }, [discoveryMode, devGenre]);
 
+  useEffect(() => {
+    // Build a stable set of track ids that can appear in either mode
+    const devTrackIds = (devItems ?? []).map((x: any) => x?.track_id).filter(Boolean) as string[];
+    const perfTrackIds = (performanceItems ?? []).map((x: any) => x?.track_id).filter(Boolean) as string[];
+
+    const trackIds = Array.from(new Set([...devTrackIds, ...perfTrackIds]));
+    if (trackIds.length === 0) return;
+
+    let cancelled = false;
+
+    async function loadTrackArtists() {
+      try {
+        const { data, error } = await supabase
+          .from("track_collaborators")
+          .select(
+            `
+            track_id,
+            role,
+            position,
+            profiles:profiles!track_collaborators_profile_id_fkey (
+              id,
+              display_name
+            )
+          `
+          )
+          .in("track_id", trackIds)
+          .order("position", { ascending: true });
+
+        if (error) return;
+        if (!data) return;
+
+        const map: Record<string, { id: string; display_name: string }[]> = {};
+
+        for (const row of data as any[]) {
+          const trackId = row?.track_id;
+          const p = row?.profiles;
+          if (!trackId || !p?.id) continue;
+
+          if (!map[trackId]) map[trackId] = [];
+
+          if (!map[trackId].some((a) => a.id === String(p.id))) {
+            map[trackId].push({
+              id: String(p.id),
+              display_name: String(p.display_name ?? "Unknown Artist"),
+            });
+          }
+        }
+
+        if (!cancelled) setTrackArtistsMap(map);
+      } catch {
+        // ignore: UI fallback to single artist
+      }
+    }
+
+    loadTrackArtists();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [devItems, performanceItems, supabase]);
+
   // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
   const playlistModule =
@@ -270,10 +333,27 @@ export default function DashboardHomeClient({
         my_stars: it.my_stars ?? null,
         bpm: it.bpm ?? null,
         key: it.key ?? null,
+        artists: (() => {
+          const ownerId = String(it.artist_id ?? "");
+          const ownerName = String(it.artist_name ?? "—");
+          const owner = ownerId ? [{ id: ownerId, display_name: ownerName }] : [];
+
+          const collabs = (trackArtistsMap?.[trackId] ?? []).map((a) => ({
+            id: String(a.id),
+            display_name: String(a.display_name ?? "Unknown Artist"),
+          }));
+
+          const out: { id: string; display_name: string }[] = [];
+          for (const a of [...owner, ...collabs]) {
+            if (!a?.id) continue;
+            if (!out.some((x) => x.id === a.id)) out.push(a);
+          }
+          return out;
+        })(),
         // genre bleibt im UI-Slot über it.genre, nicht zwingend Teil von PlayerTrack
       } as unknown as PlayerTrack;
     });
-  }, [devItems, supabase]);
+  }, [devItems, supabase, trackArtistsMap]);
 
   const perfQueue = useMemo(() => {
     return performanceItemsFiltered.map((it) => {
@@ -312,9 +392,26 @@ export default function DashboardHomeClient({
         stream_count: rt?.stream_count ?? (it.streams_30d ?? 0),
         bpm: perfTrackMetaMap?.[trackId]?.bpm ?? null,
         key: perfTrackMetaMap?.[trackId]?.key ?? null,
+        artists: (() => {
+          const ownerId = String(artistId ?? "");
+          const ownerName = String(artistName ?? "Unknown Artist");
+          const owner = ownerId ? [{ id: ownerId, display_name: ownerName }] : [];
+
+          const collabs = (trackArtistsMap?.[trackId] ?? []).map((a) => ({
+            id: String(a.id),
+            display_name: String(a.display_name ?? "Unknown Artist"),
+          }));
+
+          const out: { id: string; display_name: string }[] = [];
+          for (const a of [...owner, ...collabs]) {
+            if (!a?.id) continue;
+            if (!out.some((x) => x.id === a.id)) out.push(a);
+          }
+          return out;
+        })(),
       } as unknown as PlayerTrack;
     });
-  }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase]);
+  }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
   return (
     <div className="space-y-6">
@@ -846,7 +943,31 @@ export default function DashboardHomeClient({
                       </div>
                     }
                     subtitleSlot={
-                      rowTrack.artist_id ? (
+                      Array.isArray((rowTrack as any)?.artists) && (rowTrack as any).artists.length > 0 ? (
+                        <div className="mt-1 text-left text-xs text-white/60 truncate">
+                          {(rowTrack as any).artists.map((a: any, idx: number, arr: any[]) => (
+                            <span key={a.id}>
+                              <button
+                                type="button"
+                                onPointerDown={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                                onClick={() => router.push(`/dashboard/artist/${String(a.id)}`)}
+                                className="
+                                  hover:text-[#00FFC6] hover:underline underline-offset-2
+                                  transition-colors
+                                  focus:outline-none
+                                "
+                                title={String(a.display_name)}
+                              >
+                                {String(a.display_name)}
+                              </button>
+                              {idx < arr.length - 1 ? ", " : null}
+                            </span>
+                          ))}
+                        </div>
+                      ) : rowTrack.artist_id ? (
                         <button
                           type="button"
                           onPointerDown={(e) => {

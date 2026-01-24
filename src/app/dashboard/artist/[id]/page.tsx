@@ -10,6 +10,9 @@ import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRowBase from "@/components/TrackRowBase";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import FollowCountsClient from "./FollowCountsClient";
+import LibraryTrackArtists from "@/components/LibraryTrackArtists";
+
+const __DEV__ = process.env.NODE_ENV !== "production";
 
 export default async function ArtistPage({
   params,
@@ -127,28 +130,75 @@ export default async function ArtistPage({
     try {
       json = rawText ? JSON.parse(rawText) : null;
     } catch (e) {
-      console.error("Top tracks API returned non-JSON:", {
-        status: res.status,
-        statusText: res.statusText,
-        body: rawText?.slice(0, 500) ?? "",
-      });
+      if (__DEV__) {
+        console.error("Top tracks API returned non-JSON:", {
+          status: res.status,
+          statusText: res.statusText,
+          body: rawText?.slice(0, 500) ?? "",
+        });
+      }
     }
 
     if (res.ok && json?.ok === true && Array.isArray(json.tracks)) {
       topTracksRawApi = json.tracks;
     } else {
-      console.error("Top tracks API failed:", {
-        status: res.status,
-        statusText: res.statusText,
-        body: rawText?.slice(0, 500) ?? "",
-        json,
-      });
+      if (__DEV__) {
+        console.error("Top tracks API failed:", {
+          status: res.status,
+          statusText: res.statusText,
+          body: rawText?.slice(0, 500) ?? "",
+          json,
+        });
+      }
     }
   } catch (e) {
-    console.error("Top tracks API error:", e);
+    if (__DEV__) {
+      console.error("Top tracks API error:", e);
+    }
   }
 
   const topTrackIds = topTracksRawApi.map((r) => r.track_id);
+
+  // TopTracks: load collaborators (multi-artist)
+  let topTrackArtistsMap: Record<string, { id: string; display_name: string }[]> = {};
+
+  if (topTrackIds.length > 0) {
+    const { data: tcRows, error: tcErr } = await supabase
+      .from("track_collaborators")
+      .select(
+        `
+        track_id,
+        position,
+        profiles:profiles!track_collaborators_profile_id_fkey (
+          id,
+          display_name
+        )
+      `
+      )
+      .in("track_id", topTrackIds)
+      .order("position", { ascending: true });
+
+    if (!tcErr && tcRows) {
+      const map: Record<string, { id: string; display_name: string }[]> = {};
+      for (const row of tcRows as any[]) {
+        const tid = row?.track_id;
+        const p = row?.profiles;
+        if (!tid || !p?.id) continue;
+
+        if (!map[tid]) map[tid] = [];
+        if (!map[tid].some((a) => a.id === String(p.id))) {
+          map[tid].push({
+            id: String(p.id),
+            display_name: String(p.display_name ?? "Unknown Artist"),
+          });
+        }
+      }
+      topTrackArtistsMap = map;
+    }
+  }
+
+  // Merge owner into artists list so we always show: owner, collabs...
+  const topTrackArtistsMergedMap: Record<string, { id: string; display_name: string }[]> = {};
 
   let topTracksDetails: any[] = [];
   if (topTrackIds.length > 0) {
@@ -186,8 +236,28 @@ export default async function ArtistPage({
   }
 
   const topTracks = topTracksRawApi.map((a) => {
+    const trackId = a.track_id;
+
     const d = topTracksDetailsById[a.track_id] ?? null;
     const trackData = d?.tracks;
+
+    const ownerId = String((trackData as any)?.artist_id ?? id ?? "");
+    const ownerName = String(profile.display_name ?? "Unknown Artist");
+
+    const collabs = (topTrackArtistsMap?.[trackId] ?? []).map((x) => ({
+      id: String(x.id),
+      display_name: String(x.display_name ?? "Unknown Artist"),
+    }));
+
+    const merged: { id: string; display_name: string }[] = [];
+    if (ownerId) merged.push({ id: ownerId, display_name: ownerName });
+
+    for (const c of collabs) {
+      if (!c?.id) continue;
+      if (!merged.some((m) => m.id === c.id)) merged.push(c);
+    }
+
+    topTrackArtistsMergedMap[trackId] = merged;
     
     if (!trackData) {
       // Fallback wenn keine Track-Daten gefunden wurden
@@ -220,10 +290,12 @@ export default async function ArtistPage({
         : null;
 
     if (!audio_url) {
-      console.error("ArtistPage: missing audio_url, skipping track", {
-        track_id: trackData.id,
-        audio_path: trackData.audio_path ?? null,
-      });
+      if (__DEV__) {
+        console.error("ArtistPage: missing audio_url, skipping track", {
+          track_id: trackData.id,
+          audio_path: trackData.audio_path ?? null,
+        });
+      }
       return null;
     }
 
@@ -569,15 +641,18 @@ export default async function ArtistPage({
                       </span>
                     }
                     subtitleSlot={
-                      <div
-                        key={`artist-${t.track_id}`}
-                        className="mt-1 text-left text-xs text-white/60 truncate"
-                      >
-                        {profile.display_name ?? "Unknown Artist"}
+                      <div key={`toptrack-artists-${t.track_id}`}>
+                        <LibraryTrackArtists
+                          artists={topTrackArtistsMergedMap?.[t.track_id] ?? null}
+                          fallbackArtistId={(t.playerTrack as any)?.artist_id ?? null}
+                          fallbackDisplayName={profile.display_name ?? "Unknown Artist"}
+                        />
                       </div>
                     }
                     metaSlot={
-                      <div key={`meta-${t.track_id}`}>
+                      <div key={`meta-${t.track_id}`} className="flex items-center gap-4">
+                        {/* Rating column (fixed width) */}
+                        <div className="w-[140px]">
                         {t.rating_avg !== null && t.rating_count > 0 ? (
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-[2px] leading-none">
@@ -601,6 +676,12 @@ export default async function ArtistPage({
                         ) : (
                           <div className="text-xs text-white/40">No ratings yet</div>
                         )}
+                        </div>
+
+                        {/* Streams */}
+                        <div className="text-xs text-white/50 tabular-nums whitespace-nowrap">
+                          {(t.streams ?? 0).toLocaleString()} streams
+                        </div>
                       </div>
                     }
                     actionsSlot={

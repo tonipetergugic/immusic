@@ -16,6 +16,7 @@ type Track = {
   has_lyrics: boolean;
   is_explicit: boolean;
   artist_id: string;
+  status: "approved" | "development" | "performance";
 };
 
 type TrackCardProps = {
@@ -40,9 +41,15 @@ export function TrackCard({ track }: TrackCardProps) {
       }
     }
 
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
 
@@ -56,94 +63,100 @@ export function TrackCard({ track }: TrackCardProps) {
   const isIncomplete = !isComplete;
 
   return (
-    <div className="relative bg-white/5 hover:bg-white/10 rounded-lg p-4 transition">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Music size={20} className="text-white/50" />
-          <div className="flex flex-col">
-            <div className="text-white text-sm font-medium">{track.title}</div>
-            {/* Version / BPM / Key / Genre (secondary meta) */}
-            <div className="text-sm text-[#B3B3B3] mt-0.5">
+    <div
+      className="group relative rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:bg-white/[0.06] hover:border-white/15"
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(`/artist/my-tracks/${track.id}/edit`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(`/artist/my-tracks/${track.id}/edit`);
+        }
+      }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        {/* Left */}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 transition group-hover:bg-white/8">
+            <Music size={20} className="text-white/55" />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="truncate text-sm font-semibold text-white">
+                {track.title}
+              </div>
+
+              <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-semibold text-white/70">
+                {(track.version ?? "ORIGINAL").replaceAll("_", " ")}
+              </span>
+            </div>
+
+            <div className="mt-0.5 truncate text-xs text-[#B3B3B3]">
               {[
-                (track.version ?? "ORIGINAL").replaceAll("_", " "),
                 track.bpm ? `${track.bpm} BPM` : "— BPM",
                 track.key ? track.key : "—",
                 track.genre ? track.genre : "—",
               ].join(" • ")}
             </div>
-            <div className="text-white/50 text-xs">{track.audio_path}</div>
+
+            <div className="mt-1 truncate text-[11px] text-white/25">
+              {track.audio_path}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {isComplete && (
-            <div className="relative group">
-              <CheckCircle2
-                size={20}
-                strokeWidth={2.5}
-                className="text-emerald-400"
-                aria-label="Track ready for release"
-              />
-              <div
-                className="
-      pointer-events-none
-      absolute right-1/2 top-1/2 -translate-y-1/2 translate-x-full
-      ml-2
-      opacity-0 group-hover:opacity-100
-      transition
-      whitespace-nowrap
-      rounded-md
-      bg-black/90
-      px-2.5 py-1.5
-      text-xs text-white
-    "
-              >
-                Track ready for release
-              </div>
+
+        {/* Right */}
+        <div className="flex shrink-0 items-center gap-2">
+          {isComplete ? (
+            <div className="hidden sm:inline-flex min-w-[110px] items-center justify-center rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold leading-none text-[#00FFC6]">
+              Complete
+            </div>
+          ) : (
+            <div className="hidden sm:inline-flex min-w-[110px] items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold leading-none text-yellow-300">
+              Incomplete
             </div>
           )}
 
-          {isIncomplete && (
-            <div className="relative group">
-              <AlertCircle
-                size={20}
-                strokeWidth={2.5}
-                className="text-yellow-400"
-                aria-label="Metadata incomplete"
-              />
-              <div
-                className="
-      pointer-events-none
-      absolute right-1/2 top-1/2 -translate-y-1/2 translate-x-full
-      ml-2
-      opacity-0 group-hover:opacity-100
-      transition
-      whitespace-nowrap
-      rounded-md
-      bg-black/90
-      px-2.5 py-1.5
-      text-xs text-white
-    "
-              >
-                Please add BPM, key and genre
-              </div>
-            </div>
-          )}
+          {/* Status pill */}
+          <div className="hidden sm:inline-flex min-w-[110px] items-center justify-center rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold leading-none text-white/80">
+            {track.status === "approved"
+              ? "Approved"
+              : track.status === "development"
+              ? "Development"
+              : "Performance"}
+          </div>
 
+          {/* Menu button */}
           <button
-            onClick={() => setOpen(!open)}
-            className="text-white/60 hover:text-white"
+            type="button"
+            aria-label="Open track menu"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen((v) => !v);
+            }}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] text-white/70 transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             <MoreVertical size={18} />
           </button>
         </div>
       </div>
+
+      {/* Dropdown */}
       {open && (
         <div
           ref={menuRef}
-          className="absolute right-4 top-10 bg-[#1A1A1C] border border-white/10 rounded-md shadow-lg text-sm flex flex-col z-50"
+          role="menu"
+          aria-label="Track actions"
+          className="absolute right-4 top-14 z-50 w-[200px] overflow-hidden rounded-2xl border border-white/10 bg-[#0E0E10]/80 shadow-2xl backdrop-blur"
+          onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="px-4 py-2 text-left text-white/80 hover:bg-white/5"
+            role="menuitem"
+            className="w-full px-4 py-3 text-left text-sm font-semibold text-white/85 transition hover:bg-white/[0.06]"
             onClick={() => {
               setOpen(false);
               router.push(`/artist/my-tracks/${track.id}/edit`);
@@ -151,8 +164,12 @@ export function TrackCard({ track }: TrackCardProps) {
           >
             Edit Track
           </button>
+
+          <div className="h-px bg-white/10" />
+
           <button
-            className="px-4 py-2 text-left text-red-400 hover:bg-white/5"
+            role="menuitem"
+            className="w-full px-4 py-3 text-left text-sm font-semibold text-red-300 transition hover:bg-white/[0.06]"
             onClick={() => {
               setOpen(false);
               setShowDeleteModal(true);
@@ -162,22 +179,35 @@ export function TrackCard({ track }: TrackCardProps) {
           </button>
         </div>
       )}
+
+      {/* Delete modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#1A1A1C] border border-white/10 rounded-lg p-6 w-80 text-center">
-            <h2 className="text-white text-lg font-semibold mb-2">Delete Track?</h2>
-            <p className="text-white/60 text-sm mb-4">
-              Are you sure you want to delete this track?
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div
+            className="w-full max-w-[380px] rounded-2xl border border-white/10 bg-[#0E0E10] p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-lg font-semibold text-white">Delete Track?</div>
+            <p className="mt-2 text-sm text-white/60">
+              Are you sure you want to delete this track? This cannot be undone.
             </p>
-            <div className="flex justify-center gap-3">
+
+            <div className="mt-5 flex justify-end gap-2">
               <button
-                className="px-4 py-2 rounded-md bg-white/10 text-white hover:bg-white/20"
+                type="button"
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
                 onClick={() => setShowDeleteModal(false)}
+                disabled={isPending}
               >
                 Cancel
               </button>
+
               <button
-                className="px-4 py-2 rounded-md bg-red-500/80 hover:bg-red-500 text-white disabled:opacity-50"
+                type="button"
+                className="inline-flex items-center justify-center rounded-xl border border-red-500/30 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 disabled:opacity-50"
                 disabled={isPending}
                 onClick={() => {
                   startTransition(() => {

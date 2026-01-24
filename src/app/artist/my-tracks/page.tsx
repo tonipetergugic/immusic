@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FileMusic } from "lucide-react";
 import TrackListClient from "./TrackListClient";
 
 export default async function MyTracksPage() {
@@ -15,10 +16,10 @@ export default async function MyTracksPage() {
   const { data, error } = await supabase
     .from("tracks")
     .select(
-      "id,title,artist_id,version,audio_path,bpm,key,genre,has_lyrics,is_explicit"
+      "id,title,artist_id,version,audio_path,bpm,key,genre,has_lyrics,is_explicit,status"
     )
     .eq("artist_id", user.id)
-    .eq("status", "approved")
+    .in("status", ["approved", "development", "performance"])
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -30,10 +31,15 @@ export default async function MyTracksPage() {
   return (
     <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
       <div className="mt-2">
-        <h1 className="text-4xl font-semibold tracking-tight">My Tracks</h1>
-        <p className="mt-3 text-sm text-white/60">
-          Approved tracks ready to be added to releases.
-        </p>
+        <div className="max-w-[900px] mx-auto">
+          <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
+            <FileMusic className="h-7 w-7 text-[#00FFC6]" />
+            My Tracks
+          </h1>
+          <p className="mt-3 text-sm text-white/60">
+            Approved tracks ready to be added to releases.
+          </p>
+        </div>
 
         <div className="mt-6 max-w-[900px] mx-auto rounded-2xl border border-[#00FFC6]/25 bg-[#00FFC6]/[0.04] p-5 sm:p-6 ring-1 ring-[#00FFC6]/15">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
