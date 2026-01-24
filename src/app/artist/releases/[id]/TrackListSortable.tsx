@@ -20,8 +20,15 @@ import { useRouter } from "next/navigation";
 import { reorderReleaseTracksAction, removeTrackFromReleaseAction } from "./actions";
 import { CheckCircle2, XCircle } from "lucide-react";
 import Tooltip from "@/components/Tooltip";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
-type Track = { track_id: string; track_title: string; position: number; release_id: string };
+type Track = {
+  track_id: string;
+  track_title: string;
+  track_version?: string | null;
+  position: number;
+  release_id: string;
+};
 
 function SortableTrackItem({
   track,
@@ -117,7 +124,7 @@ function SortableTrackItem({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <p className="min-w-0 truncate text-[16px] font-semibold text-white">
-              {track.track_title}
+              {formatTrackTitle(track.track_title, track.track_version ?? null)}
             </p>
 
             {boostEnabled ? (

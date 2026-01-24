@@ -36,13 +36,32 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
     ? supabase.storage.from("release_covers").getPublicUrl(release.cover_path).data.publicUrl
     : null;
 
-  const { data: tracks } = await supabase
+  const { data: rawTracks } = await supabase
     .from("release_tracks")
-    .select("track_id, track_title, position, release_id")
+    .select(
+      `
+    track_id,
+    track_title,
+    position,
+    release_id,
+    track:tracks (
+      version
+    )
+  `,
+    )
     .eq("release_id", release.id)
     .order("position", { ascending: true });
 
-  const initialTracks = tracks ?? [];
+  const tracks =
+    rawTracks?.map((t) => ({
+      track_id: t.track_id,
+      track_title: t.track_title,
+      track_version: (t.track?.[0]?.version ?? null) as string | null,
+      position: t.position,
+      release_id: t.release_id,
+    })) ?? [];
+
+  const initialTracks = tracks;
   const existingTrackIds = initialTracks.map((t) => t.track_id);
 
   // --- Premium Credits (for Boost UI) ---
