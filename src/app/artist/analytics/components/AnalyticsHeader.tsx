@@ -1,5 +1,7 @@
 "use client";
 
+import { BarChart3 } from "lucide-react";
+
 type Range = "7d" | "28d" | "all";
 
 interface AnalyticsHeaderProps {
@@ -11,7 +13,8 @@ export default function AnalyticsHeader({ activeRange, onRangeChange }: Analytic
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+        <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
+          <BarChart3 className="h-7 w-7 text-[#00FFC6]" />
           Artist Analytics
         </h1>
         <p className="text-sm text-[#B3B3B3]">

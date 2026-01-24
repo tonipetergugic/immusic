@@ -93,7 +93,7 @@ export default function ArtistUploadPage() {
         </div>
 
         <div className="relative">
-          <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+          <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
             <UploadIcon className="h-7 w-7 text-[#00FFC6]" aria-hidden="true" />
             <span>Upload Track</span>
           </h1>

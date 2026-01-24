@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Disc3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -111,7 +111,10 @@ export default function ReleasesPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight">My Releases</h1>
+          <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
+            <Disc3 className="h-7 w-7 text-[#00FFC6]" />
+            My Releases
+          </h1>
           <p className="mt-2 text-sm text-[#B3B3B3]">
             Manage your releases, covers and details.
           </p>

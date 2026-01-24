@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { Instagram, Music2, Facebook, Twitter } from "lucide-react";
 
+const inputBase =
+  "bg-[#141417] border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-[#B3B3B3]/60 " +
+  "transition focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/35 focus:border-[#00FFC6]/40 " +
+  "hover:border-white/20";
+
 type Profile = {
   display_name: string | null;
   location: string | null;
@@ -37,9 +42,12 @@ export default function ProfileForm({
     >
       <div className="space-y-6">
         {/* Basics */}
-        <div className="space-y-4">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] space-y-4">
           <div>
-            <p className="text-sm font-semibold text-white/90">Basics</p>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00FFC6] shadow-[0_0_18px_rgba(0,255,198,0.35)]" />
+              <p className="text-sm font-semibold text-white/90">Basics</p>
+            </div>
             <p className="text-xs text-[#B3B3B3] mt-1">
               Public profile details shown on your artist page.
             </p>
@@ -58,7 +66,7 @@ export default function ProfileForm({
                 type="text"
                 name="display_name"
                 defaultValue={profile.display_name ?? ""}
-                className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
+                className={inputBase}
               />
             </div>
 
@@ -74,7 +82,7 @@ export default function ProfileForm({
                 type="text"
                 name="location"
                 defaultValue={profile.location ?? ""}
-                className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
+                className={inputBase}
               />
             </div>
           </div>
@@ -88,7 +96,7 @@ export default function ProfileForm({
               name="bio"
               rows={5}
               defaultValue={profile.bio ?? ""}
-              className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white resize-none focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
+              className={`${inputBase} resize-none`}
             />
             <p className="text-xs text-[#B3B3B3]">
               Tip: Keep it short and clear. (UI preview)
@@ -99,9 +107,12 @@ export default function ProfileForm({
         <div className="h-px bg-white/10" />
 
         {/* Social links */}
-        <div className="space-y-4">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] space-y-4">
           <div>
-            <p className="text-sm font-semibold text-white/90">Social links</p>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00FFC6] shadow-[0_0_18px_rgba(0,255,198,0.35)]" />
+              <p className="text-sm font-semibold text-white/90">Social links</p>
+            </div>
             <p className="text-xs text-[#B3B3B3] mt-1">
               Add links to help listeners find you.
             </p>
@@ -115,7 +126,7 @@ export default function ProfileForm({
               >
                 Instagram
               </label>
-              <div className="flex items-center gap-2 rounded-xl border border-[#333] bg-[#1a1a1d] px-3 py-2 focus-within:ring-2 focus-within:ring-[#00FFC6]/50 focus-within:border-[#00FFC6]/50">
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 backdrop-blur-sm transition hover:border-white/20 focus-within:ring-2 focus-within:ring-[#00FFC6]/35 focus-within:border-[#00FFC6]/40">
                 <span className="h-8 w-8 rounded-lg border border-white/10 bg-black/20 flex items-center justify-center">
                   <Instagram size={16} className="text-[#B3B3B3]" />
                 </span>
@@ -137,7 +148,7 @@ export default function ProfileForm({
               <label htmlFor="tiktok" className="text-sm font-medium text-white/80">
                 TikTok
               </label>
-              <div className="flex items-center gap-2 rounded-xl border border-[#333] bg-[#1a1a1d] px-3 py-2 focus-within:ring-2 focus-within:ring-[#00FFC6]/50 focus-within:border-[#00FFC6]/50">
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 backdrop-blur-sm transition hover:border-white/20 focus-within:ring-2 focus-within:ring-[#00FFC6]/35 focus-within:border-[#00FFC6]/40">
                 <span className="h-8 w-8 rounded-lg border border-white/10 bg-black/20 flex items-center justify-center">
                   <Music2 size={16} className="text-[#B3B3B3]" />
                 </span>
@@ -162,7 +173,7 @@ export default function ProfileForm({
               >
                 Facebook
               </label>
-              <div className="flex items-center gap-2 rounded-xl border border-[#333] bg-[#1a1a1d] px-3 py-2 focus-within:ring-2 focus-within:ring-[#00FFC6]/50 focus-within:border-[#00FFC6]/50">
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 backdrop-blur-sm transition hover:border-white/20 focus-within:ring-2 focus-within:ring-[#00FFC6]/35 focus-within:border-[#00FFC6]/40">
                 <span className="h-8 w-8 rounded-lg border border-white/10 bg-black/20 flex items-center justify-center">
                   <Facebook size={16} className="text-[#B3B3B3]" />
                 </span>
@@ -184,7 +195,7 @@ export default function ProfileForm({
               <label htmlFor="x" className="text-sm font-medium text-white/80">
                 X
               </label>
-              <div className="flex items-center gap-2 rounded-xl border border-[#333] bg-[#1a1a1d] px-3 py-2 focus-within:ring-2 focus-within:ring-[#00FFC6]/50 focus-within:border-[#00FFC6]/50">
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 backdrop-blur-sm transition hover:border-white/20 focus-within:ring-2 focus-within:ring-[#00FFC6]/35 focus-within:border-[#00FFC6]/40">
                 <span className="h-8 w-8 rounded-lg border border-white/10 bg-black/20 flex items-center justify-center">
                   <Twitter size={16} className="text-[#B3B3B3]" />
                 </span>
@@ -207,11 +218,14 @@ export default function ProfileForm({
         <div className="h-px bg-white/10" />
 
         {/* Rights & Collecting Society */}
-        <div className="space-y-4">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] space-y-4">
           <div>
-            <p className="text-sm font-semibold text-white/90">
-              Rights &amp; Collecting Society
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00FFC6] shadow-[0_0_18px_rgba(0,255,198,0.35)]" />
+              <p className="text-sm font-semibold text-white/90">
+                Rights &amp; Collecting Society
+              </p>
+            </div>
             <p className="text-xs text-[#B3B3B3] mt-1">
               Optional meta information. No impact on uploads or releases.
             </p>
@@ -288,7 +302,7 @@ export default function ProfileForm({
                   id="collecting_society_name"
                   name="collecting_society_name"
                   defaultValue={profile.collecting_society_name ?? ""}
-                  className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
+                  className={inputBase}
                 >
                   <option value="">Select…</option>
                   <option value="GEMA">GEMA</option>
@@ -313,7 +327,7 @@ export default function ProfileForm({
                   name="collecting_society_number"
                   defaultValue={profile.collecting_society_number ?? ""}
                   placeholder="e.g. 123456"
-                  className="bg-[#1a1a1d] border border-[#333] rounded-lg p-2 text-white placeholder:text-[#B3B3B3]/60 focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/50 focus:border-[#00FFC6]/50"
+                  className={inputBase}
                 />
                 <p className="text-xs text-[#B3B3B3]">
                   Depending on the collecting society, this may also be called CAE or IPI.
@@ -343,7 +357,7 @@ export default function ProfileForm({
             disabled={!dirty}
             className={`group relative inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
               dirty
-                ? "bg-[#00FFC6] text-black hover:bg-[#00FFC6]/90 hover:border-[#00FFC6]/40 hover:shadow-none"
+                ? "bg-[#00FFC6] text-black hover:bg-[#00FFC6]/90 shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_18px_50px_rgba(0,255,198,0.12)]"
                 : "bg-white/10 text-white/40 cursor-not-allowed shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
             } focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/60 focus:ring-offset-2 focus:ring-offset-black`}
           >

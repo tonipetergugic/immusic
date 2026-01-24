@@ -33,7 +33,7 @@ export default function CreateReleasePage() {
     <div className="w-full max-w-[900px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight">Create Release</h1>
+          <h1 className="text-4xl font-semibold tracking-tight text-white">Create Release</h1>
           <p className="mt-2 text-sm text-[#B3B3B3]">
             Set the basics. You can add a cover and tracks after creating.
           </p>

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { User } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateArtistProfileAction } from "./actions";
 import BannerUpload from "./BannerUpload";
@@ -39,10 +40,14 @@ export default async function ArtistProfilePage({
   const params = await searchParams;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
+    <div className="max-w-3xl mx-auto px-6 py-10 space-y-8 relative">
+      <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[700px] rounded-full bg-[#00FFC6]/10 blur-3xl" />
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Artist profile</h1>
+          <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
+            <User className="h-7 w-7 text-[#00FFC6]" />
+            Artist profile
+          </h1>
           <p className="text-sm text-[#B3B3B3] mt-1">
             Update your public artist page details.
           </p>
@@ -73,7 +78,7 @@ export default async function ArtistProfilePage({
         </div>
       )}
       {params?.success === "1" && <ProfileSuccessToast />}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.03] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_rgba(0,0,0,0.35)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-white/90">Banner</p>
