@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
+import BackLink from "@/components/BackLink";
 import SaveArtistButton from "./SaveArtistButton";
 import ReleaseCard, { type ReleaseCardData } from "@/components/ReleaseCard";
 import FollowArtistButton from "./FollowArtistButton";
@@ -382,6 +383,7 @@ export default async function ArtistPage({
   return (
     <div className="w-full">
       {/* Header */}
+      <BackLink label="Back" className="mb-4" />
       <div className="relative w-full">
         {/* Full-width bloom background (mobile fill) */}
         <div

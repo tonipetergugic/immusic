@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { respondToInviteAction } from "./actions";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import TopbarBackButton from "@/components/TopbarBackButton";
 
 type InviteRow = {
   id: string;
@@ -44,16 +45,20 @@ export default async function ArtistInvitesPage() {
 
   return (
     <div className="mx-auto max-w-[900px] px-6 py-10">
-      <div className="mb-6">
-        <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-          Inbox
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <TopbarBackButton />
+
+        <div className="flex-1">
+          <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+            Inbox
+          </div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+            Messages
+          </h1>
+          <p className="mt-1 text-sm text-white/60">
+            Personal notifications and collaboration requests.
+          </p>
         </div>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
-          Messages
-        </h1>
-        <p className="mt-1 text-sm text-white/60">
-          Personal notifications and collaboration requests.
-        </p>
       </div>
 
       {invites.length === 0 ? (
