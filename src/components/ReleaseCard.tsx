@@ -95,6 +95,8 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
             src={data.cover_url}
             alt={data.title}
             fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            priority
             className="
               object-cover rounded-xl
               transition-all duration-300

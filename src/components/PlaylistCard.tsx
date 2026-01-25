@@ -71,6 +71,7 @@ export default function PlaylistCard({
             src={coverPublicUrl}
             alt={title}
             fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="
               object-cover rounded-xl
               transition-all duration-300

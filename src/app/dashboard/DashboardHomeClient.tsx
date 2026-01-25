@@ -1,7 +1,7 @@
 // /Users/tonipetergugic/immusic/src/app/dashboard/DashboardHomeClient.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PlaylistCard from "@/components/PlaylistCard";
 import TrackRowBase from "@/components/TrackRowBase";
@@ -78,10 +78,23 @@ export default function DashboardHomeClient({
   // Multi-artist (collabs) for Home TrackRows
   const [trackArtistsMap, setTrackArtistsMap] = useState<Record<string, { id: string; display_name: string }[]>>({});
 
+  const devCacheRef = useRef<Record<string, DevelopmentDiscoveryItem[]>>({});
+  const devPromiseRef = useRef<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>({});
+  const perfCacheRef = useRef<any[] | null>(null);
+  const lastArtistsSigRef = useRef<string>("");
+
   useEffect(() => {
     if (discoveryMode !== "performance") return;
 
     let cancelled = false;
+
+    if (perfCacheRef.current) {
+      setPerformanceError(null);
+      setPerformanceItems(perfCacheRef.current);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     async function load() {
       try {
@@ -89,6 +102,10 @@ export default function DashboardHomeClient({
         setPerformanceError(null);
 
         const items = await fetchPerformanceDiscovery(30);
+
+        if (!cancelled) {
+          perfCacheRef.current = items;
+        }
 
         if (!cancelled) setPerformanceItems(items);
 
@@ -173,12 +190,43 @@ export default function DashboardHomeClient({
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode]);
+  }, [discoveryMode, supabase]);
 
   useEffect(() => {
     if (discoveryMode !== "development") return;
 
     let cancelled = false;
+
+    const cacheKey = `limit20:${devGenre && devGenre !== "all" ? devGenre : "all"}`;
+    const cached = devCacheRef.current[cacheKey];
+    if (cached) {
+      setDevError(null);
+      setDevItems(cached);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const existingPromise = devPromiseRef.current[cacheKey];
+    if (existingPromise) {
+      existingPromise
+        .then((items) => {
+          if (!cancelled) {
+            setDevError(null);
+            setDevItems(items);
+          }
+        })
+        .catch((err: any) => {
+          if (!cancelled) setDevError(err?.message ?? "Failed to load development tracks");
+        })
+        .finally(() => {
+          if (!cancelled) setDevLoading(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
 
     async function loadDev() {
       try {
@@ -189,21 +237,37 @@ export default function DashboardHomeClient({
         qs.set("limit", "20");
         if (devGenre && devGenre !== "all") qs.set("genre", devGenre);
 
-        const r = await fetch(`/api/discovery/development?${qs.toString()}`, {
-          method: "GET",
-          credentials: "include",
-        });
+        const p = (async () => {
+          const r = await fetch(`/api/discovery/development?${qs.toString()}`, {
+            method: "GET",
+            credentials: "include",
+          });
 
-        const data = await r.json();
+          const data = await r.json();
 
-        if (!r.ok || !data?.ok) {
-          throw new Error(data?.details ? `${data?.error}: ${data?.details}` : data?.error ?? "dev_discovery_error");
+          if (!r.ok || !data?.ok) {
+            throw new Error(
+              data?.details ? `${data?.error}: ${data?.details}` : data?.error ?? "dev_discovery_error"
+            );
+          }
+
+          return (data.items ?? []) as DevelopmentDiscoveryItem[];
+        })();
+
+        devPromiseRef.current[cacheKey] = p;
+
+        const nextItems = await p;
+
+        // Cache immer setzen (auch wenn cancelled durch Strict Mode)
+        devCacheRef.current[cacheKey] = nextItems;
+
+        if (!cancelled) {
+          setDevItems(nextItems);
         }
-
-        if (!cancelled) setDevItems((data.items ?? []) as DevelopmentDiscoveryItem[]);
       } catch (err: any) {
         if (!cancelled) setDevError(err?.message ?? "Failed to load development tracks");
       } finally {
+        devPromiseRef.current[cacheKey] = null;
         if (!cancelled) setDevLoading(false);
       }
     }
@@ -216,12 +280,13 @@ export default function DashboardHomeClient({
   }, [discoveryMode, devGenre]);
 
   useEffect(() => {
-    // Build a stable set of track ids that can appear in either mode
-    const devTrackIds = (devItems ?? []).map((x: any) => x?.track_id).filter(Boolean) as string[];
-    const perfTrackIds = (performanceItems ?? []).map((x: any) => x?.track_id).filter(Boolean) as string[];
-
-    const trackIds = Array.from(new Set([...devTrackIds, ...perfTrackIds]));
+    const sourceItems = discoveryMode === "performance" ? (performanceItems ?? []) : (devItems ?? []);
+    const trackIds = Array.from(new Set(sourceItems.map((x: any) => x?.track_id).filter(Boolean))) as string[];
     if (trackIds.length === 0) return;
+
+    const sig = `${discoveryMode}:${[...trackIds].sort().join("|")}`;
+    if (sig === lastArtistsSigRef.current) return;
+    lastArtistsSigRef.current = sig;
 
     let cancelled = false;
 
@@ -274,7 +339,7 @@ export default function DashboardHomeClient({
     return () => {
       cancelled = true;
     };
-  }, [devItems, performanceItems, supabase]);
+  }, [discoveryMode, devItems, performanceItems, supabase]);
 
   // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
