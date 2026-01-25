@@ -5,6 +5,8 @@ import { toPlayerTrack } from "@/lib/playerTrack";
 
 import PlaylistClient from "./PlaylistClient";
 
+const __DEV__ = process.env.NODE_ENV !== "production";
+
 // --- v2: typed join DTOs (no any, no row mutation) ---
 type ReleaseJoin = {
   status: string | null;
@@ -154,6 +156,27 @@ export default async function PlaylistPage(
     data: { user },
   } = await supabase.auth.getUser();
 
+  const canSavePlaylist = !!user?.id;
+
+  let initialSaved = false;
+  if (canSavePlaylist) {
+    const { data: savedRow, error: savedErr } = await supabase
+      .from("library_playlists")
+      .select("playlist_id")
+      .eq("user_id", user.id)
+      .eq("playlist_id", id)
+      .maybeSingle();
+
+    if (savedErr) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to read library_playlists:", savedErr);
+      }
+      initialSaved = false;
+    } else {
+      initialSaved = !!savedRow;
+    }
+  }
+
   if (!playlist) {
     return <div className="p-6 text-white">Playlist not found.</div>;
   }
@@ -202,7 +225,7 @@ export default async function PlaylistPage(
     .order("position", { ascending: true })
     .returns<PlaylistTrackRow[]>();
 
-  const convertedTracks: PlayerTrack[] = (playlistTracks ?? []).map((row) => {
+  const convertedTracks: PlayerTrack[] = (playlistTracks ?? []).flatMap((row) => {
     const cover_url =
       row.release_cover_path
         ? supabase.storage
@@ -216,7 +239,14 @@ export default async function PlaylistPage(
         : null;
 
     if (!audio_url) {
-      throw new Error("PlaylistPage(v2): Missing audio_url for track " + (row.track_id ?? "unknown"));
+      if (__DEV__) {
+        console.error("PlaylistPage: skipping track with missing audio_path", {
+          playlistId: id,
+          trackId: row.track_id,
+          releaseTrackId: row.release_track_id ?? null,
+        });
+      }
+      return [];
     }
 
     const playerTrack = toPlayerTrack({
@@ -260,7 +290,7 @@ export default async function PlaylistPage(
 
     const artists = Array.from(new Map(artistsRaw.map((a) => [a.id, a])).values());
 
-    return {
+    return [{
       ...playerTrack,
       artists,
       release_id: row.release_id ?? null,
@@ -270,7 +300,7 @@ export default async function PlaylistPage(
       stream_count: row.stream_count ?? 0,
       track_collaborators: parseTrackCollaborators(row.track_collaborators),
       artist: null,
-    };
+    }];
   });
 
   const releaseTrackIds = convertedTracks
@@ -313,6 +343,7 @@ export default async function PlaylistPage(
             playlist={playlistForClient}
             initialPlayerTracks={finalTracks}
             user={user}
+            initialSaved={initialSaved}
           />
         </div>
 

@@ -1,53 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { followProfile, unfollowProfile, isFollowingProfile } from "@/app/(topbar)/profile/actions";
+import { useState } from "react";
+import { followProfile, unfollowProfile } from "@/app/(topbar)/profile/actions";
 
-export default function FollowArtistButton({ artistId }: { artistId: string }) {
-  const [viewerId, setViewerId] = useState<string | null>(null);
-  const [following, setFollowing] = useState(false);
+export default function FollowArtistButton({
+  artistId,
+  initialIsFollowing,
+}: {
+  artistId: string;
+  initialIsFollowing: boolean;
+}) {
+  const [following, setFollowing] = useState(initialIsFollowing);
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  const supabase = createSupabaseBrowserClient();
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      try {
-        setLoading(true);
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!mounted) return;
-
-        setViewerId(user?.id ?? null);
-
-        // only load follow state if logged in and not self
-        if (user?.id && user.id !== artistId) {
-          const res = await isFollowingProfile(artistId);
-          if (!mounted) return;
-          setFollowing(!!res.following);
-        }
-      } catch (e) {
-        console.log("FollowArtistButton load error", e);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [artistId]);
-
-  const isSelf = viewerId && viewerId === artistId;
-  const canShow = !!viewerId && !isSelf;
+  const canShow = true;
 
   async function toggle() {
     if (!canShow) return;
@@ -69,7 +35,6 @@ export default function FollowArtistButton({ artistId }: { artistId: string }) {
     }
   }
 
-  if (loading) return null;
   if (!canShow) return null;
 
   return (

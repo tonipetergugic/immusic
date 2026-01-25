@@ -1,52 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function usePlaylistLibrarySave({
   supabase,
   userId,
   isOwner,
   playlistId,
+  initialSaved,
 }: {
   supabase: any;
   userId: string | null;
   isOwner: boolean;
   playlistId: string;
+  initialSaved: boolean;
 }) {
-  const [isSavedToLibrary, setIsSavedToLibrary] = useState(false);
+  const [isSavedToLibrary, setIsSavedToLibrary] = useState(initialSaved);
   const [saveBusy, setSaveBusy] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSaved() {
-      if (!userId) return;
-      if (isOwner) return;
-
-      const { data, error } = await supabase
-        .from("library_playlists")
-        .select("playlist_id")
-        .eq("user_id", userId)
-        .eq("playlist_id", playlistId)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error("Failed to read library_playlists:", error);
-        setIsSavedToLibrary(false);
-        return;
-      }
-
-      setIsSavedToLibrary(!!data);
-    }
-
-    void loadSaved();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase, userId, isOwner, playlistId]);
 
   async function toggleSaveToLibrary() {
     if (!userId) return;

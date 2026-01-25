@@ -54,7 +54,6 @@ export default async function ArtistPage({
   const [
     { data: releases },
     { data: publicPlaylists },
-    { data: releaseTracks },
   ] = await Promise.all([
     supabase
       .from("releases")
@@ -69,33 +68,6 @@ export default async function ArtistPage({
       .eq("created_by", id)
       .eq("is_public", true)
       .order("created_at", { ascending: false }),
-
-    supabase
-      .from("release_tracks")
-      .select(
-        `
-        id,
-        release_id,
-        position,
-        track_title,
-        tracks:tracks!release_tracks_track_id_fkey(
-          id,
-          title,
-          audio_path,
-          artist_id,
-          version
-        ),
-        releases:releases!release_tracks_release_id_fkey(
-          id,
-          cover_path,
-          title,
-          status,
-          artist_id
-        )
-      `
-      )
-      .eq("releases.artist_id", id)
-      .eq("releases.status", "published"),
   ]);
 
   type TopTracksRow = {
@@ -313,12 +285,6 @@ export default async function ArtistPage({
       playerTrack: any;
     }>;
 
-  const tracksByRelease: Record<string, any[]> = {};
-  (releaseTracks ?? []).forEach((rt) => {
-    if (!tracksByRelease[rt.release_id]) tracksByRelease[rt.release_id] = [];
-    tracksByRelease[rt.release_id].push(rt);
-  });
-
   const canSaveArtist = !!user?.id && user.id !== id;
 
   let initialSaved = false;
@@ -337,6 +303,27 @@ export default async function ArtistPage({
     }
   }
 
+  const canFollowArtist = !!user?.id && user.id !== id;
+
+  let initialIsFollowing = false;
+  if (canFollowArtist) {
+    const { data: followRow, error: followError } = await supabase
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", user.id)
+      .eq("following_id", id)
+      .maybeSingle();
+
+    if (followError) {
+      if (__DEV__) {
+        console.error("Failed to read follows:", followError);
+      }
+      initialIsFollowing = false;
+    } else {
+      initialIsFollowing = !!followRow;
+    }
+  }
+
   // NOTE: Do NOT use Date.now() in src (causes constant reloads). Cache-busting belongs in upload flow.
   const bannerUrl = profile.banner_url || null;
   const avatarUrlBase = profile.avatar_url || null;
@@ -344,6 +331,15 @@ export default async function ArtistPage({
     avatarUrlBase && profile.updated_at
       ? `${avatarUrlBase}${avatarUrlBase.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(profile.updated_at))}`
       : avatarUrlBase;
+
+  const playerTracksQueue = topTracks
+    .filter((tt) => tt.playerTrack)
+    .map((tt) => tt.playerTrack);
+
+  const playerTracksQueueIndexByTrackId = new Map<string, number>();
+  playerTracksQueue.forEach((pt, idx) => {
+    playerTracksQueueIndexByTrackId.set(pt.id, idx);
+  });
 
   return (
     <div className="w-full">
@@ -448,7 +444,7 @@ export default async function ArtistPage({
             <SaveArtistButton artistId={id} initialSaved={initialSaved} />
           ) : null}
 
-          <FollowArtistButton artistId={id} />
+          <FollowArtistButton artistId={id} initialIsFollowing={initialIsFollowing} />
 
           <div className="flex items-center gap-4">
             {profile.instagram ? (
@@ -613,11 +609,7 @@ export default async function ArtistPage({
                   return null;
                 }
 
-                const playerTracksQueue = topTracks
-                  .filter((tt) => tt.playerTrack)
-                  .map((tt) => tt.playerTrack);
-                
-                const queueIndex = playerTracksQueue.findIndex((pt) => pt.id === t.track_id);
+                const queueIndex = playerTracksQueueIndexByTrackId.get(t.track_id) ?? -1;
 
                 return (
                   <TrackRowBase

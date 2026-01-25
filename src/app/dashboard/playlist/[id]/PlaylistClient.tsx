@@ -38,10 +38,12 @@ export default function PlaylistClient({
   playlist,
   initialPlayerTracks,
   user,
+  initialSaved,
 }: {
   playlist: Playlist;
   initialPlayerTracks: PlayerTrack[];
   user: any | null;
+  initialSaved: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -82,6 +84,7 @@ export default function PlaylistClient({
       userId: user?.id ?? null,
       isOwner,
       playlistId: localPlaylist.id,
+      initialSaved,
     });
 
   useEffect(() => {
