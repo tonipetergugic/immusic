@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
 import BackLink from "@/components/BackLink";
@@ -99,243 +98,209 @@ export default async function ArtistPage({
       .eq("releases.status", "published"),
   ]);
 
-  type TopTracksApiOk = {
-    ok: true;
-    tracks: Array<{
-      track_id: string;
-      streams: number | null;
-      unique_listeners: number | null;
-      listened_seconds: number | null;
-      ratings_count: number | null;
-      rating_avg: number | null;
-    }>;
+  type TopTracksRow = {
+    track_id: string;
+    streams: number | null;
+    unique_listeners: number | null;
+    listened_seconds: number | null;
+    ratings_count: number | null;
+    rating_avg: number | null;
   };
 
-  let topTracksRawApi: TopTracksApiOk["tracks"] = [];
+  let topTracksRawApi: TopTracksRow[] = [];
 
-  try {
-    const h = await headers();
-    const host = h.get("x-forwarded-host") ?? h.get("host");
-    const proto = h.get("x-forwarded-proto") ?? "http";
-    const origin = host ? `${proto}://${host}` : "";
+  {
+    const { data, error } = await supabase
+      .from("analytics_artist_top_tracks_30d")
+      .select(
+        `
+        track_id,
+        streams:streams_30d,
+        unique_listeners:listeners_30d,
+        listened_seconds:listened_seconds_30d,
+        ratings_count:ratings_count_30d,
+        rating_avg:rating_avg_30d
+      `
+      )
+      .eq("artist_id", id)
+      .order("streams_30d", { ascending: false })
+      .limit(10);
 
-    const url = `${origin}/api/artist/${id}/top-tracks`;
-
-    const res = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    const rawText = await res.text();
-
-    let json: any = null;
-    try {
-      json = rawText ? JSON.parse(rawText) : null;
-    } catch (e) {
-      if (__DEV__) {
-        console.error("Top tracks API returned non-JSON:", {
-          status: res.status,
-          statusText: res.statusText,
-          body: rawText?.slice(0, 500) ?? "",
-        });
-      }
-    }
-
-    if (res.ok && json?.ok === true && Array.isArray(json.tracks)) {
-      topTracksRawApi = json.tracks;
+    if (!error && Array.isArray(data)) {
+      topTracksRawApi = data as TopTracksRow[];
     } else {
       if (__DEV__) {
-        console.error("Top tracks API failed:", {
-          status: res.status,
-          statusText: res.statusText,
-          body: rawText?.slice(0, 500) ?? "",
-          json,
+        console.error("ArtistPage: failed to load top tracks from analytics view", {
+          artist_id: id,
+          error_message: error?.message ?? null,
+          error_code: (error as any)?.code ?? null,
+          error_details: (error as any)?.details ?? null,
+          error_hint: (error as any)?.hint ?? null,
         });
       }
-    }
-  } catch (e) {
-    if (__DEV__) {
-      console.error("Top tracks API error:", e);
+      topTracksRawApi = [];
     }
   }
 
   const topTrackIds = topTracksRawApi.map((r) => r.track_id);
 
-  // TopTracks: load collaborators (multi-artist)
-  let topTrackArtistsMap: Record<string, { id: string; display_name: string }[]> = {};
+  // TopTracks: resolved details (track + release + owner + collaborators) in ONE query
+  type TopTrackResolvedRow = {
+    track_id: string;
+    release_id: string;
+    track_title: string | null;
+    track_version: string | null;
+    bpm: number | null;
+    key: string | null;
+    genre: string | null;
+    audio_path: string | null;
+    release_title: string | null;
+    cover_path: string | null;
+    owner_id: string | null;
+    owner_name: string | null;
+    collaborators: any; // jsonb array
+  };
+
+  let topTracksResolved: TopTrackResolvedRow[] = [];
 
   if (topTrackIds.length > 0) {
-    const { data: tcRows, error: tcErr } = await supabase
-      .from("track_collaborators")
+    const { data, error } = await supabase
+      .from("artist_top_tracks_resolved")
       .select(
         `
         track_id,
-        position,
-        profiles:profiles!track_collaborators_profile_id_fkey (
-          id,
-          display_name
-        )
+        release_id,
+        track_title,
+        track_version,
+        bpm,
+        key,
+        genre,
+        audio_path,
+        release_title,
+        cover_path,
+        owner_id,
+        owner_name,
+        collaborators
       `
       )
-      .in("track_id", topTrackIds)
-      .order("position", { ascending: true });
+      .in("track_id", topTrackIds);
 
-    if (!tcErr && tcRows) {
-      const map: Record<string, { id: string; display_name: string }[]> = {};
-      for (const row of tcRows as any[]) {
-        const tid = row?.track_id;
-        const p = row?.profiles;
-        if (!tid || !p?.id) continue;
-
-        if (!map[tid]) map[tid] = [];
-        if (!map[tid].some((a) => a.id === String(p.id))) {
-          map[tid].push({
-            id: String(p.id),
-            display_name: String(p.display_name ?? "Unknown Artist"),
-          });
-        }
+    if (!error && Array.isArray(data)) {
+      topTracksResolved = data as TopTrackResolvedRow[];
+    } else {
+      if (__DEV__) {
+        console.error("ArtistPage: failed to load top tracks resolved view", {
+          artist_id: id,
+          error_message: error?.message ?? null,
+          error_code: (error as any)?.code ?? null,
+          error_details: (error as any)?.details ?? null,
+          error_hint: (error as any)?.hint ?? null,
+        });
       }
-      topTrackArtistsMap = map;
+      topTracksResolved = [];
     }
+  }
+
+  const topTracksDetailsById: Record<string, TopTrackResolvedRow> = {};
+  for (const row of topTracksResolved) {
+    if (row?.track_id) topTracksDetailsById[row.track_id] = row;
   }
 
   // Merge owner into artists list so we always show: owner, collabs...
   const topTrackArtistsMergedMap: Record<string, { id: string; display_name: string }[]> = {};
 
-  let topTracksDetails: any[] = [];
-  if (topTrackIds.length > 0) {
-    const { data: rows } = await supabase
-      .from("release_tracks")
-      .select(`
-        track_id,
-        track_title,
-        rating_avg,
-        rating_count,
-        tracks:tracks!release_tracks_track_id_fkey (
-          id,
-          title,
-          audio_path,
-          artist_id,
-          bpm,
-          key,
-          version
-        ),
-        releases:releases!release_tracks_release_id_fkey (
-          id,
-          cover_path,
-          title,
-          status
-        )
-      `)
-      .in("track_id", topTrackIds)
-      .eq("releases.status", "published");
+  const topTracks = topTracksRawApi
+    .map((a) => {
+      const trackId = a.track_id;
 
-    topTracksDetails = rows ?? [];
-  }
+      const d = topTracksDetailsById[trackId] ?? null;
 
-  const topTracksDetailsById: Record<string, any> = {};
-  for (const row of topTracksDetails) {
-    if (row?.track_id) topTracksDetailsById[row.track_id] = row;
-  }
+      // Build artists list: owner first, then collaborators (already resolved in view)
+      const merged: { id: string; display_name: string }[] = [];
 
-  const topTracks = topTracksRawApi.map((a) => {
-    const trackId = a.track_id;
+      const ownerId = String(d?.owner_id ?? id ?? "");
+      const ownerName = String(d?.owner_name ?? profile.display_name ?? "Unknown Artist");
 
-    const d = topTracksDetailsById[a.track_id] ?? null;
-    const trackData = d?.tracks;
+      if (ownerId) merged.push({ id: ownerId, display_name: ownerName });
 
-    const ownerId = String((trackData as any)?.artist_id ?? id ?? "");
-    const ownerName = String(profile.display_name ?? "Unknown Artist");
+      const collabArr = Array.isArray(d?.collaborators) ? d!.collaborators : [];
 
-    const collabs = (topTrackArtistsMap?.[trackId] ?? []).map((x) => ({
-      id: String(x.id),
-      display_name: String(x.display_name ?? "Unknown Artist"),
-    }));
+      for (const c of collabArr) {
+        const cid = String(c?.artist_id ?? "");
+        const cname = String(c?.display_name ?? "Unknown Artist");
+        if (!cid) continue;
+        if (!merged.some((m) => m.id === cid)) merged.push({ id: cid, display_name: cname });
+      }
 
-    const merged: { id: string; display_name: string }[] = [];
-    if (ownerId) merged.push({ id: ownerId, display_name: ownerName });
+      topTrackArtistsMergedMap[trackId] = merged;
 
-    for (const c of collabs) {
-      if (!c?.id) continue;
-      if (!merged.some((m) => m.id === c.id)) merged.push(c);
-    }
+      // Fallback wenn resolved Row fehlt (sollte selten sein)
+      if (!d) {
+        return {
+          track_id: a.track_id,
+          streams: a.streams ?? 0,
+          unique_listeners: a.unique_listeners ?? 0,
+          track_title: null,
+          cover_path: null,
+          rating_avg: a.rating_avg ?? null,
+          rating_count: a.ratings_count ?? 0,
+          release_id: null,
+          playerTrack: null as any,
+        };
+      }
 
-    topTrackArtistsMergedMap[trackId] = merged;
-    
-    if (!trackData) {
-      // Fallback wenn keine Track-Daten gefunden wurden
+      const cover_url =
+        d.cover_path
+          ? supabase.storage.from("release_covers").getPublicUrl(d.cover_path).data.publicUrl ?? null
+          : null;
+
+      const audio_url =
+        d.audio_path ? supabase.storage.from("tracks").getPublicUrl(d.audio_path).data.publicUrl : null;
+
+      if (!audio_url) {
+        if (__DEV__) {
+          console.error("ArtistPage: missing audio_url, skipping track", {
+            track_id: d.track_id,
+            audio_path: d.audio_path ?? null,
+          });
+        }
+        return null;
+      }
+
+      const playerTrack = toPlayerTrack({
+        id: d.track_id,
+        title: d.track_title ?? null,
+        artist_id: ownerId || id,
+        audio_url,
+        cover_url,
+        bpm: d.bpm ?? null,
+        key: d.key ?? null,
+        version: d.track_version ?? null,
+      });
+
+      // Optionale Felder
+      if (a.rating_avg !== null && a.rating_avg !== undefined) {
+        playerTrack.rating_avg = a.rating_avg;
+      }
+      if (a.ratings_count !== null && a.ratings_count !== undefined) {
+        playerTrack.rating_count = a.ratings_count;
+      }
+      if (d.release_id) {
+        playerTrack.release_id = d.release_id;
+      }
+
       return {
         track_id: a.track_id,
         streams: a.streams ?? 0,
         unique_listeners: a.unique_listeners ?? 0,
-        track_title: d?.track_title ?? null,
-        cover_path: d?.releases?.cover_path ?? null,
-        rating_avg: d?.rating_avg ?? null,
-        rating_count: d?.rating_count ?? 0,
-        release_id: d?.releases?.id ?? null,
-        playerTrack: null as any,
+        track_title: d.track_title ?? null,
+        cover_path: d.cover_path ?? null,
+        rating_avg: a.rating_avg ?? null,
+        rating_count: a.ratings_count ?? 0,
+        release_id: d.release_id ?? null,
+        playerTrack,
       };
-    }
-
-    // Erstelle PlayerTrack-Objekt mit toPlayerTrack
-    const cover_url =
-      d?.releases?.cover_path
-        ? supabase.storage
-            .from("release_covers")
-            .getPublicUrl(d.releases.cover_path).data.publicUrl ?? null
-        : null;
-
-    const audio_url =
-      trackData?.audio_path
-        ? supabase.storage
-            .from("tracks")
-            .getPublicUrl(trackData.audio_path).data.publicUrl
-        : null;
-
-    if (!audio_url) {
-      if (__DEV__) {
-        console.error("ArtistPage: missing audio_url, skipping track", {
-          track_id: trackData.id,
-          audio_path: trackData.audio_path ?? null,
-        });
-      }
-      return null;
-    }
-
-    const playerTrack = toPlayerTrack({
-      id: trackData.id,
-      title: trackData.title ?? d?.track_title ?? null,
-      artist_id: trackData.artist_id ?? id,
-      audio_url,
-      cover_url,
-      bpm: trackData.bpm ?? null,
-      key: trackData.key ?? null,
-      version: trackData.version ?? null,
-    });
-    
-    // Füge optionale Felder hinzu
-    if (d?.rating_avg !== null && d?.rating_avg !== undefined) {
-      playerTrack.rating_avg = d.rating_avg;
-    }
-    if (d?.rating_count !== null && d?.rating_count !== undefined) {
-      playerTrack.rating_count = d.rating_count;
-    }
-    if (d?.releases?.id) {
-      playerTrack.release_id = d.releases.id;
-    }
-
-    return {
-      track_id: a.track_id,
-      streams: a.streams ?? 0,
-      unique_listeners: a.unique_listeners ?? 0,
-      track_title: d?.track_title ?? null,
-      cover_path: d?.releases?.cover_path ?? null,
-      rating_avg: a.rating_avg ?? d?.rating_avg ?? null,
-      rating_count: a.ratings_count ?? d?.rating_count ?? 0,
-      release_id: d?.releases?.id ?? null,
-      playerTrack,
-    };
-  })
+    })
     .filter(Boolean) as Array<{
       track_id: string;
       streams: number;
@@ -382,17 +347,10 @@ export default async function ArtistPage({
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <BackLink label="Back" className="mb-4" />
-      <div className="relative w-full">
-        {/* Full-width bloom background (mobile fill) */}
-        <div
-          className="
-            pointer-events-none
-            absolute inset-0
-            bg-[#0E0E10]
-          "
-        />
+      {/* Header (full-bleed banner) */}
+      <div className="relative left-1/2 right-1/2 -translate-x-1/2 w-screen">
+        {/* Full-width bloom background */}
+        <div className="pointer-events-none absolute inset-0 bg-[#0E0E10]" />
         <div
           className="
             pointer-events-none
@@ -403,52 +361,80 @@ export default async function ArtistPage({
           "
         />
 
-        {/* Keep content constrained */}
-        <div className="w-full pt-6">
-          <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
-            {bannerUrl ? (
-              <img
-                src={bannerUrl}
-                alt="Artist Banner"
-                className="w-full h-full object-cover"
+        {/* Banner: full-bleed, no card */}
+        <div className="relative w-full overflow-hidden aspect-[16/9] min-h-[260px] max-h-[520px]">
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt="Artist Banner"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-white/5 via-white/[0.06] to-white/5" />
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80" />
+
+          {/* Back button inside banner */}
+          <div className="absolute left-4 top-6 md:left-40 z-50 pointer-events-auto group">
+            <div
+              className="
+                inline-flex items-center rounded-full
+                bg-black/55 backdrop-blur-md
+                border border-white/15
+                px-3 py-1.5
+                shadow-lg
+                transition-all duration-200
+                hover:border-[#00FFC6]/60
+                hover:shadow-[0_0_18px_rgba(0,255,198,0.35)]
+                active:shadow-[0_0_26px_rgba(0,255,198,0.55)]
+              "
+            >
+              <BackLink
+                label="Back"
+                className="
+                  mb-0
+                  text-white/90
+                  transition-all
+                  group-hover:text-[#00FFC6]
+                  group-hover:drop-shadow-[0_0_10px_rgba(0,255,198,0.6)]
+                  active:drop-shadow-[0_0_14px_rgba(0,255,198,0.8)]
+                "
               />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-r from-white/5 via-white/[0.06] to-white/5" />
-            )}
+            </div>
+          </div>
 
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80" />
+          {/* Banner content */}
+          <div className="absolute left-4 right-6 bottom-4 md:left-40 md:right-16 md:top-1/2 md:bottom-auto md:-translate-y-1/2 flex items-start md:items-center gap-4 md:gap-6">
+            <div className="shrink-0 hidden md:block">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={profile.display_name}
+                  className="w-44 h-44 md:w-48 md:h-48 rounded-full object-cover border-4 border-white/15 shadow-2xl"
+                />
+              ) : (
+                <div className="w-44 h-44 md:w-48 md:h-48 rounded-full bg-white/10 border-4 border-white/10" />
+              )}
+            </div>
 
-            <div className="absolute left-4 right-4 bottom-4 md:left-8 md:right-8 md:top-1/2 md:bottom-auto md:-translate-y-1/2 flex items-start md:items-center gap-4 md:gap-6">
-              <div className="shrink-0 hidden md:block">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={profile.display_name}
-                    className="w-36 h-36 rounded-full object-cover border-4 border-white/15 shadow-2xl"
-                  />
-                ) : (
-                  <div className="w-36 h-36 rounded-full bg-white/10 border-4 border-white/10" />
-                )}
-              </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-xl truncate leading-tight">
+                {profile.display_name}
+              </h1>
 
-              <div className="min-w-0 flex-1">
-                <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-xl truncate">
-                  {profile.display_name}
-                </h1>
+              {profile.location ? (
+                <p className="mt-1 text-base md:text-lg text-white/70 drop-shadow-md">
+                  {profile.location}
+                </p>
+              ) : null}
 
-                {profile.location ? (
-                  <p className="mt-1 text-sm md:text-base text-white/70 drop-shadow-md">
-                    {profile.location}
-                  </p>
-                ) : null}
-
-                <div className="mt-2 md:mt-3">
-                  <FollowCountsClient
-                    profileId={id}
-                    followerCount={followerCountNum}
-                    followingCount={followingCountNum}
-                  />
-                </div>
+              <div className="mt-2 md:mt-3">
+                <FollowCountsClient
+                  profileId={id}
+                  followerCount={followerCountNum}
+                  followingCount={followingCountNum}
+                />
               </div>
             </div>
           </div>
