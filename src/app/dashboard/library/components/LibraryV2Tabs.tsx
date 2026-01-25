@@ -17,7 +17,7 @@ export function LibraryV2Tabs({ currentTab }: Props) {
           return (
             <Link
               key={t.key}
-              href={`/dashboard/library-v2?tab=${t.key}`}
+              href={`/dashboard/library?tab=${t.key}`}
               className={[
                 "px-3 py-1.5 rounded-full text-sm transition-colors",
                 active ? "bg-white/10 text-white" : "text-white/60 hover:text-white hover:bg-white/5",

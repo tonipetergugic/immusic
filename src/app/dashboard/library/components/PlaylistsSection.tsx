@@ -7,14 +7,13 @@ export function PlaylistsSection({ playlists }: { playlists: Playlist[] }) {
       <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2 sm:gap-3 items-start">
         {playlists.length > 0 ? (
           playlists.map((p) => (
-            <div key={p.id}>
-              <PlaylistCard
-                id={p.id}
-                title={p.title}
-                description={p.description}
-                cover_url={(p as any).cover_url ?? null}
-              />
-            </div>
+            <PlaylistCard
+              key={p.id}
+              id={p.id}
+              title={p.title}
+              description={p.description ?? null}
+              cover_url={p.cover_url ?? null}
+            />
           ))
         ) : (
           <p className="text-sm text-neutral-400 col-span-full">No playlists found.</p>

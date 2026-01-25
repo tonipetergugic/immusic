@@ -71,7 +71,7 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
                 return (
                   <Link
                     key={tab.key}
-                    href={`/dashboard/library-v2?tab=${tab.key}`}
+                    href={`/dashboard/library?tab=${tab.key}`}
                     className={`pb-3 transition-colors ${
                       isActive
                         ? "text-white font-medium border-b-2 border-[#00FFC6]"
