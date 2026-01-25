@@ -184,7 +184,16 @@ export default function PlaylistAddTrackModal({
           if (!playerTrack?.id) {
             throw new Error("Invalid playerTrack payload");
           }
-          onTrackAdded?.(playerTrack);
+
+          // Merge missing fields from the DB track record (insert select) to avoid "reload-only" UI data.
+          const mergedPlayerTrack = {
+            ...playerTrack,
+            genre: playerTrack.genre ?? trackRecord.genre ?? null,
+            bpm: playerTrack.bpm ?? trackRecord.bpm ?? null,
+            key: playerTrack.key ?? trackRecord.key ?? null,
+          };
+
+          onTrackAdded?.(mergedPlayerTrack);
         } catch (err) {
           console.error("Track conversion failed:", err);
           if (option.player) {

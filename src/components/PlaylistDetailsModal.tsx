@@ -41,6 +41,12 @@ export default function PlaylistDetailsModal({
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setFile(null);
+    }
+  }, [isOpen, playlist.id]);
+
   const currentCoverUrl = playlist.cover_url ?? null;
 
   async function handleSave() {
@@ -50,9 +56,15 @@ export default function PlaylistDetailsModal({
 
     if (file) {
       if (playlist.cover_url) {
-        let rel = playlist.cover_url.split(
-          "/object/public/playlist-covers/"
-        )[1];
+        let rel: string | null = null;
+
+        // If it's a public URL, extract the relative path.
+        if (playlist.cover_url.includes("/object/public/playlist-covers/")) {
+          rel = playlist.cover_url.split("/object/public/playlist-covers/")[1] ?? null;
+        } else {
+          // Otherwise it should already be the relative DB path.
+          rel = playlist.cover_url;
+        }
 
         if (rel && rel.includes("?")) {
           rel = rel.split("?")[0];
@@ -86,6 +98,7 @@ export default function PlaylistDetailsModal({
       .eq("id", playlist.id);
 
     if (!dbError) {
+      setFile(null);
       onUpdated({
         title,
         description,
