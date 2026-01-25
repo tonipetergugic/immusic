@@ -53,6 +53,11 @@ export default async function LibraryPage(props: LibraryPageProps) {
   let trackData: PlayerTrack[] = [];
   let artists: Profile[] = [];
   let releaseTrackIdByTrackId = new Map<string, string>();
+  let myStarsByReleaseTrackId = new Map<string, number | null>();
+  let eligibilityByTrackId = new Map<
+    string,
+    { can_rate: boolean | null; listened_seconds: number | null }
+  >();
 
   // -----------------------------
   // PLAYLISTS (own + saved)
@@ -135,7 +140,10 @@ export default async function LibraryPage(props: LibraryPageProps) {
           genre,
           release_tracks:release_tracks!release_tracks_track_id_fkey(
             id,
-            release_id
+            release_id,
+            rating_avg,
+            rating_count,
+            stream_count
           ),
           releases:releases!tracks_release_id_fkey(
             id,
@@ -185,6 +193,11 @@ export default async function LibraryPage(props: LibraryPageProps) {
               release_track_id: rt?.id ?? null,
               release_id: rt?.release_id ?? t?.release_id ?? null,
 
+              // rating summary (from release_tracks)
+              rating_avg: rt?.rating_avg ?? null,
+              rating_count: rt?.rating_count ?? 0,
+              stream_count: rt?.stream_count ?? 0,
+
               releases: Array.isArray(t.releases) ? t.releases[0] ?? null : t.releases ?? null,
               artist_profile: Array.isArray(t.artist_profile)
                 ? t.artist_profile[0] ?? null
@@ -198,6 +211,66 @@ export default async function LibraryPage(props: LibraryPageProps) {
       for (const t of normalizedTracks as any[]) {
         if (t?.id && t?.release_track_id) {
           releaseTrackIdByTrackId.set(String(t.id), String(t.release_track_id));
+        }
+      }
+
+      const trackIds = (normalizedTracks as any[])
+        .map((t) => String(t?.id ?? ""))
+        .filter(Boolean);
+
+      const releaseTrackIds = (normalizedTracks as any[])
+        .map((t) => String(t?.release_track_id ?? ""))
+        .filter(Boolean);
+
+      // Map: release_track_id -> my latest stars
+      myStarsByReleaseTrackId = new Map<string, number | null>();
+
+      if (releaseTrackIds.length > 0) {
+        const { data: myRows, error: myErr } = await supabase
+          .from("track_ratings")
+          .select("release_track_id, stars, created_at")
+          .eq("user_id", user.id)
+          .in("release_track_id", releaseTrackIds)
+          .order("created_at", { ascending: false });
+
+        if (myErr) {
+          console.error("Failed to load my track_ratings (library batch):", myErr);
+        } else {
+          for (const r of myRows ?? []) {
+            const rid = String((r as any).release_track_id ?? "");
+            if (!rid) continue;
+            // first one wins because sorted desc by created_at
+            if (!myStarsByReleaseTrackId.has(rid)) {
+              myStarsByReleaseTrackId.set(rid, (r as any).stars ?? null);
+            }
+          }
+        }
+      }
+
+      // Map: track_id -> listen_state eligibility
+      eligibilityByTrackId = new Map<
+        string,
+        { can_rate: boolean | null; listened_seconds: number | null }
+      >();
+
+      if (trackIds.length > 0) {
+        const { data: lsRows, error: lsErr } = await supabase
+          .from("track_listen_state")
+          .select("track_id, can_rate, listened_seconds")
+          .eq("user_id", user.id)
+          .in("track_id", trackIds);
+
+        if (lsErr) {
+          console.error("Failed to load track_listen_state (library batch):", lsErr);
+        } else {
+          for (const r of lsRows ?? []) {
+            const tid = String((r as any).track_id ?? "");
+            if (!tid) continue;
+            eligibilityByTrackId.set(tid, {
+              can_rate: (r as any).can_rate ?? null,
+              listened_seconds: (r as any).listened_seconds ?? null,
+            });
+          }
         }
       }
 
@@ -259,11 +332,32 @@ export default async function LibraryPage(props: LibraryPageProps) {
       });
 
       const baseTrackData = toPlayerTrackList(playerTrackInputs as any);
+      
+      // Map: track.id -> rating fields from normalizedTracks
+      const ratingFieldsByTrackId = new Map<string, {
+        rating_avg: number | null;
+        rating_count: number;
+        stream_count: number;
+      }>();
+      for (const t of normalizedTracks as any[]) {
+        if (t?.id) {
+          ratingFieldsByTrackId.set(String(t.id), {
+            rating_avg: t.rating_avg ?? null,
+            rating_count: t.rating_count ?? 0,
+            stream_count: t.stream_count ?? 0,
+          });
+        }
+      }
+      
       trackData = baseTrackData.map((pt, idx) => {
         const input = playerTrackInputs[idx];
+        const ratingFields = ratingFieldsByTrackId.get(String(pt.id));
         return {
           ...pt,
           artists: (input as any)?.artists ?? null,
+          rating_avg: ratingFields?.rating_avg ?? null,
+          rating_count: ratingFields?.rating_count ?? 0,
+          stream_count: ratingFields?.stream_count ?? 0,
         };
       });
     }
@@ -464,7 +558,24 @@ export default async function LibraryPage(props: LibraryPageProps) {
                       }
                       metaSlot={
                         releaseTrackIdByTrackId.get(String(track.id)) ? (
-                          <TrackRatingInline releaseTrackId={releaseTrackIdByTrackId.get(String(track.id)) as string} />
+                          <TrackRatingInline
+                            releaseTrackId={releaseTrackIdByTrackId.get(String(track.id)) as string}
+                            initialAvg={(track as any).rating_avg ?? null}
+                            initialCount={(track as any).rating_count ?? 0}
+                            initialStreams={(track as any).stream_count ?? 0}
+                            initialMyStars={
+                              myStarsByReleaseTrackId.get(
+                                releaseTrackIdByTrackId.get(String(track.id)) as string
+                              ) ?? null
+                            }
+                            initialEligibility={{
+                              window_open: true,
+                              ...(eligibilityByTrackId.get(String(track.id)) ?? {
+                                can_rate: null,
+                                listened_seconds: null,
+                              }),
+                            }}
+                          />
                         ) : null
                       }
                       bpmSlot={<span>{track.bpm ?? "—"}</span>}

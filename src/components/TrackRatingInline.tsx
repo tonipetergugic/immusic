@@ -44,6 +44,13 @@ type TrackRatingInlineProps = {
   initialStreams?: number;
   initialMyStars?: number | null;
 
+  // Optional initial eligibility (avoid GET; keep rating usable)
+  initialEligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
+
   // Optional: hide streams label on mobile automatically (matches PlaylistRow pattern)
   showStreamsOnDesktopOnly?: boolean;
   readOnly?: boolean;
@@ -82,6 +89,7 @@ function TrackRatingInline({
   initialCount = 0,
   initialStreams = 0,
   initialMyStars = null,
+  initialEligibility,
   showStreamsOnDesktopOnly = true,
   readOnly = false,
 }: TrackRatingInlineProps) {
@@ -97,7 +105,11 @@ function TrackRatingInline({
     window_open: boolean | null;
     can_rate: boolean | null;
     listened_seconds: number | null;
-  }>({ window_open: null, can_rate: null, listened_seconds: null });
+  }>({
+    window_open: initialEligibility?.window_open ?? null,
+    can_rate: initialEligibility?.can_rate ?? null,
+    listened_seconds: initialEligibility?.listened_seconds ?? null,
+  });
 
   const [hydrated, setHydrated] = useState(false);
 
@@ -178,13 +190,17 @@ function TrackRatingInline({
   }
 
   const hasInitial = useMemo(() => {
+    // Library v2 passes initialEligibility as a signal that initial payload is provided.
+    // Even if avg is null and counts are 0, we must skip the initial GET to avoid N× requests.
+    if (initialEligibility !== undefined) return true;
+
     return (
       initialMyStars !== null ||
       initialAvg !== null ||
       (typeof initialCount === "number" && initialCount > 0) ||
       (typeof initialStreams === "number" && initialStreams > 0)
     );
-  }, [initialMyStars, initialAvg, initialCount, initialStreams]);
+  }, [initialMyStars, initialAvg, initialCount, initialStreams, initialEligibility]);
 
   useEffect(() => {
     if (!releaseTrackId) return;
