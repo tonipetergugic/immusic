@@ -15,6 +15,10 @@ import type { DevelopmentDiscoveryItem } from "@/lib/discovery/fetchDevelopmentD
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import { useTrackArtistsMap } from "./_hooks/useTrackArtistsMap";
+import { useDevelopmentDiscovery } from "./_hooks/useDevelopmentDiscovery";
+import { usePerformanceDiscovery } from "./_hooks/usePerformanceDiscovery";
+import { buildDevQueue, buildPerfQueue } from "./_lib/buildHomeQueues";
 
 type HomeModule = {
   id: string;
@@ -62,284 +66,44 @@ export default function DashboardHomeClient({
   const router = useRouter();
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
-  const [devItems, setDevItems] = useState<DevelopmentDiscoveryItem[]>([]);
-  const [devLoading, setDevLoading] = useState(false);
-  const [devError, setDevError] = useState<string | null>(null);
   const [devGenre, setDevGenre] = useState<string>("all");
   const [performanceGenre, setPerformanceGenre] = useState<string>("all");
-  const [performanceItems, setPerformanceItems] = useState<any[]>([]);
-  const [performanceLoading, setPerformanceLoading] = useState(false);
-  const [performanceError, setPerformanceError] = useState<string | null>(null);
-  const [perfArtistMap, setPerfArtistMap] = useState<Record<string, string>>({});
-  const [perfReleaseTrackMap, setPerfReleaseTrackMap] = useState<Record<string, { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }>>({});
-  const [perfTrackMetaMap, setPerfTrackMetaMap] = useState<
-    Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null }>
-  >({});
-  // Multi-artist (collabs) for Home TrackRows
-  const [trackArtistsMap, setTrackArtistsMap] = useState<Record<string, { id: string; display_name: string }[]>>({});
 
   const devCacheRef = useRef<Record<string, DevelopmentDiscoveryItem[]>>({});
   const devPromiseRef = useRef<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>({});
-  const perfCacheRef = useRef<any[] | null>(null);
   const lastArtistsSigRef = useRef<string>("");
 
-  useEffect(() => {
-    if (discoveryMode !== "performance") return;
+  const {
+    devItems,
+    devLoading,
+    devError,
+  } = useDevelopmentDiscovery({
+    discoveryMode,
+    devGenre,
+    devCacheRef,
+    devPromiseRef,
+  });
 
-    let cancelled = false;
+  const {
+    performanceItems,
+    performanceLoading,
+    performanceError,
+    perfArtistMap,
+    perfReleaseTrackMap,
+    perfTrackMetaMap,
+  } = usePerformanceDiscovery({
+    discoveryMode,
+    supabase,
+    fetchPerformanceDiscovery,
+  });
 
-    if (perfCacheRef.current) {
-      setPerformanceError(null);
-      setPerformanceItems(perfCacheRef.current);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    async function load() {
-      try {
-        setPerformanceLoading(true);
-        setPerformanceError(null);
-
-        const items = await fetchPerformanceDiscovery(30);
-
-        if (!cancelled) {
-          perfCacheRef.current = items;
-        }
-
-        if (!cancelled) setPerformanceItems(items);
-
-        try {
-          const artistIds = Array.from(new Set((items ?? []).map((x: any) => x.artist_id).filter(Boolean))) as string[];
-          const trackIds = Array.from(new Set((items ?? []).map((x: any) => x.track_id).filter(Boolean))) as string[];
-          const releaseIds = Array.from(new Set((items ?? []).map((x: any) => x.release_id).filter(Boolean))) as string[];
-
-          // D) Track meta (bpm/key/genre)
-          if (trackIds.length > 0) {
-            const { data: tmeta, error: tmetaErr } = await supabase
-              .from("tracks")
-              .select("id, title, bpm, key, genre, audio_path, version")
-              .in("id", trackIds);
-
-            if (!tmetaErr && tmeta) {
-              const m: Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null }> = {};
-              for (const t of tmeta as any[]) {
-                if (!t?.id) continue;
-                m[t.id] = {
-                  bpm: t.bpm ?? null,
-                  key: t.key ?? null,
-                  genre: t.genre ?? null,
-                  audio_path: t.audio_path ?? null,
-                  version: t.version ?? null,
-                };
-              }
-              if (!cancelled) setPerfTrackMetaMap(m);
-            }
-          }
-
-          // A) Artist display names
-          if (artistIds.length > 0) {
-            const { data: profs, error: profErr } = await supabase
-              .from("profiles")
-              .select("id, display_name")
-              .in("id", artistIds);
-
-            if (!profErr && profs) {
-              const map: Record<string, string> = {};
-              for (const r of profs as any[]) {
-                if (r?.id) map[r.id] = r.display_name ?? "Unknown Artist";
-              }
-              if (!cancelled) setPerfArtistMap(map);
-            }
-          }
-
-          // B) release_track_id + current agg (rating + streams) from release_tracks
-          if (trackIds.length > 0 && releaseIds.length > 0) {
-            const { data: rts, error: rtsErr } = await supabase
-              .from("release_tracks")
-              .select("id, track_id, release_id, rating_avg, rating_count, stream_count")
-              .in("track_id", trackIds)
-              .in("release_id", releaseIds);
-
-            if (!rtsErr && rts) {
-              const map: Record<string, { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }> = {};
-              for (const rt of rts as any[]) {
-                const key = `${rt.release_id}:${rt.track_id}`;
-                map[key] = {
-                  release_track_id: rt.id,
-                  rating_avg: rt.rating_avg ?? null,
-                  rating_count: rt.rating_count ?? 0,
-                  stream_count: rt.stream_count ?? 0,
-                };
-              }
-              if (!cancelled) setPerfReleaseTrackMap(map);
-            }
-          }
-        } catch (e) {
-          // ignore (UI fallback)
-        }
-      } catch (err: any) {
-        if (!cancelled) setPerformanceError(err?.message ?? "Failed to load performance candidates");
-      } finally {
-        if (!cancelled) setPerformanceLoading(false);
-      }
-    }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [discoveryMode, supabase]);
-
-  useEffect(() => {
-    if (discoveryMode !== "development") return;
-
-    let cancelled = false;
-
-    const cacheKey = `limit20:${devGenre && devGenre !== "all" ? devGenre : "all"}`;
-    const cached = devCacheRef.current[cacheKey];
-    if (cached) {
-      setDevError(null);
-      setDevItems(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const existingPromise = devPromiseRef.current[cacheKey];
-    if (existingPromise) {
-      existingPromise
-        .then((items) => {
-          if (!cancelled) {
-            setDevError(null);
-            setDevItems(items);
-          }
-        })
-        .catch((err: any) => {
-          if (!cancelled) setDevError(err?.message ?? "Failed to load development tracks");
-        })
-        .finally(() => {
-          if (!cancelled) setDevLoading(false);
-        });
-
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    async function loadDev() {
-      try {
-        setDevLoading(true);
-        setDevError(null);
-
-        const qs = new URLSearchParams();
-        qs.set("limit", "20");
-        if (devGenre && devGenre !== "all") qs.set("genre", devGenre);
-
-        const p = (async () => {
-          const r = await fetch(`/api/discovery/development?${qs.toString()}`, {
-            method: "GET",
-            credentials: "include",
-          });
-
-          const data = await r.json();
-
-          if (!r.ok || !data?.ok) {
-            throw new Error(
-              data?.details ? `${data?.error}: ${data?.details}` : data?.error ?? "dev_discovery_error"
-            );
-          }
-
-          return (data.items ?? []) as DevelopmentDiscoveryItem[];
-        })();
-
-        devPromiseRef.current[cacheKey] = p;
-
-        const nextItems = await p;
-
-        // Cache immer setzen (auch wenn cancelled durch Strict Mode)
-        devCacheRef.current[cacheKey] = nextItems;
-
-        if (!cancelled) {
-          setDevItems(nextItems);
-        }
-      } catch (err: any) {
-        if (!cancelled) setDevError(err?.message ?? "Failed to load development tracks");
-      } finally {
-        devPromiseRef.current[cacheKey] = null;
-        if (!cancelled) setDevLoading(false);
-      }
-    }
-
-    loadDev();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [discoveryMode, devGenre]);
-
-  useEffect(() => {
-    const sourceItems = discoveryMode === "performance" ? (performanceItems ?? []) : (devItems ?? []);
-    const trackIds = Array.from(new Set(sourceItems.map((x: any) => x?.track_id).filter(Boolean))) as string[];
-    if (trackIds.length === 0) return;
-
-    const sig = `${discoveryMode}:${[...trackIds].sort().join("|")}`;
-    if (sig === lastArtistsSigRef.current) return;
-    lastArtistsSigRef.current = sig;
-
-    let cancelled = false;
-
-    async function loadTrackArtists() {
-      try {
-        const { data, error } = await supabase
-          .from("track_collaborators")
-          .select(
-            `
-            track_id,
-            role,
-            position,
-            profiles:profiles!track_collaborators_profile_id_fkey (
-              id,
-              display_name
-            )
-          `
-          )
-          .in("track_id", trackIds)
-          .order("position", { ascending: true });
-
-        if (error) return;
-        if (!data) return;
-
-        const map: Record<string, { id: string; display_name: string }[]> = {};
-
-        for (const row of data as any[]) {
-          const trackId = row?.track_id;
-          const p = row?.profiles;
-          if (!trackId || !p?.id) continue;
-
-          if (!map[trackId]) map[trackId] = [];
-
-          if (!map[trackId].some((a) => a.id === String(p.id))) {
-            map[trackId].push({
-              id: String(p.id),
-              display_name: String(p.display_name ?? "Unknown Artist"),
-            });
-          }
-        }
-
-        if (!cancelled) setTrackArtistsMap(map);
-      } catch {
-        // ignore: UI fallback to single artist
-      }
-    }
-
-    loadTrackArtists();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [discoveryMode, devItems, performanceItems, supabase]);
+  const trackArtistsMap = useTrackArtistsMap({
+    discoveryMode,
+    devItems,
+    performanceItems,
+    supabase,
+    lastArtistsSigRef,
+  });
 
   // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
@@ -370,117 +134,22 @@ export default function DashboardHomeClient({
         });
 
   const devQueue = useMemo(() => {
-    return devItems.slice(0, 20).map((it) => {
-      const trackId = it.track_id;
-      const title = it.title || "Untitled";
-      const artist = it.artist_name ?? "—";
-      const releaseId = it.release_id;
-
-      const coverUrl = it.cover_path
-        ? supabase.storage.from("release_covers").getPublicUrl(it.cover_path).data.publicUrl
-        : null;
-
-      const audioUrl = it.audio_path
-        ? supabase.storage.from("tracks").getPublicUrl(it.audio_path).data.publicUrl
-        : null;
-
-      return {
-        id: trackId,
-        artist_id: it.artist_id,
-        title,
-        version: (it as any)?.version ?? null,
-        cover_url: coverUrl,
-        audio_url: audioUrl,
-        audio_path: it.audio_path ?? null,
-        profiles: { display_name: artist },
-        release_id: releaseId,
-        release_track_id: it.release_track_id ?? null,
-        rating_avg: it.rating_avg ?? null,
-        rating_count: it.rating_count ?? 0,
-        stream_count: it.stream_count ?? 0,
-        my_stars: it.my_stars ?? null,
-        bpm: it.bpm ?? null,
-        key: it.key ?? null,
-        artists: (() => {
-          const ownerId = String(it.artist_id ?? "");
-          const ownerName = String(it.artist_name ?? "—");
-          const owner = ownerId ? [{ id: ownerId, display_name: ownerName }] : [];
-
-          const collabs = (trackArtistsMap?.[trackId] ?? []).map((a) => ({
-            id: String(a.id),
-            display_name: String(a.display_name ?? "Unknown Artist"),
-          }));
-
-          const out: { id: string; display_name: string }[] = [];
-          for (const a of [...owner, ...collabs]) {
-            if (!a?.id) continue;
-            if (!out.some((x) => x.id === a.id)) out.push(a);
-          }
-          return out;
-        })(),
-        // genre bleibt im UI-Slot über it.genre, nicht zwingend Teil von PlayerTrack
-      } as unknown as PlayerTrack;
-    });
+    return buildDevQueue({
+      devItems,
+      supabase,
+      trackArtistsMap,
+    }) as unknown as PlayerTrack[];
   }, [devItems, supabase, trackArtistsMap]);
 
   const perfQueue = useMemo(() => {
-    return performanceItemsFiltered.map((it) => {
-      const trackId = it.track_id;
-      const title = it.track_title || "Untitled";
-      const artistId = it.artist_id;
-      const releaseId = it.release_id;
-
-      const artistName = perfArtistMap[artistId] ?? "Unknown Artist";
-
-      const coverUrl = it.release_cover_path
-        ? supabase.storage.from("release_covers").getPublicUrl(it.release_cover_path).data.publicUrl
-        : null;
-
-      const audioPath = perfTrackMetaMap?.[trackId]?.audio_path ?? null;
-
-      const audioUrl = audioPath
-        ? supabase.storage.from("tracks").getPublicUrl(audioPath).data.publicUrl
-        : null;
-
-      const rtKey = `${releaseId}:${trackId}`;
-      const rt = perfReleaseTrackMap[rtKey];
-      const meta = perfTrackMetaMap?.[trackId];
-
-      return {
-        id: trackId,
-        artist_id: artistId,
-        title,
-        version: (meta as any)?.version ?? null,
-        cover_url: coverUrl,
-        audio_url: audioUrl,
-        audio_path: audioPath,
-        profiles: { display_name: artistName },
-        release_id: releaseId,
-        release_track_id: rt?.release_track_id ?? null,
-        rating_avg: rt?.rating_avg ?? (it.rating_avg ?? null),
-        rating_count: rt?.rating_count ?? (it.rating_count ?? 0),
-        stream_count: rt?.stream_count ?? (it.streams_30d ?? 0),
-        bpm: perfTrackMetaMap?.[trackId]?.bpm ?? null,
-        key: perfTrackMetaMap?.[trackId]?.key ?? null,
-        artists: (() => {
-          const ownerId = String(artistId ?? "");
-          const ownerName = String(artistName ?? "Unknown Artist");
-          const owner = ownerId ? [{ id: ownerId, display_name: ownerName }] : [];
-
-          const collabs = (trackArtistsMap?.[trackId] ?? []).map((a) => ({
-            id: String(a.id),
-            display_name: String(a.display_name ?? "Unknown Artist"),
-          }));
-
-          const out: { id: string; display_name: string }[] = [];
-          for (const a of [...owner, ...collabs]) {
-            if (!a?.id) continue;
-            if (!out.some((x) => x.id === a.id)) out.push(a);
-          }
-          return out;
-        })(),
-      } as unknown as PlayerTrack;
-    });
+    return buildPerfQueue({
+      performanceItemsFiltered,
+      perfArtistMap,
+      perfReleaseTrackMap,
+      perfTrackMetaMap,
+      supabase,
+      trackArtistsMap,
+    }) as unknown as PlayerTrack[];
   }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
   return (
