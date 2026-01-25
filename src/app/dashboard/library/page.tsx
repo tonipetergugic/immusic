@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import React from "react";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";

@@ -26,9 +26,11 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
     <div className="px-4 sm:px-6 pt-4 pb-10">
       {trackData.length > 0 ? (
         <div className="flex flex-col">
-          {trackData.map((track, index) => (
+          {trackData.map((track, index) => {
+            const releaseTrackId = releaseTrackIdByTrackId[String(track.id)];
+            return (
             <TrackRowBase
-              key={`libraryv2-trackrow:${String(track.id)}:${index}`}
+              key={`library-trackrow:${releaseTrackId}`}
               track={track}
               index={index}
               tracks={trackData}
@@ -69,7 +71,8 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                 </div>
               }
             />
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="text-sm text-neutral-400">No tracks found.</p>
