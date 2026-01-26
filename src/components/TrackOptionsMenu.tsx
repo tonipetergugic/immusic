@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
+import { getArtistHref } from "@/lib/routes";
 
 type TrackOptionsMenuProps = {
   track: PlayerTrack;
@@ -250,7 +251,7 @@ export default function TrackOptionsMenu({
           setToast("Artist ID missing.");
           return;
         }
-        router.push(`/dashboard/artist/${artistId}`);
+        router.push(getArtistHref(artistId));
         onClose();
         return;
       }

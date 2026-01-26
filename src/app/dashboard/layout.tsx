@@ -29,7 +29,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-3 pt-0 pb-4 sm:px-4 sm:pb-6 lg:px-8 lg:pb-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-0 pb-4 sm:px-4 sm:pb-6 lg:px-8 lg:pb-8">
           <div className="w-full pb-40 lg:pb-48">
             {children}
           </div>

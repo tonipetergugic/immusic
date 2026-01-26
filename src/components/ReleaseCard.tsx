@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { getArtistHref } from "@/lib/routes";
 
 export type ReleaseCardData = {
   id: string;
@@ -129,7 +130,7 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
 
       {data.artist_id ? (
         <Link
-          href={`/dashboard/artist/${data.artist_id}`}
+          href={getArtistHref(data.artist_id)}
           onClick={(e) => e.stopPropagation()}
           className="text-[11px] text-white/50 truncate hover:text-[#00FFC6] transition-colors block"
         >

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { getArtistHref } from "@/lib/routes";
 
 type Artist = { id: string; display_name: string };
 
@@ -16,7 +17,7 @@ export default function LibraryTrackArtists(props: {
     e.preventDefault();
     e.stopPropagation();
     if (!artistId) return;
-    router.push(`/dashboard/artist/${artistId}`);
+    router.push(getArtistHref(artistId));
   };
 
   const artistsArr = Array.isArray(props.artists) ? props.artists : [];

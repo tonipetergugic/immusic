@@ -55,9 +55,9 @@ export default function PlaylistCard({
       className="
         group relative 
         bg-[#111112] 
-        p-3 rounded-xl 
+        p-2 rounded-xl 
         transition-all
-        hover:scale-[1.02]
+        hover:scale-[1.015]
         hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
         border border-transparent
         hover:border-[#00FFC622]
@@ -65,19 +65,14 @@ export default function PlaylistCard({
         block
       "
     >
-      <div className="relative w-full aspect-square rounded-xl overflow-hidden">
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/5">
         {coverPublicUrl ? (
           <Image
             src={coverPublicUrl}
             alt={title}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="
-              object-cover rounded-xl
-              transition-all duration-300
-              group-hover:brightness-110
-              group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]
-            "
+            className="absolute inset-0 h-full w-full object-cover rounded-xl transition-all duration-300 group-hover:brightness-110 group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]"
           />
         ) : (
           <div className="w-full h-full bg-neutral-800 rounded-xl" />
@@ -94,12 +89,14 @@ export default function PlaylistCard({
         />
       </div>
 
-      <h3 className="mt-2 text-[13px] font-semibold text-white/90 truncate">
+      <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
         {title}
       </h3>
 
-      {description && (
-        <p className="text-[11px] text-white/50 truncate">{description}</p>
+      {description ? (
+        <p className="text-[11px] text-white/50 truncate block">{description}</p>
+      ) : (
+        <div className="h-[16px]" />
       )}
     </Link>
   );
