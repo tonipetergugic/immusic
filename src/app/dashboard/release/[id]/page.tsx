@@ -1,8 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Image from "next/image";
-import Link from "next/link";
 import BackLink from "@/components/BackLink";
 import ReleaseTrackRowClient from "./ReleaseTrackRowClient";
+import type { PlayerTrack } from "@/types/playerTrack";
+import { formatReleaseDate, formatTotalDuration } from "./_lib/format";
+import { buildArtistsList } from "./_lib/artists";
 
 export default async function ReleaseDetailPage({
   params,
@@ -59,6 +61,7 @@ export default async function ReleaseDetailPage({
       track:tracks (
         id,
         title,
+        audio_path,
         duration,
         bpm,
         key,
@@ -91,26 +94,35 @@ export default async function ReleaseDetailPage({
     0
   );
 
-  function formatTotalDuration(sec: number) {
-    if (!sec || sec <= 0) return null;
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = Math.floor(sec % 60);
-    const mm = String(m).padStart(h > 0 ? 2 : 1, "0");
-    const ss = String(s).padStart(2, "0");
-    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
-  }
+  // Build Player queue SERVER-side (no client fetch)
+  const playerQueue: PlayerTrack[] = (items ?? [])
+    .map((row: any) => {
+      const t = row?.track;
+      if (!t?.id || !t?.audio_path) return null;
 
-  function formatReleaseDate(d: any) {
-    if (!d) return null;
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return null;
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(dt);
-  }
+      const { data: audioPublic } = supabase.storage
+        .from("tracks")
+        .getPublicUrl(t.audio_path);
+
+      const audio_url = audioPublic?.publicUrl ?? null;
+      if (!audio_url) return null;
+
+      return {
+        id: String(t.id),
+        title: String(t.title ?? "Untitled"),
+        artist_id: String(t.artist_id ?? ""),
+        audio_url,
+        cover_url: coverUrl ?? null,
+        bpm: t.bpm ?? null,
+        key: t.key ?? null,
+        profiles: t.artist?.display_name
+          ? { display_name: String(t.artist.display_name) }
+          : undefined,
+        release_id: String(releaseId),
+        release_track_id: row?.id ? String(row.id) : null,
+      } as PlayerTrack;
+    })
+    .filter(Boolean) as PlayerTrack[];
 
   return (
     <div className="text-white">
@@ -225,6 +237,7 @@ export default async function ReleaseDetailPage({
                 key={row.id}
                 releaseId={releaseId}
                 startIndex={index}
+                playerQueue={playerQueue}
                 positionLabel={String(row.position ?? "")}
                 track={{
                   id: row.track?.id,
@@ -234,26 +247,7 @@ export default async function ReleaseDetailPage({
                   genre: row.track?.genre ?? null,
                   version: row.track?.version ?? null,
                 }}
-                artists={Array.from(
-                  new Map(
-                    [
-                      row?.track?.artist?.id && row?.track?.artist?.display_name
-                        ? { id: String(row.track.artist.id), display_name: String(row.track.artist.display_name) }
-                        : null,
-                      ...(Array.isArray(row?.track?.track_collaborators)
-                        ? row.track.track_collaborators
-                            .map((c: any) =>
-                              c?.profiles?.id && c?.profiles?.display_name
-                                ? { id: String(c.profiles.id), display_name: String(c.profiles.display_name) }
-                                : null,
-                            )
-                            .filter(Boolean)
-                        : []),
-                    ]
-                      .filter(Boolean)
-                      .map((a: any) => [a.id, a]),
-                  ).values(),
-                )}
+                artists={buildArtistsList(row)}
                 ratingAvg={row.rating_avg ?? null}
                 ratingCount={row.rating_count ?? null}
                 streamCount={row.stream_count ?? 0}
