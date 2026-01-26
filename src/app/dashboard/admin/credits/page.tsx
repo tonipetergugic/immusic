@@ -17,50 +17,13 @@ async function adjustArtistCreditsAction(formData: FormData) {
     throw new Error("Delta must be a non-zero number");
   if (!reason) throw new Error("Reason is required");
 
-  // Current balance (default 0 if missing)
-  const { data: creditRow, error: creditErr } = await supabase
-    .from("artist_credits")
-    .select("balance")
-    .eq("profile_id", profileId)
-    .maybeSingle();
+  const { error: rpcErr } = await supabase.rpc("admin_adjust_artist_credits", {
+    p_profile_id: profileId,
+    p_delta: delta,
+    p_reason: reason,
+  });
 
-  if (creditErr) throw creditErr;
-
-  const currentBalance = creditRow?.balance ?? 0;
-  const balanceAfter = currentBalance + delta;
-
-  // 1) append-only transaction
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-
-  if (userErr) throw userErr;
-
-  const { error: txErr } = await supabase
-    .from("artist_credit_transactions")
-    .insert({
-      profile_id: profileId,
-      delta,
-      balance_after: balanceAfter,
-      reason,
-      source: "admin",
-      created_by: user?.id ?? null,
-    });
-
-  if (txErr) throw txErr;
-
-  // 2) upsert balance
-  const { error: upsertErr } = await supabase.from("artist_credits").upsert(
-    {
-      profile_id: profileId,
-      balance: balanceAfter,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "profile_id" }
-  );
-
-  if (upsertErr) throw upsertErr;
+  if (rpcErr) throw rpcErr;
 
   revalidatePath("/dashboard/admin/credits");
 }

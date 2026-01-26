@@ -147,24 +147,32 @@ export default async function AdminPlaylistsPage({
     .order("position", { ascending: true });
 
   const featuredIds = new Set((homeItems ?? []).map((r) => r.item_id));
+  const homeIds = (homeItems ?? []).map((r) => r.item_id).filter(Boolean);
 
-  let playlistsQuery = supabase
-    .from("playlists")
-    .select(
-      "id, title, is_public, created_at, cover_url, profiles:created_by(display_name, email)"
-    )
-    .order("created_at", { ascending: false });
+  // 1) Load ONLY home playlists (small & explicit)
+  const { data: homePlaylistsRaw, error: homePlaylistsErr } = homeIds.length
+    ? await supabase
+        .from("playlists")
+        .select(
+          "id, title, is_public, created_at, cover_url, profiles:created_by(display_name, email)"
+        )
+        .in("id", homeIds)
+    : { data: [], error: null };
 
-  if (mode === "performance") {
-    playlistsQuery = playlistsQuery.eq("is_public", true);
+  if (homePlaylistsErr) {
+    throw new Error(
+      `playlists (homeIds) query failed: ${homePlaylistsErr.message} (${homePlaylistsErr.code})`
+    );
   }
 
-  const { data: playlists } = await playlistsQuery;
+  const homePlaylistsById = new Map(
+    (homePlaylistsRaw ?? []).map((pl: any) => [pl.id, pl])
+  );
 
   const homePlaylists =
     homeItems
       ?.map((item) => {
-        const playlist = playlists?.find((pl) => pl.id === item.item_id);
+        const playlist = homePlaylistsById.get(item.item_id);
         if (!playlist) return null;
 
         if (mode === "performance" && !playlist.is_public) return null;
@@ -173,11 +181,35 @@ export default async function AdminPlaylistsPage({
       })
       .filter((pl): pl is NonNullable<typeof pl> => Boolean(pl)) ?? [];
 
+  // 2) Load ONLY a bounded set of newest playlists for "Available"
+  //    (prevents full-table scans / payload explosion)
+  const AVAILABLE_LIMIT = 200;
+
+  let availableQuery = supabase
+    .from("playlists")
+    .select(
+      "id, title, is_public, created_at, cover_url, profiles:created_by(display_name, email)"
+    )
+    .order("created_at", { ascending: false })
+    .limit(AVAILABLE_LIMIT);
+
+  if (mode === "performance") {
+    availableQuery = availableQuery.eq("is_public", true);
+  }
+
+  const { data: availableRaw, error: availableErr } = await availableQuery;
+
+  if (availableErr) {
+    throw new Error(
+      `playlists (available) query failed: ${availableErr.message} (${availableErr.code})`
+    );
+  }
+
   const availablePlaylists =
-    playlists?.filter((pl) => !featuredIds.has(pl.id)) ?? [];
+    (availableRaw ?? []).filter((pl: any) => !featuredIds.has(pl.id)) ?? [];
 
   const filteredAvailablePlaylists = q
-    ? availablePlaylists.filter((pl) => {
+    ? availablePlaylists.filter((pl: any) => {
         const title = String(pl.title ?? "").toLowerCase();
         const creatorValue = getCreatorName(pl?.profiles).toLowerCase();
         return title.includes(q) || creatorValue.includes(q);

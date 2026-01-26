@@ -147,66 +147,27 @@ export default async function AdminReleasesPage({
 
   const featuredIds = new Set((homeItems ?? []).map((r) => r.item_id));
 
-  // === NACHHER: Performance mode release filter = ONLY releases where ALL tracks are performance-eligible ===
+  // Performance mode release filter = ONLY releases where ALL tracks are performance-eligible
   let performanceReleaseIds: string[] = [];
 
   if (mode === "performance") {
-    const { data: perfRows, error: perfErr } = await supabase
-      .from("performance_discovery_candidates")
-      .select("release_id, track_id");
+    const { data: perfReleaseRows, error: perfReleaseErr } = await supabase
+      .from("performance_discovery_eligible_releases")
+      .select("release_id");
 
-    if (perfErr) {
+    if (perfReleaseErr) {
       throw new Error(
-        `performance_discovery_candidates query failed: ${perfErr.message} (${perfErr.code})`
+        `performance_discovery_eligible_releases query failed: ${perfReleaseErr.message} (${perfReleaseErr.code})`
       );
     }
 
-    // eligible tracks per release (distinct track_id)
-    const eligibleByRelease = new Map<string, Set<string>>();
-    for (const row of (perfRows ?? []) as any[]) {
-      const rid = row.release_id as string | null;
-      const tid = row.track_id as string | null;
-      if (!rid || !tid) continue;
-      if (!eligibleByRelease.has(rid)) eligibleByRelease.set(rid, new Set());
-      eligibleByRelease.get(rid)!.add(tid);
-    }
+    performanceReleaseIds = (perfReleaseRows ?? [])
+      .map((r: any) => r.release_id)
+      .filter(Boolean);
 
-    const candidateReleaseIds = Array.from(eligibleByRelease.keys());
-
-    // If no candidates -> show nothing
-    if (candidateReleaseIds.length === 0) {
-      performanceReleaseIds = ["00000000-0000-0000-0000-000000000000"]; // safe "no match"
-    } else {
-      // total tracks per release (distinct track.id) — if a release has any non-eligible track, it must NOT appear
-      const { data: trackRows, error: trackErr } = await supabase
-        .from("tracks")
-        .select("id, release_id")
-        .in("release_id", candidateReleaseIds);
-
-      if (trackErr) {
-        throw new Error(`tracks query failed: ${trackErr.message} (${trackErr.code})`);
-      }
-
-      const totalByRelease = new Map<string, Set<string>>();
-      for (const row of (trackRows ?? []) as any[]) {
-        const rid = row.release_id as string | null;
-        const tid = row.id as string | null;
-        if (!rid || !tid) continue;
-        if (!totalByRelease.has(rid)) totalByRelease.set(rid, new Set());
-        totalByRelease.get(rid)!.add(tid);
-      }
-
-      // keep only releases where eligible_count === total_count
-      performanceReleaseIds = candidateReleaseIds.filter((rid) => {
-        const eligibleCount = eligibleByRelease.get(rid)?.size ?? 0;
-        const totalCount = totalByRelease.get(rid)?.size ?? 0;
-        return totalCount > 0 && eligibleCount === totalCount;
-      });
-
-      // If none fully eligible -> show nothing
-      if (performanceReleaseIds.length === 0) {
-        performanceReleaseIds = ["00000000-0000-0000-0000-000000000000"]; // safe "no match"
-      }
+    // If none fully eligible -> show nothing (safe "no match")
+    if (performanceReleaseIds.length === 0) {
+      performanceReleaseIds = ["00000000-0000-0000-0000-000000000000"];
     }
   }
 
