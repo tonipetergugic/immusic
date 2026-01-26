@@ -74,6 +74,10 @@ export type TopTrackDto = {
 
   audioUrl: string;
 
+  bpm?: number | null;
+  key?: string | null;
+  genre?: string | null;
+
   stats30d: {
     streams: number;
     listeners: number;

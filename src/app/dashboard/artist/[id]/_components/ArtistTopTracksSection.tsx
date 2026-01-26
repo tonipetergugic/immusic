@@ -148,6 +148,9 @@ export default function ArtistTopTracksSection({
                     </div>
                   </div>
                 }
+                bpmSlot={<span>{t.bpm ?? "—"}</span>}
+                keySlot={<span>{t.key ?? "—"}</span>}
+                genreSlot={<span className="truncate">{t.genre ?? "—"}</span>}
                 actionsSlot={
                   <TrackOptionsTrigger
                     track={track}
