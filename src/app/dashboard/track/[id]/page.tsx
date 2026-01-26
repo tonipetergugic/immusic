@@ -6,6 +6,8 @@ import { toPlayerTrack } from "@/lib/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import BackLink from "@/components/BackLink";
 import LyricsEditor from "./LyricsEditor";
+import { formatReleaseDateDE } from "./_lib/format";
+import { normalizeTrackForPage } from "./_lib/normalize";
 
 export default async function TrackPage({
   params,
@@ -45,33 +47,39 @@ export default async function TrackPage({
     return notFound();
   }
 
-  const trackDataNormalized = trackData
-    ? {
-        ...trackData,
-        releases: Array.isArray(trackData.releases)
-          ? trackData.releases[0] ?? null
-          : trackData.releases ?? null,
-        artist_profile: Array.isArray(trackData.artist_profile)
-          ? trackData.artist_profile[0] ?? null
-          : trackData.artist_profile ?? null,
-      }
+  if (!trackData) return notFound();
+
+  // Transform query data to match normalizeTrackForPage expected format
+  const release = Array.isArray(trackData.releases)
+    ? trackData.releases[0] ?? null
+    : trackData.releases ?? null;
+  const artistProfile = Array.isArray(trackData.artist_profile)
+    ? trackData.artist_profile[0] ?? null
+    : trackData.artist_profile ?? null;
+
+  const cover_url = release?.cover_path
+    ? supabase.storage
+        .from("release_covers")
+        .getPublicUrl(release.cover_path).data.publicUrl ?? null
     : null;
 
-  if (!trackDataNormalized) return notFound();
+  const audio_url = trackData.audio_path
+    ? supabase.storage
+        .from("tracks")
+        .getPublicUrl(trackData.audio_path).data.publicUrl ?? null
+    : null;
 
-  const cover_url =
-    trackDataNormalized?.releases?.cover_path
-      ? supabase.storage
-          .from("release_covers")
-          .getPublicUrl(trackDataNormalized.releases.cover_path).data.publicUrl ?? null
-      : null;
+  const trackForNormalization = {
+    ...trackData,
+    audio_url,
+    cover_url,
+    release_title: release?.title ?? null,
+    release_date_label: release?.release_date ?? null,
+    artist_name: artistProfile?.display_name ?? null,
+    release_id: release?.id ?? null,
+  };
 
-  const audio_url =
-    trackDataNormalized?.audio_path
-      ? supabase.storage
-          .from("tracks")
-          .getPublicUrl(trackDataNormalized.audio_path).data.publicUrl
-      : null;
+  const trackDataNormalized = normalizeTrackForPage(trackForNormalization);
 
   if (!audio_url) {
     throw new Error(
@@ -85,11 +93,11 @@ export default async function TrackPage({
     artist_id: trackDataNormalized.artist_id ?? null,
     audio_url,
     cover_url,
-    bpm: (trackDataNormalized as any).bpm ?? null,
-    key: (trackDataNormalized as any).key ?? null,
-    artist_profile: trackDataNormalized.artist_profile ?? null,
-    profiles: (trackDataNormalized as any).profiles ?? null,
-    artist: (trackDataNormalized as any).artist ?? null,
+    bpm: trackDataNormalized.bpm ?? null,
+    key: trackDataNormalized.key ?? null,
+    artist_profile: null,
+    profiles: null,
+    artist: null,
   });
 
   const coverPublicUrl = playerTrack.cover_url ?? null;
@@ -112,16 +120,9 @@ export default async function TrackPage({
     !!viewerId && (viewerId === trackDataNormalized.artist_id || viewerRole === "admin");
 
   const title = playerTrack.title;
-  const artistName = playerTrack.profiles?.display_name ?? "Unknown Artist";
-  const releaseTitle = trackDataNormalized.releases?.title ?? null;
-  const releaseDateRaw = trackDataNormalized.releases?.release_date ?? null;
-  const releaseDate = releaseDateRaw
-    ? new Date(releaseDateRaw).toLocaleDateString("de-DE", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
-    : null;
+  const artistName = trackDataNormalized.artist_name ?? "Unknown Artist";
+  const releaseTitle = trackDataNormalized.release_title ?? null;
+  const releaseDate = formatReleaseDateDE(trackDataNormalized.release_date_label ?? null);
 
   return (
     <div className="w-full">
