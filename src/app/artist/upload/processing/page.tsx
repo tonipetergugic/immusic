@@ -4,10 +4,25 @@ import { processQueuedTrack, rejectQueueItemAction } from "./actions";
 export default async function ProcessingPage() {
   const supabase = await createSupabaseServerClient();
 
-  // neuesten pending Queue-Eintrag holen
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    // gleiche UX wie vorher: Seite lädt nicht für anon
+    // (optional später redirect)
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] text-white">
+        <p className="text-white/70">Not authenticated.</p>
+      </div>
+    );
+  }
+
+  // NUR den neuesten Queue-Eintrag DES Users (nicht global!)
   const { data: queueItem } = await supabase
     .from("tracks_ai_queue")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .single();

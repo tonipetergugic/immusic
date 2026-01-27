@@ -19,6 +19,7 @@ export async function processQueuedTrack(queueId: string, action: "approve" | "r
     .from("tracks_ai_queue")
     .select("*")
     .eq("id", queueId)
+    .eq("user_id", user.id)
     .single();
 
   if (fetchError || !queueItem) {
@@ -32,7 +33,8 @@ export async function processQueuedTrack(queueId: string, action: "approve" | "r
     await supabase
       .from("tracks_ai_queue")
       .update({ status: "rejected" })
-      .eq("id", queueId);
+      .eq("id", queueId)
+      .eq("user_id", user.id);
 
     // 2) Try to remove audio file from storage
     const { error: storageError } = await supabase.storage.from("tracks").remove([audioPath]);
@@ -58,7 +60,11 @@ export async function processQueuedTrack(queueId: string, action: "approve" | "r
     throw new Error("Failed to insert track.");
   }
 
-  await supabase.from("tracks_ai_queue").update({ status: "approved" }).eq("id", queueId);
+  await supabase
+    .from("tracks_ai_queue")
+    .update({ status: "approved" })
+    .eq("id", queueId)
+    .eq("user_id", user.id);
 
   redirect("/artist/my-tracks");
 }
@@ -87,6 +93,7 @@ export async function rejectQueueItemAction(formData: FormData) {
     .from("tracks_ai_queue")
     .select("*")
     .eq("id", queueId)
+    .eq("user_id", user.id)
     .single();
 
   if (fetchError || !queueItem) {
