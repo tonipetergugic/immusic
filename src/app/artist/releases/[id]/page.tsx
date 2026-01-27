@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
 import ReleaseEditorClient from "./ReleaseEditorClient";
 
 export default async function ReleaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,18 +19,19 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
     );
   }
 
-  const { data: release, error } = await supabase
+  const { data: release, error: releaseError } = await supabase
     .from("releases")
-    .select("id, title, release_type, cover_path, created_at, status")
+    .select("id, artist_id, title, release_type, cover_path, created_at, status")
     .eq("id", id)
-    .single();
+    .eq("artist_id", user.id)
+    .maybeSingle();
 
-  if (!release || error) {
-    return (
-      <div className="text-white p-6">
-        <h1 className="text-2xl font-bold">Release not found</h1>
-      </div>
-    );
+  if (releaseError) {
+    throw releaseError;
+  }
+
+  if (!release) {
+    notFound();
   }
 
   const coverUrl = release.cover_path
@@ -38,31 +40,20 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const { data: rawTracks } = await supabase
     .from("release_tracks")
-    .select(
-      `
-    track_id,
-    track_title,
-    position,
-    release_id,
-    track:tracks (
-      version
-    )
-  `,
-    )
+    .select("track_id, track_title, position, release_id")
     .eq("release_id", release.id)
     .order("position", { ascending: true });
 
-  const tracks =
+  const baseTracks =
     rawTracks?.map((t) => ({
       track_id: t.track_id,
       track_title: t.track_title,
-      track_version: (t.track?.[0]?.version ?? null) as string | null,
+      track_version: null as string | null, // filled from tracks table below
       position: t.position,
       release_id: t.release_id,
     })) ?? [];
 
-  const initialTracks = tracks;
-  const existingTrackIds = initialTracks.map((t) => t.track_id);
+  const existingTrackIds = baseTracks.map((t) => t.track_id);
 
   // --- Premium Credits (for Boost UI) ---
   const { data: creditsRow, error: creditsErr } = await supabase
@@ -77,22 +68,44 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const premiumBalance = creditsRow?.balance ?? 0;
 
-  // --- Track status lookup (performance only toggle) ---
-  const { data: statusRows, error: statusErr } = existingTrackIds.length
+  // --- Tracks lookup (single query) ---
+  const { data: trackRows, error: trackErr } = existingTrackIds.length
     ? await supabase
         .from("tracks")
-        .select("id, status")
+        .select("id, status, version, bpm, key, genre")
         .in("id", existingTrackIds)
     : { data: [] as any[], error: null };
 
-  if (statusErr) {
-    throw statusErr;
+  if (trackErr) {
+    throw trackErr;
   }
 
-  const trackStatusById = (statusRows ?? []).reduce((acc: Record<string, string>, r: any) => {
+  const trackStatusById = (trackRows ?? []).reduce((acc: Record<string, string>, r: any) => {
     acc[r.id] = String(r.status ?? "");
     return acc;
   }, {});
+
+  const trackVersionById = (trackRows ?? []).reduce(
+    (acc: Record<string, string | null>, r: any) => {
+      acc[r.id] = (r.version ?? null) as string | null;
+      return acc;
+    },
+    {},
+  );
+
+  const initialTracks = baseTracks.map((t) => ({
+    ...t,
+    track_version: trackVersionById[t.track_id] ?? null,
+  }));
+
+  const missingTrackRows =
+    existingTrackIds.length > 0 && (trackRows ?? []).length !== existingTrackIds.length;
+  const hasMissingMeta = (trackRows ?? []).some(
+    (r: any) => r.bpm == null || r.key == null || r.genre == null,
+  );
+
+  const allTracksMetadataComplete =
+    existingTrackIds.length > 0 && !missingTrackRows && !hasMissingMeta;
 
   // --- Boost opt-in states ---
   const { data: boostRows, error: boostErr } = existingTrackIds.length
@@ -141,17 +154,6 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
     },
     {}
   );
-
-  const { data: incompleteMeta } = existingTrackIds.length
-    ? await supabase
-        .from("tracks")
-        .select("id")
-        .in("id", existingTrackIds)
-        .or("bpm.is.null,key.is.null,genre.is.null")
-    : { data: [] as any[] };
-
-  const allTracksMetadataComplete =
-    existingTrackIds.length > 0 && (incompleteMeta?.length ?? 0) === 0;
 
   return (
     <ReleaseEditorClient

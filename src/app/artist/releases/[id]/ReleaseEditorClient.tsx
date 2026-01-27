@@ -55,6 +55,7 @@ export default function ReleaseEditorClient({
   boostEnabledById,
 }: ReleaseEditorClientProps) {
   const [tracks, setTracks] = useState<Track[]>(initialTracks ?? []);
+  const hasAtLeastOneTrack = tracks.length > 0;
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState(releaseData.title);
   const [releaseType, setReleaseType] = useState(releaseData.release_type);
@@ -68,6 +69,10 @@ export default function ReleaseEditorClient({
     initialTracks.every((t) => trackStatusById[t.track_id] === "development");
   const [devAllDone, setDevAllDone] = useState(allTracksInDevelopment);
   const isPublished = status === "published";
+
+  // Publish Preconditions (verbindlich)
+  const canPublish = !isPublished && hasAtLeastOneTrack && allTracksMetadataComplete;
+
   const markAsDraft = useCallback(() => {
     // Published releases are immutable (DB-enforced). Never attempt draft transitions.
     if (status === "published") return;
@@ -90,10 +95,9 @@ export default function ReleaseEditorClient({
   }, [tracks, existingTrackIds]);
 
   const hasCover = Boolean(coverUrl);
-  const hasAtLeastOneTrack = tracks.length > 0;
 
   const confirmPublish = useCallback(() => {
-    if (isPublished) return;
+    if (!canPublish) return;
 
     startTransition(async () => {
       const res = await publishReleaseAction(releaseId);
@@ -104,7 +108,7 @@ export default function ReleaseEditorClient({
         alert(res?.error ?? "Failed to publish.");
       }
     });
-  }, [isPublished, releaseId, startTransition]);
+  }, [canPublish, releaseId, startTransition]);
 
   return (
     <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
@@ -278,10 +282,10 @@ export default function ReleaseEditorClient({
             <div className="mt-5 flex flex-col gap-2">
               <button
                 onClick={() => {
-                  if (isPublished) return;
+                  if (!canPublish) return;
                   setPublishModalOpen(true);
                 }}
-                disabled={status === "published"}
+                disabled={!canPublish}
                 className="w-full inline-flex items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
               >
                 {status === "published" ? "Published" : "Publish Release"}
@@ -497,7 +501,7 @@ export default function ReleaseEditorClient({
               <button
                 type="button"
                 onClick={confirmPublish}
-                disabled={isPending || isPublished}
+                disabled={isPending || !canPublish}
                 className="rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/15 px-5 py-2.5 text-sm font-semibold text-[#00FFC6] backdrop-blur transition
   hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/50
   hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
