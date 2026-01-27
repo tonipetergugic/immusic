@@ -22,14 +22,15 @@ type Track = {
 };
 
 const TRACK_VERSION_OPTIONS = [
-  { value: "ORIGINAL", label: "Original Mix" },
-  { value: "EXTENDED", label: "Extended Mix" },
-  { value: "RADIO", label: "Radio Edit" },
-  { value: "CLUB", label: "Club Mix" },
-  { value: "INSTRUMENTAL", label: "Instrumental Mix" },
-  { value: "DUB", label: "Dub Mix" },
-  { value: "VIP", label: "VIP Mix" },
-  { value: "SPECIAL", label: "Special Mix" },
+  { value: "None", label: "None" },
+  { value: "Original Mix", label: "Original Mix" },
+  { value: "Extended Mix", label: "Extended Mix" },
+  { value: "Radio Edit", label: "Radio Edit" },
+  { value: "Club Mix", label: "Club Mix" },
+  { value: "Instrumental Mix", label: "Instrumental Mix" },
+  { value: "Dub Mix", label: "Dub Mix" },
+  { value: "VIP Mix", label: "VIP Mix" },
+  { value: "Special Mix", label: "Special Mix" },
 ] as const;
 
 const TRACK_VERSION_VALUES = new Set(TRACK_VERSION_OPTIONS.map((o) => o.value));
@@ -201,8 +202,9 @@ export default function EditTrackClient({
         keyValue = trimmedKey;
       }
 
-      const versionValue = newVersion.trim() === "" ? null : newVersion.toUpperCase();
-      if (versionValue !== null && !TRACK_VERSION_VALUES.has(versionValue as any)) {
+      const versionValue = newVersion.trim() === "" ? "None" : newVersion.trim();
+
+      if (!TRACK_VERSION_VALUES.has(versionValue as any)) {
         setEditError("Version must be a valid preset.");
         return;
       }
@@ -350,9 +352,7 @@ export default function EditTrackClient({
               value={newVersion}
               onChange={(e) => setNewVersion(e.target.value)}
             >
-              <option value="" className="text-white/60">
-                None
-              </option>
+              <option value="" className="text-white/60">None</option>
 
               {TRACK_VERSION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>

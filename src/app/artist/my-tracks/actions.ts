@@ -10,7 +10,7 @@ export type RenameTrackPayload = {
   genre: string | null;
   has_lyrics: boolean;
   is_explicit: boolean;
-  version?: string | null;
+  version: string;
 };
 
 export type TrackCollabRole = "CO_OWNER" | "FEATURED";
@@ -113,22 +113,25 @@ export async function renameTrackAction(
     throw new Error("Not authenticated");
   }
 
+  const update = {
+    title: payload.title,
+    bpm: payload.bpm,
+    key: payload.key,
+    genre: payload.genre,
+    has_lyrics: payload.has_lyrics,
+    is_explicit: payload.is_explicit,
+    version: payload.version,
+  };
+
   const { error } = await supabase
     .from("tracks")
-    .update({
-      title: payload.title,
-      bpm: payload.bpm,
-      key: payload.key,
-      genre: payload.genre,
-      has_lyrics: payload.has_lyrics,
-      is_explicit: payload.is_explicit,
-      version: payload.version && payload.version.trim() !== "" ? payload.version.trim() : null,
-    })
+    .update(update)
     .eq("id", trackId)
     .eq("artist_id", user.id);
 
   if (error) {
-    throw new Error("Failed to rename track");
+    console.error("[renameTrackAction] supabase error:", error);
+    throw new Error(`Failed to rename track: ${error.message}`);
   }
 
   revalidatePath("/artist/my-tracks");
