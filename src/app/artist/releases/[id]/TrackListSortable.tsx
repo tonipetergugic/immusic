@@ -39,6 +39,7 @@ function SortableTrackItem({
   premiumBalance,
   status,
   initialBoostEnabled,
+  releasePublished,
 }: {
   track: Track;
   setTracks: Dispatch<SetStateAction<Track[]>>;
@@ -51,6 +52,7 @@ function SortableTrackItem({
   premiumBalance: number;
   status: string | null;
   initialBoostEnabled: boolean;
+  releasePublished: boolean;
 }) {
   const [devPending, setDevPending] = useState(false);
   const [boostPending, setBoostPending] = useState(false);
@@ -95,11 +97,15 @@ function SortableTrackItem({
   const ratingsLabel = `Ratings ${ratingCount}/3`;
 
   const nextStep =
-    isEligible ? null :
-    !isDevOk ? { label: "Enable Development (not available yet)", href: null } :
-    !isExposureOk ? { label: "Check Guaranteed Exposure", href: "/artist/dashboard" } :
-    ratingCount < 3 ? { label: "Collect more ratings (Development)", href: "/artist/dashboard" } :
-    null;
+    isEligible
+      ? null
+      : !isDevOk
+      ? (releasePublished ? { label: "Enable Development", href: null } : null)
+      : !isExposureOk
+      ? { label: "Check Guaranteed Exposure", href: "/artist/dashboard" }
+      : ratingCount < 3
+      ? { label: "Collect more ratings (Development)", href: "/artist/dashboard" }
+      : null;
 
   return (
     <li
@@ -178,33 +184,7 @@ function SortableTrackItem({
                 </div>
               ) : null}
 
-              {!isDevOk ? (
-                <button
-                  type="button"
-                  disabled={devPending}
-                  onClick={async () => {
-                    try {
-                      setDevPending(true);
-                      const res = await fetch(`/api/tracks/${track.track_id}/move-to-development`, {
-                        method: "POST",
-                      });
-
-                      if (!res.ok) {
-                        const msg = await res.text().catch(() => "");
-                        alert(msg || "Failed to enable Development.");
-                        return;
-                      }
-
-                      onRefresh?.();
-                    } finally {
-                      setDevPending(false);
-                    }
-                  }}
-                  className="inline-flex items-center justify-end text-[11px] font-semibold text-[#00FFC6] hover:text-[#00E0B0] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Enable Development →
-                </button>
-              ) : nextStep ? (
+              {nextStep ? (
                 nextStep.href ? (
                   <a
                     href={nextStep.href}
@@ -254,6 +234,7 @@ type TrackListSortableProps = {
   premiumBalance: number;
   trackStatusById: Record<string, string>;
   boostEnabledById: Record<string, boolean>;
+  releasePublished: boolean;
 };
 
 export default function TrackListSortable({
@@ -265,6 +246,7 @@ export default function TrackListSortable({
   premiumBalance,
   trackStatusById,
   boostEnabledById,
+  releasePublished,
 }: TrackListSortableProps) {
   const router = useRouter();
   const sensors = useSensors(
@@ -322,6 +304,7 @@ export default function TrackListSortable({
               premiumBalance={premiumBalance}
               status={trackStatusById[track.track_id] ?? null}
               initialBoostEnabled={!!boostEnabledById[track.track_id]}
+              releasePublished={releasePublished}
             />
           ))}
         </ul>

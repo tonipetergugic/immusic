@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { deleteReleaseCoverAction, updateReleaseCoverAction } from "./actions";
 
@@ -82,9 +83,10 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
             setUploading(false);
             onReleaseModified?.();
           }}
-          className="text-red-400 hover:text-red-300 text-xs mt-2"
+          className="mt-2 inline-flex items-center gap-2 text-xs text-red-400 hover:text-red-300 transition"
         >
-          Remove Cover
+          <Trash2 className="w-4 h-4 opacity-80" />
+          <span>Remove Cover</span>
         </button>
       )}
 

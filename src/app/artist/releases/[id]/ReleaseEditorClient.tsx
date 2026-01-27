@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
+import BackLink from "@/components/BackLink";
 import ReleaseCoverUploader from "./ReleaseCoverUploader";
 const TrackListSortable = dynamic(() => import("./TrackListSortable"), {
   ssr: false,
@@ -13,6 +14,7 @@ import { publishReleaseAction } from "./publishReleaseAction";
 import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
 import DeleteReleaseModal from "@/components/DeleteReleaseModal";
 import { deleteReleaseAction } from "./deleteReleaseAction";
+import { enableDevelopmentForReleaseAction } from "./enableDevelopmentForReleaseAction";
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
 type ReleaseStatus = "draft" | "published";
@@ -58,13 +60,27 @@ export default function ReleaseEditorClient({
   const [releaseType, setReleaseType] = useState(releaseData.release_type);
   const [status, setStatus] = useState<ReleaseStatus>(releaseData.status ?? "draft");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [devAllPending, setDevAllPending] = useState(false);
+  const allTracksInDevelopment =
+    initialTracks.length > 0 &&
+    initialTracks.every((t) => trackStatusById[t.track_id] === "development");
+  const [devAllDone, setDevAllDone] = useState(allTracksInDevelopment);
+  const isPublished = status === "published";
   const markAsDraft = useCallback(() => {
-    setStatus("draft");
+    // Published releases are immutable (DB-enforced). Never attempt draft transitions.
+    if (status === "published") return;
+
     startTransition(async () => {
-      await updateReleaseStatusAction(releaseId, "draft");
+      const res = await updateReleaseStatusAction(releaseId, "draft");
+      if (res?.success) {
+        setStatus("draft");
+      } else if (res?.error) {
+        alert(res.error);
+      }
     });
-  }, [releaseId, startTransition]);
+  }, [releaseId, startTransition, status]);
 
   const derivedTrackIds = useMemo(() => {
     if (tracks.length > 0) {
@@ -76,8 +92,26 @@ export default function ReleaseEditorClient({
   const hasCover = Boolean(coverUrl);
   const hasAtLeastOneTrack = tracks.length > 0;
 
+  const confirmPublish = useCallback(() => {
+    if (isPublished) return;
+
+    startTransition(async () => {
+      const res = await publishReleaseAction(releaseId);
+      if (res?.success) {
+        setStatus("published");
+        setPublishModalOpen(false);
+      } else {
+        alert(res?.error ?? "Failed to publish.");
+      }
+    });
+  }, [isPublished, releaseId, startTransition]);
+
   return (
     <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
+      <div className="mb-6">
+        <BackLink label="Back to Releases" />
+      </div>
+
       <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
         {/* Left column: Lifecycle / control (no cards, minimalist flow) */}
         <div className="space-y-10">
@@ -110,11 +144,19 @@ export default function ReleaseEditorClient({
             </div>
 
             <div className="mt-4">
-              <ReleaseCoverUploader
-                releaseId={releaseId}
-                initialCoverUrl={coverUrl}
-                onReleaseModified={markAsDraft}
-              />
+              <div className={isPublished ? "pointer-events-none opacity-60" : ""}>
+                <ReleaseCoverUploader
+                  releaseId={releaseId}
+                  initialCoverUrl={coverUrl}
+                  onReleaseModified={isPublished ? undefined : markAsDraft}
+                />
+              </div>
+
+              {isPublished ? (
+                <div className="mt-2 text-xs text-white/60">
+                  Cover is locked because this release is published.
+                </div>
+              ) : null}
             </div>
 
             {status === "draft" &&
@@ -179,17 +221,65 @@ export default function ReleaseEditorClient({
               </div>
             ) : null}
 
+            {isPublished ? (
+              <div className="mt-6 space-y-3">
+                <div className="text-lg font-semibold tracking-tight text-white">
+                  Development Discovery
+                </div>
+
+                <div className="text-sm text-white/70">
+                  Enable Development for all tracks in this release. This can only be done once.
+                </div>
+
+                <button
+                  type="button"
+                  disabled={devAllPending || devAllDone || allTracksInDevelopment}
+                  onClick={() => {
+                    if (devAllPending || devAllDone || allTracksInDevelopment) return;
+
+                    setDevAllPending(true);
+                    startTransition(async () => {
+                      try {
+                        const res = await enableDevelopmentForReleaseAction(releaseId);
+                        if (res?.success) {
+                          setDevAllDone(true);
+                          window.location.reload();
+                        } else {
+                          alert(res?.error ?? "Failed to enable development.");
+                        }
+                      } finally {
+                        setDevAllPending(false);
+                      }
+                    });
+                  }}
+                  className="w-full rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/15 px-5 py-3 text-sm font-semibold text-[#00FFC6] backdrop-blur transition
+      hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/50
+      hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40
+      disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {allTracksInDevelopment
+                    ? "All tracks already in Development"
+                    : devAllDone
+                    ? "Development enabled"
+                    : devAllPending
+                    ? "Enabling..."
+                    : "Enable Development for all tracks"}
+                </button>
+
+                {(devAllDone || allTracksInDevelopment) ? (
+                  <div className="text-xs text-white/60">
+                    Done. Track statuses will update automatically.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="mt-5 flex flex-col gap-2">
               <button
                 onClick={() => {
-                  startTransition(async () => {
-                    const res = await publishReleaseAction(releaseId);
-                    if (res?.success) {
-                      setStatus("published");
-                    } else {
-                      alert(res?.error ?? "Failed to publish.");
-                    }
-                  });
+                  if (isPublished) return;
+                  setPublishModalOpen(true);
                 }}
                 disabled={status === "published"}
                 className="w-full inline-flex items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
@@ -222,10 +312,13 @@ export default function ReleaseEditorClient({
         <div className="min-w-0">
           <div>
             <input
-              className="w-full bg-transparent text-3xl font-semibold tracking-tight outline-none border-b border-white/10 focus:border-[#00FFC6]/60 transition pb-3"
+              className="w-full bg-transparent text-3xl font-semibold tracking-tight outline-none border-b border-white/10 focus:border-[#00FFC6]/60 transition pb-3 disabled:opacity-60 disabled:cursor-not-allowed"
               value={title}
+              disabled={isPublished || isPending}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={() => {
+                if (isPublished) return;
+
                 const trimmed = title.trim();
                 if (trimmed !== releaseData.title) {
                   startTransition(async () => {
@@ -242,13 +335,17 @@ export default function ReleaseEditorClient({
                 }
               }}
               aria-busy={isPending}
+              aria-disabled={isPublished || isPending}
             />
 
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[#B3B3B3]">
               <select
-                className="uppercase tracking-[0.14em] text-[#00FFC6] bg-transparent border-none p-0 outline-none cursor-pointer hover:text-[#00E0B0] transition font-medium"
+                className="uppercase tracking-[0.14em] text-[#00FFC6] bg-transparent border-none p-0 outline-none cursor-pointer hover:text-[#00E0B0] transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                 value={releaseType}
+                disabled={isPublished || isPending}
                 onChange={(e) => {
+                  if (isPublished) return;
+
                   const nextType = e.target.value;
                   setReleaseType(nextType);
 
@@ -290,8 +387,12 @@ export default function ReleaseEditorClient({
               </div>
 
               <button
-                onClick={() => setModalOpen(true)}
-                className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm font-semibold text-white/90 backdrop-blur transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+                onClick={() => {
+                  if (isPublished) return;
+                  setModalOpen(true);
+                }}
+                disabled={isPublished || isPending}
+                className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm font-semibold text-white/90 backdrop-blur transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
               >
                 <span className="text-white/70 group-hover:text-[#00FFC6] transition">+</span>
@@ -319,16 +420,25 @@ export default function ReleaseEditorClient({
                 </div>
               ) : (
                 <div className="px-0 sm:px-1">
-                  <TrackListSortable
-                    releaseId={releaseId}
-                    tracks={tracks}
-                    setTracks={setTracks}
-                    onReleaseModified={markAsDraft}
-                    eligibilityByTrackId={eligibilityByTrackId}
-                    premiumBalance={premiumBalance}
-                    trackStatusById={trackStatusById}
-                    boostEnabledById={boostEnabledById}
-                  />
+                  <div className={isPublished ? "pointer-events-none opacity-60" : ""}>
+                    <TrackListSortable
+                      releaseId={releaseId}
+                      tracks={tracks}
+                      setTracks={setTracks}
+                      onReleaseModified={isPublished ? undefined : markAsDraft}
+                      eligibilityByTrackId={eligibilityByTrackId}
+                      premiumBalance={premiumBalance}
+                      trackStatusById={trackStatusById}
+                      boostEnabledById={boostEnabledById}
+                      releasePublished={isPublished}
+                    />
+                  </div>
+
+                  {isPublished ? (
+                    <div className="mt-2 text-xs text-white/60">
+                      Tracklist is locked because this release is published.
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -337,13 +447,13 @@ export default function ReleaseEditorClient({
       </div>
 
       <AddTrackModal
-        open={modalOpen}
+        open={isPublished ? false : modalOpen}
         onClose={() => setModalOpen(false)}
         existingTrackIds={derivedTrackIds}
         releaseId={releaseId}
         clientTracks={tracks}
         setClientTracks={setTracks}
-        onReleaseModified={markAsDraft}
+        onReleaseModified={isPublished ? undefined : markAsDraft}
       />
 
       <DeleteReleaseModal
@@ -354,6 +464,51 @@ export default function ReleaseEditorClient({
           deleteReleaseAction(releaseId);
         }}
       />
+
+      {publishModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setPublishModalOpen(false)}
+          />
+
+          <div className="relative w-[92vw] max-w-md rounded-2xl border border-white/10 bg-[#0E0E10] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_120px_rgba(0,0,0,0.6)]">
+            <div className="text-lg font-semibold text-white/90">Publish release?</div>
+
+            <div className="mt-2 text-sm text-[#B3B3B3]">
+              Publishing is <span className="text-white/90 font-semibold">final</span>.
+              After publishing, you can’t edit title, type, cover or tracklist anymore.
+            </div>
+
+            <div className="mt-2 text-sm text-[#B3B3B3]">
+              If something is wrong, you must{" "}
+              <span className="text-white/90 font-semibold">delete</span> the release and create a new one.
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPublishModalOpen(false)}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/[0.07] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmPublish}
+                disabled={isPending || isPublished}
+                className="rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/15 px-5 py-2.5 text-sm font-semibold text-[#00FFC6] backdrop-blur transition
+  hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/50
+  hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
