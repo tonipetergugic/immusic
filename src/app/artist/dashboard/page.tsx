@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
   BarChart3,
-  ChevronRight,
   Disc3,
   Music2,
   Upload,
@@ -11,6 +9,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Tooltip from "@/components/Tooltip";
+import ArtistDashboardHero from "./_components/ArtistDashboardHero";
+import { SectionDivider, Stat, MenuTile } from "./_components/DashboardUi";
+import { formatNumber, getCoverUrl } from "./_lib/dashboardHelpers";
 
 export default async function ArtistDashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -57,60 +58,54 @@ export default async function ArtistDashboardPage() {
 
   const premiumTx = (premiumTxRaw ?? []) as PremiumTxRow[];
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("display_name, banner_url")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError && profileError.code !== "PGRST116") {
-    throw profileError;
-  }
-
-  const artistName = profile?.display_name ?? "Artist";
-  const bannerUrl = profile?.banner_url ?? null;
-
   const publicArtistHref = `/dashboard/artist/${user.id}`;
-  const isProfileIncomplete = !bannerUrl || artistName === "Artist";
 
   type PerfRow = {
     release_id: string;
-    track_title: string | null;
+    track_title: string;
     stream_count: number | null;
     rating_avg: number | null;
     rating_count: number | null;
-    releases:
-      | { artist_id: string; cover_path: string | null }
-      | { artist_id: string; cover_path: string | null }[]
-      | null;
+    cover_path: string | null;
   };
 
-  const { data: perfRowsRaw, error: perfError } = await supabase
-    .from("release_tracks")
-    .select(
-      "release_id, track_title, stream_count, rating_avg, rating_count, releases!inner(artist_id, cover_path)"
-    )
-    .eq("releases.artist_id", user.id);
+  const { data: topRatedRaw, error: topRatedError } = await supabase
+    .from("artist_dashboard_release_tracks")
+    .select("release_id, track_title, stream_count, rating_avg, rating_count, cover_path")
+    .eq("artist_id", user.id)
+    .order("rating_avg", { ascending: false, nullsFirst: false })
+    .order("rating_count", { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  const { data: topStreamsRaw, error: topStreamsError } = await supabase
+    .from("artist_dashboard_release_tracks")
+    .select("release_id, track_title, stream_count, rating_avg, rating_count, cover_path")
+    .eq("artist_id", user.id)
+    .order("stream_count", { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  const perfError = topRatedError ?? topStreamsError;
 
   if (perfError) {
     throw perfError;
   }
 
-  const perfRows = (perfRowsRaw ?? []) as PerfRow[];
+  const topRatedRows = (topRatedRaw ?? []) as PerfRow[];
+  const topStreamsRows = (topStreamsRaw ?? []) as PerfRow[];
 
-  const totalStreams = perfRows.reduce(
+  const totalStreams = topStreamsRows.reduce(
     (sum, row) => sum + (typeof row.stream_count === "number" ? row.stream_count : 0),
     0
   );
 
-  const totalTracks = perfRows.length;
+  const totalTracks = topStreamsRows.length;
   const totalReleases = Array.from(
-    new Set(perfRows.map((row) => row.release_id).filter(Boolean))
+    new Set(topStreamsRows.map((row) => row.release_id).filter(Boolean))
   ).length;
 
   const avgStreamsPerTrack = totalTracks > 0 ? totalStreams / totalTracks : 0;
 
-  const { weightedRatingSum, ratingCountSum } = perfRows.reduce(
+  const { weightedRatingSum, ratingCountSum } = topRatedRows.reduce(
     (acc, row) => {
       const count = typeof row.rating_count === "number" ? row.rating_count : 0;
       const avg = typeof row.rating_avg === "number" ? row.rating_avg : null;
@@ -125,7 +120,7 @@ export default async function ArtistDashboardPage() {
     { weightedRatingSum: 0, ratingCountSum: 0 }
   );
 
-  const totalRatingsCount = perfRows.reduce(
+  const totalRatingsCount = topRatedRows.reduce(
     (sum, row) => sum + (typeof row.rating_count === "number" ? row.rating_count : 0),
     0
   );
@@ -134,38 +129,26 @@ export default async function ArtistDashboardPage() {
     ratingCountSum > 0 ? weightedRatingSum / ratingCountSum : 0;
 
   const getReleaseCoverPath = (row: PerfRow) => {
-    const rel = row.releases
-      ? Array.isArray(row.releases)
-        ? row.releases[0]
-        : row.releases
-      : null;
-
-    return rel?.cover_path ?? null;
+    return row.cover_path ?? null;
   };
 
-  const getCoverUrl = (coverPath: string | null) => {
-    if (!coverPath) return null;
-    return supabase.storage.from("release_covers").getPublicUrl(coverPath).data.publicUrl;
-  };
 
-  const performanceTracks = [...perfRows]
-    .sort((a, b) => (b.stream_count ?? 0) - (a.stream_count ?? 0))
+  const performanceTracks = topStreamsRows
     .slice(0, 3)
     .map((row) => ({
       title: row.track_title ?? "Untitled Track",
       streams: row.stream_count ?? 0,
-      coverUrl: getCoverUrl(getReleaseCoverPath(row)),
+      coverUrl: getCoverUrl(supabase, getReleaseCoverPath(row)),
     }));
 
-  const qualityTracks = [...perfRows]
+  const qualityTracks = topRatedRows
     .filter((row) => (row.rating_count ?? 0) > 0 && typeof row.rating_avg === "number")
-    .sort((a, b) => (b.rating_avg ?? 0) - (a.rating_avg ?? 0))
     .slice(0, 3)
     .map((row) => ({
       title: row.track_title ?? "Untitled Track",
       rating: row.rating_avg ?? 0,
       ratingCount: row.rating_count ?? 0,
-      coverUrl: getCoverUrl(getReleaseCoverPath(row)),
+      coverUrl: getCoverUrl(supabase, getReleaseCoverPath(row)),
     }));
 
   const lastUpdatedLabel = new Date().toLocaleString("de-DE", {
@@ -176,66 +159,9 @@ export default async function ArtistDashboardPage() {
     minute: "2-digit",
   });
 
-  const formatNumber = (value: number) => value.toLocaleString("de-DE");
-
   return (
     <div className="space-y-8">
-      {/* Spotify-style hero */}
-      <div className="rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
-        <div className="relative h-56 md:h-72">
-          {bannerUrl ? (
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${bannerUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-r from-[#00FFC6]/15 via-white/5 to-[#00FFC6]/10" />
-          )}
-
-          {/* overlays */}
-          <div className="absolute inset-0 bg-black/35" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-
-          {/* content */}
-          <div className="absolute inset-0 flex items-end px-6 md:px-10 pb-6 md:pb-8">
-            <div className="w-full">
-              {!bannerUrl && (
-                <p className="text-xs text-white/60 mb-2">Banner not set yet</p>
-              )}
-
-              <p className="text-sm text-white/80">
-                Welcome to ImMusic
-              </p>
-
-              <p className="mt-1 text-4xl md:text-6xl xl:text-7xl font-semibold text-white leading-tight tracking-tight">
-                {artistName}
-              </p>
-
-              <p className="mt-2 text-sm text-white/70">
-                Your hub for releases, uploads and analytics.
-              </p>
-
-              <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                {isProfileIncomplete ? (
-                  <p className="text-sm text-[#B3B3B3]">
-                    Tip: Complete your artist profile for a better public page.
-                    <Link
-                      href="/artist/profile"
-                      className="ml-2 text-[#00FFC6] hover:text-[#00E0B0] transition-colors"
-                    >
-                      Go to Profile →
-                    </Link>
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ArtistDashboardHero publicArtistHref={publicArtistHref} />
 
       <div className="space-y-3">
         <section className="mt-16 mb-10">
@@ -515,113 +441,3 @@ export default async function ArtistDashboardPage() {
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-xl bg-[#121216] border border-white/5 p-5">
-      <p className="text-xs text-[#B3B3B3]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-[#B3B3B3]">{hint}</p> : null}
-    </div>
-  );
-}
-
-function SectionDivider() {
-  return (
-    <div className="h-10" />
-  );
-}
-
-function Stat({
-  label,
-  value,
-  hint,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  valueClassName?: string;
-}) {
-  return (
-    <div className="relative group text-center h-16 flex flex-col items-center justify-end">
-      <p
-        className={`text-3xl font-semibold leading-none transition group-hover:text-[#00FFC6] ${
-          valueClassName ?? "text-white"
-        }`}
-      >
-        {value}
-      </p>
-
-      <p className="mt-2 text-xs uppercase tracking-wide text-white/40 leading-none">
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function MenuTile(props: {
-  href: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={props.href}
-      className="
-        group relative overflow-hidden rounded-2xl
-        bg-[#121216] border border-white/5
-        p-6 transition
-        hover:-translate-y-0.5
-        hover:border-[#00FFC6]/35 hover:bg-[#14141a]
-        focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/40
-        h-full
-      "
-    >
-      <div className="absolute right-4 top-4 text-white/30 group-hover:text-[#00FFC6]/80 transition">
-        <ChevronRight className="h-5 w-5" />
-      </div>
-
-      <div className="flex h-full flex-col">
-        <div className="flex items-start gap-4">
-          <div
-            className="
-              mt-0.5 shrink-0 rounded-xl
-              bg-white/5 border border-white/10
-              p-3 text-white/90
-              transition
-              group-hover:text-[#00FFC6]
-              group-hover:border-[#00FFC6]/35
-              group-hover:bg-[#00FFC6]/[0.08]
-            "
-          >
-            {props.icon}
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-lg font-semibold text-white">{props.title}</p>
-            <p className="mt-1 text-sm text-[#B3B3B3]">{props.description}</p>
-          </div>
-        </div>
-
-        <div className="mt-auto pt-4">
-          <p className="text-xs text-white/35 group-hover:text-[#00FFC6]/70 transition">
-            Open →
-          </p>
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition">
-        <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-[#00FFC6]/10 blur-2xl" />
-      </div>
-    </Link>
-  );
-}

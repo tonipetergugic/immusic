@@ -2,6 +2,7 @@ import Sidebar from "./components/ArtistSidebar";
 import Topbar from "../dashboard/components/Topbar";
 import ScrollToTopOnRouteChange from "./components/ScrollToTopOnRouteChange";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ArtistProfileProvider } from "@/app/artist/_components/ArtistProfileProvider";
 
 export default async function ArtistLayout({
   children,
@@ -13,6 +14,14 @@ export default async function ArtistLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  let profile:
+    | {
+        display_name: string | null;
+        banner_url: string | null;
+        artist_onboarding_status: string | null;
+      }
+    | null = null;
 
   let topbarProps: {
     userEmail: string | null;
@@ -31,19 +40,27 @@ export default async function ArtistLayout({
   };
 
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profileRow } = await supabase
       .from("profiles")
-      .select("role, display_name, avatar_url, updated_at, artist_onboarding_status")
+      .select("role, display_name, avatar_url, banner_url, updated_at, artist_onboarding_status")
       .eq("id", user.id)
       .single();
 
+    profile = profileRow
+      ? {
+          display_name: profileRow.display_name ?? null,
+          banner_url: profileRow.banner_url ?? null,
+          artist_onboarding_status: profileRow.artist_onboarding_status ?? null,
+        }
+      : null;
+
     topbarProps = {
       userEmail: user.email ?? null,
-      displayName: profile?.display_name ?? null,
-      role: profile?.role ?? null,
-      avatarUrl: profile?.avatar_url ?? null,
-      avatarUpdatedAt: profile?.updated_at ?? null,
-      artistOnboardingStatus: profile?.artist_onboarding_status ?? null,
+      displayName: profileRow?.display_name ?? null,
+      role: profileRow?.role ?? null,
+      avatarUrl: profileRow?.avatar_url ?? null,
+      avatarUpdatedAt: profileRow?.updated_at ?? null,
+      artistOnboardingStatus: profileRow?.artist_onboarding_status ?? null,
     };
   }
 
@@ -77,7 +94,15 @@ export default async function ArtistLayout({
           {/* Padded content */}
           <div className="px-6 py-6 lg:px-10 lg:py-8">
             <div className="max-w-[1600px] mx-auto w-full pb-40 lg:pb-48">
-              {children}
+              <ArtistProfileProvider
+                value={{
+                  displayName: profile?.display_name ?? null,
+                  bannerUrl: profile?.banner_url ?? null,
+                  artistOnboardingStatus: profile?.artist_onboarding_status ?? null,
+                }}
+              >
+                {children}
+              </ArtistProfileProvider>
             </div>
           </div>
         </main>
