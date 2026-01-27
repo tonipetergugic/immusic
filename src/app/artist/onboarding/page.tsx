@@ -1,6 +1,36 @@
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { confirmBecomeArtistAction } from "./actions";
 
-export default function ArtistOnboardingPage() {
+export default async function ArtistOnboardingPage() {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !authData?.user) redirect("/login");
+
+  const { data, error: pErr } = await supabase
+    .from("profiles")
+    .select("role, artist_onboarding_status")
+    .eq("id", authData.user.id)
+    .single();
+
+  if (pErr || !data) {
+    throw new Error(`ONBOARDING_PROFILE_LOAD_ERROR: ${pErr?.message ?? "no profile"}`);
+  }
+
+  // NOTE: supabase types are currently outdated (artist_onboarding_status missing in src/types/supabase.ts).
+  // We keep this cast local & minimal to avoid spreading "any" across the codebase.
+  const profile = data as unknown as {
+    role: "listener" | "artist" | "admin";
+    artist_onboarding_status: string | null;
+  };
+
+  // Already an artist → onboarding is irrelevant
+  if (profile.role === "artist") redirect("/artist/dashboard");
+
+  // Already started onboarding → go straight to upload
+  if (profile.artist_onboarding_status === "pending_upload") redirect("/artist/upload");
+
   return (
     <div className="max-w-2xl">
       <h1 className="text-3xl font-semibold mb-3">Become an Artist</h1>
@@ -28,4 +58,3 @@ export default function ArtistOnboardingPage() {
     </div>
   );
 }
-

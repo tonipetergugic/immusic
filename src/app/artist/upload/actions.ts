@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export async function submitToQueueAction(formData: FormData) {
-  const audioPath = formData.get("audio_path")?.toString();
+  const audioPath = formData.get("audio_path")?.toString().trim();
   const title = formData.get("title")?.toString().trim();
 
   if (!title) {
@@ -16,27 +16,45 @@ export async function submitToQueueAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (authErr || !authData?.user) {
     throw new Error("Not authenticated.");
   }
 
-  // Eintrag in Queue erstellen
+  const userId = authData.user.id;
+
+  // Guard 1: audio_path darf nur in den eigenen User-Prefix zeigen (verhindert manipulierte Hidden Inputs)
+  if (!audioPath.startsWith(`${userId}/`)) {
+    throw new Error("Invalid audio path.");
+  }
+
+  // Guard 2: keine Doppel-Queue (wenn bereits pending existiert → direkt weiter)
+  const { data: existingPending, error: pendingErr } = await supabase
+    .from("tracks_ai_queue")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .limit(1);
+
+  if (pendingErr) {
+    throw new Error(`Failed to verify queue state: ${pendingErr.message}`);
+  }
+
+  if (existingPending && existingPending.length > 0) {
+    redirect("/artist/upload/processing");
+  }
+
   const { error } = await supabase.from("tracks_ai_queue").insert({
-    user_id: user.id,
+    user_id: userId,
     audio_path: audioPath,
     title,
     status: "pending",
   });
 
   if (error) {
-    console.error("Queue insert error:", error);
-    throw new Error("Failed to queue track.");
+    throw new Error(`Failed to queue track: ${error.message}`);
   }
 
-  // Später leiten wir hier auf eine Processing-Seite um
   redirect("/artist/upload/processing");
 }
