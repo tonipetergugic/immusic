@@ -17,7 +17,9 @@ export async function respondToInviteAction(args: {
   const { error } = await supabase
     .from("track_collaboration_invites")
     .update({ status: args.action })
-    .eq("id", args.inviteId);
+    .eq("id", args.inviteId)
+    .eq("invitee_profile_id", authData.user.id)
+    .eq("status", "pending");
 
   if (error) {
     throw new Error(`Failed to respond: ${error.message}`);

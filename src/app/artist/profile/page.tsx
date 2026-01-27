@@ -25,7 +25,9 @@ export default async function ArtistProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select(
+      "id, role, display_name, location, bio, instagram, tiktok, facebook, x, banner_url, collecting_society_member, collecting_society_name, collecting_society_number"
+    )
     .eq("id", user.id)
     .single();
 

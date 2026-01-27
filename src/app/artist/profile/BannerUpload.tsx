@@ -18,7 +18,6 @@ export default function BannerUpload({
   const router = useRouter();
 
   const supabase = createSupabaseBrowserClient();
-  console.log("Supabase client initialized:", supabase);
 
   async function cleanupOtherFilesInPrefix(params: {
     bucket: string;
@@ -33,7 +32,6 @@ export default function BannerUpload({
         .list(prefix, { limit: 100, offset: 0 });
 
       if (listErr) {
-        console.log("[cleanup] list failed:", listErr);
         return;
       }
 
@@ -46,13 +44,10 @@ export default function BannerUpload({
 
       const { error: delErr } = await supabase.storage.from(bucket).remove(toDelete);
       if (delErr) {
-        console.log("[cleanup] remove failed:", delErr);
         return;
       }
 
-      console.log(`[cleanup] removed ${toDelete.length} old file(s) from ${bucket}/${prefix}`);
     } catch (e) {
-      console.log("[cleanup] unexpected error:", e);
     }
   }
 
@@ -74,9 +69,7 @@ export default function BannerUpload({
         .from("profile-banners")
         .upload(filePath, file, { upsert: false });
 
-      console.log("Upload raw result:", uploadData, uploadError);
 
-      console.log("Banner upload result:", { uploadData, uploadError });
 
       if (uploadError) {
         setErrorMessage(uploadError.message);
@@ -93,7 +86,6 @@ export default function BannerUpload({
         .from("profile-banners")
         .getPublicUrl(filePath);
 
-      console.log("Banner public URL:", publicData);
 
       if (!publicData?.publicUrl) {
         setErrorMessage("No public URL returned from Supabase.");
