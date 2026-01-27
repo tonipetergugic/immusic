@@ -1,19 +1,61 @@
 import Sidebar from "./components/ArtistSidebar";
 import Topbar from "../dashboard/components/Topbar";
 import ScrollToTopOnRouteChange from "./components/ScrollToTopOnRouteChange";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default function ArtistLayout({
+export default async function ArtistLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let topbarProps: {
+    userEmail: string | null;
+    displayName: string | null;
+    role: string | null;
+    avatarUrl: string | null;
+    avatarUpdatedAt: string | null;
+    artistOnboardingStatus: string | null;
+  } = {
+    userEmail: user?.email ?? null,
+    displayName: null,
+    role: null,
+    avatarUrl: null,
+    avatarUpdatedAt: null,
+    artistOnboardingStatus: null,
+  };
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, display_name, avatar_url, updated_at, artist_onboarding_status")
+      .eq("id", user.id)
+      .single();
+
+    topbarProps = {
+      userEmail: user.email ?? null,
+      displayName: profile?.display_name ?? null,
+      role: profile?.role ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
+      avatarUpdatedAt: profile?.updated_at ?? null,
+      artistOnboardingStatus: profile?.artist_onboarding_status ?? null,
+    };
+  }
 
   return (
     <div className="flex h-screen w-full bg-[#0E0E10] text-white overflow-hidden">
 
       {/* Artist Sidebar */}
       <div className="w-60 shrink-0">
-        <Sidebar />
+        <Sidebar
+          role={topbarProps.role}
+          artistOnboardingStatus={topbarProps.artistOnboardingStatus}
+        />
       </div>
 
       {/* Right Content */}
@@ -23,7 +65,13 @@ export default function ArtistLayout({
         <main className="flex-1 overflow-y-auto">
           {/* Topbar (shared with dashboard) */}
           <div className="sticky top-0 z-50">
-            <Topbar />
+            <Topbar
+              userEmail={topbarProps.userEmail}
+              displayName={topbarProps.displayName}
+              role={topbarProps.role}
+              avatarUrl={topbarProps.avatarUrl}
+              avatarUpdatedAt={topbarProps.avatarUpdatedAt}
+            />
           </div>
 
           {/* Padded content */}

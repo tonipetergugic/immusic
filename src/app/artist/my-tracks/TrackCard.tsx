@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Music, MoreVertical, CheckCircle2, AlertCircle } from "lucide-react";
+import { Music, MoreVertical } from "lucide-react";
 import { deleteTrackAction } from "./actions";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
@@ -61,7 +61,6 @@ export function TrackCard({ track }: TrackCardProps) {
     Boolean(track?.genre) &&
     typeof track?.has_lyrics === "boolean" &&
     typeof track?.is_explicit === "boolean";
-  const isIncomplete = !isComplete;
 
   return (
     <div
@@ -86,7 +85,7 @@ export function TrackCard({ track }: TrackCardProps) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <div className="truncate text-sm font-semibold text-white">
-                {formatTrackTitle(track.title, (track as any).version)}
+                {formatTrackTitle(track.title, track.version)}
               </div>
             </div>
 

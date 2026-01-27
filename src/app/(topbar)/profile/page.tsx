@@ -212,8 +212,8 @@ export default function ProfilePage() {
               // Update UI
               setAvatarUrl(url);
 
-              // notify Topbar (and any other listeners) to refetch versioned avatar_url
-              window.dispatchEvent(new CustomEvent("avatarUpdated"));
+              // notify Topbar (and any other listeners) with new avatar URL
+              window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: url } }));
 
               setLoading(false);
             }}
@@ -255,7 +255,7 @@ export default function ProfilePage() {
                 setLoading(true);
                 await deleteAvatar();
                 setAvatarUrl(null);
-                window.dispatchEvent(new CustomEvent("avatarUpdated"));
+                window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: null } }));
                 setLoading(false);
               }}
               className="

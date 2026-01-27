@@ -12,9 +12,16 @@ import {
   User,
   Home
 } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export default function ArtistSidebar() {
+type ArtistSidebarProps = {
+  role?: string | null;
+  artistOnboardingStatus?: string | null;
+};
+
+export default function ArtistSidebar({
+  role = null,
+  artistOnboardingStatus = null,
+}: ArtistSidebarProps) {
   const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -22,45 +29,11 @@ export default function ArtistSidebar() {
     containerRef.current?.scrollTo({ top: 0 });
   }, [pathname]);
 
-  const [canAccessProtected, setCanAccessProtected] = useState(false);
-  const [canAccessUpload, setCanAccessUpload] = useState(false);
+  const isArtist = role === "artist";
+  const isPending = artistOnboardingStatus === "pending_upload";
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadAccess() {
-      const supabase = createSupabaseBrowserClient();
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        if (!cancelled) {
-          setCanAccessProtected(false);
-          setCanAccessUpload(false);
-        }
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, artist_onboarding_status")
-        .eq("id", user.id)
-        .single();
-
-      const isArtist = profile?.role === "artist";
-      const isPending = profile?.artist_onboarding_status === "pending_upload";
-
-      if (!cancelled) {
-        setCanAccessProtected(isArtist);
-        setCanAccessUpload(isArtist || isPending);
-      }
-    }
-
-    loadAccess();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const canAccessProtected = isArtist;
+  const canAccessUpload = isArtist || isPending;
 
   const navItems = [
     {

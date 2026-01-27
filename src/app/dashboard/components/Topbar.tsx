@@ -12,11 +12,27 @@ function versionedUrl(base: string | null, updatedAt: string | null | undefined)
   return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(updatedAt)}`;
 }
 
-export default function Topbar() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+type TopbarProps = {
+  userEmail?: string | null;
+  displayName?: string | null;
+  role?: string | null;
+  avatarUrl?: string | null;
+  avatarUpdatedAt?: string | null;
+};
+
+export default function Topbar({
+  userEmail: initialUserEmail = null,
+  displayName: initialDisplayName = null,
+  role: initialRole = null,
+  avatarUrl: initialAvatarUrl = null,
+  avatarUpdatedAt: initialAvatarUpdatedAt = null,
+}: TopbarProps) {
+  const [userEmail, setUserEmail] = useState<string | null>(initialUserEmail);
+  const [displayName, setDisplayName] = useState<string | null>(initialDisplayName);
+  const [role, setRole] = useState<string | null>(initialRole);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    versionedUrl(initialAvatarUrl, initialAvatarUpdatedAt)
+  );
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -25,32 +41,10 @@ export default function Topbar() {
   }, []);
 
   useEffect(() => {
-    async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      setUserEmail(user.email ?? null);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, display_name, avatar_url, updated_at")
-        .eq("id", user.id)
-        .single();
-
-      if (profile?.role) {
-        setRole(profile.role);
-        window.dispatchEvent(new CustomEvent("roleUpdated", { detail: profile.role }));
-      }
-      if (profile?.display_name) setDisplayName(profile.display_name);
-      
-      setAvatarUrl(versionedUrl(profile?.avatar_url ?? null, profile?.updated_at));
+    if (role) {
+      window.dispatchEvent(new CustomEvent("roleUpdated", { detail: role }));
     }
-
-    loadUser();
-  }, [supabase]);
+  }, [role]);
 
   useEffect(() => {
     function handleNameUpdate(e: CustomEvent) {
@@ -73,30 +67,28 @@ export default function Topbar() {
   }, []);
 
   useEffect(() => {
-    async function handleAvatarUpdate() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    function handleAvatarUpdate(e: Event) {
+      const custom = e as CustomEvent;
+      const nextUrl =
+        custom.detail && typeof custom.detail === "object" && "avatar_url" in custom.detail
+          ? (custom.detail.avatar_url as string | null)
+          : null;
 
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("avatar_url, updated_at")
-        .eq("id", user.id)
-        .single();
-
-      if (profile) {
-        setAvatarUrl(versionedUrl(profile.avatar_url ?? null, profile.updated_at));
+      if (!nextUrl) {
+        setAvatarUrl(null);
+        return;
       }
+
+      // local cache-bust ohne DB-Refetch
+      setAvatarUrl(versionedUrl(nextUrl, new Date().toISOString()));
     }
 
-    window.addEventListener("avatarUpdated", handleAvatarUpdate);
+    window.addEventListener("avatarUpdated", handleAvatarUpdate as EventListener);
 
     return () => {
-      window.removeEventListener("avatarUpdated", handleAvatarUpdate);
+      window.removeEventListener("avatarUpdated", handleAvatarUpdate as EventListener);
     };
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

@@ -69,7 +69,7 @@ export default async function MyTracksPage() {
               Tracks
             </div>
             <div className="text-base font-medium text-[#00FFC6]">
-              {tracks.length} approved
+              {tracks.length} tracks
             </div>
           </div>
         </div>
