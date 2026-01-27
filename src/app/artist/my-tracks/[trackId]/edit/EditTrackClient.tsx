@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   inviteTrackCollaboratorAction,
   renameTrackAction,
   type RenameTrackPayload,
 } from "../../actions";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import BackLink from "@/components/BackLink";
 
 type Track = {
@@ -41,9 +40,25 @@ const BPM_SUGGESTIONS = [
   120, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 145, 150, 160, 174
 ] as const;
 
-export default function EditTrackClient({ track }: { track: Track }) {
+export default function EditTrackClient({
+  track,
+  initialPendingInvites,
+  initialAcceptedCollabs,
+}: {
+  track: Track;
+  initialPendingInvites: Array<{
+    id: string;
+    role: "CO_OWNER" | "FEATURED";
+    invitee_display_name: string | null;
+    created_at: string;
+  }>;
+  initialAcceptedCollabs: Array<{
+    id: string;
+    role: "CO_OWNER" | "FEATURED";
+    display_name: string | null;
+  }>;
+}) {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const ALLOWED_KEYS = useMemo(
     () =>
@@ -110,76 +125,13 @@ export default function EditTrackClient({ track }: { track: Track }) {
       invitee_display_name: string | null;
       created_at: string;
     }>
-  >([]);
+  >(initialPendingInvites);
 
   const [acceptedCollabs, setAcceptedCollabs] = useState<
     Array<{ id: string; role: "CO_OWNER" | "FEATURED"; display_name: string | null }>
-  >([]);
+  >(initialAcceptedCollabs);
 
   const [collabListLoading, setCollabListLoading] = useState(false);
-
-  const loadCollabLists = async () => {
-    setCollabListLoading(true);
-    setCollabError(null);
-
-    try {
-      const [invRes, accRes] = await Promise.all([
-        supabase
-          .from("track_collaboration_invites")
-          .select("id,role,invitee_display_name,created_at")
-          .eq("track_id", track.id)
-          .eq("status", "pending")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("track_collaborators")
-          .select("id,role,profiles:profile_id(display_name)")
-          .eq("track_id", track.id)
-          .in("role", ["CO_OWNER", "FEATURED"]),
-      ]);
-
-      if (invRes.error) {
-        setPendingInvites([]);
-        setAcceptedCollabs([]);
-        setCollabError(invRes.error.message ?? "Failed to load collaboration invites.");
-        return;
-      }
-
-      if (accRes.error) {
-        setPendingInvites([]);
-        setAcceptedCollabs([]);
-        setCollabError(accRes.error.message ?? "Failed to load accepted collaborators.");
-        return;
-      }
-
-      setPendingInvites(
-        (invRes.data ?? []).map((r: any) => ({
-          id: r.id,
-          role: r.role,
-          invitee_display_name: r.invitee_display_name ?? null,
-          created_at: r.created_at,
-        }))
-      );
-
-      setAcceptedCollabs(
-        (accRes.data ?? []).map((r: any) => ({
-          id: r.id,
-          role: r.role,
-          display_name: r.profiles?.display_name ?? null,
-        }))
-      );
-    } catch {
-      setPendingInvites([]);
-      setAcceptedCollabs([]);
-      setCollabError("Failed to load collaboration data.");
-    } finally {
-      setCollabListLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadCollabLists();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [track.id]);
 
   const runCollabSearch = async () => {
     const q = collabQuery.trim();
@@ -193,16 +145,24 @@ export default function EditTrackClient({ track }: { track: Track }) {
 
     setCollabLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,display_name")
-        .ilike("display_name", `%${q}%`)
-        .limit(8);
+      const res = await fetch(`/api/artist/collab-search?q=${encodeURIComponent(q)}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        setCollabResults([]);
+        setCollabError("Failed to search artists.");
+        return;
+      }
 
-      const filtered = (data ?? []).filter((p) => p.id !== track.artist_id);
-      setCollabResults(filtered as any);
+      const json = await res.json();
+      const results = Array.isArray(json?.results) ? json.results : [];
+
+      // extra safety: never show the track owner
+      const filtered = results.filter((p: any) => p?.id && p.id !== track.artist_id);
+
+      setCollabResults(filtered);
     } catch {
       setCollabError("Failed to search artists.");
       setCollabResults([]);
@@ -262,7 +222,6 @@ export default function EditTrackClient({ track }: { track: Track }) {
       await renameTrackAction(track.id, payload);
 
       setEditSuccess("Saved.");
-      router.refresh();
     });
   };
 
@@ -522,9 +481,17 @@ export default function EditTrackClient({ track }: { track: Track }) {
                         role: collabRole,
                       });
                       setCollabSuccess(`Invite sent to ${p.display_name}`);
+                      setPendingInvites((prev) => [
+                        {
+                          id: `optimistic_${Date.now()}`,
+                          role: collabRole,
+                          invitee_display_name: p.display_name ?? null,
+                          created_at: new Date().toISOString(),
+                        },
+                        ...prev,
+                      ]);
                       setCollabResults([]);
                       setCollabQuery("");
-                      await loadCollabLists();
                     } catch (e: any) {
                       setCollabError(e?.message ?? "Failed to send invite.");
                     }

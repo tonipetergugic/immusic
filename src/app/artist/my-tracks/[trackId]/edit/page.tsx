@@ -29,6 +29,20 @@ export default async function EditTrackPage({
     notFound();
   }
 
+  const [{ data: pendingInvites }, { data: acceptedCollabs }] = await Promise.all([
+    supabase
+      .from("track_collaboration_invites")
+      .select("id,role,invitee_display_name,created_at")
+      .eq("track_id", track.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("track_collaborators")
+      .select("id,role,profiles:profile_id(display_name)")
+      .eq("track_id", track.id)
+      .in("role", ["CO_OWNER", "FEATURED"]),
+  ]);
+
   return (
     <div className="relative min-h-screen overflow-hidden -mt-16 pt-16">
       {/* Background glow */}
@@ -50,6 +64,17 @@ export default async function EditTrackPage({
             is_explicit: Boolean(track.is_explicit),
             artist_id: track.artist_id,
           }}
+          initialPendingInvites={(pendingInvites ?? []).map((r: any) => ({
+            id: r.id,
+            role: r.role,
+            invitee_display_name: r.invitee_display_name ?? null,
+            created_at: r.created_at,
+          }))}
+          initialAcceptedCollabs={(acceptedCollabs ?? []).map((r: any) => ({
+            id: r.id,
+            role: r.role,
+            display_name: r.profiles?.display_name ?? null,
+          }))}
         />
       </div>
     </div>
