@@ -317,6 +317,94 @@ export default async function ArtistAnalyticsPage({
 
   const trackIds = (artistTracks || []).map((t) => t.id);
 
+  // Best converting track (Listeners -> Saves) for the active range
+  // Listeners: distinct user_id from valid_listen_events in range
+  // Saves: distinct user_id from library_tracks in range
+  const now = new Date();
+  const rangeStart =
+    range === "7d"
+      ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      : range === "28d"
+        ? new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
+        : null;
+
+  const rangeStartIso = rangeStart ? rangeStart.toISOString() : null;
+
+  type ConvertingTrack = {
+    track_id: string;
+    title: string;
+    cover_url: string | null;
+    listeners: number;
+    saves: number;
+    conversion_pct: number;
+  };
+
+  let topConvertingTracks: ConvertingTrack[] = [];
+
+  if (trackIds.length > 0) {
+    // Listeners (range truth)
+    let listenQ = supabase
+      .from("valid_listen_events")
+      .select("track_id, user_id, created_at")
+      .in("track_id", trackIds);
+
+    if (rangeStartIso) listenQ = listenQ.gte("created_at", rangeStartIso);
+
+    const { data: listenRows } = await listenQ;
+
+    // Saves (range)
+    let saveQ = supabase
+      .from("library_tracks")
+      .select("track_id, user_id, created_at")
+      .in("track_id", trackIds);
+
+    if (rangeStartIso) saveQ = saveQ.gte("created_at", rangeStartIso);
+
+    const { data: saveRows } = await saveQ;
+
+    const listenersByTrack = new Map<string, Set<string>>();
+    for (const r of (listenRows ?? []) as any[]) {
+      const tid = String(r.track_id);
+      const uid = String(r.user_id);
+      if (!listenersByTrack.has(tid)) listenersByTrack.set(tid, new Set());
+      listenersByTrack.get(tid)!.add(uid);
+    }
+
+    const savesByTrack = new Map<string, Set<string>>();
+    for (const r of (saveRows ?? []) as any[]) {
+      const tid = String(r.track_id);
+      const uid = String(r.user_id);
+      if (!savesByTrack.has(tid)) savesByTrack.set(tid, new Set());
+      savesByTrack.get(tid)!.add(uid);
+    }
+
+    for (const id of trackIds) {
+      const listeners = listenersByTrack.get(id)?.size ?? 0;
+      if (listeners < 2) continue; // hard filter
+
+      const saves = savesByTrack.get(id)?.size ?? 0;
+      const pct = (saves / listeners) * 100;
+
+      topConvertingTracks.push({
+        track_id: id,
+        title: titleById.get(id) || "Unknown track",
+        cover_url: toPublicCoverUrl(coverPathByTrackId.get(id) ?? null),
+        listeners,
+        saves,
+        conversion_pct: pct,
+      });
+    }
+
+    topConvertingTracks = topConvertingTracks
+      .sort((a, b) => {
+        if (b.conversion_pct !== a.conversion_pct) {
+          return b.conversion_pct - a.conversion_pct;
+        }
+        return b.saves - a.saves;
+      })
+      .slice(0, 3);
+  }
+
   let savesCount = 0;
 
   if (trackIds.length > 0) {
@@ -329,16 +417,14 @@ export default async function ArtistAnalyticsPage({
     savesCount = count ?? 0;
   }
 
-  // Conversion (live) — saves per peak 30d listener count (from topTracks)
-  const peakListeners = topTracks.reduce((max, t) => {
-    const v = Number((t as any).unique_listeners ?? 0);
-    return v > max ? v : max;
-  }, 0);
+  // Conversion (live) — saves per unique listeners in the active range
+  // Listeners source of truth: summary.unique_listeners_total (range truth)
+  const uniqueListenersInRange = Number((summary as any)?.unique_listeners_total ?? 0);
 
   const conversionPct =
-    peakListeners > 0
-      ? (Number(savesCount ?? 0) / peakListeners) * 100
-      : 0;
+    uniqueListenersInRange > 0
+      ? (Number(savesCount ?? 0) / uniqueListenersInRange) * 100
+      : Number.NaN;
 
   return (
     <ArtistAnalyticsClient
@@ -353,6 +439,7 @@ export default async function ArtistAnalyticsPage({
       followersCount={followersCount ?? 0}
       savesCount={savesCount ?? 0}
       conversionPct={conversionPct}
+      topConvertingTracks={topConvertingTracks}
     />
   );
 }

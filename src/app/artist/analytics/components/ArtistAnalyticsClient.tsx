@@ -12,6 +12,15 @@ import StreamsOverTimeChart from "./StreamsOverTimeChart";
 import ListenersOverTimeChart from "./ListenersOverTimeChart";
 import Tooltip from "@/components/Tooltip";
 
+function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function renderValue(v: unknown): string {
+  if (typeof v === "string") return v;
+  return isFiniteNumber(v) ? String(v) : "—";
+}
+
 type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 export type Range = "7d" | "28d" | "all";
 
@@ -54,6 +63,17 @@ function getRangeLabel(r: "7d" | "28d" | "all"): RangeLabel {
   return { badge: "All time", subtitle: "all time", metricSuffix: "(all time)" };
 }
 
+function calcPct(numerator: number, denominator: number): string {
+  if (!denominator || denominator === 0) return "—";
+  return `${Math.round((numerator / denominator) * 100)}%`;
+}
+
+function formatPctSmart(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const rounded1 = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded1) ? `${rounded1.toFixed(0)}%` : `${rounded1.toFixed(1)}%`;
+}
+
 export default function ArtistAnalyticsClient(props: {
   artistId: string;
   initialTab: Tab;
@@ -66,6 +86,14 @@ export default function ArtistAnalyticsClient(props: {
   followersCount: number;
   savesCount: number;
   conversionPct: number;
+  topConvertingTracks: {
+    track_id: string;
+    title: string;
+    cover_url: string | null;
+    listeners: number;
+    saves: number;
+    conversion_pct: number;
+  }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -433,17 +461,146 @@ export default function ArtistAnalyticsClient(props: {
 
       {activeTab === "Conversion" && (
         <div className="mt-8 space-y-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-lg font-semibold">Conversion funnel</p>
+          {(props.summary?.unique_listeners_total ?? 0) < 1 && (
+            <div className="mb-4 text-sm text-muted-foreground">
+              Not enough data yet to calculate conversion.
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <StatCard label="Listeners" value="—" delta="—" helper="later" />
-            <StatCard label="Saves" value="—" delta="—" helper="later" />
-            <StatCard label="Ratings" value="—" delta="—" helper="later" />
-            <StatCard label="Follows" value="—" delta="—" helper="later" />
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-stretch">
+            <div className="h-full flex flex-col max-w-xl">
+              {/* Header */}
+              <div className="mb-6 max-w-md">
+                <div className="mb-1 text-sm font-medium text-muted-foreground">
+                  Listener progression
+                </div>
+                <p className="text-sm text-muted-foreground/80">
+                  How listeners progress from first play to saving, rating, and following.
+                </p>
+              </div>
+
+              {/* Content */}
+              <div className="mt-auto">
+                <div className="pt-6 space-y-3">
+                  {/* Listeners */}
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <div className="text-sm text-muted-foreground">Listeners</div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-lg tabular-nums text-white">
+                        {props.summary?.unique_listeners_total ?? "—"}
+                      </div>
+                      <div className="w-16 text-right text-sm text-muted-foreground">
+                        ↓ 100%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Saves */}
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <div className="text-sm text-muted-foreground">Saves</div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-lg tabular-nums text-white">
+                        {props.savesCount}
+                      </div>
+                      <div className="w-16 text-right text-sm text-muted-foreground">
+                        ↓ {formatPctSmart(
+                          (props.savesCount / Number(props.summary?.unique_listeners_total ?? 0)) * 100
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ratings */}
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <div className="text-sm text-muted-foreground">Ratings</div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-lg tabular-nums text-white">
+                        {props.topRatedTracks?.reduce(
+                          (sum, t) => sum + (t.ratings_count ?? 0),
+                          0
+                        ) ?? "—"}
+                      </div>
+                      <div className="w-16 text-right text-sm text-muted-foreground">
+                        ↓ {formatPctSmart(
+                          ((props.topRatedTracks?.reduce(
+                            (sum, t) => sum + (t.ratings_count ?? 0),
+                            0
+                          ) ?? 0) / Number(props.savesCount)) * 100
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Follows */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">Follows</div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-lg tabular-nums text-white">
+                        {props.followersCount}
+                      </div>
+                      <div className="w-16 text-right text-sm text-muted-foreground">
+                        —
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 border-t border-white/5" />
+              </div>
+            </div>
+
+            <div className="h-full flex flex-col max-w-xl">
+              <div className="flex flex-col justify-between h-full">
+                <div className="text-sm font-medium text-muted-foreground">
+                  Top converting tracks
+                </div>
+                {props.topConvertingTracks.length > 0 ? (
+                  <>
+                    <p className="mt-1 mb-3 text-sm text-muted-foreground/80">
+                      Only tracks with at least 2 listeners in the selected range.
+                    </p>
+                    <div className="space-y-2.5">
+                      {props.topConvertingTracks.map((t, idx) => (
+                        <div
+                          key={t.track_id}
+                          className="flex items-center justify-between gap-4 rounded-md px-1 py-1 hover:bg-white/5 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {t.cover_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={t.cover_url}
+                                alt=""
+                                className="h-9 w-9 rounded-md object-cover"
+                              />
+                            ) : (
+                              <div className="h-9 w-9 rounded-md bg-white/10" />
+                            )}
+
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium text-white">
+                                {idx + 1}. {t.title}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {t.saves} saves / {t.listeners} listeners
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-sm tabular-nums text-muted-foreground">
+                            {t.conversion_pct.toFixed(1)}%
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    No tracks have enough listener data yet to calculate conversion.
+                  </div>
+                )}
+                <div className="mt-3 border-t border-white/5" />
+              </div>
+            </div>
           </div>
         </div>
       )}
