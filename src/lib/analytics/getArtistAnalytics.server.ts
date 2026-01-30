@@ -19,6 +19,7 @@ export type ArtistAnalyticsSummary = {
   from: string; // timestamptz
   streams_over_time: StreamsOverTimePoint[];
   listeners_over_time: ListenersOverTimePoint[];
+  unique_listeners_total: number;
 };
 
 export async function getArtistAnalyticsSummary(params: {
@@ -43,6 +44,37 @@ export async function getArtistAnalyticsSummary(params: {
   } else {
     // "all" - use a very old date
     rangeStart = "2000-01-01";
+  }
+
+  // Get all track ids for this artist (needed because valid_listen_events has no artist_id)
+  const { data: artistTracks, error: artistTracksErr } = await supabase
+    .from("tracks")
+    .select("id")
+    .eq("artist_id", params.artistId);
+
+  if (artistTracksErr) throw artistTracksErr;
+
+  const artistTrackIds = (artistTracks || []).map((t: any) => String(t.id));
+
+  // Truth for unique listeners over the selected range: DISTINCT user_id from valid_listen_events
+  let uniqueListenersTotal = 0;
+
+  if (artistTrackIds.length > 0) {
+    const { data: uRows, error: uErr } = await supabase
+      .from("valid_listen_events")
+      .select("user_id")
+      .in("track_id", artistTrackIds)
+      .gte("created_at", `${rangeStart}T00:00:00.000Z`)
+      .lte("created_at", `${rangeEnd}T23:59:59.999Z`);
+
+    if (uErr) throw uErr;
+
+    const set = new Set<string>();
+    (uRows || []).forEach((r: any) => {
+      if (r.user_id) set.add(String(r.user_id));
+    });
+
+    uniqueListenersTotal = set.size;
   }
 
   const { data: rows, error } = await supabase
@@ -80,6 +112,7 @@ export async function getArtistAnalyticsSummary(params: {
     from: rangeStart,
     streams_over_time: streamsOverTime,
     listeners_over_time: listenersOverTime,
+    unique_listeners_total: uniqueListenersTotal,
   };
 }
 

@@ -129,30 +129,12 @@ export default function ChartCard({
               ) : null}
             </div>
           ) : null}
-          <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#B3B3B3]">
-              Live later
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenDetails?.(title, subtitle);
-              }}
-              className="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10"
-            >
-              View
-            </button>
-          </div>
         </div>
       </div>
 
       {kind === "line" ? <FakeLine /> : <FakeBars />}
 
       <div className="mt-3 flex items-center justify-between text-xs text-[#B3B3B3]">
-        <span className="px-2 py-1 rounded-full border border-white/10 bg-black/20">
-          UI preview
-        </span>
         <button
           type="button"
           onClick={(e) => {

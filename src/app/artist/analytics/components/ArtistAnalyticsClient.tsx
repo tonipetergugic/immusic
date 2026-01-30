@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AnalyticsHeader from "./AnalyticsHeader";
 import StatCard from "./StatCard";
@@ -23,13 +23,18 @@ export type ArtistAnalyticsSummary = {
   from: string;
   streams_over_time: StreamsPoint[];
   listeners_over_time: ListenersPoint[];
+  unique_listeners_total: number;
 };
 
 export type TopTrackRow = {
   track_id: string;
   title: string;
+  cover_url: string | null;
   streams: number;
   unique_listeners: number;
+  listened_seconds: number;
+  ratings_count: number;
+  rating_avg: number | null;
 };
 
 export type CountryListeners30dRow = {
@@ -41,12 +46,22 @@ function formatInt(v: number) {
   return new Intl.NumberFormat("en-US").format(v);
 }
 
+type RangeLabel = { badge: string; subtitle: string; metricSuffix: string };
+
+function getRangeLabel(r: "7d" | "28d" | "all"): RangeLabel {
+  if (r === "7d") return { badge: "7d", subtitle: "last 7 days", metricSuffix: "(7d)" };
+  if (r === "28d") return { badge: "28d", subtitle: "last 28 days", metricSuffix: "(28d)" };
+  return { badge: "All time", subtitle: "all time", metricSuffix: "(all time)" };
+}
+
 export default function ArtistAnalyticsClient(props: {
   artistId: string;
   initialTab: Tab;
   initialRange: Range;
+  initialTrackSort: "streams" | "listeners" | "rating" | "time";
   summary: ArtistAnalyticsSummary;
   topTracks: TopTrackRow[];
+  topRatedTracks: TopTrackRow[];
   countryListeners30d: CountryListeners30dRow[];
   followersCount: number;
   savesCount: number;
@@ -73,6 +88,12 @@ export default function ArtistAnalyticsClient(props: {
 
   const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl);
   const [activeRange, setActiveRange] = useState<Range>(rangeFromUrl);
+  const [trackSort, setTrackSort] = useState<"streams" | "listeners" | "rating" | "time">(props.initialTrackSort);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTrackSort(props.initialTrackSort);
+  }, [props.initialTrackSort]);
 
   // URL ist Quelle der Wahrheit (Navigation triggert Server-Render)
   // State nur für UI-Responsiveness; wir navigieren bei Änderungen.
@@ -91,9 +112,21 @@ export default function ArtistAnalyticsClient(props: {
     router.replace(`${pathname}?${next.toString()}`);
   };
 
+  const handleTrackSortChange = (newSort: "streams" | "listeners" | "rating" | "time") => {
+    setTrackSort(newSort);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("sort", newSort);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
+
   const summary = props.summary;
   const topTracks = props.topTracks;
+  const topRatedTracks = props.topRatedTracks;
   const countryListeners30d = props.countryListeners30d;
+
+  const selectedTrack = selectedTrackId
+    ? topTracks.find((t) => t.track_id === selectedTrackId) ?? null
+    : null;
 
   const liveStreamsTotal =
     summary?.streams_over_time?.reduce((acc, p) => acc + (p.streams || 0), 0) ?? 0;
@@ -103,6 +136,8 @@ export default function ArtistAnalyticsClient(props: {
       const v = Number(p.listeners ?? 0);
       return v > max ? v : max;
     }, 0) ?? 0;
+
+  const uniqueListenersTotal = props.summary?.unique_listeners_total ?? 0;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTitle, setDrawerTitle] = useState("Details");
@@ -136,9 +171,9 @@ export default function ArtistAnalyticsClient(props: {
 
             <StatCard
               label="Listeners"
-              value={formatInt(livePeakListeners)}
+              value={formatInt(uniqueListenersTotal)}
               delta="—"
-              helper="peak day"
+              helper="unique in range"
             />
 
             <StatCard
@@ -163,7 +198,7 @@ export default function ArtistAnalyticsClient(props: {
                   : "—"
               }
               delta="—"
-              helper="track saves / peak listeners"
+              helper="track saves / unique listeners"
             />
           </div>
 
@@ -185,22 +220,41 @@ export default function ArtistAnalyticsClient(props: {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-lg font-semibold">Track performance</p>
-              <p className="text-sm text-[#B3B3B3] mt-1">
-                Your best performing tracks (last 30 days)
-              </p>
+              {(() => {
+                const r = getRangeLabel(activeRange as any);
+                return (
+                  <p className="text-sm text-[#B3B3B3] mt-1">
+                    Your best performing tracks ({r.subtitle})
+                  </p>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-2">
-              <button className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm">
-                Sort: Streams
-              </button>
+              <label className="text-sm text-[#B3B3B3] shrink-0">Sort:</label>
+              <select
+                value={trackSort}
+                onChange={(e) => handleTrackSortChange(e.target.value as "streams" | "listeners" | "rating" | "time")}
+                className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20"
+              >
+                <option value="streams">Streams</option>
+                <option value="listeners">Unique listeners</option>
+                <option value="rating">Avg rating</option>
+                <option value="time">Listening time</option>
+              </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             <div className="xl:col-span-2 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-              <div className="px-4 md:px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                <p className="text-sm font-semibold">Top tracks</p>
-                <p className="text-xs text-[#B3B3B3]">30d</p>
+              <div className="px-4 md:px-5 py-4 border-b border-white/10">
+                <div className="flex items-center gap-4">
+                  <p className="text-sm font-semibold">Top tracks</p>
+
+                  <div className="ml-auto flex items-center gap-6 text-xs text-[#B3B3B3]">
+                    <div className="w-14 text-right">Streams</div>
+                    <div className="w-14 text-right">Listeners</div>
+                  </div>
+                </div>
               </div>
 
               <div className="divide-y divide-white/10">
@@ -211,22 +265,51 @@ export default function ArtistAnalyticsClient(props: {
                 {topTracks.map((t, idx) => (
                   <div
                     key={t.track_id}
-                    className="px-4 md:px-5 py-3 flex items-center gap-4 hover:bg-white/5 transition"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedTrackId(t.track_id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") setSelectedTrackId(t.track_id);
+                    }}
+                    className={[
+                      "px-4 md:px-5 py-3 flex items-center gap-4 transition",
+                      selectedTrackId === t.track_id ? "bg-white/10" : "hover:bg-white/5",
+                    ].join(" ")}
                   >
                     <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
 
-                    <div className="h-10 w-10 rounded-xl border border-white/10 bg-black/20 flex items-center justify-center text-xs text-[#B3B3B3]">
-                      —
-                    </div>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                        {t.cover_url ? (
+                          <img
+                            src={t.cover_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : null}
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{t.title}</p>
-                      <p className="text-xs text-[#B3B3B3] mt-0.5">Streams (30d) · Unique listeners (30d)</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{t.title}</p>
+                        {(() => {
+                          const r = getRangeLabel(activeRange as any);
+                          return (
+                            <p className="text-xs text-[#B3B3B3]">
+                              Streams · Unique listeners
+                            </p>
+                          );
+                        })()}
+                      </div>
                     </div>
 
                     <div className="hidden md:flex items-center gap-6">
-                      <div className="text-sm text-white/90 tabular-nums">{formatInt(t.streams)}</div>
-                      <div className="text-sm text-[#00FFC6] tabular-nums">{formatInt(t.unique_listeners)}</div>
+                      <div className="w-14 text-right text-sm text-white/90 tabular-nums">
+                        {formatInt(t.streams)}
+                      </div>
+                      <div className="w-14 text-right text-sm text-[#00FFC6] tabular-nums">
+                        {formatInt(t.unique_listeners)}
+                      </div>
                     </div>
 
                     <div className="md:hidden text-sm text-[#00FFC6] tabular-nums">
@@ -238,8 +321,111 @@ export default function ArtistAnalyticsClient(props: {
             </div>
 
             <div className="space-y-4">
-              <ChartCard title="Streams trend" subtitle="Later" kind="line" onOpenDetails={openDrawer} />
-              <ChartCard title="Top rated" subtitle="Later" kind="bars" onOpenDetails={openDrawer} />
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Track details</p>
+                  {(() => {
+                    const r = getRangeLabel(activeRange as any);
+                    return <span className="text-xs text-[#B3B3B3]">{r.badge}</span>;
+                  })()}
+                </div>
+
+                {!selectedTrack ? (
+                  <p className="text-sm text-[#B3B3B3] mt-3">
+                    Select a track to see details.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                        {selectedTrack.cover_url ? (
+                          <img
+                            src={selectedTrack.cover_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{selectedTrack.title}</p>
+                        {(() => {
+                          const r = getRangeLabel(activeRange as any);
+                          return (
+                            <p className="text-xs text-[#B3B3B3]">
+                              Based on {r.subtitle}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-xs text-[#B3B3B3]">Streams</p>
+                        <p className="text-sm font-semibold tabular-nums">{formatInt(selectedTrack.streams)}</p>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-xs text-[#B3B3B3]">Unique listeners</p>
+                        <p className="text-sm font-semibold tabular-nums">{formatInt(selectedTrack.unique_listeners)}</p>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-xs text-[#B3B3B3]">Listening time</p>
+                        <p className="text-sm font-semibold tabular-nums">
+                          {Math.round((selectedTrack.listened_seconds ?? 0) / 60)} min
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-xs text-[#B3B3B3]">Avg rating</p>
+                        <p className="text-sm font-semibold tabular-nums">
+                          {selectedTrack.rating_avg === null ? "—" : selectedTrack.rating_avg.toFixed(2)}
+                          <span className="text-xs text-[#B3B3B3]"> · {selectedTrack.ratings_count}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+                <p className="text-sm font-semibold mb-3">Top rated</p>
+                <div className="divide-y divide-white/10">
+                  {topRatedTracks.length === 0 && (
+                    <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">No data yet.</div>
+                  )}
+
+                  {topRatedTracks.slice(0, 5).map((t, idx) => (
+                    <div key={t.track_id} className="px-4 md:px-5 py-3 flex items-center gap-3">
+                      <div className="w-8 text-xs text-[#B3B3B3]">{idx + 1}</div>
+
+                      <div className="h-9 w-9 rounded-md bg-white/10 overflow-hidden shrink-0">
+                        {t.cover_url ? (
+                          <img
+                            src={t.cover_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : null}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{t.title}</p>
+                        <p className="text-xs text-[#B3B3B3]">
+                          Avg rating · {t.ratings_count} ratings
+                        </p>
+                      </div>
+
+                      <div className="text-sm text-[#00FFC6] tabular-nums">
+                        {t.rating_avg === null ? "-" : t.rating_avg.toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -250,7 +436,6 @@ export default function ArtistAnalyticsClient(props: {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-lg font-semibold">Conversion funnel</p>
-              <p className="text-sm text-[#B3B3B3] mt-1">Later</p>
             </div>
           </div>
 

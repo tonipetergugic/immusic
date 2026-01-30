@@ -17,9 +17,6 @@ export default function AnalyticsHeader({ activeRange, onRangeChange }: Analytic
           <BarChart3 className="h-7 w-7 text-[#00FFC6]" />
           Artist Analytics
         </h1>
-        <p className="text-sm text-[#B3B3B3]">
-          UI preview — we'll connect real data later.
-        </p>
       </div>
 
       <div className="flex items-center gap-2">
