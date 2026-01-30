@@ -4,6 +4,8 @@ type ChartCardProps = {
   title: string;
   subtitle?: string;
   kind: "line" | "bars";
+  value?: string;
+  valueHelper?: string;
   onOpenDetails?: (title: string, subtitle?: string) => void;
 };
 
@@ -93,10 +95,23 @@ export default function ChartCard({
   title,
   subtitle,
   kind,
+  value,
+  valueHelper,
   onOpenDetails,
 }: ChartCardProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+    <div
+      className={`rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5 ${
+        onOpenDetails ? "cursor-pointer hover:bg-white/10" : ""
+      }`}
+      role={onOpenDetails ? "button" : undefined}
+      tabIndex={onOpenDetails ? 0 : undefined}
+      onClick={() => onOpenDetails?.(title, subtitle)}
+      onKeyDown={(e) => {
+        if (!onOpenDetails) return;
+        if (e.key === "Enter" || e.key === " ") onOpenDetails(title, subtitle);
+      }}
+    >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold">{title}</p>
@@ -105,17 +120,30 @@ export default function ChartCard({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#B3B3B3]">
-            Live later
-          </span>
-          <button
-            type="button"
-            onClick={() => onOpenDetails?.(title, subtitle)}
-            className="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10"
-          >
-            View
-          </button>
+        <div className="flex flex-col items-end gap-2">
+          {value ? (
+            <div className="text-right">
+              <div className="text-2xl font-semibold text-white leading-none">{value}</div>
+              {valueHelper ? (
+                <div className="text-xs text-[#B3B3B3] mt-1">{valueHelper}</div>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#B3B3B3]">
+              Live later
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenDetails?.(title, subtitle);
+              }}
+              className="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10"
+            >
+              View
+            </button>
+          </div>
         </div>
       </div>
 
@@ -127,7 +155,10 @@ export default function ChartCard({
         </span>
         <button
           type="button"
-          onClick={() => onOpenDetails?.(title, subtitle)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetails?.(title, subtitle);
+          }}
           className="text-[#00FFC6] hover:opacity-90"
         >
           Details →

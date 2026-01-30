@@ -280,7 +280,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             p_track_id: currentTrack.id,
             p_session_id: sessionIdRef.current,
             p_delta_seconds: 5,
-            p_country_code: (countryCode ?? "Z").slice(0, 1),
+            p_country_code: String(countryCode ?? "ZZ").trim().toUpperCase().slice(0, 2),
           });
 
           if (error) {

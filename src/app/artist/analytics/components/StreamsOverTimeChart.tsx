@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
@@ -10,10 +9,8 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import type { Range, StreamsPoint } from "./ArtistAnalyticsClient";
 
-import { fetchArtistAnalyticsSummary } from "@/lib/analytics/fetchArtistAnalytics.client";
-
-type Range = "7d" | "28d" | "all";
 type Point = { date: string; streams: number };
 
 function formatNumber(n: number) {
@@ -21,58 +18,50 @@ function formatNumber(n: number) {
 }
 
 function formatDayLabel(isoDay: string) {
-  // isoDay: "YYYY-MM-DD"
   const d = new Date(`${isoDay}T00:00:00`);
   return d.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
 }
 
-export default function StreamsOverTimeChart({ range }: { range: Range }) {
-  const [data, setData] = useState<Point[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const summary = await fetchArtistAnalyticsSummary(range);
-        const points: Point[] = (summary.streams_over_time || []).map((p) => ({
-          date: formatDayLabel(p.day),
-          streams: p.streams,
-        }));
-
-        if (!cancelled) setData(points);
-      } catch (e) {
-        const message = e instanceof Error ? e.message : "Unknown error";
-        if (!cancelled) {
-          setError(message);
-          setData([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [range]);
+export default function StreamsOverTimeChart({
+  range,
+  points,
+}: {
+  range: Range;
+  points: StreamsPoint[];
+}) {
+  const data: Point[] = (points || []).map((p) => ({
+    date: formatDayLabel(p.day),
+    streams: Number(p.streams ?? 0),
+  }));
 
   const last = data[data.length - 1]?.streams ?? 0;
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [chartWidth, setChartWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setChartWidth(Math.max(0, Math.floor(rect.width)));
+    };
+
+    update();
+
+    const ro = new ResizeObserver(() => update());
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold text-white">Streams over time</div>
-          <div className="mt-1 text-sm text-[#B3B3B3]">
-            Live data · Range: {range}
-          </div>
+          <div className="mt-1 text-sm text-[#B3B3B3]">Server data · Range: {range}</div>
         </div>
 
         <div className="text-right">
@@ -81,18 +70,18 @@ export default function StreamsOverTimeChart({ range }: { range: Range }) {
         </div>
       </div>
 
-      {loading && (
-        <div className="mt-3 text-xs text-[#B3B3B3]">Loading…</div>
-      )}
-      {error && (
-        <div className="mt-3 text-xs text-red-400 break-words">
-          {error}
-        </div>
-      )}
-
-      <div className="mt-4 h-56 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 14, left: 0, bottom: 0 }}>
+      <div
+        ref={containerRef}
+        className="mt-6 h-[360px] w-full min-w-0"
+        style={{ minHeight: 360 }}
+      >
+        {chartWidth > 0 ? (
+          <LineChart
+            width={chartWidth}
+            height={360}
+            data={data}
+            margin={{ top: 10, right: 14, left: 0, bottom: 0 }}
+          >
             <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.08)" />
 
             <XAxis
@@ -130,9 +119,10 @@ export default function StreamsOverTimeChart({ range }: { range: Range }) {
               activeDot={{ r: 5 }}
             />
           </LineChart>
-        </ResponsiveContainer>
+        ) : (
+          <div className="h-full w-full rounded-xl border border-white/10 bg-black/10" />
+        )}
       </div>
     </div>
   );
 }
-

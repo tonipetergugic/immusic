@@ -21,11 +21,7 @@ export default function StatCard({ label, value, delta, helper }: StatCardProps)
           ) : null}
         </div>
 
-        {delta ? (
-          <span className="text-xs px-2 py-1 rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]">
-            {delta}
-          </span>
-        ) : null}
+        {/* delta badge removed (not used / no real trend data yet) */}
       </div>
     </div>
   );
