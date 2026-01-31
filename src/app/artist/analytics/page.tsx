@@ -96,6 +96,23 @@ export default async function ArtistAnalyticsPage({
 
   if (dailyErr) throw new Error(dailyErr.message);
 
+  type AnalyticsTrackDailyRow = {
+    track_id: string | null;
+    streams: number | null;
+    listened_seconds: number | null;
+    ratings_count: number | null;
+    rating_avg: number | null;
+  };
+
+  type ValidListenRow = { track_id: string | null; user_id: string | null };
+  type ReleaseTrackRow = { release_id: string | null; track_id: string | null };
+  type ReleaseRow = { id: string | null; cover_path: string | null };
+  type TrackTitleRow = { id: string | null; title: string | null };
+  type CountryStreamsRow = { country_iso2: string | null; listeners_30d: number | null };
+  type SummaryRow = { unique_listeners_total: number | null };
+
+  type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
+
   // aggregate per track_id in JS (Supabase free plan friendly, no DB changes)
   type Agg = {
     streams: number;
@@ -106,7 +123,7 @@ export default async function ArtistAnalyticsPage({
 
   const aggByTrack = new Map<string, Agg>();
 
-  (dailyRows || []).forEach((r: any) => {
+  ((dailyRows || []) as AnalyticsTrackDailyRow[]).forEach((r) => {
     const id = String(r.track_id);
     const streams = Number(r.streams ?? 0);
     const listened_seconds = Number(r.listened_seconds ?? 0);
@@ -175,7 +192,7 @@ export default async function ArtistAnalyticsPage({
     const { data: vRows, error: vErr } = await vq;
     if (vErr) throw new Error(vErr.message);
 
-    (vRows || []).forEach((r: any) => {
+    ((vRows || []) as ValidListenRow[]).forEach((r) => {
       const tid = String(r.track_id);
       const uid = r.user_id ? String(r.user_id) : null;
       if (!uid) return;
@@ -198,7 +215,7 @@ export default async function ArtistAnalyticsPage({
     if (rtErr) throw new Error(rtErr.message);
 
     const releaseIds = Array.from(
-      new Set((rtRows || []).map((r: any) => String(r.release_id)))
+      new Set(((rtRows || []) as ReleaseTrackRow[]).map((r) => String(r.release_id)))
     );
 
     const coverPathByReleaseId = new Map<string, string | null>();
@@ -211,7 +228,7 @@ export default async function ArtistAnalyticsPage({
 
       if (relErr) throw new Error(relErr.message);
 
-      (relRows || []).forEach((r: any) =>
+      ((relRows || []) as ReleaseRow[]).forEach((r) =>
         coverPathByReleaseId.set(
           String(r.id),
           r.cover_path ? String(r.cover_path) : null
@@ -219,7 +236,7 @@ export default async function ArtistAnalyticsPage({
       );
     }
 
-    (rtRows || []).forEach((r: any) => {
+    ((rtRows || []) as ReleaseTrackRow[]).forEach((r) => {
       const trackId = String(r.track_id);
       const relId = String(r.release_id);
       const coverPath = coverPathByReleaseId.get(relId) ?? null;
@@ -235,7 +252,7 @@ export default async function ArtistAnalyticsPage({
     return data.publicUrl ?? null;
   };
 
-  let titleById = new Map<string, string>();
+  const titleById = new Map<string, string>();
 
   if (ids.length) {
     const { data: tracks, error: tracksErr } = await supabase
@@ -244,7 +261,9 @@ export default async function ArtistAnalyticsPage({
       .in("id", ids);
 
     if (tracksErr) throw new Error(tracksErr.message);
-    (tracks || []).forEach((t: any) => titleById.set(String(t.id), String(t.title)));
+    ((tracks || []) as TrackTitleRow[]).forEach((t) =>
+      titleById.set(String(t.id), String(t.title))
+    );
   }
 
   const topTracks: TopTrackRow[] = topAgg.map((r) => ({
@@ -290,14 +309,17 @@ export default async function ArtistAnalyticsPage({
     .limit(250);
 
   if (countryError) {
-    console.error("[artist/analytics] world map (iso2) error:", countryError);
+    // intentionally silent: analytics world map errors are non-blocking
   }
 
   const countryListeners30d: CountryListeners30dRow[] = (countryRows ?? [])
-    .map((r) => ({
-      country_iso2: String((r as any).country_iso2 ?? "").trim().toUpperCase(),
-      listeners_30d: Number((r as any).listeners_30d ?? 0),
-    }))
+    .map((r) => {
+      const row = r as CountryStreamsRow;
+      return {
+        country_iso2: String(row.country_iso2 ?? "").trim().toUpperCase(),
+        listeners_30d: Number(row.listeners_30d ?? 0),
+      };
+    })
     .filter((r) => r.country_iso2.length === 2 && r.listeners_30d > 0);
 
   // Followers (live) — how many profiles follow this artist
@@ -332,7 +354,7 @@ export default async function ArtistAnalyticsPage({
 
   // Conversion (live) — saves per unique listeners in the active range
   // Listeners source of truth: summary.unique_listeners_total (range truth)
-  const uniqueListenersInRange = Number((summary as any)?.unique_listeners_total ?? 0);
+  const uniqueListenersInRange = Number(((summary as SummaryRow | null)?.unique_listeners_total) ?? 0);
 
   const conversionPct =
     uniqueListenersInRange > 0
@@ -361,7 +383,7 @@ export default async function ArtistAnalyticsPage({
     const { data: vRows2, error: vErr2 } = await vq2;
     if (vErr2) throw new Error(vErr2.message);
 
-    (vRows2 || []).forEach((r: any) => {
+    ((vRows2 || []) as ValidListenRow[]).forEach((r) => {
       const tid = String(r.track_id);
       const uid = r.user_id ? String(r.user_id) : null;
       if (!uid) return;
@@ -386,7 +408,7 @@ export default async function ArtistAnalyticsPage({
       if (savesErr2) throw new Error(savesErr2.message);
 
       const savesByTrack = new Map<string, number>();
-      (saveRows2 || []).forEach((r: any) => {
+      ((saveRows2 || []) as { track_id: string | null }[]).forEach((r) => {
         const tid = r.track_id ? String(r.track_id) : null;
         if (!tid) return;
         savesByTrack.set(tid, (savesByTrack.get(tid) ?? 0) + 1);
@@ -401,7 +423,7 @@ export default async function ArtistAnalyticsPage({
       if (titleErr2) throw new Error(titleErr2.message);
 
       const titleByEligibleId = new Map<string, string>();
-      (titleRows2 || []).forEach((t: any) =>
+      ((titleRows2 || []) as TrackTitleRow[]).forEach((t) =>
         titleByEligibleId.set(String(t.id), String(t.title ?? "Unknown track"))
       );
 
@@ -416,7 +438,7 @@ export default async function ArtistAnalyticsPage({
       if (rt2Err) throw new Error(rt2Err.message);
 
       const relIds2 = Array.from(
-        new Set((rt2 || []).map((r: any) => String(r.release_id)))
+        new Set(((rt2 || []) as ReleaseTrackRow[]).map((r) => String(r.release_id)))
       );
 
       const coverPathByReleaseId2 = new Map<string, string | null>();
@@ -429,7 +451,7 @@ export default async function ArtistAnalyticsPage({
 
         if (rel2Err) throw new Error(rel2Err.message);
 
-        (rel2 || []).forEach((r: any) =>
+        ((rel2 || []) as ReleaseRow[]).forEach((r) =>
           coverPathByReleaseId2.set(
             String(r.id),
             r.cover_path ? String(r.cover_path) : null
@@ -437,7 +459,7 @@ export default async function ArtistAnalyticsPage({
         );
       }
 
-      (rt2 || []).forEach((r: any) => {
+      ((rt2 || []) as ReleaseTrackRow[]).forEach((r) => {
         const tid = String(r.track_id);
         const rid = String(r.release_id);
         const cp = coverPathByReleaseId2.get(rid) ?? null;
@@ -474,7 +496,7 @@ export default async function ArtistAnalyticsPage({
   return (
     <ArtistAnalyticsClient
       artistId={artistId}
-      initialTab={initialTab as any}
+      initialTab={initialTab as Tab}
       initialRange={range}
       initialTrackSort={trackSort}
       summary={summary}

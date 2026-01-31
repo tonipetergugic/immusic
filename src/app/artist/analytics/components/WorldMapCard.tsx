@@ -12,7 +12,7 @@ export default function WorldMapCard({
   items: CountryListeners30dRow[];
 }) {
   const top = useMemo(() => {
-    const getListeners = (r: any) => Number(r?.listeners_30d ?? 0);
+    const getListeners = (r: CountryListeners30dRow) => Number(r.listeners_30d ?? 0);
 
     const total = (items || []).reduce((sum, r) => sum + getListeners(r), 0);
     const sorted = [...(items || [])]
@@ -43,7 +43,7 @@ export default function WorldMapCard({
         {(() => {
           const seen = new Set<string>();
           const unique = top.sorted.filter((c) => {
-            const code = String((c as any).country_iso2 ?? "").trim().toUpperCase();
+            const code = String(c.country_iso2 ?? "").trim().toUpperCase();
             if (!code) return false;
             if (seen.has(code)) return false;
             seen.add(code);
@@ -51,9 +51,9 @@ export default function WorldMapCard({
           });
 
           return unique.map((c) => {
-          const listeners = top.getListeners(c as any);
+          const listeners = top.getListeners(c);
           const share = top.total > 0 ? Math.round((listeners / top.total) * 100) : 0;
-          const raw = String((c as any).country_iso2 ?? "").trim();
+          const raw = String(c.country_iso2 ?? "").trim();
           const code = raw.toUpperCase();
 
           let pretty = code;

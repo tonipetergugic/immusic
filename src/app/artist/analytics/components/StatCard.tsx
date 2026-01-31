@@ -7,7 +7,8 @@ type StatCardProps = {
   helper?: string;
 };
 
-export default function StatCard({ label, value, delta, helper }: StatCardProps) {
+export default function StatCard(props: StatCardProps) {
+  const { label, value, helper } = props;
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
       <div className="flex items-start justify-between gap-3">

@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import AnalyticsHeader from "./AnalyticsHeader";
 import StatCard from "./StatCard";
-import ChartCard from "./ChartCard";
 import WorldMapCard from "./WorldMapCard";
 import AnalyticsTabs from "./AnalyticsTabs";
 import AnalyticsDrawer from "./AnalyticsDrawer";
@@ -141,28 +141,12 @@ export default function ArtistAnalyticsClient(props: {
   const liveStreamsTotal =
     summary?.streams_over_time?.reduce((acc, p) => acc + (p.streams || 0), 0) ?? 0;
 
-  const livePeakListeners =
-    summary?.listeners_over_time?.reduce((max, p) => {
-      const v = Number(p.listeners ?? 0);
-      return v > max ? v : max;
-    }, 0) ?? 0;
-
   const uniqueListenersTotal = props.summary?.unique_listeners_total ?? 0;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTitle, setDrawerTitle] = useState("Details");
-  const [drawerSubtitle, setDrawerSubtitle] = useState<string | undefined>(undefined);
+  const [drawerTitle] = useState("Details");
+  const [drawerSubtitle] = useState<string | undefined>(undefined);
   const [compareMode, setCompareMode] = useState(false);
-
-  const openDrawer = (title: string, subtitle?: string) => {
-    setDrawerTitle(title);
-    setDrawerSubtitle(subtitle);
-    setDrawerOpen(true);
-
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("detail", title.toLowerCase().replace(/\s+/g, "-"));
-    router.replace(`${pathname}?${next.toString()}`);
-  };
 
   return (
     <div className="space-y-6">
@@ -231,7 +215,7 @@ export default function ArtistAnalyticsClient(props: {
             <div>
               <p className="text-lg font-semibold">Track performance</p>
               {(() => {
-                const r = getRangeLabel(activeRange as any);
+                const r = getRangeLabel(activeRange);
                 return (
                   <p className="text-sm text-[#B3B3B3] mt-1">
                     Your best performing tracks ({r.subtitle})
@@ -289,12 +273,13 @@ export default function ArtistAnalyticsClient(props: {
                     <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
 
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                      <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
                         {t.cover_url ? (
-                          <img
+                          <Image
                             src={t.cover_url}
                             alt=""
-                            className="h-full w-full object-cover"
+                            fill
+                            className="object-cover"
                             loading="lazy"
                           />
                         ) : null}
@@ -303,7 +288,6 @@ export default function ArtistAnalyticsClient(props: {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{t.title}</p>
                         {(() => {
-                          const r = getRangeLabel(activeRange as any);
                           return (
                             <p className="text-xs text-[#B3B3B3]">
                               Streams · Unique listeners
@@ -335,7 +319,7 @@ export default function ArtistAnalyticsClient(props: {
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">Track details</p>
                   {(() => {
-                    const r = getRangeLabel(activeRange as any);
+                    const r = getRangeLabel(activeRange);
                     return <span className="text-xs text-[#B3B3B3]">{r.badge}</span>;
                   })()}
                 </div>
@@ -347,12 +331,13 @@ export default function ArtistAnalyticsClient(props: {
                 ) : (
                   <div className="mt-4 space-y-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                      <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
                         {selectedTrack.cover_url ? (
-                          <img
+                          <Image
                             src={selectedTrack.cover_url}
                             alt=""
-                            className="h-full w-full object-cover"
+                            fill
+                            className="object-cover"
                             loading="lazy"
                           />
                         ) : null}
@@ -360,7 +345,7 @@ export default function ArtistAnalyticsClient(props: {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{selectedTrack.title}</p>
                         {(() => {
-                          const r = getRangeLabel(activeRange as any);
+                          const r = getRangeLabel(activeRange);
                           return (
                             <p className="text-xs text-[#B3B3B3]">
                               Based on {r.subtitle}
@@ -411,12 +396,13 @@ export default function ArtistAnalyticsClient(props: {
                     <div key={t.track_id} className="px-4 md:px-5 py-3 flex items-center gap-3">
                       <div className="w-8 text-xs text-[#B3B3B3]">{idx + 1}</div>
 
-                      <div className="h-9 w-9 rounded-md bg-white/10 overflow-hidden shrink-0">
+                      <div className="relative h-9 w-9 rounded-md bg-white/10 overflow-hidden shrink-0">
                         {t.cover_url ? (
-                          <img
+                          <Image
                             src={t.cover_url}
                             alt=""
-                            className="h-full w-full object-cover"
+                            fill
+                            className="object-cover"
                             loading="lazy"
                           />
                         ) : null}
@@ -448,11 +434,8 @@ export default function ArtistAnalyticsClient(props: {
             <div className="text-lg font-semibold">Conversion performance</div>
             <div className="text-sm text-muted-foreground">
               {(() => {
-                const r = getRangeLabel(activeRange as any) as any;
-                const label =
-                  typeof r === "string"
-                    ? r
-                    : (r?.badge ?? r?.subtitle ?? String(activeRange));
+                const r = getRangeLabel(activeRange);
+                const label = r.badge ?? r.subtitle ?? String(activeRange);
                 return <>Listener → save conversion ({label})</>;
               })()}
             </div>
@@ -488,12 +471,13 @@ export default function ArtistAnalyticsClient(props: {
                       <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
 
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                        <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
                           {t.cover_url ? (
-                            <img
+                            <Image
                               src={t.cover_url}
                               alt=""
-                              className="h-full w-full object-cover"
+                              fill
+                              className="object-cover"
                               loading="lazy"
                             />
                           ) : null}

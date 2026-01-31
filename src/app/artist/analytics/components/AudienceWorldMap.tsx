@@ -17,6 +17,11 @@ type Item = {
   listeners_30d: number;   // rolling 30d
 };
 
+type Geo = {
+  rsmKey: string;
+  properties?: Record<string, unknown>;
+};
+
 export default function AudienceWorldMap(props: { items: Item[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -31,7 +36,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
   }, [props.items]);
 
   const [tip, setTip] = useState<null | { x: number; y: number; name: string; value: number }>(null);
-  const [hoverCode, setHoverCode] = useState<string | null>(null);
+  const [, setHoverCode] = useState<string | null>(null);
 
   const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
@@ -100,21 +105,22 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
           }}
         >
         <Geographies geography="/maps/countries_iso2.geojson">
-          {({ geographies }: { geographies: any[] }) =>
-            geographies.map((geo: any) => {
-              const props: any = geo.properties ?? {};
+          {({ geographies }: { geographies: Geo[] }) =>
+            geographies.map((geo) => {
+              const props = (geo.properties ?? {}) as Record<string, unknown>;
 
               const iso2 =
-                normalizeIso2(props.ISO_A2) ??
-                normalizeIso2(props.ISO2) ??
-                normalizeIso2(props.iso_a2) ??
-                normalizeIso2(props.iso2);
+                normalizeIso2(props.ISO_A2 as string) ??
+                normalizeIso2(props.ISO2 as string) ??
+                normalizeIso2(props.iso_a2 as string) ??
+                normalizeIso2(props.iso2 as string);
 
               const matched = iso2 ? byIso2.get(iso2) : undefined;
-              const value = matched ? Number((matched as any).listeners_30d ?? 0) : 0;
+              const value = matched ? Number(matched.listeners_30d ?? 0) : 0;
 
-              const name =
-                props.NAME || props.ADMIN || props.name || "Unknown";
+              const rawName =
+                (props.NAME ?? props.ADMIN ?? props.name ?? "Unknown") as unknown;
+              const name = typeof rawName === "string" ? rawName : String(rawName);
 
               const hasValue = value > 0;
               const keyCode = (iso2 ?? "").toUpperCase();
