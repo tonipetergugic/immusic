@@ -12,15 +12,6 @@ import StreamsOverTimeChart from "./StreamsOverTimeChart";
 import ListenersOverTimeChart from "./ListenersOverTimeChart";
 import Tooltip from "@/components/Tooltip";
 
-function isFiniteNumber(v: unknown): v is number {
-  return typeof v === "number" && Number.isFinite(v);
-}
-
-function renderValue(v: unknown): string {
-  if (typeof v === "string") return v;
-  return isFiniteNumber(v) ? String(v) : "—";
-}
-
 type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 export type Range = "7d" | "28d" | "all";
 
@@ -51,6 +42,15 @@ export type CountryListeners30dRow = {
   listeners_30d: number;    // rolling 30d
 };
 
+export type TopConvertingTrackRow = {
+  track_id: string;
+  title: string;
+  cover_url: string | null;
+  listeners: number;
+  saves: number;
+  conversion_pct: number;
+};
+
 function formatInt(v: number) {
   return new Intl.NumberFormat("en-US").format(v);
 }
@@ -61,17 +61,6 @@ function getRangeLabel(r: "7d" | "28d" | "all"): RangeLabel {
   if (r === "7d") return { badge: "7d", subtitle: "last 7 days", metricSuffix: "(7d)" };
   if (r === "28d") return { badge: "28d", subtitle: "last 28 days", metricSuffix: "(28d)" };
   return { badge: "All time", subtitle: "all time", metricSuffix: "(all time)" };
-}
-
-function calcPct(numerator: number, denominator: number): string {
-  if (!denominator || denominator === 0) return "—";
-  return `${Math.round((numerator / denominator) * 100)}%`;
-}
-
-function formatPctSmart(value: number): string {
-  if (!Number.isFinite(value)) return "—";
-  const rounded1 = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded1) ? `${rounded1.toFixed(0)}%` : `${rounded1.toFixed(1)}%`;
 }
 
 export default function ArtistAnalyticsClient(props: {
@@ -85,15 +74,8 @@ export default function ArtistAnalyticsClient(props: {
   countryListeners30d: CountryListeners30dRow[];
   followersCount: number;
   savesCount: number;
+  topConvertingTracks: TopConvertingTrackRow[];
   conversionPct: number;
-  topConvertingTracks: {
-    track_id: string;
-    title: string;
-    cover_url: string | null;
-    listeners: number;
-    saves: number;
-    conversion_pct: number;
-  }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -460,145 +442,133 @@ export default function ArtistAnalyticsClient(props: {
       )}
 
       {activeTab === "Conversion" && (
-        <div className="mt-8 space-y-5">
-          {(props.summary?.unique_listeners_total ?? 0) < 1 && (
-            <div className="mb-4 text-sm text-muted-foreground">
-              Not enough data yet to calculate conversion.
+        <div className="space-y-4">
+          {/* Header like Track performance */}
+          <div>
+            <div className="text-lg font-semibold">Conversion performance</div>
+            <div className="text-sm text-muted-foreground">
+              {(() => {
+                const r = getRangeLabel(activeRange as any) as any;
+                const label =
+                  typeof r === "string"
+                    ? r
+                    : (r?.badge ?? r?.subtitle ?? String(activeRange));
+                return <>Listener → save conversion ({label})</>;
+              })()}
             </div>
-          )}
+          </div>
 
-          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-stretch">
-            <div className="h-full flex flex-col max-w-xl">
-              {/* Header */}
-              <div className="mb-6 max-w-md">
-                <div className="mb-1 text-sm font-medium text-muted-foreground">
-                  Listener progression
-                </div>
-                <p className="text-sm text-muted-foreground/80">
-                  How listeners progress from first play to saving, rating, and following.
-                </p>
-              </div>
-
-              {/* Content */}
-              <div className="mt-auto">
-                <div className="pt-6 space-y-3">
-                  {/* Listeners */}
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                    <div className="text-sm text-muted-foreground">Listeners</div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-lg tabular-nums text-white">
-                        {props.summary?.unique_listeners_total ?? "—"}
-                      </div>
-                      <div className="w-16 text-right text-sm text-muted-foreground">
-                        ↓ 100%
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Saves */}
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                    <div className="text-sm text-muted-foreground">Saves</div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-lg tabular-nums text-white">
-                        {props.savesCount}
-                      </div>
-                      <div className="w-16 text-right text-sm text-muted-foreground">
-                        ↓ {formatPctSmart(
-                          (props.savesCount / Number(props.summary?.unique_listeners_total ?? 0)) * 100
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Ratings */}
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                    <div className="text-sm text-muted-foreground">Ratings</div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-lg tabular-nums text-white">
-                        {props.topRatedTracks?.reduce(
-                          (sum, t) => sum + (t.ratings_count ?? 0),
-                          0
-                        ) ?? "—"}
-                      </div>
-                      <div className="w-16 text-right text-sm text-muted-foreground">
-                        ↓ {formatPctSmart(
-                          ((props.topRatedTracks?.reduce(
-                            (sum, t) => sum + (t.ratings_count ?? 0),
-                            0
-                          ) ?? 0) / Number(props.savesCount)) * 100
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Follows */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Follows</div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-lg tabular-nums text-white">
-                        {props.followersCount}
-                      </div>
-                      <div className="w-16 text-right text-sm text-muted-foreground">
-                        —
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 border-t border-white/5" />
-              </div>
-            </div>
-
-            <div className="h-full flex flex-col max-w-xl">
-              <div className="flex flex-col justify-between h-full">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {/* LEFT: Big list card */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden xl:col-span-2">
+              <div className="px-4 md:px-5 py-4 border-b border-white/10 flex items-center justify-between">
                 <div className="text-sm font-medium text-muted-foreground">
                   Top converting tracks
                 </div>
-                {props.topConvertingTracks.length > 0 ? (
-                  <>
-                    <p className="mt-1 mb-3 text-sm text-muted-foreground/80">
-                      Only tracks with at least 2 listeners in the selected range.
-                    </p>
-                    <div className="space-y-2.5">
-                      {props.topConvertingTracks.map((t, idx) => (
-                        <div
-                          key={t.track_id}
-                          className="flex items-center justify-between gap-4 rounded-md px-1 py-1 hover:bg-white/5 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {t.cover_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={t.cover_url}
-                                alt=""
-                                className="h-9 w-9 rounded-md object-cover"
-                              />
-                            ) : (
-                              <div className="h-9 w-9 rounded-md bg-white/10" />
-                            )}
 
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium text-white">
-                                {idx + 1}. {t.title}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {t.saves} saves / {t.listeners} listeners
-                              </div>
-                            </div>
-                          </div>
+                {/* column labels on desktop */}
+                <div className="hidden md:flex items-center gap-6 text-xs text-[#B3B3B3]">
+                  <div className="w-14 text-right">Saves</div>
+                  <div className="w-14 text-right">Listeners</div>
+                  <div className="w-16 text-right">Conv.</div>
+                </div>
+              </div>
 
-                          <div className="text-sm tabular-nums text-muted-foreground">
-                            {t.conversion_pct.toFixed(1)}%
-                          </div>
+              {props.topConvertingTracks.length === 0 ? (
+                <div className="px-4 md:px-5 py-4 text-sm text-muted-foreground">
+                  Not enough listener data yet.
+                </div>
+              ) : (
+                <div className="divide-y divide-white/10">
+                  {props.topConvertingTracks.map((t, idx) => (
+                    <div
+                      key={t.track_id}
+                      className="px-4 md:px-5 py-3 flex items-center gap-4 transition-colors hover:bg-white/5"
+                    >
+                      <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
+
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                          {t.cover_url ? (
+                            <img
+                              src={t.cover_url}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : null}
                         </div>
-                      ))}
+
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{t.title}</p>
+                          <p className="text-xs text-[#B3B3B3]">
+                            Saves · Listeners
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Desktop columns */}
+                      <div className="hidden md:flex items-center gap-6">
+                        <div className="w-14 text-right text-sm text-white/90 tabular-nums">
+                          {formatInt(t.saves)}
+                        </div>
+                        <div className="w-14 text-right text-sm text-white/90 tabular-nums">
+                          {formatInt(t.listeners)}
+                        </div>
+                        <div className="w-16 text-right text-sm text-[#00FFC6] tabular-nums">
+                          {Number.isFinite(t.conversion_pct)
+                            ? `${t.conversion_pct.toFixed(1)}%`
+                            : "—"}
+                        </div>
+                      </div>
+
+                      {/* Mobile: show conversion only */}
+                      <div className="md:hidden text-sm text-[#00FFC6] tabular-nums">
+                        {Number.isFinite(t.conversion_pct)
+                          ? `${t.conversion_pct.toFixed(1)}%`
+                          : "—"}
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    No tracks have enough listener data yet to calculate conversion.
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT: stacked cards */}
+            <div className="space-y-4 xl:col-span-1">
+              {/* Conversion summary card */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+                <div className="text-sm text-muted-foreground mb-1">
+                  Conversion rate
+                </div>
+                <div className="text-3xl font-semibold">
+                  {Number.isFinite(props.conversionPct)
+                    ? `${props.conversionPct.toFixed(1)}%`
+                    : "—"}
+                </div>
+                <div className="text-xs text-[#B3B3B3] mt-1">
+                  listener → save · selected range
+                </div>
+
+                <div className="mt-4 border-t border-white/5 pt-4">
+                  <div className="text-sm text-muted-foreground mb-1">Saves</div>
+                  <div className="text-2xl font-medium">{formatInt(props.savesCount)}</div>
+                  <div className="text-xs text-[#B3B3B3] mt-1">
+                    Current libraries across your tracks
                   </div>
-                )}
-                <div className="mt-3 border-t border-white/5" />
+                </div>
+              </div>
+
+              {/* How to read card */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+                <div className="text-sm font-medium text-muted-foreground mb-2">
+                  How to read this
+                </div>
+                <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                  <li>&lt; 5% → low save rate</li>
+                  <li>5–10% → healthy save rate</li>
+                  <li>&gt; 10% → very strong save rate</li>
+                </ul>
               </div>
             </div>
           </div>

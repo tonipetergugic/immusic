@@ -6,6 +6,7 @@ import ArtistAnalyticsClient, {
   type ArtistAnalyticsSummary,
   type TopTrackRow,
   type CountryListeners30dRow,
+  type TopConvertingTrackRow,
 } from "./components/ArtistAnalyticsClient";
 
 export const dynamic = "force-dynamic";
@@ -317,94 +318,6 @@ export default async function ArtistAnalyticsPage({
 
   const trackIds = (artistTracks || []).map((t) => t.id);
 
-  // Best converting track (Listeners -> Saves) for the active range
-  // Listeners: distinct user_id from valid_listen_events in range
-  // Saves: distinct user_id from library_tracks in range
-  const now = new Date();
-  const rangeStart =
-    range === "7d"
-      ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      : range === "28d"
-        ? new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000)
-        : null;
-
-  const rangeStartIso = rangeStart ? rangeStart.toISOString() : null;
-
-  type ConvertingTrack = {
-    track_id: string;
-    title: string;
-    cover_url: string | null;
-    listeners: number;
-    saves: number;
-    conversion_pct: number;
-  };
-
-  let topConvertingTracks: ConvertingTrack[] = [];
-
-  if (trackIds.length > 0) {
-    // Listeners (range truth)
-    let listenQ = supabase
-      .from("valid_listen_events")
-      .select("track_id, user_id, created_at")
-      .in("track_id", trackIds);
-
-    if (rangeStartIso) listenQ = listenQ.gte("created_at", rangeStartIso);
-
-    const { data: listenRows } = await listenQ;
-
-    // Saves (range)
-    let saveQ = supabase
-      .from("library_tracks")
-      .select("track_id, user_id, created_at")
-      .in("track_id", trackIds);
-
-    if (rangeStartIso) saveQ = saveQ.gte("created_at", rangeStartIso);
-
-    const { data: saveRows } = await saveQ;
-
-    const listenersByTrack = new Map<string, Set<string>>();
-    for (const r of (listenRows ?? []) as any[]) {
-      const tid = String(r.track_id);
-      const uid = String(r.user_id);
-      if (!listenersByTrack.has(tid)) listenersByTrack.set(tid, new Set());
-      listenersByTrack.get(tid)!.add(uid);
-    }
-
-    const savesByTrack = new Map<string, Set<string>>();
-    for (const r of (saveRows ?? []) as any[]) {
-      const tid = String(r.track_id);
-      const uid = String(r.user_id);
-      if (!savesByTrack.has(tid)) savesByTrack.set(tid, new Set());
-      savesByTrack.get(tid)!.add(uid);
-    }
-
-    for (const id of trackIds) {
-      const listeners = listenersByTrack.get(id)?.size ?? 0;
-      if (listeners < 2) continue; // hard filter
-
-      const saves = savesByTrack.get(id)?.size ?? 0;
-      const pct = (saves / listeners) * 100;
-
-      topConvertingTracks.push({
-        track_id: id,
-        title: titleById.get(id) || "Unknown track",
-        cover_url: toPublicCoverUrl(coverPathByTrackId.get(id) ?? null),
-        listeners,
-        saves,
-        conversion_pct: pct,
-      });
-    }
-
-    topConvertingTracks = topConvertingTracks
-      .sort((a, b) => {
-        if (b.conversion_pct !== a.conversion_pct) {
-          return b.conversion_pct - a.conversion_pct;
-        }
-        return b.saves - a.saves;
-      })
-      .slice(0, 3);
-  }
-
   let savesCount = 0;
 
   if (trackIds.length > 0) {
@@ -426,6 +339,138 @@ export default async function ArtistAnalyticsPage({
       ? (Number(savesCount ?? 0) / uniqueListenersInRange) * 100
       : Number.NaN;
 
+  // Top converting tracks (server-side, no DB changes)
+  const topConvertingTracks: TopConvertingTrackRow[] = [];
+
+  if (trackIds.length > 0) {
+    // Unique listeners per track in selected range (truth from valid_listen_events)
+    const uniqByTrack = new Map<string, Set<string>>();
+
+    let vq2 = supabase
+      .from("valid_listen_events")
+      .select("track_id, user_id")
+      .in("track_id", trackIds);
+
+    if (days !== null) {
+      const from = new Date();
+      from.setDate(from.getDate() - (days - 1));
+      const fromISO = from.toISOString().slice(0, 10);
+      vq2 = vq2.gte("created_at", `${fromISO}T00:00:00.000Z`);
+    }
+
+    const { data: vRows2, error: vErr2 } = await vq2;
+    if (vErr2) throw new Error(vErr2.message);
+
+    (vRows2 || []).forEach((r: any) => {
+      const tid = String(r.track_id);
+      const uid = r.user_id ? String(r.user_id) : null;
+      if (!uid) return;
+
+      const set = uniqByTrack.get(tid) ?? new Set<string>();
+      set.add(uid);
+      uniqByTrack.set(tid, set);
+    });
+
+    // Hard rule: only tracks with at least 2 listeners in selected range
+    const eligibleTrackIds = trackIds.filter(
+      (id) => (uniqByTrack.get(String(id))?.size ?? 0) >= 2
+    );
+
+    if (eligibleTrackIds.length > 0) {
+      // Saves per track (current library state)
+      const { data: saveRows2, error: savesErr2 } = await supabase
+        .from("library_tracks")
+        .select("track_id")
+        .in("track_id", eligibleTrackIds);
+
+      if (savesErr2) throw new Error(savesErr2.message);
+
+      const savesByTrack = new Map<string, number>();
+      (saveRows2 || []).forEach((r: any) => {
+        const tid = r.track_id ? String(r.track_id) : null;
+        if (!tid) return;
+        savesByTrack.set(tid, (savesByTrack.get(tid) ?? 0) + 1);
+      });
+
+      // Titles for eligible tracks
+      const { data: titleRows2, error: titleErr2 } = await supabase
+        .from("tracks")
+        .select("id, title")
+        .in("id", eligibleTrackIds);
+
+      if (titleErr2) throw new Error(titleErr2.message);
+
+      const titleByEligibleId = new Map<string, string>();
+      (titleRows2 || []).forEach((t: any) =>
+        titleByEligibleId.set(String(t.id), String(t.title ?? "Unknown track"))
+      );
+
+      // Cover urls for eligible tracks (release_tracks -> releases.cover_path)
+      const coverPathByEligibleTrackId = new Map<string, string | null>();
+
+      const { data: rt2, error: rt2Err } = await supabase
+        .from("release_tracks")
+        .select("track_id, release_id")
+        .in("track_id", eligibleTrackIds);
+
+      if (rt2Err) throw new Error(rt2Err.message);
+
+      const relIds2 = Array.from(
+        new Set((rt2 || []).map((r: any) => String(r.release_id)))
+      );
+
+      const coverPathByReleaseId2 = new Map<string, string | null>();
+
+      if (relIds2.length) {
+        const { data: rel2, error: rel2Err } = await supabase
+          .from("releases")
+          .select("id, cover_path")
+          .in("id", relIds2);
+
+        if (rel2Err) throw new Error(rel2Err.message);
+
+        (rel2 || []).forEach((r: any) =>
+          coverPathByReleaseId2.set(
+            String(r.id),
+            r.cover_path ? String(r.cover_path) : null
+          )
+        );
+      }
+
+      (rt2 || []).forEach((r: any) => {
+        const tid = String(r.track_id);
+        const rid = String(r.release_id);
+        const cp = coverPathByReleaseId2.get(rid) ?? null;
+        if (!coverPathByEligibleTrackId.has(tid)) coverPathByEligibleTrackId.set(tid, cp);
+      });
+
+      const items = eligibleTrackIds
+        .map((id) => {
+          const tid = String(id);
+          const listeners = uniqByTrack.get(tid)?.size ?? 0;
+          const saves = savesByTrack.get(tid) ?? 0;
+          const conversion_pct = listeners > 0 ? (saves / listeners) * 100 : 0;
+
+          return {
+            track_id: tid,
+            title: titleByEligibleId.get(tid) || "Unknown track",
+            cover_url: toPublicCoverUrl(coverPathByEligibleTrackId.get(tid) ?? null),
+            listeners,
+            saves,
+            conversion_pct,
+          } satisfies TopConvertingTrackRow;
+        })
+        .sort((a, b) => {
+          if (b.conversion_pct !== a.conversion_pct) return b.conversion_pct - a.conversion_pct;
+          if (b.listeners !== a.listeners) return b.listeners - a.listeners;
+          return b.saves - a.saves;
+        })
+        .slice(0, 5);
+
+      topConvertingTracks.push(...items);
+    }
+  }
+
   return (
     <ArtistAnalyticsClient
       artistId={artistId}
@@ -438,8 +483,8 @@ export default async function ArtistAnalyticsPage({
       countryListeners30d={countryListeners30d}
       followersCount={followersCount ?? 0}
       savesCount={savesCount ?? 0}
-      conversionPct={conversionPct}
       topConvertingTracks={topConvertingTracks}
+      conversionPct={conversionPct}
     />
   );
 }
