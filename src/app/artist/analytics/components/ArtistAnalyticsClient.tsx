@@ -279,6 +279,7 @@ export default function ArtistAnalyticsClient(props: {
                             src={t.cover_url}
                             alt=""
                             fill
+                            sizes="40px"
                             className="object-cover"
                             loading="lazy"
                           />
@@ -337,6 +338,7 @@ export default function ArtistAnalyticsClient(props: {
                             src={selectedTrack.cover_url}
                             alt=""
                             fill
+                            sizes="40px"
                             className="object-cover"
                             loading="lazy"
                           />
@@ -402,6 +404,7 @@ export default function ArtistAnalyticsClient(props: {
                             src={t.cover_url}
                             alt=""
                             fill
+                            sizes="36px"
                             className="object-cover"
                             loading="lazy"
                           />
@@ -477,6 +480,7 @@ export default function ArtistAnalyticsClient(props: {
                               src={t.cover_url}
                               alt=""
                               fill
+                              sizes="40px"
                               className="object-cover"
                               loading="lazy"
                             />
