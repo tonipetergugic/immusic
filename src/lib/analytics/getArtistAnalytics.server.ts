@@ -54,7 +54,8 @@ export async function getArtistAnalyticsSummary(params: {
 
   if (artistTracksErr) throw artistTracksErr;
 
-  const artistTrackIds = (artistTracks || []).map((t: any) => String(t.id));
+  type TrackIdRow = { id: string | null };
+  const artistTrackIds = ((artistTracks || []) as TrackIdRow[]).map((t) => String(t.id));
 
   // Truth for unique listeners over the selected range: DISTINCT user_id from valid_listen_events
   let uniqueListenersTotal = 0;
@@ -70,7 +71,8 @@ export async function getArtistAnalyticsSummary(params: {
     if (uErr) throw uErr;
 
     const set = new Set<string>();
-    (uRows || []).forEach((r: any) => {
+    type UserIdRow = { user_id: string | null };
+    ((uRows || []) as UserIdRow[]).forEach((r) => {
       if (r.user_id) set.add(String(r.user_id));
     });
 
@@ -88,12 +90,6 @@ export async function getArtistAnalyticsSummary(params: {
   if (error) {
     throw error;
   }
-
-  const totalStreams = rows?.reduce((sum, r) => sum + Number(r.streams), 0) ?? 0;
-  const totalListeners =
-    rows?.reduce((sum, r) => sum + Number(r.unique_listeners), 0) ?? 0;
-  const totalListeningTime =
-    rows?.reduce((sum, r) => sum + Number(r.listened_seconds), 0) ?? 0;
 
   const streamsOverTime =
     rows?.map(r => ({
