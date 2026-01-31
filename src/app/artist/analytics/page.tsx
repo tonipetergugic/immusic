@@ -8,31 +8,24 @@ import ArtistAnalyticsClient, {
   type CountryListeners30dRow,
   type TopConvertingTrackRow,
 } from "./components/ArtistAnalyticsClient";
+import {
+  normalizeRange,
+  normalizeTab,
+  normalizeTrackSort,
+  type TrackSort,
+  type Tab,
+} from "./_lib/analyticsParams";
+import type {
+  AnalyticsTrackDailyRow,
+  ValidListenRow,
+  ReleaseTrackRow,
+  ReleaseRow,
+  TrackTitleRow,
+  CountryStreamsRow,
+  SummaryRow,
+} from "./_lib/analyticsRows";
 
 export const dynamic = "force-dynamic";
-
-function normalizeRange(input: string | string[] | undefined): Range {
-  const v = Array.isArray(input) ? input[0] : input;
-  if (v === "7d" || v === "28d" || v === "all") return v;
-  return "28d";
-}
-
-function normalizeTab(input: string | string[] | undefined) {
-  const v = Array.isArray(input) ? input[0] : input;
-  const raw = (v || "overview").toLowerCase();
-  if (raw === "audience") return "Audience";
-  if (raw === "tracks") return "Tracks";
-  if (raw === "conversion") return "Conversion";
-  return "Overview";
-}
-
-type TrackSort = "streams" | "listeners" | "rating" | "time";
-
-function normalizeTrackSort(input: string | string[] | undefined): TrackSort {
-  const v = Array.isArray(input) ? input[0] : input;
-  if (v === "streams" || v === "listeners" || v === "rating" || v === "time") return v;
-  return "streams";
-}
 
 export default async function ArtistAnalyticsPage({
   searchParams,
@@ -95,23 +88,6 @@ export default async function ArtistAnalyticsPage({
   const { data: dailyRows, error: dailyErr } = await topQuery;
 
   if (dailyErr) throw new Error(dailyErr.message);
-
-  type AnalyticsTrackDailyRow = {
-    track_id: string | null;
-    streams: number | null;
-    listened_seconds: number | null;
-    ratings_count: number | null;
-    rating_avg: number | null;
-  };
-
-  type ValidListenRow = { track_id: string | null; user_id: string | null };
-  type ReleaseTrackRow = { release_id: string | null; track_id: string | null };
-  type ReleaseRow = { id: string | null; cover_path: string | null };
-  type TrackTitleRow = { id: string | null; title: string | null };
-  type CountryStreamsRow = { country_iso2: string | null; listeners_30d: number | null };
-  type SummaryRow = { unique_listeners_total: number | null };
-
-  type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 
   // aggregate per track_id in JS (Supabase free plan friendly, no DB changes)
   type Agg = {
