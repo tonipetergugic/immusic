@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(
   _req: Request,
@@ -12,6 +13,19 @@ export async function GET(
       { ok: false, error: "Missing artist id" },
       { status: 400 }
     );
+  }
+
+  const auth = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await auth.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (user.id !== artistId) {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
 
   const supabase = getSupabaseAdmin();
