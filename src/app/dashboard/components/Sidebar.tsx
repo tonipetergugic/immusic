@@ -94,7 +94,12 @@ export default function Sidebar({
       />
 
       {/* Artist Bereich */}
-      {isDrawer ? null : role === "artist" || role === "admin" ? (
+      {isDrawer ? (
+        <div className="flex items-center gap-3 p-3 rounded-md text-[#B3B3B3] opacity-80 select-none cursor-not-allowed">
+          <Mic size={20} />
+          <span className="text-sm">Artist (Desktop only)</span>
+        </div>
+      ) : role === "artist" || role === "admin" ? (
         <SidebarItem
           href="/artist/dashboard"
           icon={<Mic size={20} />}

@@ -32,29 +32,60 @@ export default async function ArtistOnboardingPage() {
   if (profile.artist_onboarding_status === "pending_upload") redirect("/artist/upload");
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-3xl font-semibold mb-3">Become an Artist</h1>
-      <p className="text-[#B3B3B3] mb-6 leading-relaxed">
-        As an artist, you can upload tracks and releases to ImMusic. Your first upload will be reviewed by our AI.
-        If approved, your account will automatically be upgraded to an Artist account.
-      </p>
-
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 mb-6">
-        <ul className="list-disc pl-5 space-y-2 text-sm text-[#B3B3B3]">
-          <li>Your first track will be uploaded now.</li>
-          <li>AI review status: pending → approved / rejected.</li>
-          <li>After approval, you become an Artist automatically.</li>
-        </ul>
+    <div className="relative">
+      {/* Full-bleed background layer (like landing page) */}
+      <div
+        className="fixed inset-0 -z-10"
+        style={{
+          backgroundImage: "url('/artist-onboarding-hero.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        {/* cinematic overlay + vignette */}
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/55 to-black/80" />
+        <div className="absolute inset-0 [box-shadow:inset_0_0_340px_rgba(0,0,0,0.95)]" />
       </div>
 
-      <form action={confirmBecomeArtistAction}>
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center rounded-xl bg-[#00FFC6] text-black font-medium px-5 py-2.5 hover:bg-[#00E0B0] transition"
-        >
-          Yes, I want to become an Artist
-        </button>
-      </form>
+      {/* Content (compact, centered, no banner/card) */}
+      <div className="mx-auto w-full max-w-5xl px-6 py-20">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
+          Become an Artist
+        </h1>
+
+        <p className="mt-5 max-w-4xl text-base md:text-xl leading-relaxed text-white/75">
+          Upload your tracks and releases to ImMusic from a desktop computer.
+          Your first upload will be reviewed by our AI. Upon approval, your account
+          will be upgraded to an Artist account.
+        </p>
+
+        <ul className="mt-8 list-disc pl-6 space-y-3 text-sm md:text-lg text-white/70">
+          <li>Upload and AI-powered review only available on desktop.</li>
+          <li>Your first track will be reviewed: pending → approved / rejected.</li>
+          <li>Upon approval, you become an Artist automatically.</li>
+        </ul>
+
+        <form action={confirmBecomeArtistAction} className="mt-14">
+          <button
+            type="submit"
+            className="
+              inline-flex items-center justify-center
+              rounded-2xl px-10 py-4
+              text-sm md:text-lg font-semibold
+              text-[#00FFC6]
+              bg-black/30 backdrop-blur-md
+              border border-[#00FFC6]/60
+              shadow-[0_0_0_1px_rgba(0,255,198,0.20),0_0_40px_rgba(0,255,198,0.25),0_0_90px_rgba(0,255,198,0.12)]
+              hover:bg-black/40 hover:border-[#00FFC6]/80
+              transition
+              cursor-pointer
+            "
+          >
+            Yes, I want to become an Artist
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
