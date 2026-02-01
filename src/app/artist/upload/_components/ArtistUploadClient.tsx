@@ -32,21 +32,27 @@ export default function ArtistUploadClient({ userId }: Props) {
   const [audioPath, setAudioPath] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [rightsAccepted, setRightsAccepted] = useState(false);
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [fileError, setFileError] = useState(false);
+
+  const hasTitleError = titleTouched && !title.trim();
 
   function handleFileSelected(next: File | null) {
     if (!next) {
       setFile(null);
+      setFileError(false);
       return;
     }
 
     const ext = (next.name.split(".").pop() || "").toLowerCase();
     if (ext !== "mp3") {
-      alert("Only MP3 files are supported. Please export your track as MP3.");
+      setFileError(true);
       setFile(null);
       setResetSignal((s) => s + 1);
       return;
     }
 
+    setFileError(false);
     setFile(next);
   }
 
@@ -115,12 +121,17 @@ export default function ArtistUploadClient({ userId }: Props) {
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => setTitleTouched(true)}
             placeholder="e.g. Cosmic Puls"
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-base text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+            className={`w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/90 placeholder:text-white/35 transition focus:outline-none focus:border-[#00FFC6]/60 focus:shadow-[0_0_0_2px_rgba(0,255,198,0.16),0_0_40px_rgba(0,255,198,0.10)] ${hasTitleError ? "border-red-400/60 focus:border-red-400/80 focus:shadow-[0_0_0_2px_rgba(248,113,113,0.25)]" : ""}`}
           />
-          <p className="mt-2 text-sm text-[#B3B3B3]">
-            Tip: use the exact track title you want to show publicly.
-          </p>
+          {hasTitleError ? (
+            <p className="mt-2 text-sm text-red-400/90">Please enter a track title.</p>
+          ) : (
+            <p className="mt-2 text-sm text-[#B3B3B3]">
+              Tip: use the exact track title you want to show publicly.
+            </p>
+          )}
         </div>
 
         {/* Dropzone */}
@@ -135,7 +146,16 @@ export default function ArtistUploadClient({ userId }: Props) {
           </p>
 
           <div className="mt-3">
-            <AudioDropzone onFileSelected={handleFileSelected} resetSignal={resetSignal} />
+            <AudioDropzone
+              onFileSelected={handleFileSelected}
+              resetSignal={resetSignal}
+              fileError={fileError}
+            />
+            {fileError && (
+              <p className="mt-2 text-sm text-red-400/90">
+                Please upload a valid MP3 file (320 kbps recommended).
+              </p>
+            )}
           </div>
 
           {file ? (
@@ -162,7 +182,7 @@ export default function ArtistUploadClient({ userId }: Props) {
             </div>
           ) : null}
 
-          <label className="mt-6 flex items-start gap-3 rounded-xl border border-[#00FFC6]/30 bg-gradient-to-br from-[#00FFC6]/[0.06] via-[#00FFC6]/[0.03] to-transparent px-4 py-3 shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]">
+          <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-[#00FFC6]/40 hover:bg-white/[0.03]">
             <input
               type="checkbox"
               checked={rightsAccepted}
@@ -182,7 +202,7 @@ export default function ArtistUploadClient({ userId }: Props) {
             <button
               onClick={handleUpload}
               disabled={uploading || title.trim().length === 0 || !rightsAccepted}
-              className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+              className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
               type="button"
             >
               <Plus size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
@@ -211,7 +231,9 @@ export default function ArtistUploadClient({ userId }: Props) {
                     setFile(null);
                     setAudioPath(null);
                     setRightsAccepted(false);
+                    setTitleTouched(false);
                     setResetSignal((s) => s + 1);
+                    setFileError(false);
                   }}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white"
                 >
@@ -226,7 +248,7 @@ export default function ArtistUploadClient({ userId }: Props) {
                 <button
                   type="submit"
                   disabled={!rightsAccepted}
-                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
                 >
                   <ArrowRight size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
                   Submit to QC

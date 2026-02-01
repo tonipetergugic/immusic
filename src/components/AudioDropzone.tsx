@@ -5,9 +5,11 @@ import { useState, useEffect, DragEvent } from "react";
 export default function AudioDropzone({
   onFileSelected,
   resetSignal,
+  fileError = false,
 }: {
   onFileSelected: (file: File | null) => void;
   resetSignal: number;
+  fileError?: boolean;
 }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -48,7 +50,7 @@ export default function AudioDropzone({
   function handleClick() {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "audio/*";
+    input.accept = "audio/mpeg";
     input.onchange = () => handleFiles(input.files);
     input.click();
   }
@@ -61,14 +63,18 @@ export default function AudioDropzone({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={`
-        w-full h-32 rounded-xl cursor-pointer flex items-center justify-center
-        border-2 border-dashed transition
-        ${
-          dragActive
-            ? "border-[#00FFC6] bg-[#00FFC610]"
-            : "border-[#2A2A2D] bg-[#111112]"
-        }
-      `}
+  w-full h-32 rounded-xl cursor-pointer flex items-center justify-center
+  border-2 border-dashed transition
+  active:scale-[0.99]
+  hover:border-[#00FFC6]/60 hover:bg-white/[0.03]
+  hover:shadow-[0_0_0_1px_rgba(0,255,198,0.18),0_20px_60px_rgba(0,255,198,0.10)]
+  ${
+    dragActive
+      ? "border-[#00FFC6] bg-[#00FFC6]/10 shadow-[0_0_0_1px_rgba(0,255,198,0.30),0_28px_80px_rgba(0,255,198,0.14)]"
+      : "border-[#2A2A2D] bg-[#111112]"
+  }
+  ${fileError ? "border-red-400/60 bg-red-400/5" : ""}
+`}
     >
       {fileName ? (
         <p className="text-white/80 text-sm">{fileName}</p>
