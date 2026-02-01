@@ -50,39 +50,49 @@ export async function GET(
   const rows = (data ?? []) as any[];
   const rawTracks = rows.map((r) => r.tracks).filter(Boolean);
 
-  const normalizedTracks = rawTracks.map((t: any) => {
-    const releaseObj = Array.isArray(t?.releases) ? (t.releases[0] ?? null) : (t?.releases ?? null);
-    const profileObj = Array.isArray(t?.profiles) ? (t.profiles[0] ?? null) : (t?.profiles ?? null);
+  const normalizedTracks = rawTracks
+    .map((t: any) => {
+      const releaseObj = Array.isArray(t?.releases)
+        ? (t.releases[0] ?? null)
+        : (t?.releases ?? null);
 
-    const cover_url =
-      releaseObj?.cover_path
-        ? supabase.storage
-            .from("release_covers")
-            .getPublicUrl(releaseObj.cover_path).data.publicUrl ?? null
-        : null;
+      // Only published releases are allowed in playlist queues
+      if (releaseObj?.status !== "published") return null;
 
-    const audio_url =
-      t?.audio_path
-        ? supabase.storage
-            .from("tracks")
-            .getPublicUrl(t.audio_path).data.publicUrl
-        : null;
+      const profileObj = Array.isArray(t?.profiles)
+        ? (t.profiles[0] ?? null)
+        : (t?.profiles ?? null);
 
-    if (!audio_url) {
-      throw new Error(`Playlist queue route: missing audio_url for track ${t?.id}`);
-    }
+      const cover_url =
+        releaseObj?.cover_path
+          ? supabase.storage
+              .from("release_covers")
+              .getPublicUrl(releaseObj.cover_path).data.publicUrl ?? null
+          : null;
 
-    return {
-      id: t.id,
-      title: t.title ?? null,
-      artist_id: t.artist_id ?? null,
-      audio_url,
-      cover_url,
-      bpm: t.bpm ?? null,
-      key: t.key ?? null,
+      const audio_url =
+        t?.audio_path
+          ? supabase.storage
+              .from("tracks")
+              .getPublicUrl(t.audio_path).data.publicUrl
+          : null;
+
+      if (!audio_url) {
+        throw new Error(`Playlist queue route: missing audio_url for track ${t?.id}`);
+      }
+
+      return {
+        id: t.id,
+        title: t.title ?? null,
+        artist_id: t.artist_id ?? null,
+        audio_url,
+        cover_url,
+        bpm: t.bpm ?? null,
+        key: t.key ?? null,
       profiles: profileObj,
     };
-  });
+  })
+  .filter((t): t is NonNullable<typeof t> => Boolean(t));
 
   const queue = toPlayerTrackList(normalizedTracks);
 
