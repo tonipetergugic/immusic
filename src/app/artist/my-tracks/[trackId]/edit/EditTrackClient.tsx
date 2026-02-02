@@ -230,16 +230,18 @@ export default function EditTrackClient({
   return (
     <div className="mx-auto w-full max-w-[860px] pb-24">
       {/* Header */}
-      <div className="flex items-start justify-between gap-6">
+      <div className="mt-2 flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-[0.12em] text-white/60">Track</div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white drop-shadow-[0_0_30px_rgba(0,255,198,0.15)]">Edit Track</h1>
+          <BackLink className="mb-4" />
+
+          <h1 className="text-4xl font-semibold tracking-tight text-white drop-shadow-[0_0_30px_rgba(0,255,198,0.15)]">
+            Edit Track
+          </h1>
+
           <p className="mt-1 text-sm text-white/60">
             Update metadata used for releases and discovery.
           </p>
         </div>
-
-        <BackLink className="mt-1" />
       </div>
 
       <datalist id="bpm-suggestions">

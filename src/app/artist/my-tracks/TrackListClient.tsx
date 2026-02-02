@@ -15,6 +15,7 @@ type Track = {
   has_lyrics: boolean;
   is_explicit: boolean;
   status: "approved" | "development" | "performance";
+  isLocked?: boolean;
 };
 
 type TrackListClientProps = {

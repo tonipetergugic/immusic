@@ -69,6 +69,30 @@ export async function inviteTrackCollaboratorAction(args: {
   revalidatePath("/artist/my-tracks");
 }
 
+async function assertTrackNotLocked(
+  supabase: any,
+  userId: string,
+  trackId: string
+) {
+  // Find any release_track linking this track to a published release owned by this artist
+  const { data, error } = await supabase
+    .from("release_tracks")
+    .select("release_id, releases!inner(status, artist_id)")
+    .eq("track_id", trackId)
+    .eq("releases.status", "published")
+    .eq("releases.artist_id", userId)
+    .limit(1);
+
+  if (error) {
+    console.error("[assertTrackNotLocked] supabase error:", error);
+    throw new Error("Failed to validate track lock state.");
+  }
+
+  if (data && data.length > 0) {
+    throw new Error("This track is locked because it belongs to a published release.");
+  }
+}
+
 export async function deleteTrackAction(trackId: string, audioPath: string) {
   const supabase = await createSupabaseServerClient();
 
@@ -79,6 +103,8 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
   if (!user) {
     throw new Error("Not authenticated");
   }
+
+  await assertTrackNotLocked(supabase, user.id, trackId);
 
   const { error: dbError } = await supabase
     .from("tracks")
@@ -112,6 +138,8 @@ export async function renameTrackAction(
   if (!user) {
     throw new Error("Not authenticated");
   }
+
+  await assertTrackNotLocked(supabase, user.id, trackId);
 
   const update = {
     title: payload.title,
