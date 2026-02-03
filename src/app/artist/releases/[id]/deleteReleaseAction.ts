@@ -6,16 +6,29 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function deleteReleaseAction(releaseId: string) {
   const supabase = await createSupabaseServerClient();
 
-  // 1. Load release (to get cover_path, status)
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Not authenticated." as const };
+  }
+
+  // 1. Load release (cover_path, status, artist_id)
   const { data: release, error: releaseError } = await supabase
     .from("releases")
-    .select("id, cover_path, status")
+    .select("id, cover_path, status, artist_id")
     .eq("id", releaseId)
-    .single();
+    .maybeSingle();
 
   if (releaseError || !release) {
     console.error("Failed to load release:", releaseError);
-    return { error: "Release not found." };
+    return { error: "Release not found." as const };
+  }
+
+  if (release.artist_id !== user.id) {
+    return { error: "Not authorized." as const };
   }
 
   // IMPORTANT: Delete allowed ONLY when draft or withdrawn (never when published)
