@@ -502,7 +502,7 @@ export default function ReleaseEditorClient({
                 </div>
               ) : (
                 <div className="px-0 sm:px-1">
-                  <div className={isPublished ? "pointer-events-none opacity-60" : ""}>
+                  <div className={isPublished ? "pointer-events-none" : ""}>
                     <TrackListSortable
                       releaseId={releaseId}
                       tracks={tracks}
@@ -512,7 +512,7 @@ export default function ReleaseEditorClient({
                       premiumBalance={premiumBalance}
                       trackStatusById={trackStatusById}
                       boostEnabledById={boostEnabledById}
-                      releaseStatus={releaseData.status ?? "draft"}
+                      releaseStatus={status}
                       releasePublished={hasBeenPublished}
                     />
                   </div>
