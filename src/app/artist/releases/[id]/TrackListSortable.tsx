@@ -39,6 +39,7 @@ function SortableTrackItem({
   premiumBalance,
   status,
   initialBoostEnabled,
+  releaseStatus,
   releasePublished,
 }: {
   track: Track;
@@ -52,8 +53,10 @@ function SortableTrackItem({
   premiumBalance: number;
   status: string | null;
   initialBoostEnabled: boolean;
+  releaseStatus: "draft" | "published" | "withdrawn";
   releasePublished: boolean;
 }) {
+  const router = useRouter();
   const [devPending, setDevPending] = useState(false);
   const [boostPending, setBoostPending] = useState(false);
   const [boostEnabled, setBoostEnabled] = useState<boolean>(initialBoostEnabled);
@@ -117,12 +120,26 @@ function SortableTrackItem({
     : "border-[#27272A] bg-[#18181B]"
   }
 `}
+      role={releaseStatus === "draft" || releaseStatus === "withdrawn" ? "button" : undefined}
+      tabIndex={releaseStatus === "draft" || releaseStatus === "withdrawn" ? 0 : undefined}
+      onClick={() => {
+        if (!(releaseStatus === "draft" || releaseStatus === "withdrawn")) return;
+        router.push(`/artist/my-tracks/${track.track_id}/edit`);
+      }}
+      onKeyDown={(e) => {
+        if (!(releaseStatus === "draft" || releaseStatus === "withdrawn")) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(`/artist/my-tracks/${track.track_id}/edit`);
+        }
+      }}
     >
       <div className="flex min-w-0 items-start gap-4">
         <div
           className="mt-0.5 cursor-grab select-none text-white/35 hover:text-white/55 transition"
           {...attributes}
           {...listeners}
+          onClick={(e) => e.stopPropagation()}
         >
           |||
         </div>
@@ -202,8 +219,16 @@ function SortableTrackItem({
 
             <button
               type="button"
-              onClick={async () => {
-                await removeTrackFromReleaseAction(track.release_id, track.track_id);
+              onClick={async (e) => {
+                e.stopPropagation();
+                const res = await removeTrackFromReleaseAction(track.release_id, track.track_id);
+
+                if (res && "error" in res) {
+                  alert(res.error);
+                  onRefresh?.();
+                  return;
+                }
+
                 setTracks((prev) =>
                   prev
                     .filter((t) => t.track_id !== track.track_id)
@@ -234,6 +259,7 @@ type TrackListSortableProps = {
   premiumBalance: number;
   trackStatusById: Record<string, string>;
   boostEnabledById: Record<string, boolean>;
+  releaseStatus: "draft" | "published" | "withdrawn";
   releasePublished: boolean;
 };
 
@@ -246,6 +272,7 @@ export default function TrackListSortable({
   premiumBalance,
   trackStatusById,
   boostEnabledById,
+  releaseStatus,
   releasePublished,
 }: TrackListSortableProps) {
   const router = useRouter();
@@ -304,6 +331,7 @@ export default function TrackListSortable({
               premiumBalance={premiumBalance}
               status={trackStatusById[track.track_id] ?? null}
               initialBoostEnabled={!!boostEnabledById[track.track_id]}
+              releaseStatus={releaseStatus}
               releasePublished={releasePublished}
             />
           ))}

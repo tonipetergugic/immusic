@@ -12,18 +12,20 @@ import { updateReleaseTitleAction } from "./updateReleaseTitleAction";
 import { updateReleaseTypeAction } from "./updateReleaseTypeAction";
 import { publishReleaseAction } from "./publishReleaseAction";
 import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
+import { toggleReleaseVisibilityAction } from "./toggleReleaseVisibilityAction";
 import DeleteReleaseModal from "@/components/DeleteReleaseModal";
 import { deleteReleaseAction } from "./deleteReleaseAction";
 import { enableDevelopmentForReleaseAction } from "./enableDevelopmentForReleaseAction";
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
-type ReleaseStatus = "draft" | "published";
+type ReleaseStatus = "draft" | "published" | "withdrawn";
 type ReleaseData = {
   title: string;
   release_type: string;
   created_at: string;
   updated_at?: string;
   status?: ReleaseStatus;
+  published_at?: string | null;
 };
 
 type ReleaseEditorClientProps = {
@@ -62,6 +64,7 @@ export default function ReleaseEditorClient({
   const [status, setStatus] = useState<ReleaseStatus>(releaseData.status ?? "draft");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [devAllPending, setDevAllPending] = useState(false);
   const allTracksInDevelopment =
@@ -69,9 +72,14 @@ export default function ReleaseEditorClient({
     initialTracks.every((t) => trackStatusById[t.track_id] === "development");
   const [devAllDone, setDevAllDone] = useState(allTracksInDevelopment);
   const isPublished = status === "published";
+  const isWithdrawn = status === "withdrawn";
+  const hasBeenPublished = Boolean(releaseData.published_at);
+  const hasCover = Boolean(coverUrl);
 
   // Publish Preconditions (verbindlich)
-  const canPublish = !isPublished && hasAtLeastOneTrack && allTracksMetadataComplete;
+  // IMPORTANT: only Draft can be published (Withdrawn must NOT enable republish)
+  const canPublish =
+    status === "draft" && hasCover && hasAtLeastOneTrack && allTracksMetadataComplete;
 
   const markAsDraft = useCallback(() => {
     // Published releases are immutable (DB-enforced). Never attempt draft transitions.
@@ -94,8 +102,6 @@ export default function ReleaseEditorClient({
     return existingTrackIds;
   }, [tracks, existingTrackIds]);
 
-  const hasCover = Boolean(coverUrl);
-
   const confirmPublish = useCallback(() => {
     if (!canPublish) return;
 
@@ -110,10 +116,26 @@ export default function ReleaseEditorClient({
     });
   }, [canPublish, releaseId, startTransition]);
 
+  const confirmToggleVisibility = useCallback(() => {
+    if (status !== "published" && status !== "withdrawn") return;
+
+    startTransition(async () => {
+      const res = await toggleReleaseVisibilityAction(releaseId);
+      if (res?.ok && res.status) {
+        setStatus(res.status as ReleaseStatus);
+        setVisibilityModalOpen(false);
+      } else if (res?.error) {
+        alert(res.error);
+      } else {
+        alert("Failed to update release status.");
+      }
+    });
+  }, [releaseId, startTransition, status]);
+
   return (
     <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
       <div className="mb-6">
-        <BackLink label="Back to Releases" />
+        <BackLink label="Back to Releases" href="/artist/releases" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
@@ -123,15 +145,23 @@ export default function ReleaseEditorClient({
           <div>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-white/60">
                   Release
                 </div>
-                <div className="mt-1 text-sm font-semibold text-white/90">
-                  {status === "published" ? "Published" : "Draft"}
+                <div className="mt-1 text-lg font-semibold tracking-tight text-white">
+                  {status === "published"
+                    ? "Published"
+                    : status === "withdrawn"
+                    ? "Withdrawn"
+                    : "Draft"}
                 </div>
                 {status === "published" ? (
                   <div className="mt-1 text-xs text-white/60">
                     Status: Published — visible on ImMusic
+                  </div>
+                ) : status === "withdrawn" ? (
+                  <div className="mt-1 text-xs text-white/60">
+                    Status: Withdrawn — not visible / not rateable
                   </div>
                 ) : null}
               </div>
@@ -148,11 +178,19 @@ export default function ReleaseEditorClient({
             </div>
 
             <div className="mt-4">
-              <div className={isPublished ? "pointer-events-none opacity-60" : ""}>
+              <div
+                className={[
+                  "mx-auto",
+                  "w-full",
+                  "max-w-[320px]",
+                  "aspect-square",
+                  isPublished ? "pointer-events-none opacity-60" : "",
+                ].join(" ")}
+              >
                 <ReleaseCoverUploader
                   releaseId={releaseId}
                   initialCoverUrl={coverUrl}
-                  onReleaseModified={isPublished ? undefined : markAsDraft}
+                  onReleaseModified={status === "draft" ? markAsDraft : undefined}
                 />
               </div>
 
@@ -166,23 +204,23 @@ export default function ReleaseEditorClient({
             {status === "draft" &&
               releaseData.updated_at &&
               releaseData.created_at !== releaseData.updated_at && (
-              <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+              <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
                 This release has been modified. Re-publish to make changes public.
               </div>
             )}
           </div>
 
           {/* Pre-Publish Checklist */}
-          <div>
-            <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-              Pre-Publish Checklist
-            </div>
+            <div>
+              <div className="text-sm font-semibold tracking-tight text-white">
+                Pre-Publish Checklist
+              </div>
 
-            <div className="mt-3 space-y-2 text-sm">
+            <div className="mt-3 space-y-2 text-[13px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-white/80">Cover added</span>
+                <span className="text-white/70">Cover added</span>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                  className={`inline-flex items-center justify-center min-w-[72px] rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                     hasCover
                       ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
                       : "border-white/15 bg-black/20 text-white/60"
@@ -193,9 +231,9 @@ export default function ReleaseEditorClient({
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-white/80">At least 1 track</span>
+                <span className="text-white/70">At least 1 track</span>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                  className={`inline-flex items-center justify-center min-w-[72px] rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                     hasAtLeastOneTrack
                       ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
                       : "border-white/15 bg-black/20 text-white/60"
@@ -206,9 +244,9 @@ export default function ReleaseEditorClient({
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-white/80">Track metadata complete</span>
+                <span className="text-white/70">Track metadata complete</span>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                  className={`inline-flex items-center justify-center min-w-[72px] rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                     allTracksMetadataComplete
                       ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
                       : "border-white/15 bg-black/20 text-white/60"
@@ -220,14 +258,14 @@ export default function ReleaseEditorClient({
             </div>
 
             {!allTracksMetadataComplete && hasAtLeastOneTrack ? (
-              <div className="mt-3 text-xs text-white/60">
+              <div className="mt-3 text-xs text-white/65">
                 Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, genre, lyrics flag, and explicit flag.
               </div>
             ) : null}
 
             {isPublished ? (
               <div className="mt-6 space-y-3">
-                <div className="text-lg font-semibold tracking-tight text-white">
+                <div className="text-sm font-semibold text-white/90">
                   Development Discovery
                 </div>
 
@@ -280,36 +318,76 @@ export default function ReleaseEditorClient({
             ) : null}
 
             <div className="mt-5 flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  if (!canPublish) return;
-                  setPublishModalOpen(true);
-                }}
-                disabled={!canPublish}
-                className="w-full inline-flex items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-              >
-                {status === "published" ? "Published" : "Publish Release"}
-              </button>
+              {!hasBeenPublished && releaseData.status === "draft" && (
+                <button
+                  onClick={() => {
+                    if (!canPublish) return;
+                    setPublishModalOpen(true);
+                  }}
+                  disabled={!canPublish}
+                  className="w-full inline-flex items-center justify-center rounded-xl
+  border border-[#00FFC6]/40
+  bg-[#00FFC6]/15
+  px-4 py-3
+  text-sm font-semibold text-[#00FFC6]
+  transition
+  hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/60
+  hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60
+  disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Publish Release
+                </button>
+              )}
+
+              {status === "published" && (
+                <button
+                  type="button"
+                  onClick={() => setVisibilityModalOpen(true)}
+                  className="w-full inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                >
+                  Withdraw Release
+                </button>
+              )}
+
+              {status === "withdrawn" && (
+                <button
+                  type="button"
+                  onClick={() => setVisibilityModalOpen(true)}
+                  className="w-full inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                >
+                  Activate Release
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Danger Zone */}
-          <div>
-            <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-              Danger Zone
-            </div>
-            <div className="mt-1 text-sm text-[#B3B3B3]">
-              Delete this release permanently.
-            </div>
+          {!isPublished && (
+            <>
+              {/* Danger Zone */}
+              <div className="rounded-2xl border border-red-500/25 bg-red-500/5 px-4 py-4">
+                <div className="text-sm font-semibold tracking-tight text-white">
+                  Danger Zone
+                </div>
 
-            <button
-              onClick={() => setDeleteModalOpen(true)}
-              className="mt-4 w-full inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-red-200/90 transition hover:bg-red-500/10 hover:border-red-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
-              type="button"
-            >
-              Delete Release
-            </button>
-          </div>
+                <div className="mt-1 text-sm text-white/70">
+                  Delete this release permanently.
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!(releaseData.status === "draft" || isWithdrawn)) return;
+                    setDeleteModalOpen(true);
+                  }}
+                  disabled={!(releaseData.status === "draft" || isWithdrawn)}
+                  className="mt-4 w-full inline-flex items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 hover:border-red-500/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                >
+                  Delete Release
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right column: Title / Meta / Tracks */}
@@ -392,10 +470,10 @@ export default function ReleaseEditorClient({
 
               <button
                 onClick={() => {
-                  if (isPublished) return;
+                  if (status !== "draft") return;
                   setModalOpen(true);
                 }}
-                disabled={isPublished || isPending}
+                disabled={status !== "draft" || isPending}
                 className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm font-semibold text-white/90 backdrop-blur transition hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
               >
@@ -429,12 +507,13 @@ export default function ReleaseEditorClient({
                       releaseId={releaseId}
                       tracks={tracks}
                       setTracks={setTracks}
-                      onReleaseModified={isPublished ? undefined : markAsDraft}
+                      onReleaseModified={status === "draft" ? markAsDraft : undefined}
                       eligibilityByTrackId={eligibilityByTrackId}
                       premiumBalance={premiumBalance}
                       trackStatusById={trackStatusById}
                       boostEnabledById={boostEnabledById}
-                      releasePublished={isPublished}
+                      releaseStatus={releaseData.status ?? "draft"}
+                      releasePublished={hasBeenPublished}
                     />
                   </div>
 
@@ -451,7 +530,7 @@ export default function ReleaseEditorClient({
       </div>
 
       <AddTrackModal
-        open={isPublished ? false : modalOpen}
+        open={status === "draft" ? modalOpen : false}
         onClose={() => setModalOpen(false)}
         existingTrackIds={derivedTrackIds}
         releaseId={releaseId}
@@ -461,7 +540,7 @@ export default function ReleaseEditorClient({
       />
 
       <DeleteReleaseModal
-        open={deleteModalOpen}
+        open={!(releaseData.status === "draft" || isWithdrawn) ? false : deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={() => {
           // directly call the server action
@@ -508,6 +587,49 @@ export default function ReleaseEditorClient({
   focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Visibility-Modal */}
+      {visibilityModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setVisibilityModalOpen(false)}
+          />
+
+          <div className="relative w-[92vw] max-w-md rounded-2xl border border-white/10 bg-[#0E0E10] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_120px_rgba(0,0,0,0.6)]">
+            <div className="text-lg font-semibold text-white/90">
+              {status === "withdrawn" ? "Activate release?" : "Withdraw release?"}
+            </div>
+
+            <div className="mt-2 text-sm text-[#B3B3B3]">
+              {status === "withdrawn"
+                ? "Activating will make this release visible on ImMusic again."
+                : "Withdrawing will make this release not visible / not rateable on ImMusic."}
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibilityModalOpen(false)}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/[0.07] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmToggleVisibility}
+                disabled={isPending || (status !== "published" && status !== "withdrawn")}
+                className="rounded-xl border border-white/15 bg-white/[0.06] px-5 py-2.5 text-sm font-semibold text-white/90 backdrop-blur transition
+  hover:bg-white/[0.10] hover:border-white/25
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {status === "withdrawn" ? "Activate" : "Withdraw"}
               </button>
             </div>
           </div>

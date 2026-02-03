@@ -21,7 +21,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const { data: release, error: releaseError } = await supabase
     .from("releases")
-    .select("id, artist_id, title, release_type, cover_path, created_at, status")
+    .select("id, artist_id, title, release_type, cover_path, created_at, status, published_at")
     .eq("id", id)
     .eq("artist_id", user.id)
     .maybeSingle();
@@ -163,6 +163,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
         release_type: release.release_type,
         created_at: release.created_at,
         status: release.status,
+        published_at: release.published_at,
       }}
       initialTracks={initialTracks}
       existingTrackIds={existingTrackIds}

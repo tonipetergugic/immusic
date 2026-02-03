@@ -15,15 +15,13 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
   const supabase = createSupabaseBrowserClient();
   const [uploading, setUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function uploadFile(file: File) {
     setUploading(true);
 
-    const ext = file.name.split(".").pop();
+    const ext = file.name.split(".").pop() || "jpg";
     const filePath = `${releaseId}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
@@ -47,6 +45,15 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
     setUploading(false);
   }
 
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // reset input so selecting the same file again still triggers onChange
+    e.target.value = "";
+    await uploadFile(file);
+  }
+
   function handleClick() {
     fileInputRef.current?.click();
   }
@@ -55,13 +62,52 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
     <div className="mb-6">
       <div
         onClick={handleClick}
-        className="w-48 h-48 rounded bg-[#1F1F23] mb-2 flex items-center justify-center cursor-pointer hover:opacity-80 transition"
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (uploading) return;
+          setIsDragging(true);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (uploading) return;
+          setIsDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+        }}
+        onDrop={async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+          if (uploading) return;
+
+          const file = e.dataTransfer.files?.[0];
+          if (!file) return;
+          if (!file.type.startsWith("image/")) return;
+
+          await uploadFile(file);
+        }}
+        className={[
+          "w-full aspect-square rounded bg-[#1F1F23] mb-2 flex items-center justify-center cursor-pointer transition overflow-hidden",
+          "hover:opacity-90",
+          isDragging ? "ring-2 ring-[#00FFC6]/60 border border-[#00FFC6]/40" : "border border-white/10",
+          uploading ? "opacity-60 cursor-not-allowed" : "",
+        ].join(" ")}
       >
         {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="Release Cover" className="w-48 h-48 rounded object-cover" />
+          <img
+            src={coverUrl}
+            alt="Release Cover"
+            className="w-full h-full object-cover"
+          />
         ) : (
-          <span className="text-gray-500 text-sm">Click to upload cover</span>
+          <span className="text-white/60 text-sm">
+            {isDragging ? "Drop image to upload" : "Click or drag & drop to upload"}
+          </span>
         )}
       </div>
 

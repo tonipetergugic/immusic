@@ -59,6 +59,35 @@ export async function deleteReleaseCoverAction(releaseId: string) {
 export async function addTrackToReleaseAction(releaseId: string, trackId: string) {
   const supabase = await createSupabaseServerClient();
 
+  // Guard: tracklist changes only allowed in draft + must be owner
+  const { data: rel, error: relErr } = await supabase
+    .from("releases")
+    .select("id, status, artist_id")
+    .eq("id", releaseId)
+    .maybeSingle();
+
+  if (relErr || !rel) {
+    return { error: "Release not found." as const };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Not authenticated." as const };
+  }
+
+  if (rel.artist_id !== user.id) {
+    return { error: "Not authorized." as const };
+  }
+
+  // IMPORTANT: blocks both published and withdrawn
+  if (rel.status !== "draft") {
+    return { error: "Tracklist can only be changed while the release is in draft." as const };
+  }
+
   const { data: track } = await supabase
     .from("tracks")
     .select("id, title")
@@ -66,7 +95,7 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
     .single();
 
   if (!track) {
-    return { error: "Track not found." };
+    return { error: "Track not found." as const };
   }
 
   const { data: maxPos } = await supabase
@@ -87,36 +116,82 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
   });
 
   if (error) {
-    return { error: "Failed to add track to release." };
+    return { error: "Failed to add track to release." as const };
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
 
-  return { success: true };
+  return { ok: true as const };
 }
 
 export async function removeTrackFromReleaseAction(releaseId: string, trackId: string) {
   const supabase = await createSupabaseServerClient();
 
-  await supabase.from("release_tracks").delete().eq("release_id", releaseId).eq("track_id", trackId);
+  // Guard: tracklist changes only allowed in draft
+  const { data: rel, error: relErr } = await supabase
+    .from("releases")
+    .select("id, status, artist_id")
+    .eq("id", releaseId)
+    .maybeSingle();
 
-  const { data: remaining } = await supabase
+  if (relErr || !rel) {
+    return { error: "Release not found." as const };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: "Not authenticated." as const };
+  }
+
+  if (rel.artist_id !== user.id) {
+    return { error: "Not authorized." as const };
+  }
+
+  // IMPORTANT: blocks both published and withdrawn
+  if (rel.status !== "draft") {
+    return { error: "Tracklist can only be changed while the release is in draft." as const };
+  }
+
+  const { error: delErr } = await supabase
+    .from("release_tracks")
+    .delete()
+    .eq("release_id", releaseId)
+    .eq("track_id", trackId);
+
+  if (delErr) {
+    return { error: "Failed to remove track from release." as const };
+  }
+
+  const { data: remaining, error: remainingErr } = await supabase
     .from("release_tracks")
     .select("track_id, position")
     .eq("release_id", releaseId)
     .order("position", { ascending: true });
 
+  if (remainingErr) {
+    return { error: "Failed to reorder remaining tracks." as const };
+  }
+
   if (remaining) {
     for (let i = 0; i < remaining.length; i++) {
-      await supabase
+      const { error: updErr } = await supabase
         .from("release_tracks")
         .update({ position: i + 1 })
         .eq("release_id", releaseId)
         .eq("track_id", remaining[i].track_id);
+
+      if (updErr) {
+        return { error: "Failed to update track positions." as const };
+      }
     }
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
+  return { ok: true as const };
 }
 
 export async function reorderReleaseTracksAction(
@@ -125,14 +200,40 @@ export async function reorderReleaseTracksAction(
 ) {
   const supabase = await createSupabaseServerClient();
 
+  const { data: rel, error: relErr } = await supabase
+    .from("releases")
+    .select("id, status, artist_id")
+    .eq("id", releaseId)
+    .maybeSingle();
+
+  if (relErr || !rel) return { error: "Release not found." as const };
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) return { error: "Not authenticated." as const };
+  if (rel.artist_id !== user.id) return { error: "Not authorized." as const };
+
+  // IMPORTANT: Reorder allowed ONLY in draft or withdrawn
+  if (!(rel.status === "draft" || rel.status === "withdrawn")) {
+    return { error: "Tracks can only be reordered while the release is draft or withdrawn." as const };
+  }
+
   for (const row of newOrder) {
-    await supabase
+    const { error: updErr } = await supabase
       .from("release_tracks")
       .update({ position: row.position })
       .eq("release_id", releaseId)
       .eq("track_id", row.track_id);
+
+    if (updErr) {
+      return { error: "Failed to reorder tracks." as const };
+    }
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
+  return { ok: true as const };
 }
 
