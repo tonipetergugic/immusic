@@ -102,9 +102,9 @@ export default function ArtistHeader({
                 {artist.displayName}
               </h1>
 
-              {artist.location ? (
+              {artist.city || artist.country ? (
                 <p className="mt-1 text-base md:text-lg text-white/70 drop-shadow-md">
-                  {artist.location}
+                  {[artist.city, artist.country].filter(Boolean).join(", ")}
                 </p>
               ) : null}
 

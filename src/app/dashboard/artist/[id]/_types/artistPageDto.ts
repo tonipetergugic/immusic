@@ -24,7 +24,8 @@ export type ArtistCoreDto = {
   id: string;
   displayName: string;
   bio: string | null;
-  location: string | null;
+  city: string | null;
+  country: string | null;
 
   bannerUrl: string | null;
   avatarUrl: string | null;

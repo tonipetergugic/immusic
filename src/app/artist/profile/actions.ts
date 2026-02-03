@@ -22,6 +22,8 @@ export async function updateArtistProfileAction(formData: FormData) {
   const display_name = (formData.get("display_name") as string | null) ?? null;
   const bio = (formData.get("bio") as string | null) ?? null;
   const location = (formData.get("location") as string | null) ?? null;
+  const country = formData.get("country") as string | null;
+  const city = formData.get("city") as string | null;
   const instagram = (formData.get("instagram") as string | null) ?? null;
   const tiktok = (formData.get("tiktok") as string | null) ?? null;
   const facebook = (formData.get("facebook") as string | null) ?? null;
@@ -53,7 +55,8 @@ export async function updateArtistProfileAction(formData: FormData) {
     .update({
       display_name,
       bio,
-      location,
+      country,
+      city,
       instagram,
       tiktok,
       facebook,

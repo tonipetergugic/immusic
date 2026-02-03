@@ -25,7 +25,7 @@ export default async function ArtistV2Page({
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, bio, location, instagram, tiktok, facebook, x, banner_url, avatar_url, updated_at"
+      "id, display_name, bio, city, country, location, instagram, tiktok, facebook, x, banner_url, avatar_url, updated_at"
     )
     .eq("id", artistId)
     .single();
@@ -285,7 +285,8 @@ export default async function ArtistV2Page({
       id: profile.id,
       displayName: profile.display_name ?? "Unknown Artist",
       bio: profile.bio ?? null,
-      location: profile.location ?? null,
+      city: (profile as any).city ?? null,
+      country: (profile as any).country ?? null,
       bannerUrl: (profile as any).banner_url ?? null,
       avatarUrl: (() => {
         const base = (profile as any).avatar_url ?? null;

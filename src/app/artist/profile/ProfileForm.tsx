@@ -10,7 +10,8 @@ const inputBase =
 
 type Profile = {
   display_name: string | null;
-  location: string | null;
+  country: string | null;
+  city: string | null;
   bio: string | null;
   instagram: string | null;
   tiktok: string | null;
@@ -53,39 +54,59 @@ export default function ProfileForm({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col space-y-2">
-              <label
-                htmlFor="display_name"
-                className="text-sm font-medium text-white/80"
-              >
-                Artist name (display name)
-              </label>
-              <input
-                id="display_name"
-                type="text"
-                name="display_name"
-                defaultValue={profile.display_name ?? ""}
-                className={inputBase}
-              />
-            </div>
-
-            <div className="flex flex-col space-y-2">
-              <label
-                htmlFor="location"
-                className="text-sm font-medium text-white/80"
-              >
-                Location
-              </label>
-              <input
-                id="location"
-                type="text"
-                name="location"
-                defaultValue={profile.location ?? ""}
-                className={inputBase}
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col space-y-2">
+            <label
+              htmlFor="display_name"
+              className="text-sm font-medium text-white/80"
+            >
+              Artist name (display name)
+            </label>
+            <input
+              id="display_name"
+              type="text"
+              name="display_name"
+              defaultValue={profile.display_name ?? ""}
+              className={inputBase}
+            />
           </div>
+
+          <div />
+
+          <div className="flex flex-col space-y-2">
+            <label
+              htmlFor="city"
+              className="text-sm font-medium text-white/80"
+            >
+              City
+            </label>
+            <input
+              id="city"
+              type="text"
+              name="city"
+              defaultValue={(profile as any).city ?? ""}
+              placeholder="e.g. Frankfurt am Main"
+              className={inputBase}
+            />
+          </div>
+
+          <div className="flex flex-col space-y-2">
+            <label
+              htmlFor="country"
+              className="text-sm font-medium text-white/80"
+            >
+              Country
+            </label>
+            <input
+              id="country"
+              type="text"
+              name="country"
+              defaultValue={(profile as any).country ?? ""}
+              placeholder="e.g. Germany"
+              className={inputBase}
+            />
+          </div>
+        </div>
 
           <div className="flex flex-col space-y-2">
             <label htmlFor="bio" className="text-sm font-medium text-white/80">

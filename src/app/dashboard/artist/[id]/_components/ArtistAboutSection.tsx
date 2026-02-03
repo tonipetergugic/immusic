@@ -25,8 +25,10 @@ export default function ArtistAboutSection({
         <p className="mt-3 text-sm text-neutral-400">No bio yet.</p>
       )}
 
-      {artist.location ? (
-        <p className="mt-3 text-sm text-neutral-400">Location: {artist.location}</p>
+      {artist.city || artist.country ? (
+        <p className="mt-3 text-sm text-neutral-400">
+          Location: {[artist.city, artist.country].filter(Boolean).join(", ")}
+        </p>
       ) : null}
 
       {hasSocial ? (
