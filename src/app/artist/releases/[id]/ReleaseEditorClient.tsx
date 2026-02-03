@@ -157,11 +157,11 @@ export default function ReleaseEditorClient({
                 </div>
                 {status === "published" ? (
                   <div className="mt-1 text-xs text-white/60">
-                    Status: Published — visible on ImMusic
+                    Status: Published — live on ImMusic
                   </div>
                 ) : status === "withdrawn" ? (
                   <div className="mt-1 text-xs text-white/60">
-                    Status: Withdrawn — not visible / not rateable
+                    Status: Withdrawn — private edit mode (release remains live)
                   </div>
                 ) : null}
               </div>
@@ -173,7 +173,7 @@ export default function ReleaseEditorClient({
                     : "border-white/15 bg-black/20 text-white/70"
                 }`}
               >
-                {status === "published" ? "Live" : "Ready"}
+                {status === "draft" ? "Ready" : "Live"}
               </span>
             </div>
 
@@ -608,8 +608,8 @@ export default function ReleaseEditorClient({
 
             <div className="mt-2 text-sm text-[#B3B3B3]">
               {status === "withdrawn"
-                ? "Activating will make this release visible on ImMusic again."
-                : "Withdrawing will make this release not visible / not rateable on ImMusic."}
+                ? "Activating will exit private edit mode. The release remains live for listeners."
+                : "Withdrawing will enable private editing without affecting listeners."}
             </div>
 
             <div className="mt-5 flex items-center justify-end gap-2">
