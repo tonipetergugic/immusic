@@ -1,5 +1,6 @@
 "use client";
 
+import BackLink from "@/components/BackLink";
 import { createReleaseAction } from "./actions";
 import { useFormStatus } from "react-dom";
 
@@ -11,8 +12,8 @@ function SubmitButton() {
       type="submit"
       disabled={pending}
       className={[
-        "group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition",
-        "hover:bg-white/[0.06] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)]",
+        "group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/35 backdrop-blur-xl px-5 py-2.5 text-sm font-semibold text-white/90 transition",
+        "hover:bg-black/50 hover:border-[#00FFC6]/70 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)]",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60",
         pending ? "opacity-60 cursor-not-allowed hover:shadow-none" : "",
       ].join(" ")}
@@ -33,7 +34,11 @@ export default function CreateReleasePage() {
     <div className="w-full max-w-[900px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="text-4xl font-semibold tracking-tight text-white">Create Release</h1>
+          <BackLink href="/artist/releases" />
+
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">
+            Create Release
+          </h1>
           <p className="mt-2 text-sm text-[#B3B3B3]">
             Set the basics. You can add a cover and tracks after creating.
           </p>
@@ -42,7 +47,7 @@ export default function CreateReleasePage() {
 
       <form
         action={createReleaseAction}
-        className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md p-6 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_90px_rgba(0,0,0,0.55)]"
+        className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_60px_rgba(0,255,198,0.06),0_30px_90px_rgba(0,0,0,0.55)]"
       >
         <div className="grid gap-8">
           {/* Title */}
@@ -56,7 +61,7 @@ export default function CreateReleasePage() {
               type="text"
               required
               placeholder="e.g. Come On"
-              className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur-md px-4 py-3 text-base text-white outline-none transition placeholder:text-white/35 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 backdrop-blur-xl px-4 py-3 text-base text-white outline-none transition placeholder:text-white/35 hover:border-white/20 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
             />
           </div>
 
@@ -85,30 +90,31 @@ export default function CreateReleasePage() {
 
                   <span
                     className="
-            inline-flex min-w-[140px] items-center justify-center
-            rounded-xl border border-white/10
-            bg-white/[0.04] backdrop-blur-md
-            px-6 py-2.5
-            text-sm font-semibold
-            cursor-pointer
-            text-white/80
-            transition
-            hover:bg-white/[0.06]
-            peer-checked:border-[#00FFC6]/60
-            peer-checked:bg-[#00FFC6]/15
-            peer-checked:text-[#00FFC6]
-          "
+    inline-flex min-w-[140px] items-center justify-center
+    rounded-xl border border-white/10
+    bg-black/30 backdrop-blur-xl
+    px-6 py-2.5
+    text-sm font-semibold
+    cursor-pointer
+    text-white/80
+    transition
+    hover:border-white/20 hover:bg-black/40
+    peer-checked:border-[#00FFC6]/60
+    peer-checked:bg-[#00FFC6]/10
+    peer-checked:text-[#00FFC6]
+    peer-checked:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.10)]
+  "
                   >
                     {option.label}
                   </span>
 
                   <span
                     className="
-            text-xs text-white/45
-            text-center
-            transition
-            peer-checked:text-white/70
-          "
+  text-xs text-white/45
+  text-center
+  transition
+  peer-checked:text-white/70
+"
                   >
                     {option.desc}
                   </span>
