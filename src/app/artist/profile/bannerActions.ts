@@ -48,7 +48,7 @@ export async function updateBannerAction(formData: FormData) {
   return { success: true };
 }
 
-export async function setBannerUrlAction(url: string) {
+export async function setBannerUrlAction(url: string | null) {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -69,6 +69,28 @@ export async function setBannerUrlAction(url: string) {
   }
 
   return { success: true };
+}
+
+export async function clearBannerUrlAction() {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+
+  if (userErr || !user) {
+    throw new Error("Not authenticated.");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ banner_url: null })
+    .eq("id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 

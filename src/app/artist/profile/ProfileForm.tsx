@@ -346,24 +346,24 @@ export default function ProfileForm({
 
         {/* Actions */}
         <div className="flex items-center justify-between gap-3">
-          {dirty && (
-            <span className="text-xs text-[#B3B3B3]">
-              Unsaved changes
-            </span>
-          )}
+          <span className={dirty ? "text-xs text-[#B3B3B3]" : "invisible text-xs"}>
+            Unsaved changes
+          </span>
 
           <button
             type="submit"
             disabled={!dirty}
-            className={`group relative inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-              dirty
-                ? "bg-[#00FFC6] text-black hover:bg-[#00FFC6]/90 shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_18px_50px_rgba(0,255,198,0.12)]"
-                : "bg-white/10 text-white/40 cursor-not-allowed shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
-            } focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/60 focus:ring-offset-2 focus:ring-offset-black`}
+            className={[
+              "group inline-flex items-center gap-3 rounded-full border border-[#00FFC6]/40 bg-white/[0.02] px-6 py-3",
+              "text-[#00FFC6] text-sm font-semibold tracking-tight",
+              "shadow-[0_0_0_1px_rgba(0,255,198,0.12)] transition",
+              "hover:bg-white/[0.04] hover:border-[#00FFC6]/60 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_18px_50px_rgba(0,255,198,0.10)]",
+              "active:translate-y-[1px]",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none",
+            ].join(" ")}
           >
-            <span className="relative">
-              Save changes
-            </span>
+            <span>Save changes</span>
           </button>
         </div>
       </div>

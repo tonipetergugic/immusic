@@ -44,7 +44,7 @@ export default async function ArtistProfilePage({
   return (
     <div className="max-w-3xl mx-auto px-6 py-10 space-y-8 relative">
       <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[700px] rounded-full bg-[#00FFC6]/10 blur-3xl" />
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-3">
         <div>
           <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
             <User className="h-7 w-7 text-[#00FFC6]" />
@@ -53,15 +53,6 @@ export default async function ArtistProfilePage({
           <p className="text-sm text-[#B3B3B3] mt-1">
             Update your public artist page details.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#B3B3B3]">
-            UI: Live
-          </span>
-          <span className="text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[#B3B3B3]">
-            Preview later
-          </span>
         </div>
       </div>
       {needsCollectingSocietyConfirmation && (
@@ -89,9 +80,6 @@ export default async function ArtistProfilePage({
             </p>
           </div>
 
-          <span className="text-xs px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-[#B3B3B3]">
-            Recommended: 1600×400
-          </span>
         </div>
 
         <div className="mt-4">
