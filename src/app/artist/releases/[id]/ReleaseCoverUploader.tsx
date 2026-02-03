@@ -16,33 +16,41 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
   const [uploading, setUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl);
   const [isDragging, setIsDragging] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function uploadFile(file: File) {
+    setErrorMsg(null);
     setUploading(true);
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const filePath = `${releaseId}/${crypto.randomUUID()}.${ext}`;
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const filePath = `${releaseId}/${crypto.randomUUID()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("release_covers")
-      .upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from("release_covers")
+        .upload(filePath, file, { upsert: true });
 
-    if (uploadError) {
-      console.error(uploadError);
+      if (uploadError) {
+        console.error(uploadError);
+        setErrorMsg("Upload failed. Please try again.");
+        return;
+      }
+
+      await updateReleaseCoverAction(releaseId, filePath);
+      onReleaseModified?.();
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("release_covers").getPublicUrl(filePath);
+
+      setCoverUrl(publicUrl);
+    } catch (e) {
+      console.error(e);
+      setErrorMsg("Cover update not allowed for this release.");
+    } finally {
       setUploading(false);
-      return;
     }
-
-    await updateReleaseCoverAction(releaseId, filePath);
-    onReleaseModified?.();
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("release_covers").getPublicUrl(filePath);
-
-    setCoverUrl(publicUrl);
-    setUploading(false);
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -123,11 +131,19 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
         <button
           type="button"
           onClick={async () => {
+            setErrorMsg(null);
             setUploading(true);
-            await deleteReleaseCoverAction(releaseId);
-            setCoverUrl(null);
-            setUploading(false);
-            onReleaseModified?.();
+
+            try {
+              await deleteReleaseCoverAction(releaseId);
+              setCoverUrl(null);
+              onReleaseModified?.();
+            } catch (e) {
+              console.error(e);
+              setErrorMsg("Cover removal not allowed for this release.");
+            } finally {
+              setUploading(false);
+            }
           }}
           className="mt-2 inline-flex items-center gap-2 text-xs text-red-400 hover:text-red-300 transition"
         >
@@ -137,6 +153,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
       )}
 
       {uploading && <p className="text-xs text-gray-400 mt-1">Uploading cover...</p>}
+      {errorMsg && <p className="text-xs text-red-400 mt-1">{errorMsg}</p>}
     </div>
   );
 }

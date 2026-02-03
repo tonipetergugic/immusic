@@ -63,7 +63,9 @@ export async function deleteReleaseAction(releaseId: string) {
   const { error: deleteError } = await supabase
     .from("releases")
     .delete()
-    .eq("id", releaseId);
+    .eq("id", releaseId)
+    .eq("artist_id", user.id)
+    .in("status", ["draft", "withdrawn"]);
 
   if (deleteError) {
     console.error("Failed to delete release row:", deleteError);

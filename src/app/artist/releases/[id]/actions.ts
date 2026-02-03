@@ -6,14 +6,31 @@ import { revalidatePath } from "next/cache";
 export async function updateReleaseCoverAction(releaseId: string, newFilePath: string) {
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error("Unauthorized.");
+  }
+
   const { data: release, error: fetchError } = await supabase
     .from("releases")
-    .select("cover_path")
+    .select("id, status, artist_id, cover_path")
     .eq("id", releaseId)
     .single();
 
   if (fetchError || !release) {
     throw new Error("Failed to load release.");
+  }
+
+  if (!release.artist_id || release.artist_id !== user.id) {
+    throw new Error("Forbidden.");
+  }
+
+  if (!(release.status === "draft" || release.status === "withdrawn")) {
+    throw new Error("Cover can only be changed while the release is draft or withdrawn.");
   }
 
   if (release.cover_path && release.cover_path !== newFilePath) {
@@ -41,17 +58,51 @@ export async function updateReleaseCoverAction(releaseId: string, newFilePath: s
 export async function deleteReleaseCoverAction(releaseId: string) {
   const supabase = await createSupabaseServerClient();
 
-  const { data: release } = await supabase
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error("Unauthorized.");
+  }
+
+  const { data: release, error: fetchError } = await supabase
     .from("releases")
-    .select("cover_path")
+    .select("id, status, artist_id, cover_path")
     .eq("id", releaseId)
     .single();
 
-  if (release?.cover_path) {
-    await supabase.storage.from("release_covers").remove([release.cover_path]);
+  if (fetchError || !release) {
+    throw new Error("Failed to load release.");
   }
 
-  await supabase.from("releases").update({ cover_path: null }).eq("id", releaseId);
+  if (!release.artist_id || release.artist_id !== user.id) {
+    throw new Error("Forbidden.");
+  }
+
+  if (!(release.status === "draft" || release.status === "withdrawn")) {
+    throw new Error("Cover can only be changed while the release is draft or withdrawn.");
+  }
+
+  if (release.cover_path) {
+    const { error: removeError } = await supabase.storage
+      .from("release_covers")
+      .remove([release.cover_path]);
+
+    if (removeError) {
+      throw new Error("Failed to remove existing cover.");
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("releases")
+    .update({ cover_path: null })
+    .eq("id", releaseId);
+
+  if (updateError) {
+    throw new Error("Failed to update the cover.");
+  }
 
   revalidatePath(`/artist/releases/${releaseId}`);
 }

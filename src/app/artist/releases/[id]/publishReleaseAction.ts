@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function publishReleaseAction(releaseId: string) {
   const supabase = await createSupabaseServerClient();
@@ -28,7 +29,7 @@ export async function publishReleaseAction(releaseId: string) {
 
   // Hard rule: publish only once
   if (release.published_at || release.status === "published") {
-    return { error: "This release is already published and cannot be republished. Delete and recreate it." };
+    return { error: "This release is already published and cannot be republished." };
   }
 
   // Validation
@@ -92,12 +93,17 @@ export async function publishReleaseAction(releaseId: string) {
   const { error: updateError } = await supabase
     .from("releases")
     .update({ status: "published" })
-    .eq("id", releaseId);
+    .eq("id", releaseId)
+    .eq("artist_id", user.id)
+    .eq("status", "draft");
 
   if (updateError) {
     console.error("Publish failed:", updateError);
     return { error: "Failed to publish the release." };
   }
+
+  revalidatePath(`/artist/releases/${releaseId}`);
+  revalidatePath("/artist/releases");
 
   return { success: true };
 }

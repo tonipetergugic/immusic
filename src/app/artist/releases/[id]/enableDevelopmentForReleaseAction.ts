@@ -5,14 +5,22 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function enableDevelopmentForReleaseAction(releaseId: string) {
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) return { error: "Unauthorized." };
+
   // 1) Release prüfen + published only
   const { data: release, error: releaseError } = await supabase
     .from("releases")
-    .select("id, status")
+    .select("id, status, artist_id")
     .eq("id", releaseId)
     .single();
 
   if (releaseError || !release) return { error: "Release not found." };
+  if (!release.artist_id || release.artist_id !== user.id) return { error: "Forbidden." };
   if (release.status !== "published") return { error: "Release must be published first." };
 
   // 2) Alle track_ids holen (einmalig)
