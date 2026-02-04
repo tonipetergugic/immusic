@@ -74,26 +74,28 @@ export default function PlaylistTrackList({
 
   return (
     <div className="mt-6">
-      <div
-        className="
-          grid grid-cols-[24px_64px_1fr_36px]
-          md:grid-cols-[40px_80px_1fr_70px_70px_80px]
-          items-center
-          gap-x-4 md:gap-x-3
-          text-xs text-white/50 uppercase tracking-wide
-          px-4 py-2
-          border-b border-white/10
-        "
-      >
-        <span>#</span>
-        <span>Cover</span>
-        <span>Title</span>
+        <div
+          className="
+            grid
+            grid-cols-[16px_56px_1fr_36px]
+            lg:grid-cols-[40px_80px_1fr_56px_56px_180px_80px]
+            items-center
+            gap-x-2 md:gap-x-3
+            text-xs text-white/50 uppercase tracking-wide
+            px-3 sm:px-4 py-2
+            border-b border-white/10
+          "
+        >
+          <span>#</span>
+          <span>Cover</span>
+          <span>Title</span>
 
-        <span className="hidden md:block">BPM</span>
-        <span className="hidden md:block">Key</span>
+          <span className="hidden lg:block text-right">BPM</span>
+          <span className="hidden lg:block text-right">Key</span>
+          <span className="hidden lg:block text-center">Genre</span>
 
-        <span>Actions</span>
-      </div>
+          <span className="text-right">Actions</span>
+        </div>
 
       {tracks.length ? (
         isOwner ? (

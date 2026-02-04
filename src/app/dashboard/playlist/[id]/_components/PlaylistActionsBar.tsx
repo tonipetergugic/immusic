@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Lock, MoreHorizontal, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { Globe, Lock, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Playlist } from "@/types/database";
+import PlayOverlayButton from "@/components/PlayOverlayButton";
+
+type PlayerTrack = {
+  id: string;
+  title: string;
+  artist_id: string;
+  cover_url: string | null;
+  audio_url: string;
+};
 
 export default function PlaylistActionsBar({
   isOwner,
@@ -10,7 +19,8 @@ export default function PlaylistActionsBar({
   user,
   isSavedToLibrary,
   saveBusy,
-  onPlay,
+  tracks,
+  startIndex = 0,
   onAddTrack,
   onToggleSaveToLibrary,
   onTogglePublic,
@@ -23,8 +33,9 @@ export default function PlaylistActionsBar({
 
   isSavedToLibrary: boolean;
   saveBusy: boolean;
+  tracks?: PlayerTrack[];
+  startIndex?: number;
 
-  onPlay: () => void;
   onAddTrack: () => void;
   onToggleSaveToLibrary: () => void;
 
@@ -52,22 +63,31 @@ export default function PlaylistActionsBar({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-6">
-        {/* PLAY */}
-        <button
-          onClick={onPlay}
-          className="
-      inline-flex items-center gap-2
-      px-5 h-10
-      rounded-full
-      border border-[#00FFC6]/40
-      text-[#00FFC6]
-      hover:bg-[#00FFC6]/10
-      transition
-    "
-        >
-          <Play size={16} />
-          <span>Play</span>
-        </button>
+        {/* PLAY (standard) */}
+        {tracks && tracks.length > 0 ? (
+          <PlayOverlayButton
+            variant="standalone"
+            size="lg"
+            track={tracks[Math.max(0, startIndex)]}
+            tracks={tracks}
+            index={Math.max(0, startIndex)}
+          />
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="
+              inline-flex items-center gap-2
+              px-5 h-10
+              rounded-full
+              border border-[#00FFC6]/25
+              text-[#00FFC6]/40
+              cursor-not-allowed
+            "
+          >
+            <span>Play</span>
+          </button>
+        )}
 
         {/* SECONDARY ACTIONS */}
         {isOwner ? (

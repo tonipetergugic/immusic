@@ -252,7 +252,8 @@ export default function PlaylistClient({
         user={user}
         isSavedToLibrary={isSavedToLibrary}
         saveBusy={saveBusy}
-        onPlay={() => {}}
+        tracks={playerTracks}
+        startIndex={0}
         onAddTrack={() => setAddOpen(true)}
         onToggleSaveToLibrary={toggleSaveToLibrary}
         onTogglePublic={async () => {
