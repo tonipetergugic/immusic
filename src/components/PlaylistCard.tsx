@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
@@ -19,6 +19,7 @@ export default function PlaylistCard({
   description,
   cover_url,
 }: PlaylistCardProps) {
+  const router = useRouter();
   const coverPublicUrl =
     cover_url && (cover_url.startsWith("http://") || cover_url.startsWith("https://"))
       ? cover_url
@@ -50,8 +51,16 @@ export default function PlaylistCard({
   }
 
   return (
-    <Link
-      href={`/dashboard/playlist/${id}`}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(`/dashboard/playlist/${id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          router.push(`/dashboard/playlist/${id}`);
+        }
+      }}
       className="
         group relative 
         bg-[#111112] 
@@ -63,6 +72,9 @@ export default function PlaylistCard({
         hover:border-[#00FFC622]
         cursor-pointer
         block
+        focus:outline-none
+        focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60
+        focus-visible:ring-offset-2 focus-visible:ring-offset-[#0E0E10]
       "
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/5">
@@ -75,18 +87,79 @@ export default function PlaylistCard({
             className="absolute inset-0 h-full w-full object-cover rounded-xl transition-all duration-300 group-hover:brightness-110 group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]"
           />
         ) : (
-          <div className="w-full h-full bg-neutral-800 rounded-xl" />
+          <div
+            className="
+              relative h-full rounded-xl overflow-hidden
+              bg-white/[0.06]
+              border border-white/10
+            "
+          >
+            {/* subtle texture */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.06] via-transparent to-black/20" />
+            <div className="absolute inset-0 opacity-70 blur-2xl bg-[radial-gradient(circle_at_30%_20%,rgba(0,255,198,0.12),transparent_55%)]" />
+
+            <div className="relative z-10 flex items-center justify-center h-full">
+              <div
+                className="
+                  inline-flex items-center justify-center
+                  w-9 h-9
+                  transition-opacity duration-150
+                  group-hover:opacity-0
+                  pointer-events-none
+                "
+              >
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14Z"
+                    stroke="#00FFC6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.95"
+                  />
+                  <path
+                    d="M8.5 10.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
+                    stroke="#00FFC6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.9"
+                  />
+                  <path
+                    d="M21 16l-5-5L5 21"
+                    stroke="#00FFC6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.9"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Hover Play (standardized) */}
-        <PlayOverlayButton
-          size="lg"
-          track={{ id } as any}
-          currentTrackId={isCurrentFromThisPlaylist ? (currentTrack?.id ?? undefined) : undefined}
-          getQueue={async () => {
-            return (await getPlaylistQueue()) as any;
+        <div
+          className="pointer-events-auto"
+          onPointerDownCapture={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
           }}
-        />
+          onClickCapture={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <PlayOverlayButton
+            size="lg"
+            track={{ id } as any}
+            currentTrackId={isCurrentFromThisPlaylist ? currentTrack?.id : undefined}
+            getQueue={async () => {
+              return (await getPlaylistQueue()) as any;
+            }}
+          />
+        </div>
       </div>
 
       <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
@@ -98,6 +171,6 @@ export default function PlaylistCard({
       ) : (
         <div className="h-[16px]" />
       )}
-    </Link>
+    </div>
   );
 }

@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { useMemo, useRef, useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist } from "@/types/database";
 import BackLink from "@/components/BackLink";
+import { Trash2 } from "lucide-react";
 
 type PlaylistOwnerJoin = {
   owner?: {
@@ -18,14 +21,149 @@ export default function PlaylistHeaderClient({
   playlist,
   playerTracks,
   onEditCover,
+  onCoverUpdated,
   isOwner,
 }: {
   playlist: Playlist & PlaylistOwnerJoin;
   playerTracks: PlayerTrack[];
   onEditCover: () => void;
+  onCoverUpdated: (newRelPathOrNull: string | null) => void;
   isOwner: boolean;
 }) {
   const { currentTrack, isPlaying } = usePlayer();
+
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
+
+  async function replaceCover(file: File) {
+    if (!isOwner) return;
+
+    setCoverBusy(true);
+    try {
+      // load fresh cover_url (relative path) from DB to delete safely
+      const { data: fresh, error: freshErr } = await supabase
+        .from("playlists")
+        .select("cover_url")
+        .eq("id", playlist.id)
+        .single<{ cover_url: string | null }>();
+
+      if (freshErr) {
+        console.error("Failed to load current cover_url:", freshErr);
+      }
+
+      const currentRel = fresh?.cover_url ?? null;
+
+      if (currentRel) {
+        const { error: removeErr } = await supabase.storage
+          .from("playlist-covers")
+          .remove([currentRel]);
+
+        if (removeErr) {
+          console.error("Failed to remove old cover from storage:", removeErr);
+        }
+      }
+
+      const ext = file.name.split(".").pop() || "jpg";
+      const newRel = `${playlist.id}/cover-${Date.now()}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("playlist-covers")
+        .upload(newRel, file, { upsert: false });
+
+      if (uploadErr) {
+        console.error("Cover upload failed:", uploadErr);
+        return;
+      }
+
+      const { error: dbErr } = await supabase
+        .from("playlists")
+        .update({ cover_url: newRel })
+        .eq("id", playlist.id);
+
+      if (dbErr) {
+        console.error("Cover DB update failed:", dbErr);
+        return;
+      }
+
+      onCoverUpdated(newRel);
+    } finally {
+      setCoverBusy(false);
+    }
+  }
+
+  async function deleteCover() {
+    if (!isOwner) return;
+    if (coverBusy) return;
+
+    const ok = window.confirm("Delete cover?");
+    if (!ok) return;
+
+    setCoverBusy(true);
+    try {
+      // load fresh cover_url (relative path) from DB to delete safely
+      const { data: fresh, error: freshErr } = await supabase
+        .from("playlists")
+        .select("cover_url")
+        .eq("id", playlist.id)
+        .single<{ cover_url: string | null }>();
+
+      if (freshErr) {
+        console.error("Failed to load current cover_url:", freshErr);
+      }
+
+      const currentRel = fresh?.cover_url ?? null;
+
+      // 1) clear DB ref first (makes UI empty as soon as state refreshes)
+      const { error: dbErr } = await supabase
+        .from("playlists")
+        .update({ cover_url: null })
+        .eq("id", playlist.id);
+
+      if (dbErr) {
+        console.error("Cover DB clear failed:", dbErr);
+        return;
+      }
+
+      onCoverUpdated(null);
+
+      // 2) best-effort storage delete (only if we have a rel path)
+      if (currentRel) {
+        const { error: removeErr } = await supabase.storage
+          .from("playlist-covers")
+          .remove([currentRel]);
+
+        if (removeErr) {
+          console.error("Failed to remove cover from storage:", removeErr);
+        }
+      }
+    } finally {
+      setCoverBusy(false);
+    }
+  }
+
+  function onCoverClick() {
+    if (!isOwner) return;
+    fileInputRef.current?.click();
+  }
+
+  function onCoverDragOver(e: React.DragEvent) {
+    if (!isOwner) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function onCoverDrop(e: React.DragEvent) {
+    if (!isOwner) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const f = e.dataTransfer.files?.[0] ?? null;
+    if (!f) return;
+    if (!f.type.startsWith("image/")) return;
+
+    void replaceCover(f);
+  }
 
   const isActive =
     !!currentTrack &&
@@ -34,7 +172,7 @@ export default function PlaylistHeaderClient({
 
   const isPublic = !!playlist.is_public;
 
-  const rawCover = (playlist as any)?.cover_url ?? null;
+  const rawCover = playlist.cover_url ?? null;
 
   // Next/Image braucht eine echte URL (http/https) oder einen lokalen /public Pfad.
   // Bei uns darf hier nur eine absolute Public URL durch.
@@ -75,6 +213,18 @@ export default function PlaylistHeaderClient({
 
       {/* CONTENT */}
       <div className="relative z-10 pt-10 pb-14 px-10">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            e.currentTarget.value = "";
+            if (!f) return;
+            void replaceCover(f);
+          }}
+        />
         <div className="mb-6">
           <BackLink />
         </div>
@@ -88,9 +238,11 @@ export default function PlaylistHeaderClient({
             `}
           >
             <div
-              onClick={isOwner ? onEditCover : undefined}
+              onClick={isOwner ? onCoverClick : undefined}
+              onDragOver={isOwner ? onCoverDragOver : undefined}
+              onDrop={isOwner ? onCoverDrop : undefined}
               className={`
-                relative w-[220px] h-[220px] md:w-[280px] md:h-[280px]
+                group relative w-[220px] h-[220px] md:w-[280px] md:h-[280px]
                 rounded-xl overflow-hidden
                 border border-[#1A1A1C] bg-gradient-to-br from-neutral-900 to-neutral-800
                 flex items-center justify-center
@@ -105,7 +257,7 @@ export default function PlaylistHeaderClient({
                   className="object-cover rounded-xl"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-white/40">
+                <div className="flex flex-col items-center justify-center text-white/50 pointer-events-none select-none">
                   <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm4-6 3 3 4-4"
@@ -115,11 +267,46 @@ export default function PlaylistHeaderClient({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <p className="mt-2 text-xs text-white/60">
-                    {isOwner ? "Add cover" : "No cover"}
+
+                  <p className="mt-2 text-sm font-medium text-white/80">
+                    Click or drag & drop to upload
+                  </p>
+
+                  <p className="mt-1 text-xs text-white/50">
+                    JPG, PNG · recommended 1:1
                   </p>
                 </div>
               )}
+              {coverBusy ? (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                  <div className="text-xs font-semibold text-white/80">
+                    Uploading…
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Delete icon (only when cover exists) */}
+              {isOwner && rawCover ? (
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await deleteCover();
+                  }}
+                  className={[
+                    "absolute bottom-3 right-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border",
+                    "border-white/10 bg-black/40 backdrop-blur-md",
+                    "opacity-0 transition group-hover:opacity-100",
+                    "hover:border-red-400/40 hover:bg-red-500/10 hover:shadow-[0_0_0_1px_rgba(248,113,113,0.25)]",
+                    coverBusy ? "pointer-events-none opacity-40" : "",
+                  ].join(" ")}
+                  aria-label="Delete cover"
+                  title="Delete cover"
+                >
+                  <Trash2 className="h-5 w-5 text-red-300" />
+                </button>
+              ) : null}
             </div>
           </div>
 

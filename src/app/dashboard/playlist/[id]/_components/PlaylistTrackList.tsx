@@ -48,7 +48,7 @@ export default function PlaylistTrackList({
     user: any | null;
     onDelete?: () => void;
   }) {
-    const { attributes, listeners, setNodeRef, transform } = useSortable({
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform } = useSortable({
       id: track.id,
     });
 
@@ -57,15 +57,17 @@ export default function PlaylistTrackList({
       transition: undefined,
     };
 
+    const safeListeners = (listeners ?? {}) as Record<string, any>;
+
     return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="w-full"
-        {...attributes}
-        {...listeners}
-      >
-        <PlaylistRow track={track} tracks={tracks} user={user} onDelete={onDelete} />
+      <div ref={setNodeRef} style={style} className="w-full" {...attributes}>
+        <PlaylistRow
+          track={track}
+          tracks={tracks}
+          user={user}
+          onDelete={onDelete}
+          dragHandleProps={{ listeners: safeListeners, setActivatorNodeRef }}
+        />
       </div>
     );
   }

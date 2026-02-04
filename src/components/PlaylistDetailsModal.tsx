@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function PlaylistDetailsModal({
@@ -32,120 +31,30 @@ export default function PlaylistDetailsModal({
 
   const [title, setTitle] = useState(playlist.title);
   const [description, setDescription] = useState(playlist.description ?? "");
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!previewUrl) return;
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFile(null);
-    }
-  }, [isOpen, playlist.id]);
-
-  const currentCoverUrl = playlist.cover_url ?? null;
 
   async function handleSave() {
     setLoading(true);
-
-    let newCoverUrl = playlist.cover_url;
-
-    if (file) {
-      if (playlist.cover_url) {
-        let rel: string | null = null;
-
-        // If it's a public URL, extract the relative path.
-        if (playlist.cover_url.includes("/object/public/playlist-covers/")) {
-          rel = playlist.cover_url.split("/object/public/playlist-covers/")[1] ?? null;
-        } else {
-          // Otherwise it should already be the relative DB path.
-          rel = playlist.cover_url;
-        }
-
-        if (rel && rel.includes("?")) {
-          rel = rel.split("?")[0];
-        }
-
-        if (rel) {
-          await supabase.storage.from("playlist-covers").remove([rel]);
-        }
-      }
-
-      const ext = file.name.split(".").pop();
-      const path = `${playlist.id}/cover-${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("playlist-covers")
-        .upload(path, file, { upsert: false });
-
-      if (!uploadError) {
-        // Store only the relative path in DB (best practice)
-        newCoverUrl = path;
-      }
-    }
-
     const { error: dbError } = await supabase
       .from("playlists")
       .update({
         title,
         description,
-        cover_url: newCoverUrl,
       })
       .eq("id", playlist.id);
-
+ 
     if (!dbError) {
-      setFile(null);
       onUpdated({
         title,
         description,
-        cover_url: newCoverUrl ?? null,
+        cover_url: playlist.cover_url ?? null,
       });
       onClose();
+    } else {
+      console.error("Playlist details update failed:", dbError);
     }
-
+ 
     setLoading(false);
-  }
-
-  async function handleRemoveCover() {
-    if (!playlist.cover_url) return;
-
-    let rel = playlist.cover_url;
-
-    // Support old full Public URLs
-    if (rel.includes("/object/public/playlist-covers/")) {
-      rel = rel.split("/object/public/playlist-covers/")[1].split("?")[0];
-    }
-
-    // 1) delete from storage
-    const { error: deleteError } = await supabase.storage
-      .from("playlist-covers")
-      .remove([rel]);
-
-    if (deleteError) {
-      console.error("❌ Storage delete failed:", deleteError);
-    }
-
-    // 2) clear DB reference
-    const { error: dbError } = await supabase
-      .from("playlists")
-      .update({ cover_url: null })
-      .eq("id", playlist.id);
-
-    if (dbError) {
-      console.error("❌ DB update failed:", dbError);
-    }
-
-    onUpdated({
-      title,
-      description,
-      cover_url: null,
-    });
-
-    onClose();
   }
 
   if (!isOpen) return null;
@@ -161,58 +70,8 @@ export default function PlaylistDetailsModal({
             Edit Playlist Details
           </h2>
           <p className="mt-1 text-sm text-white/60">
-            Update cover, title and description.
+            Update title and description.
           </p>
-        </div>
-
-        <div className="space-y-3">
-          <p className="text-sm text-white/60">Cover</p>
-          <label className="flex flex-col gap-2">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => {
-                const selectedFile = event.target.files?.[0] ?? null;
-                setFile(selectedFile);
-                if (selectedFile) {
-                  setPreviewUrl(URL.createObjectURL(selectedFile));
-                } else {
-                  setPreviewUrl(null);
-                }
-              }}
-              className="
-                block w-full text-sm text-white
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-lg file:border-0
-                file:text-sm file:font-semibold
-                file:bg-[#00FFC6]/10 file:text-[#00FFC6]
-                hover:file:bg-[#00FFC6]/20
-              "
-            />
-          </label>
-
-          {(previewUrl || currentCoverUrl) && (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs text-white/60">Preview</p>
-              <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900/60">
-                <img
-                  src={previewUrl ?? currentCoverUrl ?? ""}
-                  alt="Playlist cover preview"
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-            </div>
-          )}
-
-          {playlist.cover_url && !previewUrl && (
-            <button
-              onClick={handleRemoveCover}
-              className="inline-flex items-center gap-3 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-red-300/90 transition hover:bg-white/[0.06] hover:border-red-400/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
-            >
-              <Trash2 size={18} className="text-red-400" />
-              <span>Remove current cover</span>
-            </button>
-          )}
         </div>
 
         <div className="space-y-2">

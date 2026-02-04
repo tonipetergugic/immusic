@@ -8,17 +8,23 @@ import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import { GripVertical } from "lucide-react";
 
 function PlaylistRow({
   track,
   onDelete,
   tracks,
   user,
+  dragHandleProps,
 }: {
   track: PlayerTrack;
   tracks: PlayerTrack[];
   onDelete?: () => void;
   user: any | null;
+  dragHandleProps?: {
+    listeners?: Record<string, any>;
+    setActivatorNodeRef: (node: HTMLButtonElement | null) => void;
+  };
 }) {
   const router = useRouter();
 
@@ -53,8 +59,27 @@ function PlaylistRow({
         coverSize="md"
         className="border-b-0" // ✅ border comes from wrapper (DnD wrapper), not from TrackRowBase
         leadingSlot={
-          <div className="text-white/50 text-[11px] tabular-nums px-1 py-1">
-            {currentIndex + 1}
+          <div className="flex items-center gap-1">
+            {dragHandleProps ? (
+              <button
+                ref={dragHandleProps.setActivatorNodeRef}
+                type="button"
+                aria-label="Reorder track"
+                className="
+      -ml-1 p-1 rounded
+      text-white/40 hover:text-white/70
+      cursor-grab active:cursor-grabbing
+      touch-none
+    "
+                {...(dragHandleProps.listeners ?? {})}
+              >
+                <GripVertical size={16} />
+              </button>
+            ) : null}
+
+            <div className="text-white/50 text-[11px] tabular-nums px-1 py-1">
+              {currentIndex + 1}
+            </div>
           </div>
         }
         titleSlot={

@@ -234,8 +234,14 @@ export default function PlaylistClient({
         playlist={{ ...localPlaylist, cover_url: playlistCoverPublicUrl }}
         playerTracks={playerTracks}
         onEditCover={() => {
-          if (!isOwner) return;
-          setDetailsOpen(true);
+          // Cover click should NOT open the details modal anymore.
+          // Title/description editing stays in the actions bar modal.
+        }}
+        onCoverUpdated={(newRelPathOrNull) => {
+          setLocalPlaylist((prev) => ({
+            ...prev,
+            cover_url: newRelPathOrNull,
+          }));
         }}
         isOwner={isOwner}
       />
