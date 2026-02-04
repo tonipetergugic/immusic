@@ -28,6 +28,7 @@ export type ArtistCoreDto = {
   country: string | null;
 
   bannerUrl: string | null;
+  bannerPosY: number;
   avatarUrl: string | null;
 
   socials: {

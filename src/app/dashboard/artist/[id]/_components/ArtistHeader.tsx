@@ -21,6 +21,7 @@ export default function ArtistHeader({
 }) {
   const bannerUrl = artist.bannerUrl ?? null;
   const avatarUrl = artist.avatarUrl ?? null;
+  const bannerPosY = artist.bannerPosY ?? 50;
 
   return (
     <div className="w-full">
@@ -46,6 +47,7 @@ export default function ArtistHeader({
               src={bannerUrl}
               alt="Artist Banner"
               className="w-full h-full object-cover"
+              style={{ objectPosition: `50% ${bannerPosY}%` }}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-white/5 via-white/[0.06] to-white/5" />

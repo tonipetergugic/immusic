@@ -8,6 +8,24 @@ import BannerUpload from "./BannerUpload";
 import ProfileForm from "./ProfileForm";
 import ProfileSuccessToast from "./ProfileSuccessToast";
 
+type ProfileRow = {
+  id: string;
+  role: string | null;
+  display_name: string | null;
+  country: string | null;
+  city: string | null;
+  bio: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  facebook: string | null;
+  x: string | null;
+  banner_url: string | null;
+  banner_pos_y: number | null;
+  collecting_society_member: boolean | null;
+  collecting_society_name: string | null;
+  collecting_society_number: string | null;
+};
+
 export default async function ArtistProfilePage({
   searchParams,
 }: {
@@ -26,10 +44,10 @@ export default async function ArtistProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, role, display_name, country, city, bio, instagram, tiktok, facebook, x, banner_url, collecting_society_member, collecting_society_name, collecting_society_number"
+      "id, role, display_name, country, city, bio, instagram, tiktok, facebook, x, banner_url, banner_pos_y, collecting_society_member, collecting_society_name, collecting_society_number"
     )
     .eq("id", user.id)
-    .single();
+    .single<ProfileRow>();
 
   if (!profile) {
     throw new Error("Profile not found");
@@ -82,9 +100,13 @@ export default async function ArtistProfilePage({
 
         </div>
 
-        <div className="mt-4">
-          <BannerUpload userId={profile.id} currentBannerUrl={profile.banner_url} />
-        </div>
+      <div className="mt-4">
+        <BannerUpload
+          userId={profile.id}
+          currentBannerUrl={profile.banner_url}
+          currentBannerPosY={Number.isFinite(profile.banner_pos_y) ? (profile.banner_pos_y as number) : 50}
+        />
+      </div>
       </div>
       <ProfileForm profile={profile} updateAction={updateArtistProfileAction} />
     </div>

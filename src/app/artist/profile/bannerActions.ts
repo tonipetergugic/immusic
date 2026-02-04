@@ -93,4 +93,29 @@ export async function clearBannerUrlAction() {
   }
 }
 
+export async function setBannerPosYAction(posY: number) {
+  const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+
+  if (userErr || !user) {
+    throw new Error("Not authenticated.");
+  }
+
+  const n = Number.isFinite(posY) ? Math.round(posY) : 50;
+  const clamped = Math.max(0, Math.min(100, n));
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ banner_pos_y: clamped, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return { success: true };
+}

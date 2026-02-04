@@ -1,22 +1,30 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import BannerPreview from "./BannerPreview";
 import { setBannerUrlAction, clearBannerUrlAction } from "./bannerActions";
+import { setBannerPosYAction } from "./bannerActions";
 import { Trash2 } from "lucide-react";
 
 export default function BannerUpload({
   userId,
   currentBannerUrl,
+  currentBannerPosY,
 }: {
   userId: string;
   currentBannerUrl: string | null;
+  currentBannerPosY: number;
 }) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [posY, setPosY] = useState<number>(currentBannerPosY ?? 50);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [isPositionDragging, setIsPositionDragging] = useState(false);
+  const [isCommittingPos, setIsCommittingPos] = useState(false);
+  const posYRef = useRef<number>(posY);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -120,6 +128,38 @@ export default function BannerUpload({
     await uploadFile(file);
   };
 
+  useEffect(() => {
+    setPosY(currentBannerPosY ?? 50);
+  }, [currentBannerPosY]);
+
+  useEffect(() => {
+    posYRef.current = posY;
+  }, [posY]);
+
+  const clamp = (n: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, n));
+
+  const computePosYFromPointer = (clientY: number): number => {
+    const el = previewRef.current;
+    if (!el) return posYRef.current ?? 50;
+
+    const rect = el.getBoundingClientRect();
+    const y = clamp(clientY - rect.top, 0, rect.height);
+    const pct = rect.height > 0 ? (y / rect.height) * 100 : 50;
+    return Math.round(clamp(pct, 0, 100));
+  };
+
+  const commitBannerPosY = async (value: number) => {
+    if (isCommittingPos) return;
+    setIsCommittingPos(true);
+    try {
+      await setBannerPosYAction(value);
+      router.refresh();
+    } finally {
+      setIsCommittingPos(false);
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -212,9 +252,55 @@ export default function BannerUpload({
           handleUpload(fakeEvent);
         }}
       >
-        {/* Preview */}
-        <div className="h-[220px] sm:h-[240px]">
-          <BannerPreview url={currentBannerUrl} />
+        {/* Preview (drag to reposition) */}
+        <div
+          ref={previewRef}
+          className={[
+            "relative h-[220px] sm:h-[240px] overflow-hidden rounded-2xl",
+            currentBannerUrl ? "cursor-grab active:cursor-grabbing" : "",
+            isPositionDragging ? "ring-2 ring-[#00FFC6]/30" : "",
+          ].join(" ")}
+          onPointerDown={async (e) => {
+            if (!currentBannerUrl) return;
+            if (uploading) return;
+            if (isCommittingPos) return;
+
+            (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+            setIsPositionDragging(true);
+
+            const v = computePosYFromPointer(e.clientY);
+            setPosY(v);
+          }}
+          onPointerMove={(e) => {
+            if (!currentBannerUrl) return;
+            if (!isPositionDragging) return;
+
+            const v = computePosYFromPointer(e.clientY);
+            setPosY(v);
+          }}
+          onPointerUp={async () => {
+            if (!currentBannerUrl) return;
+            if (!isPositionDragging) return;
+
+            setIsPositionDragging(false);
+            await commitBannerPosY(posYRef.current ?? 50);
+          }}
+          onPointerCancel={async () => {
+            if (!currentBannerUrl) return;
+            if (!isPositionDragging) return;
+
+            setIsPositionDragging(false);
+            await commitBannerPosY(posYRef.current ?? 50);
+          }}
+          aria-label="Drag to reposition banner"
+        >
+          <BannerPreview url={currentBannerUrl} posY={posY} />
+
+          {currentBannerUrl ? (
+            <div className="pointer-events-none absolute left-3 top-3 rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white/70 backdrop-blur-md">
+              Drag to reposition
+            </div>
+          ) : null}
         </div>
 
         {/* Click overlay to trigger file input (works even when banner exists) */}
@@ -294,6 +380,44 @@ export default function BannerUpload({
           className="hidden"
         />
       </div>
+
+      {currentBannerUrl ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm text-white/70">Banner position</div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={posY}
+              disabled={uploading || isCommittingPos}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPosY(v);
+              }}
+              onPointerUp={async () => {
+                await commitBannerPosY(posYRef.current ?? 50);
+              }}
+              onPointerCancel={async () => {
+                await commitBannerPosY(posYRef.current ?? 50);
+              }}
+              className="w-full accent-[#00FFC6]"
+              aria-label="Banner vertical position"
+            />
+            <div className="w-12 text-right text-sm text-white/50 tabular-nums">
+              {posY}
+            </div>
+          </div>
+
+          <div className="text-xs text-white/40">
+            Tip: adjust what part of the image stays visible after cropping.
+          </div>
+        </div>
+      ) : null}
 
       {errorMessage && (
         <p className="text-sm text-red-400">Upload error: {errorMessage}</p>
