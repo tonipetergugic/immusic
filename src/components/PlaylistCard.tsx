@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
-import { usePlayer } from "@/context/PlayerContext";
+
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { usePlayer } from "@/context/PlayerContext";
 
 type PlaylistCardProps = {
   id: string;
@@ -19,11 +20,8 @@ export default function PlaylistCard({
   description,
   cover_url,
 }: PlaylistCardProps) {
-  const router = useRouter();
   const coverPublicUrl =
-    cover_url && (cover_url.startsWith("http://") || cover_url.startsWith("https://"))
-      ? cover_url
-      : null;
+    typeof cover_url === "string" && /^https?:\/\//.test(cover_url) ? cover_url : null;
   const { currentTrack } = usePlayer();
   const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string>>(new Set());
 
@@ -52,15 +50,6 @@ export default function PlaylistCard({
 
   return (
     <div
-      role="link"
-      tabIndex={0}
-      onClick={() => router.push(`/dashboard/playlist/${id}`)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          router.push(`/dashboard/playlist/${id}`);
-        }
-      }}
       className="
         group relative 
         bg-[#111112] 
@@ -70,7 +59,6 @@ export default function PlaylistCard({
         hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
         border border-transparent
         hover:border-[#00FFC622]
-        cursor-pointer
         block
         focus:outline-none
         focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60
@@ -140,17 +128,7 @@ export default function PlaylistCard({
         )}
 
         {/* Hover Play (standardized) */}
-        <div
-          className="pointer-events-auto"
-          onPointerDownCapture={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onClickCapture={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
+        <div className="pointer-events-auto">
           <PlayOverlayButton
             size="lg"
             track={{ id } as any}
@@ -162,15 +140,21 @@ export default function PlaylistCard({
         </div>
       </div>
 
-      <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
-        {title}
-      </h3>
+      <Link
+        href={`/dashboard/playlist/${id}`}
+        className="mt-2 block outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 rounded-md"
+        aria-label={`Open playlist: ${title}`}
+      >
+        <h3 className="text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
+          {title}
+        </h3>
 
-      {description ? (
-        <p className="text-[11px] text-white/50 truncate block">{description}</p>
-      ) : (
-        <div className="h-[16px]" />
-      )}
+        {description ? (
+          <p className="text-[11px] text-white/50 truncate block">{description}</p>
+        ) : (
+          <div className="h-[16px]" />
+        )}
+      </Link>
     </div>
   );
 }
