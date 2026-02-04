@@ -123,11 +123,18 @@ export default function Topbar({
   };
 
   return (
-    <div className="w-full h-14 bg-[#0B0B0D] border-b border-[#1A1A1C] 
-      flex items-center justify-between px-8
-      shadow-[0_1px_20px_0_rgba(0,255,198,0.08)]
-      relative
-    ">
+    <div
+      className="
+        w-full h-14
+        bg-[#0B0B0D]
+        border-b border-[#1A1A1C]
+        flex items-center justify-between
+        px-4 sm:px-6 lg:px-8
+        shadow-[0_1px_20px_0_rgba(0,255,198,0.08)]
+        relative
+        sticky top-0 z-40
+      "
+    >
       <span className="text-white/90 font-semibold tracking-wide text-sm">
         ImMusic Dashboard
       </span>
@@ -167,7 +174,7 @@ export default function Topbar({
             id="avatar-menu"
             role="menu"
             className="
-              absolute top-14 right-8 z-50
+              absolute top-14 right-4 sm:right-6 lg:right-8 z-50
               w-64
               bg-[#0B0B0D] border border-[#1A1A1C]
               rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.55)]

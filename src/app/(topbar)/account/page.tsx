@@ -23,6 +23,9 @@ export default function AccountPage() {
   const [securitySuccess, setSecuritySuccess] = useState<string | null>(null);
   const [lastSignInAt, setLastSignInAt] = useState<string | null>(null);
   const [accountUpdatedAt, setAccountUpdatedAt] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteInfo, setDeleteInfo] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -379,6 +382,168 @@ export default function AccountPage() {
             )}
           </div>
         </div>
+
+        {/* Danger Zone */}
+        <div className="mt-8">
+          <div className="text-sm text-[#B3B3B3] mb-2">Danger zone</div>
+
+          <div
+            className="
+              rounded-xl
+              border border-red-500/20
+              bg-[#111113]
+              px-4 py-4
+            "
+          >
+            <div className="text-white/90 font-medium">Delete account</div>
+            <div className="text-sm text-[#B3B3B3] mt-1">
+              This permanently deletes your account. This is a UI-only flow for now (no backend wired).
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteInfo(null);
+                  setDeleteConfirmText("");
+                  setDeleteOpen(true);
+                }}
+                className="
+                  inline-flex items-center justify-center
+                  w-[220px]
+                  rounded-lg
+                  px-5 py-2.5
+                  bg-[#111113]
+                  border border-red-500/30
+                  text-red-300 font-medium
+                  hover:border-red-400
+                  hover:text-red-200
+                  transition
+                "
+              >
+                Delete account
+              </button>
+
+              <span className="text-xs text-[#B3B3B3]">
+                You&apos;ll need to confirm.
+              </span>
+            </div>
+
+            {deleteInfo && (
+              <div className="mt-3 text-sm text-[#00FFC6]">
+                {deleteInfo}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Delete account modal (UI only) */}
+        {deleteOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/70"
+              aria-label="Close modal"
+              onClick={() => setDeleteOpen(false)}
+            />
+
+            <div
+              className="
+                relative w-full max-w-md
+                rounded-2xl
+                border border-[#1A1A1C]
+                bg-[#0B0B0D]
+                p-6
+                shadow-[0_20px_60px_rgba(0,0,0,0.7)]
+              "
+            >
+              <div className="text-lg font-semibold text-white">
+                Confirm account deletion
+              </div>
+
+              <div className="mt-2 text-sm text-[#B3B3B3]">
+                Type <span className="text-white/90 font-medium">DELETE</span> to enable the final button.
+                <br />
+                <span className="text-red-300">
+                  UI only: No backend deletion is executed in this build.
+                </span>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm text-[#B3B3B3] mb-2">
+                  Confirmation
+                </label>
+                <input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder='Type "DELETE"'
+                  className="
+                    w-full
+                    bg-[#0F0F11]
+                    border border-[#1A1A1C]
+                    rounded-xl
+                    px-4 py-3
+                    text-white placeholder-[#666]
+                    focus:outline-none
+                    focus:border-red-400
+                    focus:shadow-[0_0_0_2px_rgba(248,113,113,0.15)]
+                    transition
+                  "
+                />
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteOpen(false)}
+                  className="
+                    inline-flex items-center justify-center
+                    rounded-lg
+                    px-4 py-2.5
+                    bg-[#111113]
+                    border border-[#1A1A1C]
+                    text-[#B3B3B3] font-medium
+                    hover:border-[#00FFC6]
+                    hover:text-[#00FFC6]
+                    transition
+                  "
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={deleteConfirmText.trim().toUpperCase() !== "DELETE"}
+                  onClick={() => {
+                    setDeleteOpen(false);
+                    setDeleteInfo("Account deletion confirmed (UI only). Backend wiring comes later.");
+                  }}
+                  className="
+                    inline-flex items-center justify-center
+                    rounded-lg
+                    px-4 py-2.5
+                    bg-[#111113]
+                    border border-red-500/30
+                    text-red-300 font-medium
+                    hover:border-red-400
+                    hover:text-red-200
+                    transition
+                    disabled:opacity-40
+                    disabled:cursor-not-allowed
+                    disabled:hover:border-red-500/30
+                    disabled:hover:text-red-300
+                  "
+                >
+                  Delete permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
