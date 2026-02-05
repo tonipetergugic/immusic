@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import PlayOverlayButton from "@/components/PlayOverlayButton";
 import { getArtistHref } from "@/lib/routes";
 
 export type ReleaseCardData = {
@@ -109,19 +108,6 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
           <div className="w-full h-full bg-neutral-800 rounded-xl" />
         )}
 
-        {/* Hover Play (standardized) */}
-        <PlayOverlayButton
-          size="lg"
-          // dummy track object; we only need an id for current matching
-          track={{ id: firstTrackId ?? releaseId } as any}
-          currentTrackId={isCurrent ? (firstTrackId ?? undefined) : undefined}
-          getQueue={async () => {
-            const queue = await fetchReleaseQueueForPlayer(releaseId);
-            if (!Array.isArray(queue) || queue.length === 0) return { tracks: [], index: 0 };
-            setFirstTrackId(queue[0].id);
-            return { tracks: queue as any, index: 0 };
-          }}
-        />
       </div>
 
       <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">

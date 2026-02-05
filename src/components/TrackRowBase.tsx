@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import { usePlayer } from "@/context/PlayerContext";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 type TrackRowBaseProps = {
@@ -82,6 +83,8 @@ export default function TrackRowBase({
   const overlaySize = coverSize === "sm" ? "sm" : "sm"; // rows: keep overlay compact
 
   const showDesktopCols = Boolean(bpmSlot || keySlot || genreSlot);
+  const { currentTrack, isPlaying } = usePlayer();
+  const isCurrent = currentTrack?.id === track.id;
 
   return (
     <div
@@ -139,15 +142,40 @@ export default function TrackRowBase({
       </div>
 
       {/* Main: title/artist + meta */}
-      <div className="min-w-0 ml-1 sm:ml-0 pl-2 sm:pl-0 flex flex-col gap-0 justify-self-start">
+      <div className="min-w-0 ml-1 pl-1.5 lg:ml-0.25 lg:pl-0.5 flex flex-col gap-0 justify-self-start">
         {/* Line 1: Title */}
-        {titleSlot ? (
-          titleSlot
-        ) : (
-          <Link href={to} className="text-left text-[13px] font-semibold leading-tight text-white truncate hover:text-[#00FFC6] transition-colors">
-            {formatTrackTitle(track.title, (track as any).version)}
-          </Link>
-        )}
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Mobile/Tablet: Now Playing Indicator (nur wenn aktuell & playing) */}
+          {isCurrent && isPlaying ? (
+            <span aria-hidden="true" className="lg:hidden inline-flex items-end gap-[2px] h-[12px] shrink-0">
+              <span
+                className="w-[2px] h-[4px] bg-[#00FFC6]"
+                style={{ animation: "eq 0.9s ease-in-out infinite", transformOrigin: "bottom" }}
+              />
+              <span
+                className="w-[2px] h-[8px] bg-[#00FFC6]"
+                style={{ animation: "eq 0.7s ease-in-out infinite", transformOrigin: "bottom" }}
+              />
+              <span
+                className="w-[2px] h-[6px] bg-[#00FFC6]"
+                style={{ animation: "eq 0.82s ease-in-out infinite", transformOrigin: "bottom" }}
+              />
+            </span>
+          ) : null}
+
+          <div className="min-w-0 flex-1">
+            {titleSlot ? (
+              titleSlot
+            ) : (
+              <Link
+                href={to}
+                className="text-left text-[13px] font-semibold leading-tight text-white truncate hover:text-[#00FFC6] transition-colors block"
+              >
+                {formatTrackTitle(track.title, (track as any).version)}
+              </Link>
+            )}
+          </div>
+        </div>
 
         {/* Line 2: Artist */}
         {subtitleSlot ? (

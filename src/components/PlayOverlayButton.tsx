@@ -122,17 +122,37 @@ export default function PlayOverlayButton({
   }
 
   return (
-    <div
-      className="
-        absolute inset-0
-        flex items-center justify-center
-        bg-black/35
-        opacity-100 sm:opacity-0 sm:group-hover:opacity-100
-        transition-opacity duration-200 will-change-[opacity]
-        pointer-events-none
-      "
-    >
-      {button}
-    </div>
+    <>
+      {/* Mobile/Tablet: unsichtbare Tap-Fläche (kein Overlay sichtbar) */}
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          void handleClick();
+        }}
+        className="md:hidden absolute inset-0 pointer-events-auto bg-transparent"
+        aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
+      />
+
+      {/* Desktop: Hover-Overlay mit sichtbarem Button */}
+      <div
+        className="
+          hidden md:flex
+          absolute inset-0
+          items-center justify-center
+          bg-black/35
+          opacity-0 group-hover:opacity-100
+          transition-opacity duration-200 will-change-[opacity]
+          pointer-events-none
+        "
+      >
+        {button}
+      </div>
+    </>
   );
 }

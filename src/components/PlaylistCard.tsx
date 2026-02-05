@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
-import PlayOverlayButton from "@/components/PlayOverlayButton";
 import { usePlayer } from "@/context/PlayerContext";
 
 type PlaylistCardProps = {
@@ -49,7 +48,9 @@ export default function PlaylistCard({
   }
 
   return (
-    <div
+    <Link
+      href={`/dashboard/playlist/${id}`}
+      aria-label={`Open playlist: ${title}`}
       className="
         group relative 
         bg-[#111112] 
@@ -92,7 +93,6 @@ export default function PlaylistCard({
                   inline-flex items-center justify-center
                   w-9 h-9
                   transition-opacity duration-150
-                  group-hover:opacity-0
                   pointer-events-none
                 "
               >
@@ -127,24 +127,9 @@ export default function PlaylistCard({
           </div>
         )}
 
-        {/* Hover Play (standardized) */}
-        <div className="pointer-events-auto">
-          <PlayOverlayButton
-            size="lg"
-            track={{ id } as any}
-            currentTrackId={isCurrentFromThisPlaylist ? currentTrack?.id : undefined}
-            getQueue={async () => {
-              return (await getPlaylistQueue()) as any;
-            }}
-          />
-        </div>
       </div>
 
-      <Link
-        href={`/dashboard/playlist/${id}`}
-        className="mt-2 block outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 rounded-md"
-        aria-label={`Open playlist: ${title}`}
-      >
+      <div className="mt-2 block">
         <h3 className="text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
           {title}
         </h3>
@@ -154,7 +139,7 @@ export default function PlaylistCard({
         ) : (
           <div className="h-[16px]" />
         )}
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }
