@@ -47,7 +47,7 @@ export default function TrackListClient({ tracks }: TrackListClientProps) {
     });
 
   return (
-    <div className="space-y-6 max-w-[900px] mx-auto">
+    <div className="space-y-6 w-full">
       <input
         type="text"
         placeholder="Search tracks..."

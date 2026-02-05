@@ -59,8 +59,9 @@ export default async function MyTracksPage() {
 
   return (
     <div className="w-full text-white">
-      <div className="mt-2">
-        <div className="max-w-[900px] mx-auto">
+      <div className="w-full max-w-[900px] mx-auto">
+        {/* Header */}
+        <div className="mt-2">
           <h1 className="flex items-center gap-3 text-3xl sm:text-4xl font-semibold tracking-tight text-white">
             <FileMusic className="h-6 w-6 sm:h-7 sm:w-7 text-[#00FFC6]" />
             My Tracks
@@ -68,39 +69,41 @@ export default async function MyTracksPage() {
           <p className="mt-2 text-sm text-white/55">
             Approved tracks ready to be added to releases.
           </p>
-        </div>
 
-        <div className="mt-6 max-w-[900px] mx-auto rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-5 py-4 shadow-[0_0_0_1px_rgba(0,255,198,0.05)]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-white/90">
-                Next step: create a release
+          {/* Info-Box */}
+          <div className="mt-6 w-full rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-5 py-4 shadow-[0_0_0_1px_rgba(0,255,198,0.05)]">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white/90">
+                  Next step: create a release
+                </div>
+                <p className="mt-1 text-sm text-white/60">
+                  Before creating a release, make sure all track details (title, BPM, key, genre) are complete and correct.
+                </p>
               </div>
-              <p className="mt-1 text-sm text-white/60">
-                Before creating a release, make sure all track details (title, BPM, key, genre) are complete and correct.
-              </p>
-            </div>
 
-            <Link
-              href="/artist/releases"
-              className="shrink-0 inline-flex items-center justify-center rounded-xl border border-emerald-500/25 bg-transparent px-5 py-2 text-sm font-semibold text-emerald-300 hover:border-emerald-500/40 hover:text-emerald-200 hover:bg-emerald-500/5 active:scale-[0.98] transition"
-            >
-              Go to Releases
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-10">
-        <div className="mb-6 max-w-[900px] mx-auto">
-          <div className="flex items-baseline gap-4">
-            <div className="text-2xl font-semibold tracking-tight text-white">
-              {tracks.length} {tracks.length === 1 ? "Track" : "Tracks"}
+              <Link
+                href="/artist/releases"
+                className="shrink-0 inline-flex items-center justify-center rounded-xl border border-emerald-500/25 bg-transparent px-5 py-2 text-sm font-semibold text-emerald-300 hover:border-emerald-500/40 hover:text-emerald-200 hover:bg-emerald-500/5 active:scale-[0.98] transition"
+              >
+                Go to Releases
+              </Link>
             </div>
           </div>
         </div>
 
-        <TrackListClient tracks={tracks} />
+        {/* Count */}
+        <div className="mt-10">
+          <div className="mb-6">
+            <div className="flex items-baseline gap-4">
+              <div className="text-2xl font-semibold tracking-tight text-white">
+                {tracks.length} {tracks.length === 1 ? "Track" : "Tracks"}
+              </div>
+            </div>
+          </div>
+
+          <TrackListClient tracks={tracks} />
+        </div>
       </div>
     </div>
   );

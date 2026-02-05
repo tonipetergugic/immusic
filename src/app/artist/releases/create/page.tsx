@@ -31,25 +31,26 @@ function SubmitButton() {
 
 export default function CreateReleasePage() {
   return (
-    <div className="w-full max-w-[900px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <BackLink href="/artist/releases" />
+    <div className="w-full text-white">
+      <div className="w-full max-w-[820px] mx-auto">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <BackLink href="/artist/releases" />
 
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">
-            Create Release
-          </h1>
-          <p className="mt-2 text-sm text-[#B3B3B3]">
-            Set the basics. You can add a cover and tracks after creating.
-          </p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">
+              Create Release
+            </h1>
+            <p className="mt-2 text-sm text-[#B3B3B3]">
+              Set the basics. You can add a cover and tracks after creating.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <form
-        action={createReleaseAction}
-        className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_60px_rgba(0,255,198,0.06),0_30px_90px_rgba(0,0,0,0.55)]"
-      >
-        <div className="grid gap-8">
+        <form
+          action={createReleaseAction}
+          className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_60px_rgba(0,255,198,0.06),0_30px_90px_rgba(0,0,0,0.55)]"
+        >
+          <div className="grid gap-8">
           {/* Title */}
           <div>
             <label htmlFor="release-title" className="block text-sm font-medium text-white/80">
@@ -123,12 +124,13 @@ export default function CreateReleasePage() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-center pt-4">
-            <SubmitButton />
+            {/* Actions */}
+            <div className="flex items-center justify-center pt-4">
+              <SubmitButton />
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

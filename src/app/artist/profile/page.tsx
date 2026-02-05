@@ -60,9 +60,10 @@ export default async function ArtistProfilePage({
   const params = await searchParams;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10 space-y-8 relative">
-      <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[700px] rounded-full bg-[#00FFC6]/10 blur-3xl" />
-      <div className="flex flex-col gap-3">
+    <div className="w-full relative text-white">
+      <div className="w-full max-w-[820px] mx-auto space-y-8">
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-64 w-[700px] rounded-full bg-[#00FFC6]/10 blur-3xl" />
+        <div className="flex flex-col gap-3">
         <div>
           <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
             <User className="h-7 w-7 text-[#00FFC6]" />
@@ -100,15 +101,16 @@ export default async function ArtistProfilePage({
 
         </div>
 
-      <div className="mt-4">
-        <BannerUpload
-          userId={profile.id}
-          currentBannerUrl={profile.banner_url}
-          currentBannerPosY={Number.isFinite(profile.banner_pos_y) ? (profile.banner_pos_y as number) : 50}
-        />
+        <div className="mt-4">
+          <BannerUpload
+            userId={profile.id}
+            currentBannerUrl={profile.banner_url}
+            currentBannerPosY={Number.isFinite(profile.banner_pos_y) ? (profile.banner_pos_y as number) : 50}
+          />
+        </div>
+        </div>
+        <ProfileForm profile={profile} updateAction={updateArtistProfileAction} />
       </div>
-      </div>
-      <ProfileForm profile={profile} updateAction={updateArtistProfileAction} />
     </div>
   );
 }

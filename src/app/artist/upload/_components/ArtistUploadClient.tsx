@@ -87,9 +87,10 @@ export default function ArtistUploadClient({ userId }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[900px] px-6 py-6 pb-40 text-white lg:px-10 lg:py-8 lg:pb-48">
-      {/* Header (visual hero) */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#00FFC6]/10 via-white/[0.02] to-transparent px-6 py-7 sm:px-8 sm:py-8">
+    <div className="w-full text-white">
+      <div className="w-full max-w-[820px] mx-auto">
+        {/* Header (visual hero) */}
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#00FFC6]/10 via-white/[0.02] to-transparent px-6 py-7 sm:px-8 sm:py-8">
         {/* soft shapes */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#00FFC6]/10 blur-3xl" />
@@ -259,5 +260,6 @@ export default function ArtistUploadClient({ userId }: Props) {
         </div>
       </div>
     </div>
+  </div>
   );
 }
