@@ -1,3 +1,5 @@
+import AppShell from "@/components/layout/AppShell";
+
 export default function LandingLayout({
   children,
 }: {
@@ -6,8 +8,11 @@ export default function LandingLayout({
   // Root <body> bleibt overflow-hidden (für App).
   // Landing bekommt eigenen Scroll-Container.
   return (
-    <div className="h-dvh overflow-y-auto overflow-x-hidden pb-24 sm:pb-20">
+    <AppShell
+      mainClassName="flex-1 overflow-y-auto overflow-x-hidden"
+      innerClassName="min-h-full pb-24 sm:pb-20"
+    >
       {children}
-    </div>
+    </AppShell>
   );
 }

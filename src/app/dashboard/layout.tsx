@@ -2,6 +2,7 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import MobileSidebarDrawer from "./components/MobileSidebarDrawer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import AppShell from "@/components/layout/AppShell";
 
 export default async function DashboardLayout({
   children,
@@ -45,40 +46,34 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#0E0E10] text-white overflow-hidden">
-
-      {/* Sidebar (Desktop only) */}
-      <div className="hidden md:block md:w-60 shrink-0">
-        <Sidebar />
-      </div>
-
-      {/* Right Side */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-
-        <header className="shrink-0">
-          <div className="flex items-center">
-            <div className="md:hidden pl-4">
-              <MobileSidebarDrawer />
-            </div>
-            <div className="flex-1">
-              <Topbar
-                userEmail={topbarProps.userEmail}
-                displayName={topbarProps.displayName}
-                role={topbarProps.role}
-                avatarUrl={topbarProps.avatarUrl}
-                avatarUpdatedAt={topbarProps.avatarUpdatedAt}
-              />
-            </div>
+    <AppShell
+      sidebar={
+        <>
+          {/* Sidebar (Desktop only) */}
+          <div className="hidden md:block md:w-60 shrink-0">
+            <Sidebar />
           </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-0 pb-4 sm:px-4 sm:pb-6 lg:px-8 lg:pb-8">
-          <div className="w-full pb-40 lg:pb-48">
-            {children}
+        </>
+      }
+      header={
+        <div className="flex items-center">
+          <div className="md:hidden pl-4">
+            <MobileSidebarDrawer />
           </div>
-        </main>
-      </div>
-    </div>
+          <div className="flex-1">
+            <Topbar
+              userEmail={topbarProps.userEmail}
+              displayName={topbarProps.displayName}
+              role={topbarProps.role}
+              avatarUrl={topbarProps.avatarUrl}
+              avatarUpdatedAt={topbarProps.avatarUpdatedAt}
+            />
+          </div>
+        </div>
+      }
+    >
+      {children}
+    </AppShell>
   );
 }
 

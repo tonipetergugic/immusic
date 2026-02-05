@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AdminBackButton from "./AdminBackButton";
+import AppShell from "@/components/layout/AppShell";
 
 export default async function AdminLayout({
   children,
@@ -26,44 +27,49 @@ export default async function AdminLayout({
   if (profileError || profile?.role !== "admin") redirect("/dashboard");
 
   return (
-    <div className="p-6 text-white">
-      <div className="flex flex-col gap-2">
-        <AdminBackButton />
+    <AppShell
+      mainClassName="flex-1 overflow-y-auto overflow-x-hidden"
+      innerClassName="px-6 py-6 lg:px-10 lg:py-8"
+    >
+      <div className="max-w-[1200px] mx-auto w-full pb-24">
+        <div className="flex flex-col gap-2">
+          <AdminBackButton />
 
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
-          <nav className="flex items-center gap-3 text-sm">
-            <Link
-              href="/dashboard/admin/releases"
-              className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
-            >
-              Releases
-            </Link>
-            <Link
-              href="/dashboard/admin/playlists"
-              className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
-            >
-              Playlists
-            </Link>
-            <Link
-              href="/dashboard/admin/credits"
-              className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
-            >
-              Credits
-            </Link>
-            <Link
-              href="/dashboard/admin/moderation"
-              className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
-            >
-              Moderation
-            </Link>
-          </nav>
+            <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <Link
+                href="/dashboard/admin/releases"
+                className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
+              >
+                Releases
+              </Link>
+              <Link
+                href="/dashboard/admin/playlists"
+                className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
+              >
+                Playlists
+              </Link>
+              <Link
+                href="/dashboard/admin/credits"
+                className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
+              >
+                Credits
+              </Link>
+              <Link
+                href="/dashboard/admin/moderation"
+                className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors"
+              >
+                Moderation
+              </Link>
+            </nav>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-6">{children}</div>
-    </div>
+        <div className="mt-6">{children}</div>
+      </div>
+    </AppShell>
   );
 }
 
