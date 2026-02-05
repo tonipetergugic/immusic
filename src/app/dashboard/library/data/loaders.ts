@@ -282,7 +282,22 @@ export async function loadLibraryV2Tracks({
     }
   }
 
-  const tracks = toPlayerTrackList(unique as any);
+  // --- SAFETY: skip tracks that have no audio_url (toPlayerTrack would throw) ---
+  const safeUnique = (unique as any[]).filter((t) => {
+    const audioUrl = (t as any)?.audio_url;
+    if (!audioUrl) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("LibraryV2: skipping track with missing audio_url/audio_path", {
+          trackId: (t as any)?.id ?? null,
+          userId,
+        });
+      }
+      return false;
+    }
+    return true;
+  });
+
+  const tracks = toPlayerTrackList(safeUnique as any);
 
   return {
     tracks,
