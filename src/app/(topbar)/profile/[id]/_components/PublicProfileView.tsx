@@ -36,7 +36,7 @@ export default function PublicProfileView({
           <BackLink />
         </div>
 
-        <h1 className="mt-10 text-5xl md:text-6xl font-extrabold tracking-tight text-white">
+        <h1 className="mt-4 mb-6 text-5xl md:text-6xl font-extrabold tracking-tight text-white">
           Public profile
         </h1>
 
