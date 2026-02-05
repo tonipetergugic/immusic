@@ -11,6 +11,7 @@ type PlaylistCardProps = {
   title: string;
   description?: string | null;
   cover_url?: string | null;
+  priority?: boolean;
 };
 
 export default function PlaylistCard({
@@ -18,6 +19,7 @@ export default function PlaylistCard({
   title,
   description,
   cover_url,
+  priority = false,
 }: PlaylistCardProps) {
   const coverPublicUrl =
     typeof cover_url === "string" && /^https?:\/\//.test(cover_url) ? cover_url : null;
@@ -72,6 +74,7 @@ export default function PlaylistCard({
             src={coverPublicUrl}
             alt={title}
             fill
+            priority={priority}
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="absolute inset-0 h-full w-full object-cover rounded-xl transition-all duration-300 group-hover:brightness-110 group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]"
           />

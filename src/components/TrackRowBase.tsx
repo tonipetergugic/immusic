@@ -150,15 +150,15 @@ export default function TrackRowBase({
             <span aria-hidden="true" className="lg:hidden inline-flex items-end gap-[2px] h-[12px] shrink-0">
               <span
                 className="w-[2px] h-[4px] bg-[#00FFC6]"
-                style={{ animation: "eq 0.9s ease-in-out infinite", transformOrigin: "bottom" }}
+                style={{ animation: "nowPlayingEq 0.9s ease-in-out infinite", transformOrigin: "bottom" }}
               />
               <span
                 className="w-[2px] h-[8px] bg-[#00FFC6]"
-                style={{ animation: "eq 0.7s ease-in-out infinite", transformOrigin: "bottom" }}
+                style={{ animation: "nowPlayingEq 0.7s ease-in-out infinite", transformOrigin: "bottom" }}
               />
               <span
                 className="w-[2px] h-[6px] bg-[#00FFC6]"
-                style={{ animation: "eq 0.82s ease-in-out infinite", transformOrigin: "bottom" }}
+                style={{ animation: "nowPlayingEq 0.82s ease-in-out infinite", transformOrigin: "bottom" }}
               />
             </span>
           ) : null}

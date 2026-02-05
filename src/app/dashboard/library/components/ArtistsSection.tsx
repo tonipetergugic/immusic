@@ -3,8 +3,8 @@ import type { Profile } from "@/types/database";
 
 export function ArtistsSection({ artists }: { artists: Profile[] }) {
   return (
-    <div className="px-6 pt-4 pb-10">
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2 sm:gap-3 items-start">
+    <div className="pt-4 pb-10">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] items-start">
         {artists.length > 0 ? (
           artists.map((a) => (
             <ArtistCard

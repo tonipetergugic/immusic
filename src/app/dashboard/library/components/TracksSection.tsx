@@ -23,7 +23,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
   const windowOpenByTrackId = payload.windowOpenByTrackId;
 
   return (
-    <div className="px-4 sm:px-6 pt-4 pb-10">
+    <div className="pt-4 pb-10">
       {trackData.length > 0 ? (
         <div className="flex flex-col">
           {trackData.map((track, index) => {
