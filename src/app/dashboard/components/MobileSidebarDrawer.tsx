@@ -17,7 +17,7 @@ export default function MobileSidebarDrawer() {
   }, [open]);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       {/* Trigger */}
       <button
         type="button"
@@ -38,7 +38,7 @@ export default function MobileSidebarDrawer() {
 
       {/* Overlay + Drawer */}
       {open ? (
-        <div className="fixed inset-0 z-[999999] md:hidden">
+        <div className="fixed inset-0 z-[999999] lg:hidden">
           {/* Backdrop */}
           <button
             type="button"

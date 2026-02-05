@@ -50,14 +50,14 @@ export default async function DashboardLayout({
       sidebar={
         <>
           {/* Sidebar (Desktop only) */}
-          <div className="hidden md:block md:w-60 shrink-0">
+          <div className="hidden lg:block lg:w-60 shrink-0">
             <Sidebar />
           </div>
         </>
       }
       header={
         <div className="flex items-center">
-          <div className="md:hidden pl-4">
+          <div className="lg:hidden pl-4">
             <MobileSidebarDrawer />
           </div>
           <div className="flex-1">

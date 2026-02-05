@@ -10,7 +10,7 @@ export default function AppShell({
   header,
   children,
   mainClassName = "flex-1 overflow-y-auto overflow-x-hidden",
-  innerClassName = "w-full max-w-[1200px] mx-auto px-3 pt-6 pb-40 sm:px-4 sm:pt-8 lg:px-6 lg:pb-48",
+  innerClassName = "w-full max-w-[1200px] mx-auto px-3 pb-40 sm:px-4 lg:px-6 lg:pb-48",
 }: {
   sidebar?: ReactNode;
   header?: ReactNode;

@@ -16,6 +16,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(true);
 
   const isDrawer = variant === "drawer";
 
@@ -30,6 +31,13 @@ export default function Sidebar({
       // ignore (private mode / blocked storage)
     }
 
+    // Viewport gate: treat < lg as "non-desktop" (tablet + mobile)
+    function updateViewport() {
+      setIsDesktopViewport(window.matchMedia("(min-width: 1024px)").matches);
+    }
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+
     function handleRoleUpdate(e: Event) {
       const ce = e as CustomEvent;
       const nextRole = typeof ce.detail === "string" ? ce.detail : null;
@@ -40,6 +48,7 @@ export default function Sidebar({
 
     return () => {
       window.removeEventListener("roleUpdated", handleRoleUpdate as EventListener);
+      window.removeEventListener("resize", updateViewport);
     };
   }, []);
 
@@ -94,7 +103,7 @@ export default function Sidebar({
       />
 
       {/* Artist Bereich */}
-      {isDrawer ? (
+      {isDrawer || !isDesktopViewport ? (
         <div className="flex items-center gap-3 p-3 rounded-md text-[#B3B3B3] opacity-80 select-none cursor-not-allowed">
           <Mic size={20} />
           <span className="text-sm">Artist (Desktop only)</span>
