@@ -333,9 +333,9 @@ export default async function PlaylistPage(
   }
 
   return (
-    <div className="flex w-full overflow-x-hidden touch-pan-y min-w-0">  
-      {/* Linker Bereich */}
-      <div className="flex-1 min-w-0 w-full flex flex-col pt-4 pb-2 max-w-[1500px] mx-auto">
+    <div className="flex w-full overflow-x-hidden touch-pan-y min-w-0">
+      {/* Content */}
+      <div className="flex-1 min-w-0 w-full flex flex-col pt-4 pb-2">
 
         {/* Trackliste scrollt NICHT separat → gehört zum globalen Scroll */}
         <div className="min-w-0">

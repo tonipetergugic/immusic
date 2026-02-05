@@ -31,7 +31,7 @@ export default async function AdminLayout({
       mainClassName="flex-1 overflow-y-auto overflow-x-hidden"
       innerClassName="w-full max-w-[1600px] mx-auto px-3 pt-6 pb-40 sm:px-4 sm:pt-8 lg:px-6 lg:pb-48"
     >
-      <div className="max-w-[1200px] mx-auto w-full pb-24">
+      <div className="w-full pb-24">
         <div className="flex flex-col gap-2">
           <AdminBackButton />
 
