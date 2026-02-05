@@ -36,7 +36,7 @@ export default function HomePlaylistsSection({
         <p className="text-white/40">{emptyText}</p>
       ) : (
         <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
-          {playlistIds.slice(0, 10).map((pid) => {
+          {playlistIds.slice(0, 10).map((pid, i) => {
             const pl = playlistsById[pid];
 
             if (!pl) {
@@ -59,6 +59,7 @@ export default function HomePlaylistsSection({
                   title={pl.title}
                   description={pl.description}
                   cover_url={pl.cover_url}
+                  priority={i === 0}
                 />
               </div>
             );

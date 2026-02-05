@@ -254,6 +254,8 @@ export default function PlaylistHeaderClient({
                   src={coverPublicUrl}
                   alt={playlist.title}
                   fill
+                  priority
+                  sizes="(min-width: 768px) 280px, 220px"
                   className="object-cover rounded-xl"
                 />
               ) : (
