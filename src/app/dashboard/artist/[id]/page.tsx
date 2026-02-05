@@ -323,9 +323,5 @@ export default async function ArtistV2Page({
     topTracks,
   };
 
-  return (
-    <div className="w-full max-w-[1600px] mx-auto">
-      <ArtistClient dto={dto} shareUrl={shareUrl} />
-    </div>
-  );
+  return <ArtistClient dto={dto} shareUrl={shareUrl} />;
 }

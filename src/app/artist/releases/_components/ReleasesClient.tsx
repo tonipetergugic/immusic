@@ -52,7 +52,7 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
   const loading = false;
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto">
+    <div className="w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0 flex-1 max-w-[520px]">

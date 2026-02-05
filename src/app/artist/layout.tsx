@@ -87,19 +87,17 @@ export default async function ArtistLayout({
         </div>
       }
       mainClassName="flex-1 overflow-y-auto overflow-x-hidden"
-      innerClassName="px-6 py-6 lg:px-10 lg:py-8"
+      innerClassName="w-full max-w-[1600px] mx-auto px-3 pt-6 pb-40 sm:px-4 sm:pt-8 lg:px-6 lg:pb-48"
     >
-      <div className="max-w-[1600px] mx-auto w-full pb-40 lg:pb-48">
-        <ArtistProfileProvider
-          value={{
-            displayName: profile?.display_name ?? null,
-            bannerUrl: profile?.banner_url ?? null,
-            artistOnboardingStatus: profile?.artist_onboarding_status ?? null,
-          }}
-        >
-          {children}
-        </ArtistProfileProvider>
-      </div>
+      <ArtistProfileProvider
+        value={{
+          displayName: profile?.display_name ?? null,
+          bannerUrl: profile?.banner_url ?? null,
+          artistOnboardingStatus: profile?.artist_onboarding_status ?? null,
+        }}
+      >
+        {children}
+      </ArtistProfileProvider>
     </AppShell>
   );
 }

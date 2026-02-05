@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 
+// Layout-Regel (verbindlich):
+// - AppShell ist die einzige Quelle für max-width, horizontales Padding und Top/Bottom-Spacing.
+// - Pages/Client-Komponenten dürfen KEINE eigenen Outer-Wrapper setzen (kein max-w-*, mx-auto, px-* auf Root-Level).
+// - Ausnahme: Modals/Dialogs/Overlays dürfen eine eigene Breite haben (z.B. max-w-md), weil sie nicht Teil des Page-Layouts sind.
+
 export default function AppShell({
   sidebar,
   header,

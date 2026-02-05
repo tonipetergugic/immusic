@@ -133,7 +133,7 @@ export default function ReleaseEditorClient({
   }, [releaseId, startTransition, status]);
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
+    <div className="w-full text-white">
       <div className="mb-6">
         <BackLink label="Back to Releases" href="/artist/releases" />
       </div>

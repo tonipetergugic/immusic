@@ -29,9 +29,9 @@ export default function PublicProfileView({
   const avatarUrl = versionedUrl(profile.avatar_url, profile.updated_at);
 
   return (
-    <div className="w-full min-h-screen bg-[#0E0E10] text-white">
-      {/* Header area (old-style) */}
-      <div className="w-full max-w-[1200px] mx-auto px-6 pt-6">
+    <div className="w-full text-white">
+      {/* Header area */}
+      <div className="w-full">
         <div className="mb-6">
           <BackLink />
         </div>
@@ -105,7 +105,7 @@ export default function PublicProfileView({
       </div>
 
       {/* Playlists */}
-      <div className="w-full max-w-[1200px] mx-auto px-6 mt-10 pb-12">
+      <div className="w-full mt-10 pb-12">
         <div className="flex items-end justify-between gap-4 mb-6">
           <h2 className="text-2xl font-semibold text-white">Playlists</h2>
           <div className="text-sm text-[#B3B3B3]">

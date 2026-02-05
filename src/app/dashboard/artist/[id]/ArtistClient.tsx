@@ -15,7 +15,7 @@ export default function ArtistClient({
   shareUrl: string;
 }) {
   return (
-    <div className="px-6 pb-6 pt-0">
+    <div className="w-full pb-6 pt-0">
       <ArtistHeader
         artist={dto.artist}
         viewer={dto.viewer}

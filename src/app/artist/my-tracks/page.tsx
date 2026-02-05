@@ -58,7 +58,7 @@ export default async function MyTracksPage() {
   });
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto text-white px-6 py-6 lg:px-10 lg:py-8 pb-40 lg:pb-48">
+    <div className="w-full text-white">
       <div className="mt-2">
         <div className="max-w-[900px] mx-auto">
           <h1 className="flex items-center gap-3 text-3xl sm:text-4xl font-semibold tracking-tight text-white">

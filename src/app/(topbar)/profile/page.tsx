@@ -115,10 +115,9 @@ export default function ProfilePage() {
   }, []);
 
   return (
-    <div className="w-full min-h-screen bg-[#0E0E10] text-white p-10">
+    <div className="w-full">
       <div
         className="
-          max-w-xl mx-auto
           bg-[#0B0B0D]
           border border-[#1A1A1C]
           rounded-2xl
