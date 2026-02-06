@@ -62,7 +62,13 @@ export default function PlaylistActionsBar({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-6">
+      <div
+        className="
+          flex items-center gap-6
+          mt-4
+          pl-[36px] sm:pl-[44px] lg:pl-[56px]
+        "
+      >
         {/* PLAY (standard) */}
         {tracks && tracks.length > 0 ? (
           <PlayOverlayButton

@@ -317,7 +317,7 @@ export default function PlaylistHeaderClient({
             <h1
               className="
                 font-semibold text-white tracking-tight leading-tight
-                text-5xl md:text-7xl
+                text-[34px] sm:text-5xl md:text-6xl lg:text-5xl xl:text-7xl
                 max-w-[70vw] md:max-w-[600px]
                 truncate
               "
