@@ -9,8 +9,8 @@ export default function ArtistPlaylistsSection({
   playlists: PlaylistCardDto[];
 }) {
   return (
-    <div className="w-full px-0 mt-12 pb-12">
-      <div className="flex items-end justify-between gap-4 mb-6">
+    <div className="w-full px-0 mt-3 pb-4">
+      <div className="flex items-end justify-between gap-4 mb-3">
         <h2 className="text-2xl font-semibold text-white">Playlists</h2>
         <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
           {playlists.length > 0 ? `${playlists.length} public` : ""}
@@ -18,15 +18,16 @@ export default function ArtistPlaylistsSection({
       </div>
 
       {playlists.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
+        <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
           {playlists.map((pl) => (
-            <PlaylistCard
-              key={pl.id}
-              id={pl.id}
-              title={pl.title}
-              description={null}
-              cover_url={pl.coverUrl}
-            />
+            <div key={pl.id} className="shrink-0 w-[150px] snap-start">
+              <PlaylistCard
+                id={pl.id}
+                title={pl.title}
+                description={null}
+                cover_url={pl.coverUrl}
+              />
+            </div>
           ))}
         </div>
       ) : (

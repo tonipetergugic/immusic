@@ -89,8 +89,8 @@ export default function ArtistTopTracksSection({
   }, [playerTracksQueue]);
 
   return (
-    <div className="w-full px-0 mt-12 pb-12 overflow-x-hidden touch-pan-y min-w-0">
-      <div className="flex items-end justify-between gap-4 mb-6">
+    <div className="w-full px-0 mt-3 pb-6 overflow-x-hidden touch-pan-y min-w-0">
+      <div className="flex items-end justify-between gap-4 mb-3">
         <h2 className="text-2xl font-semibold text-white">Top Tracks</h2>
         <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
           {topTracks.length > 0 ? "Last 30 days" : ""}
