@@ -8,6 +8,7 @@ import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist } from "@/types/database";
 import BackLink from "@/components/BackLink";
 import { Trash2 } from "lucide-react";
+import { useFitText } from "@/components/useFitText";
 
 type PlaylistOwnerJoin = {
   owner?: {
@@ -174,6 +175,16 @@ export default function PlaylistHeaderClient({
 
   const rawCover = playlist.cover_url ?? null;
 
+  const fitTitle = useFitText<HTMLHeadingElement>(playlist.title, {
+    rangesByMinViewportPx: {
+      0: { minPx: 26, maxPx: 34, stepPx: 1 },       // mobile
+      640: { minPx: 34, maxPx: 48, stepPx: 2 },     // sm
+      768: { minPx: 40, maxPx: 60, stepPx: 2 },     // md (tablet)
+      1024: { minPx: 36, maxPx: 48, stepPx: 2 },    // lg (sidebar sichtbar)
+      1280: { minPx: 44, maxPx: 72, stepPx: 2 },    // xl desktop hero
+    },
+  });
+
   // Next/Image braucht eine echte URL (http/https) oder einen lokalen /public Pfad.
   // Bei uns darf hier nur eine absolute Public URL durch.
   const coverPublicUrl =
@@ -315,6 +326,7 @@ export default function PlaylistHeaderClient({
           {/* TEXT SECTION */}
           <div className="flex flex-col gap-3 w-full">
             <h1
+              ref={fitTitle.ref}
               className="
                 font-semibold text-white tracking-tight leading-tight
                 text-[34px] sm:text-5xl md:text-6xl lg:text-5xl xl:text-7xl

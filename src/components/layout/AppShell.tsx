@@ -9,7 +9,7 @@ export default function AppShell({
   sidebar,
   header,
   children,
-  mainClassName = "flex-1 overflow-y-auto overflow-x-hidden",
+  mainClassName = "flex-1 min-h-0 overflow-y-auto overflow-x-hidden",
   innerClassName = "w-full max-w-[1200px] mx-auto px-3 pb-40 sm:px-4 lg:px-6 lg:pb-48",
 }: {
   sidebar?: ReactNode;
@@ -19,7 +19,7 @@ export default function AppShell({
   innerClassName?: string;
 }) {
   return (
-    <div className="flex h-screen w-full bg-[#0E0E10] text-white overflow-hidden">
+    <div className="flex h-[100dvh] w-full bg-[#0E0E10] text-white overflow-hidden">
       {sidebar}
 
       <div className="flex flex-col flex-1 overflow-hidden">

@@ -132,7 +132,7 @@ export default function Topbar({
         px-4 sm:px-6 lg:px-8
         shadow-[0_1px_20px_0_rgba(0,255,198,0.08)]
         relative
-        sticky top-0 z-40
+        z-40
       "
     >
       <span className="text-white/90 font-semibold tracking-wide text-sm">
