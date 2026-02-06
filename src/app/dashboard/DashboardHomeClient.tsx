@@ -35,6 +35,7 @@ export default function DashboardHomeClient({
   const router = useRouter();
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
+  const [homeTab, setHomeTab] = useState<"releases" | "playlists" | "tracks">("releases");
   const [devGenre, setDevGenre] = useState<string>("all");
   const [performanceGenre, setPerformanceGenre] = useState<string>("all");
 
@@ -110,6 +111,34 @@ export default function DashboardHomeClient({
     }) as unknown as PlayerTrack[];
   }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
+  const HomeTabs = (
+    <div className="border-b border-white/5">
+      <nav className="flex gap-6 text-sm">
+        {[
+          { key: "releases", label: "Releases" },
+          { key: "playlists", label: "Playlists" },
+          { key: "tracks", label: "Tracks" },
+        ].map((t) => {
+          const isActive = homeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setHomeTab(t.key as any)}
+              className={`pb-3 transition-colors ${
+                isActive
+                  ? "text-white font-medium border-b-2 border-[#00FFC6]"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <DashboardHeroAndToggle
@@ -120,66 +149,80 @@ export default function DashboardHomeClient({
       {/* Development (EXAKT das bestehende Home) */}
       {discoveryMode === "development" ? (
         <div className="space-y-10 pb-[calc(env(safe-area-inset-bottom)+120px)]">
-          <HomeReleasesSection
-            title={releaseModule?.title ?? "Releases"}
-            emptyText="No releases configured for Home yet."
-            releaseIds={homeReleaseIds}
-            releasesById={releasesById}
-            showWhenEmpty={true}
-            wrapperClassName="space-y-4"
-          />
+          {HomeTabs}
 
-          <HomePlaylistsSection
-            title={playlistModule?.title ?? "Playlists"}
-            emptyText="No playlists configured for Home yet."
-            playlistIds={homePlaylistIds}
-            playlistsById={playlistsById}
-            showWhenEmpty={true}
-            wrapperClassName="space-y-4"
-          />
+          {homeTab === "releases" ? (
+            <HomeReleasesSection
+              title={releaseModule?.title ?? "Releases"}
+              emptyText="No releases configured for Home yet."
+              releaseIds={homeReleaseIds}
+              releasesById={releasesById}
+              showWhenEmpty={true}
+              wrapperClassName="space-y-4"
+            />
+          ) : null}
 
-          <DevelopmentTracksSection
-            devGenre={devGenre}
-            setDevGenre={setDevGenre}
-            devItems={devItems}
-            devLoading={devLoading}
-            devError={devError}
-            devQueue={devQueue}
-            routerPush={(href) => router.push(href)}
-          />
+          {homeTab === "playlists" ? (
+            <HomePlaylistsSection
+              title={playlistModule?.title ?? "Featured Playlists"}
+              emptyText="No playlists configured for Home yet."
+              playlistIds={homePlaylistIds}
+              playlistsById={playlistsById}
+              showWhenEmpty={true}
+              wrapperClassName="space-y-4"
+            />
+          ) : null}
+
+          {homeTab === "tracks" ? (
+            <DevelopmentTracksSection
+              devGenre={devGenre}
+              setDevGenre={setDevGenre}
+              devItems={devItems}
+              devLoading={devLoading}
+              devError={devError}
+              devQueue={devQueue}
+              routerPush={(href) => router.push(href)}
+            />
+          ) : null}
         </div>
       ) : (
         /* Performance (minimal list from performance_discovery_candidates via API) */
         <div className="space-y-8">
-          {/* Performance Releases (admin-curated) */}
-          <HomeReleasesSection
-            title="Performance Releases"
-            releaseIds={performanceReleaseIds}
-            releasesById={releasesById}
-            showWhenEmpty={false}
-            wrapperClassName="space-y-4 pb-2"
-          />
+          {HomeTabs}
 
-          {/* Performance Playlists (admin-curated only) */}
-          <HomePlaylistsSection
-            title="Performance Playlists"
-            playlistIds={performancePlaylistIds}
-            playlistsById={playlistsById}
-            showWhenEmpty={false}
-            wrapperClassName="space-y-4 pb-2"
-          />
+          {homeTab === "releases" ? (
+            <HomeReleasesSection
+              title="Performance Releases"
+              releaseIds={performanceReleaseIds}
+              releasesById={releasesById}
+              showWhenEmpty={false}
+              wrapperClassName="space-y-4 pb-2"
+            />
+          ) : null}
 
-          <PerformanceDiscoverySection
-            performanceGenre={performanceGenre}
-            setPerformanceGenre={setPerformanceGenre}
-            performanceGenreOptions={performanceGenreOptions}
-            performanceLoading={performanceLoading}
-            performanceError={performanceError}
-            performanceItems={performanceItems}
-            perfQueue={perfQueue}
-            perfTrackMetaMap={perfTrackMetaMap}
-            routerPush={(href) => router.push(href)}
-          />
+          {homeTab === "playlists" ? (
+            <HomePlaylistsSection
+              title="Performance Playlists"
+              playlistIds={performancePlaylistIds}
+              playlistsById={playlistsById}
+              showWhenEmpty={false}
+              wrapperClassName="space-y-4 pb-2"
+            />
+          ) : null}
+
+          {homeTab === "tracks" ? (
+            <PerformanceDiscoverySection
+              performanceGenre={performanceGenre}
+              setPerformanceGenre={setPerformanceGenre}
+              performanceGenreOptions={performanceGenreOptions}
+              performanceLoading={performanceLoading}
+              performanceError={performanceError}
+              performanceItems={performanceItems}
+              perfQueue={perfQueue}
+              perfTrackMetaMap={perfTrackMetaMap}
+              routerPush={(href) => router.push(href)}
+            />
+          ) : null}
         </div>
       )}
     </div>
