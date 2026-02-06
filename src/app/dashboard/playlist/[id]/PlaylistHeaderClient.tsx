@@ -179,7 +179,7 @@ export default function PlaylistHeaderClient({
     rangesByMinViewportPx: {
       0: { minPx: 26, maxPx: 34, stepPx: 1 },       // mobile
       640: { minPx: 34, maxPx: 48, stepPx: 2 },     // sm
-      768: { minPx: 40, maxPx: 60, stepPx: 2 },     // md (tablet)
+      768: { minPx: 28, maxPx: 40, stepPx: 1 },     // md (tablet) - slightly smaller
       1024: { minPx: 36, maxPx: 48, stepPx: 2 },    // lg (sidebar sichtbar)
       1280: { minPx: 44, maxPx: 72, stepPx: 2 },    // xl desktop hero
     },
