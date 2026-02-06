@@ -56,7 +56,7 @@ export default function ArtistHeader({
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80" />
 
           {/* Back button inside banner */}
-          <div className="absolute left-4 top-6 md:left-40 z-50 pointer-events-auto group">
+          <div className="absolute left-4 top-6 md:left-10 lg:left-40 z-50 pointer-events-auto group">
             <div
               className="
                 inline-flex items-center rounded-full
@@ -85,7 +85,7 @@ export default function ArtistHeader({
           </div>
 
           {/* Banner content */}
-          <div className="absolute left-4 right-6 bottom-4 md:left-40 md:right-16 md:top-1/2 md:bottom-auto md:-translate-y-1/2 flex items-start md:items-center gap-4 md:gap-6">
+          <div className="absolute left-4 right-6 bottom-4 md:left-10 md:right-auto lg:left-40 lg:right-16 md:top-1/2 md:bottom-auto md:-translate-y-1/2 flex items-start md:items-center gap-4 md:gap-6">
             <div className="shrink-0 hidden md:block">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
