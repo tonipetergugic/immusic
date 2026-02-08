@@ -44,7 +44,7 @@ export async function POST() {
     // If there is no pending item, check the most recent terminal state (approved/rejected)
     const { data: lastItem, error: lastErr } = await supabase
       .from("tracks_ai_queue")
-      .select("status")
+      .select("id, status")
       .eq("user_id", user.id)
       .in("status", ["approved", "rejected"])
       .order("created_at", { ascending: false })
@@ -52,11 +52,11 @@ export async function POST() {
       .maybeSingle();
 
     if (!lastErr && lastItem?.status === "approved") {
-      return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: true });
+      return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: true, queue_id: lastItem.id });
     }
 
     if (!lastErr && lastItem?.status === "rejected") {
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected" });
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: lastItem.id });
     }
 
     return NextResponse.json({ ok: true, processed: false, reason: "no_pending" });
@@ -93,7 +93,7 @@ export async function POST() {
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected" });
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: queueId });
     }
 
     // 3) Analyze (stub for now)
@@ -124,7 +124,7 @@ export async function POST() {
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected" });
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: queueId });
     }
 
     // APPROVE -> insert track
@@ -135,7 +135,7 @@ export async function POST() {
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected" });
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: queueId });
     }
 
     const { error: trackError } = await supabase.from("tracks").insert({
@@ -165,7 +165,7 @@ export async function POST() {
       .eq("id", queueId)
       .eq("user_id", user.id);
 
-    return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: true });
+    return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: true, queue_id: queueId });
   } catch {
     // Absoluter Safety-Net: niemals in processing hängen bleiben
     await supabase

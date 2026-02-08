@@ -11,6 +11,7 @@ type Track = {
   title: string;
   version: string | null;
   audio_path: string;
+  queue_id?: string | null;
   bpm: number | null;
   key: string | null;
   genre: string | null;
@@ -176,6 +177,27 @@ export function TrackCard({ track }: TrackCardProps) {
             }}
           >
             Edit Track
+          </button>
+
+          <div className="h-px bg-white/10" />
+
+          <button
+            role="menuitem"
+            disabled={!track.queue_id}
+            className={
+              "w-full px-4 py-3 text-left text-sm font-semibold transition hover:bg-white/[0.06] " +
+              (track.queue_id ? "text-white/85" : "text-white/35 cursor-not-allowed")
+            }
+            onClick={() => {
+              if (isLocked) return;
+              if (!track.queue_id) return;
+              setOpen(false);
+              router.push(
+                `/artist/upload/feedback?queue_id=${encodeURIComponent(track.queue_id)}`
+              );
+            }}
+          >
+            View Feedback
           </button>
 
           <div className="h-px bg-white/10" />

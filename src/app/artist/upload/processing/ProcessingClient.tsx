@@ -4,17 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type ApiResponse =
-  | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean }
-  | { ok: true; processed: true; decision: "rejected" }
-  | { ok: true; processed: false; reason: string }
+  | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean; queue_id?: string }
+  | { ok: true; processed: true; decision: "rejected"; queue_id?: string }
+  | { ok: true; processed: false; reason: string; queue_id?: string }
   | { ok: false; error: string };
 
-export default function ProcessingClient() {
+type Props = { credits: number };
+
+export default function ProcessingClient({ credits }: Props) {
   const router = useRouter();
   const [statusText, setStatusText] = useState<string>("Processing your track…");
   const [errorText, setErrorText] = useState<string | null>(null);
   const [rejected, setRejected] = useState(false);
   const [approvedWithFeedback, setApprovedWithFeedback] = useState(false);
+  const [queueId, setQueueId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +33,9 @@ export default function ProcessingClient() {
         if (!("ok" in data) || data.ok !== true) {
           setErrorText("Processing failed. Please try again.");
           return;
+        }
+        if ("queue_id" in data && typeof (data as any).queue_id === "string") {
+          setQueueId((data as any).queue_id);
         }
 
         if (data.processed === false) {
@@ -80,15 +86,35 @@ export default function ProcessingClient() {
             <p className="mb-3">
               Der Track konnte aufgrund technischer Hörbarkeitsprobleme nicht freigegeben werden.
             </p>
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-              onClick={() => {
-                router.push("/artist/upload/feedback");
-              }}
-            >
-              Detaillierte KI-Auswertung (1 Credit)
-            </button>
+            {credits >= 1 ? (
+              <button
+                type="button"
+                className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
+                onClick={() => {
+                  if (!queueId) return;
+                  router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
+                }}
+              >
+                Detaillierte KI-Auswertung (1 Credit)
+              </button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  type="button"
+                  disabled
+                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold opacity-50 cursor-not-allowed"
+                >
+                  Credits kaufen
+                </button>
+                <button
+                  type="button"
+                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
+                  onClick={() => router.replace("/artist/my-tracks")}
+                >
+                  Go to My Tracks
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -101,13 +127,26 @@ export default function ProcessingClient() {
             >
               Go to My Tracks
             </button>
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-              onClick={() => router.push("/artist/upload/feedback")}
-            >
-              Detaillierte KI-Auswertung (1 Credit)
-            </button>
+            {credits >= 1 ? (
+              <button
+                type="button"
+                className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
+                onClick={() => {
+                  if (!queueId) return;
+                  router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
+                }}
+              >
+                Detaillierte KI-Auswertung (1 Credit)
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold opacity-50 cursor-not-allowed"
+              >
+                Credits kaufen
+              </button>
+            )}
           </div>
         )}
 

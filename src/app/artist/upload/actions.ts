@@ -29,12 +29,14 @@ export async function submitToQueueAction(formData: FormData) {
     throw new Error("Invalid audio path.");
   }
 
-  // Guard 2: keine Doppel-Queue (wenn bereits pending existiert → direkt weiter)
+  // Guard 2: keine Doppel-Queue NUR für dasselbe audio_path
+  // (Neue Uploads mit neuem audio_path müssen immer eine neue Queue bekommen.)
   const { data: existingPending, error: pendingErr } = await supabase
     .from("tracks_ai_queue")
     .select("id")
     .eq("user_id", userId)
-    .eq("status", "pending")
+    .eq("audio_path", audioPath)
+    .in("status", ["pending", "processing"])
     .limit(1);
 
   if (pendingErr) {
