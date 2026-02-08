@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FileMusic } from "lucide-react";
 import TrackListClient from "./TrackListClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function MyTracksPage() {
   const supabase = await createSupabaseServerClient();
   const {
