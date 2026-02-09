@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 
 export async function unlockPaidFeedbackAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
@@ -23,7 +24,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   // 1) Ownership check: queue item muss dem User gehören
   const { data: queueRow, error: queueErr } = await supabase
     .from("tracks_ai_queue")
-    .select("id, user_id")
+    .select("id, user_id, audio_hash")
     .eq("id", queueId)
     .maybeSingle();
 
@@ -76,6 +77,20 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   if (balance < 1) {
     // rollback unlock
     await supabase.from("track_ai_feedback_unlocks").delete().eq("id", unlockId).eq("user_id", user.id);
+    // Security/Observability (rein beobachtend, darf niemals den Flow brechen)
+    await logSecurityEvent({
+      eventType: "UNLOCK_DENIED_NO_CREDITS",
+      severity: "INFO",
+      actorUserId: user.id,
+      queueId,
+      unlockId,
+      reason: "insufficient_credits",
+      hashChecked: false,
+      queueAudioHash: (queueRow as any)?.audio_hash ?? null,
+      unlockAudioHash: null,
+      metadata: { source: "unlockPaidFeedbackAction", credit_balance: balance },
+    });
+
     redirect(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}&error=insufficient_credits`);
   }
 
@@ -105,11 +120,39 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     // UX: wenn Credit spend wegen fehlendem Guthaben scheitert (Race/Edge), sauber redirecten
     const lower = msg.toLowerCase();
     if (lower.includes("insufficient") || lower.includes("not enough") || lower.includes("balance")) {
+      // Security/Observability (rein beobachtend, darf niemals den Flow brechen)
+      await logSecurityEvent({
+        eventType: "UNLOCK_DENIED_NO_CREDITS",
+        severity: "INFO",
+        actorUserId: user.id,
+        queueId,
+        unlockId,
+        reason: "insufficient_credits",
+        hashChecked: false,
+        queueAudioHash: (queueRow as any)?.audio_hash ?? null,
+        unlockAudioHash: null,
+        metadata: { source: "unlockPaidFeedbackAction", path: "credit_spend", spend_error: msg },
+      });
+
       redirect(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}&error=insufficient_credits`);
     }
 
     throw new Error(`Failed to deduct credit: ${msg || "unknown_error"}`);
   }
+
+  // Security/Observability (rein beobachtend, darf niemals den Flow brechen)
+  await logSecurityEvent({
+    eventType: "UNLOCK_CREATED",
+    severity: "INFO",
+    actorUserId: user.id,
+    queueId,
+    unlockId,
+    reason: "paid_feedback_unlock",
+    hashChecked: false,
+    queueAudioHash: (queueRow as any)?.audio_hash ?? null,
+    unlockAudioHash: (queueRow as any)?.audio_hash ?? null,
+    metadata: { credits_spent: 1, source: "unlockPaidFeedbackAction" },
+  });
 
   redirect(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
 }

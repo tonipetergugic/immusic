@@ -26,12 +26,24 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  // Step 65: Auto-recover stuck processing items (self-healing, user-scoped)
+  // If a previous run crashed after claiming, don't leave the queue blocked forever.
+  // We only reset rows older than 10 minutes to avoid interfering with an active run.
+  await supabase
+    .from("tracks_ai_queue")
+    .update({ status: "pending", message: null })
+    .eq("user_id", user.id)
+    .eq("status", "processing")
+    .lt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
+
   // 1) Find oldest pending queue item for this user
   const { data: pendingItem, error: fetchErr } = await supabase
     .from("tracks_ai_queue")
-    .select("id, user_id, audio_path, title, status")
+    .select("id, user_id, audio_path, title, status, hash_status, audio_hash")
     .eq("user_id", user.id)
     .eq("status", "pending")
+    .eq("hash_status", "done")
+    .not("audio_hash", "is", null)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -69,6 +81,8 @@ export async function POST() {
     .eq("id", pendingItem.id)
     .eq("user_id", user.id)
     .eq("status", "pending")
+    .eq("hash_status", "done")
+    .not("audio_hash", "is", null)
     .select("id")
     .limit(1);
 
@@ -143,10 +157,28 @@ export async function POST() {
       audio_path: audioPath,
       title,
       status: "approved",
+      source_queue_id: queueId,
     });
 
     if (trackError) {
-      // Deterministisch aus processing raus, ohne Details
+      // Idempotency: track already exists for this queue (unique violation)
+      if ((trackError as any).code === "23505") {
+        await supabase
+          .from("tracks_ai_queue")
+          .update({ status: "approved", message: null })
+          .eq("id", queueId)
+          .eq("user_id", user.id);
+
+        return NextResponse.json({
+          ok: true,
+          processed: true,
+          decision: "approved",
+          feedback_available: true,
+          queue_id: queueId,
+        });
+      }
+
+      // Other insert errors are real errors
       await supabase
         .from("tracks_ai_queue")
         .update({ status: "pending", message: null })

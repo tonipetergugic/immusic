@@ -1,6 +1,7 @@
 import BackLink from "@/components/BackLink";
 import { unlockPaidFeedbackAction } from "./actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 import { headers, cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -105,6 +106,42 @@ export default async function UploadFeedbackPage({
 
   const unlocked = data.status !== "locked";
   const queueTitle = data.queue_title ?? "Untitled";
+
+  // Optional: queue audio_hash für Observability (rein beobachtend, darf niemals den Flow brechen)
+  let queueAudioHash: string | null = null;
+  try {
+    const { data: qh, error: qhErr } = await supabase
+      .from("tracks_ai_queue")
+      .select("audio_hash")
+      .eq("id", queueId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!qhErr) {
+      queueAudioHash = (qh as any)?.audio_hash ?? null;
+    }
+  } catch {
+    // ignore
+  }
+
+  // Security/Observability (rein beobachtend, darf niemals den Flow brechen)
+  await logSecurityEvent({
+    eventType: unlocked ? "FEEDBACK_ACCESS_GRANTED" : "FEEDBACK_ACCESS_DENIED",
+    severity: "INFO",
+    actorUserId: user.id,
+    queueId,
+    unlockId: null,
+    reason: unlocked ? null : "NO_UNLOCK",
+    hashChecked: false,
+    queueAudioHash,
+    unlockAudioHash: null,
+    metadata: {
+      source: "UploadFeedbackPage",
+      api_status: data.status,
+      credit_balance: creditBalance,
+      error_param: error || null,
+    },
+  });
 
   return (
     <div className="min-h-screen bg-[#0E0E10] text-white">
