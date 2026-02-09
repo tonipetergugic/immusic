@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { createHash } from "crypto";
 
 export async function submitToQueueAction(formData: FormData) {
   const audioPath = formData.get("audio_path")?.toString().trim();
@@ -47,15 +48,88 @@ export async function submitToQueueAction(formData: FormData) {
     redirect("/artist/upload/processing");
   }
 
-  const { error } = await supabase.from("tracks_ai_queue").insert({
-    user_id: userId,
-    audio_path: audioPath,
-    title,
-    status: "pending",
-  });
+  const { data: insertedRow, error: insertErr } = await supabase
+    .from("tracks_ai_queue")
+    .insert({
+      user_id: userId,
+      audio_path: audioPath,
+      title,
+      status: "pending",
+      hash_status: "pending",
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    throw new Error(`Failed to queue track: ${error.message}`);
+  if (insertErr || !insertedRow?.id) {
+    throw new Error(`Failed to queue track: ${insertErr?.message ?? "unknown insert error"}`);
+  }
+
+  const queueId = insertedRow.id as string;
+
+  // Best-effort: Hash direkt nach Insert setzen (damit process-next sofort arbeiten kann)
+  try {
+    const { data: file, error: dlErr } = await supabase.storage.from("tracks").download(audioPath);
+
+    if (dlErr || !file) {
+      // Markiere Hash-Fehler, aber blockiere den Flow nicht komplett
+      await supabase
+        .from("tracks_ai_queue")
+        .update({
+          hash_status: "error",
+          hash_attempts: 1,
+          hash_last_error: `download_failed: ${dlErr?.message ?? "unknown"}`,
+        })
+        .eq("id", queueId)
+        .eq("user_id", userId)
+        .eq("hash_status", "pending")
+        .is("audio_hash", null);
+
+      redirect("/artist/upload/processing");
+    }
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    if (!buf || buf.length === 0) {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({
+          hash_status: "error",
+          hash_attempts: 1,
+          hash_last_error: "download_failed: empty_file",
+        })
+        .eq("id", queueId)
+        .eq("user_id", userId)
+        .eq("hash_status", "pending")
+        .is("audio_hash", null);
+
+      redirect("/artist/upload/processing");
+    }
+
+    const hex = createHash("sha256").update(buf).digest("hex");
+
+    await supabase
+      .from("tracks_ai_queue")
+      .update({
+        audio_hash: hex,
+        hash_status: "done",
+        hashed_at: new Date().toISOString(),
+        hash_last_error: null,
+      })
+      .eq("id", queueId)
+      .eq("user_id", userId)
+      .eq("hash_status", "pending")
+      .is("audio_hash", null);
+  } catch (e) {
+    await supabase
+      .from("tracks_ai_queue")
+      .update({
+        hash_status: "error",
+        hash_attempts: 1,
+        hash_last_error: `hash_failed: ${String((e as any)?.message ?? e)}`,
+      })
+      .eq("id", queueId)
+      .eq("user_id", userId)
+      .eq("hash_status", "pending")
+      .is("audio_hash", null);
   }
 
   redirect("/artist/upload/processing");

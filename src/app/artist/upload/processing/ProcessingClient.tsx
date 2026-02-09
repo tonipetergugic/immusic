@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type ApiResponse =
   | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean; queue_id?: string }
-  | { ok: true; processed: true; decision: "rejected"; queue_id?: string }
+  | { ok: true; processed: true; decision: "rejected"; feedback_available?: boolean; queue_id?: string }
   | { ok: true; processed: false; reason: string; queue_id?: string }
   | { ok: false; error: string };
 
@@ -16,7 +16,8 @@ export default function ProcessingClient({ credits }: Props) {
   const [statusText, setStatusText] = useState<string>("Processing your track…");
   const [errorText, setErrorText] = useState<string | null>(null);
   const [rejected, setRejected] = useState(false);
-  const [approvedWithFeedback, setApprovedWithFeedback] = useState(false);
+  const [approved, setApproved] = useState(false);
+  const [canFeedback, setCanFeedback] = useState(false);
   const [queueId, setQueueId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,13 +46,10 @@ export default function ProcessingClient({ credits }: Props) {
         }
 
         if (data.decision === "approved") {
-          if (data.feedback_available) {
-            setApprovedWithFeedback(true);
-            setStatusText("Approved. You can optionally unlock detailed AI feedback.");
-            return;
-          }
-          router.replace("/artist/my-tracks");
-          return;
+          setApproved(true);
+          setCanFeedback(!!data.feedback_available);
+          setStatusText("Approved. Your track is now in My Tracks.");
+          return; // stop polling on success
         }
 
         // rejected
@@ -118,7 +116,7 @@ export default function ProcessingClient({ credits }: Props) {
           </div>
         )}
 
-        {approvedWithFeedback && (
+        {approved && (
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <button
               type="button"
@@ -127,14 +125,12 @@ export default function ProcessingClient({ credits }: Props) {
             >
               Go to My Tracks
             </button>
-            {credits >= 1 ? (
+
+            {credits >= 1 && queueId ? (
               <button
                 type="button"
                 className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-                onClick={() => {
-                  if (!queueId) return;
-                  router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
-                }}
+                onClick={() => router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
               >
                 Detaillierte KI-Auswertung (1 Credit)
               </button>

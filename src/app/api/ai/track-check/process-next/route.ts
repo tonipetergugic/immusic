@@ -10,8 +10,62 @@ type Decision = "approved" | "rejected";
  * IMPORTANT: keinerlei Messwerte/Fail-Codes zurückgeben (Anti-Leak).
  * Für jetzt: immer approved.
  */
-async function analyzeAudioStub(_audioPath: string): Promise<Decision> {
-  return "approved";
+async function analyzeAudioStub(
+  supabase: any,
+  audioPath: string
+): Promise<Decision> {
+  try {
+    const { data, error } = await supabase.storage
+      .from("tracks")
+      .download(audioPath);
+
+    if (error || !data) return "rejected";
+
+    // Blob size check (0 bytes / absurdly large)
+    const size = (data as Blob).size ?? 0;
+    if (size <= 0) return "rejected";
+    if (size > 200 * 1024 * 1024) return "rejected"; // 200 MB hard safety
+
+    // Minimal format sniffing (hard-fail only if totally broken/unknown)
+    const buf = await data.arrayBuffer();
+    if (!buf || buf.byteLength <= 0) return "rejected";
+
+    const u8 = new Uint8Array(buf);
+
+    const startsWith = (ascii: string) => {
+      if (u8.length < ascii.length) return false;
+      for (let i = 0; i < ascii.length; i++) {
+        if (u8[i] !== ascii.charCodeAt(i)) return false;
+      }
+      return true;
+    };
+
+    const isWav = u8.length >= 12 && startsWith("RIFF") && String.fromCharCode(...u8.slice(8, 12)) === "WAVE";
+    const isFlac = startsWith("fLaC");
+    const isOgg = startsWith("OggS");
+    const isMp3 = startsWith("ID3") || (u8.length >= 2 && u8[0] === 0xff && (u8[1] & 0xe0) === 0xe0); // frame sync
+    const isMp4 =
+      u8.length >= 12 &&
+      u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70; // "ftyp" at offset 4
+
+    if (!(isWav || isFlac || isOgg || isMp3 || isMp4)) return "rejected";
+
+    return "approved";
+  } catch {
+    return "rejected";
+  }
+}
+
+async function hasFeedbackUnlock(supabase: any, userId: string, queueId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("track_ai_feedback_unlocks")
+    .select("id")
+    .eq("queue_id", queueId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) return false;
+  return !!data?.id;
 }
 
 export async function POST() {
@@ -64,11 +118,13 @@ export async function POST() {
       .maybeSingle();
 
     if (!lastErr && lastItem?.status === "approved") {
-      return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: true, queue_id: lastItem.id });
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, lastItem.id);
+      return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: unlocked, queue_id: lastItem.id });
     }
 
     if (!lastErr && lastItem?.status === "rejected") {
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: lastItem.id });
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, lastItem.id);
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", feedback_available: unlocked, queue_id: lastItem.id });
     }
 
     return NextResponse.json({ ok: true, processed: false, reason: "no_pending" });
@@ -107,38 +163,32 @@ export async function POST() {
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: queueId });
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", feedback_available: unlocked, queue_id: queueId });
     }
 
     // 3) Analyze (stub for now)
-    const decision = await analyzeAudioStub(audioPath);
+    const decision = await analyzeAudioStub(supabase, audioPath);
 
     if (decision === "rejected") {
-      const { error: storageError } = await supabase.storage
-        .from("tracks")
-        .remove([audioPath]);
-
-      if (storageError) {
-        // Deterministisch aus processing raus, ohne Details
-        await supabase
-          .from("tracks_ai_queue")
-          .update({ status: "pending", message: null })
-          .eq("id", queueId)
-          .eq("user_id", user.id);
-
-        return NextResponse.json(
-          { ok: false, error: "storage_delete_failed" },
-          { status: 500 }
-        );
-      }
-
       await supabase
         .from("tracks_ai_queue")
-        .update({ status: "rejected", message: null })
+        .update({
+          status: "rejected",
+          rejected_at: new Date().toISOString(),
+          message: null,
+        })
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: queueId });
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+      return NextResponse.json({
+        ok: true,
+        processed: true,
+        decision: "rejected",
+        feedback_available: unlocked,
+        queue_id: queueId,
+      });
     }
 
     // APPROVE -> insert track
@@ -149,7 +199,8 @@ export async function POST() {
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      return NextResponse.json({ ok: true, processed: true, decision: "rejected", queue_id: queueId });
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", feedback_available: unlocked, queue_id: queueId });
     }
 
     const { error: trackError } = await supabase.from("tracks").insert({
@@ -169,11 +220,12 @@ export async function POST() {
           .eq("id", queueId)
           .eq("user_id", user.id);
 
+        const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
         return NextResponse.json({
           ok: true,
           processed: true,
           decision: "approved",
-          feedback_available: true,
+          feedback_available: unlocked,
           queue_id: queueId,
         });
       }
@@ -197,7 +249,8 @@ export async function POST() {
       .eq("id", queueId)
       .eq("user_id", user.id);
 
-    return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: true, queue_id: queueId });
+    const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+    return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: unlocked, queue_id: queueId });
   } catch {
     // Absoluter Safety-Net: niemals in processing hängen bleiben
     await supabase
