@@ -35,11 +35,18 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     redirect("/artist/upload/feedback?error=not_found");
   }
 
+  // Guard: Unlock darf nur erfolgen, wenn audio_hash bereits vorhanden ist
+  // (Bindung an exakt die analysierte Audiodatei)
+  const queueAudioHash = (queueRow as any)?.audio_hash as string | null;
+  if (!queueAudioHash) {
+    redirect(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}&error=waiting_for_hash`);
+  }
+
   // 2) Persistenter Unlock pro Queue (idempotent)
   // Versuch zuerst zu inserten: wenn bereits vorhanden, kein Credit-Spend.
   const { data: insertedRows, error: insertErr } = await supabase
     .from("track_ai_feedback_unlocks")
-    .insert({ queue_id: queueId, user_id: user.id })
+    .insert({ queue_id: queueId, user_id: user.id, audio_hash: queueAudioHash })
     .select("id")
     .limit(1);
 

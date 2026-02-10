@@ -7,18 +7,30 @@ type OkLocked = {
   ok: true;
   queue_id: string;
   queue_title: string | null;
+  feedback_state: "locked";
   status: "locked";
   unlocked: false;
   payload: null;
 };
 
-type OkUnlocked = {
+type OkUnlockedPending = {
   ok: true;
   queue_id: string;
   queue_title: string | null;
+  feedback_state: "unlocked_pending";
   status: "unlocked_no_data";
   unlocked: true;
-  payload: null; // Stub: später echte Analyse-Daten
+  payload: null;
+};
+
+type OkUnlockedReady = {
+  ok: true;
+  queue_id: string;
+  queue_title: string | null;
+  feedback_state: "unlocked_ready";
+  status: "unlocked_ready";
+  unlocked: true;
+  payload: any; // jsonb payload aus DB (später typisieren)
 };
 
 type Err = { ok: false; error: string };
@@ -45,7 +57,7 @@ export async function GET(request: Request) {
   // 1) Ownership check: queue item muss dem User gehören
   const { data: queueRow, error: queueErr } = await supabase
     .from("tracks_ai_queue")
-    .select("id, user_id, title")
+    .select("id, user_id, title, audio_hash")
     .eq("id", queueId)
     .maybeSingle();
 
@@ -61,7 +73,7 @@ export async function GET(request: Request) {
   // 2) Unlock check: darf nur bei vorhandenem Unlock "unlocked" sein
   const { data: unlockRow, error: unlockErr } = await supabase
     .from("track_ai_feedback_unlocks")
-    .select("id")
+    .select("id, audio_hash")
     .eq("queue_id", queueId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -70,7 +82,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "unlock_fetch_failed" } satisfies Err, { status: 500 });
   }
 
-  const unlocked = !!unlockRow?.id;
+  const queueHash = (queueRow as any)?.audio_hash as string | null;
+  const unlockHash = (unlockRow as any)?.audio_hash as string | null;
+
+  // Unlock gilt nur, wenn er zur exakt gleichen Audiodatei gehört.
+  const unlocked = !!unlockRow?.id && !!queueHash && !!unlockHash && queueHash === unlockHash;
 
   if (!unlocked) {
     return NextResponse.json(
@@ -78,6 +94,7 @@ export async function GET(request: Request) {
         ok: true,
         queue_id: queueId,
         queue_title: (queueRow.title as string | null) ?? null,
+        feedback_state: "locked",
         status: "locked",
         unlocked: false,
         payload: null,
@@ -86,15 +103,41 @@ export async function GET(request: Request) {
     );
   }
 
+  // If unlocked, check whether payload exists and matches the exact audio hash.
+  if (queueHash) {
+    const { data: payloadRow, error: payloadErr } = await supabase
+      .from("track_ai_feedback_payloads")
+      .select("audio_hash, payload")
+      .eq("queue_id", queueId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!payloadErr && payloadRow) {
+      const payloadHash = (payloadRow as any)?.audio_hash as string | null;
+      if (payloadHash && payloadHash === queueHash) {
+        return NextResponse.json({
+          ok: true,
+          queue_id: queueId,
+          queue_title: ((queueRow as any).title as string | null) ?? null,
+          feedback_state: "unlocked_ready",
+          status: "unlocked_ready",
+          unlocked: true,
+          payload: (payloadRow as any).payload ?? null,
+        } satisfies OkUnlockedReady);
+      }
+    }
+  }
+
   return NextResponse.json(
     {
       ok: true,
       queue_id: queueId,
       queue_title: (queueRow.title as string | null) ?? null,
+      feedback_state: "unlocked_pending",
       status: "unlocked_no_data",
       unlocked: true,
       payload: null,
-    } satisfies OkUnlocked,
+    } satisfies OkUnlockedPending,
     { status: 200 }
   );
 }
