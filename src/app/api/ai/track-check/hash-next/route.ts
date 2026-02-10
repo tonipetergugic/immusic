@@ -44,14 +44,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  if (queueRow.hash_status !== "pending" || queueRow.audio_hash !== null) {
+  // Allow retry if hashing previously errored, as long as no hash exists yet.
+  if (queueRow.audio_hash !== null) {
     return NextResponse.json({
       ok: true,
       skipped: true,
-      reason: "not_hash_pending",
+      reason: "already_hashed",
       hash_status: queueRow.hash_status,
     });
   }
+
+  if (queueRow.hash_status !== "pending" && queueRow.hash_status !== "error") {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "not_hashable_state",
+      hash_status: queueRow.hash_status,
+    });
+  }
+
+  // Normalize state for retry (best-effort)
+  await supabase
+    .from("tracks_ai_queue")
+    .update({ hash_status: "pending" })
+    .eq("id", queue_id)
+    .eq("user_id", user.id);
 
   // 4) Edge Function aufrufen (deterministisch, genau 1 Queue)
 const { data, error } = await supabase.functions.invoke(

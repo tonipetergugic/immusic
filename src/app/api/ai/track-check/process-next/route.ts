@@ -90,6 +90,15 @@ export async function POST() {
     .eq("status", "processing")
     .lt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
 
+  // Self-heal: if a hash exists, hash_status must be "done" (user-scoped)
+  await supabase
+    .from("tracks_ai_queue")
+    .update({ hash_status: "done" })
+    .eq("user_id", user.id)
+    .eq("status", "pending")
+    .not("audio_hash", "is", null)
+    .neq("hash_status", "done");
+
   // 1) Find oldest pending queue item for this user
   const { data: pendingItem, error: fetchErr } = await supabase
     .from("tracks_ai_queue")
@@ -107,6 +116,30 @@ export async function POST() {
   }
 
   if (!pendingItem) {
+    // If there is a pending item but hash is not ready yet, inform the client to keep waiting.
+    const { data: pendingUnhashed, error: unhashedErr } = await supabase
+      .from("tracks_ai_queue")
+      .select("id, hash_status, audio_hash")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!unhashedErr && pendingUnhashed?.id) {
+      const hashStatus = (pendingUnhashed.hash_status as string | null) ?? "pending";
+      const hasHash = pendingUnhashed.audio_hash != null;
+
+      if (hashStatus !== "done" || !hasHash) {
+        return NextResponse.json({
+          ok: true,
+          processed: false,
+          reason: hashStatus === "error" ? "hash_error" : "waiting_for_hash",
+          queue_id: pendingUnhashed.id,
+        });
+      }
+    }
+
     // If there is no pending item, check the most recent terminal state (approved/rejected)
     const { data: lastItem, error: lastErr } = await supabase
       .from("tracks_ai_queue")
@@ -127,7 +160,7 @@ export async function POST() {
       return NextResponse.json({ ok: true, processed: true, decision: "rejected", feedback_available: unlocked, queue_id: lastItem.id });
     }
 
-    return NextResponse.json({ ok: true, processed: false, reason: "no_pending" });
+    return NextResponse.json({ ok: true, processed: false, reason: "idle" });
   }
 
   // 2) Claim atomically-ish: pending -> processing (avoid double-processing)
