@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/getUser";
 
@@ -40,6 +41,16 @@ export default async function HomePage() {
       <div className="relative px-4 py-10 sm:px-6 sm:py-14">
         <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
           <div className="mt-16 flex flex-col items-center text-center">
+            <div className="mb-6 flex items-center justify-center">
+              <Image
+                src="/brand/logo.png"
+                alt="ImMusic"
+                width={120}
+                height={120}
+                priority
+                className="shadow-2xl shadow-black/40"
+              />
+            </div>
             <div className="rounded-full border border-white/10 bg-black/30 px-4 py-1 text-xs text-white/60 backdrop-blur">
               Early access
             </div>

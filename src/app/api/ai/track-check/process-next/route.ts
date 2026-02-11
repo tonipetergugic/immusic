@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -67,9 +68,96 @@ async function hasFeedbackUnlock(supabase: any, userId: string, queueId: string)
   if (error) return false;
   return !!data?.id;
 }
+ 
+type FeedbackPayloadV1 = {
+  issues: Array<{
+    t?: number; // seconds
+    title: string;
+    detail?: string;
+    severity?: "low" | "medium" | "high";
+  }>;
+  metrics: Record<string, number | string | null>;
+  recommendations: Array<{
+    title: string;
+    detail?: string;
+  }>;
+};
+
+async function writeFeedbackPayloadIfUnlocked(params: {
+  admin: ReturnType<typeof getSupabaseAdmin>;
+  userId: string;
+  queueId: string;
+  audioHash: string;
+  decision: Decision;
+}) {
+  const { admin, userId, queueId, audioHash, decision } = params;
+
+  // Only write payload if user has paid unlock (anti-leak + cost control)
+  const { data: unlock, error: unlockErr } = await admin
+    // Database typing may not include this table yet -> avoid "never" inference
+    .from("track_ai_feedback_unlocks" as any)
+    .select("id")
+    .eq("queue_id", queueId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const unlockRow = unlock as { id?: string } | null;
+
+  if (unlockErr || !unlockRow?.id) return;
+
+  const payload: FeedbackPayloadV1 =
+    decision === "approved"
+      ? {
+          issues: [],
+          metrics: { decision: "approved" },
+          recommendations: [
+            {
+              title: "No critical technical issues detected (DEV stub).",
+              detail:
+                "This is a placeholder result. The real DSP analyzer will add timecoded issues, metrics and recommendations.",
+            },
+          ],
+        }
+      : {
+          issues: [
+            {
+              title: "Technical listenability problems detected (DEV stub).",
+              detail:
+                "This is a placeholder result. The real DSP analyzer will provide precise causes and timecodes.",
+              severity: "high",
+            },
+          ],
+          metrics: { decision: "rejected" },
+          recommendations: [
+            {
+              title: "Fix technical problems and re-upload.",
+              detail:
+                "Common issues: corrupted file, silence/dropouts, extreme clipping, invalid format.",
+            },
+          ],
+        };
+
+  // Idempotent: one payload per queue_id (DB has UNIQUE(queue_id))
+  const adminClient = admin as any;
+
+  await adminClient
+    .from("track_ai_feedback_payloads")
+    .upsert(
+      {
+        queue_id: queueId,
+        user_id: userId,
+        audio_hash: audioHash,
+        payload_version: 1,
+        payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "queue_id" }
+    );
+}
 
 export async function POST() {
   const supabase = await createSupabaseServerClient();
+  const admin = getSupabaseAdmin();
 
   const {
     data: { user },
@@ -214,6 +302,15 @@ export async function POST() {
         .eq("id", queueId)
         .eq("user_id", user.id);
 
+      const audioHash = pendingItem.audio_hash as string;
+      await writeFeedbackPayloadIfUnlocked({
+        admin,
+        userId: user.id,
+        queueId,
+        audioHash,
+        decision: "rejected",
+      });
+
       const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
       return NextResponse.json({
         ok: true,
@@ -253,6 +350,15 @@ export async function POST() {
           .eq("id", queueId)
           .eq("user_id", user.id);
 
+        const audioHash = pendingItem.audio_hash as string;
+        await writeFeedbackPayloadIfUnlocked({
+          admin,
+          userId: user.id,
+          queueId,
+          audioHash,
+          decision: "approved",
+        });
+
         const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
         return NextResponse.json({
           ok: true,
@@ -281,6 +387,15 @@ export async function POST() {
       .update({ status: "approved", message: null })
       .eq("id", queueId)
       .eq("user_id", user.id);
+
+    const audioHash = pendingItem.audio_hash as string;
+    await writeFeedbackPayloadIfUnlocked({
+      admin,
+      userId: user.id,
+      queueId,
+      audioHash,
+      decision: "approved",
+    });
 
     const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
     return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: unlocked, queue_id: queueId });

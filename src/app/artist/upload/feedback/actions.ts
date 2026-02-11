@@ -3,6 +3,99 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+type FeedbackPayloadV1 = {
+  issues: Array<{
+    t?: number; // seconds
+    title: string;
+    detail?: string;
+    severity?: "low" | "medium" | "high";
+  }>;
+  metrics: Record<string, number | string | null>;
+  recommendations: Array<{
+    title: string;
+    detail?: string;
+  }>;
+};
+
+async function ensureFeedbackPayloadForTerminalQueue(params: {
+  queueId: string;
+  userId: string;
+  audioHash: string;
+}) {
+  const { queueId, userId, audioHash } = params;
+  const admin = getSupabaseAdmin() as any;
+
+  // If payload already exists -> nothing to do (idempotent)
+  const { data: existing, error: existingErr } = await admin
+    .from("track_ai_feedback_payloads")
+    .select("id")
+    .eq("queue_id", queueId)
+    .maybeSingle();
+
+  if (!existingErr && existing?.id) return;
+
+  // Load queue state (service-role, no RLS issues)
+  const { data: q, error: qErr } = await admin
+    .from("tracks_ai_queue")
+    .select("id, user_id, status, audio_hash")
+    .eq("id", queueId)
+    .maybeSingle();
+
+  if (qErr || !q) return;
+  if (q.user_id !== userId) return;
+  if (!q.audio_hash || q.audio_hash !== audioHash) return;
+
+  const status = String(q.status ?? "");
+  if (status !== "approved" && status !== "rejected") return;
+
+  const payload: FeedbackPayloadV1 =
+    status === "approved"
+      ? {
+          issues: [],
+          metrics: { decision: "approved" },
+          recommendations: [
+            {
+              title: "No critical technical issues detected (DEV stub).",
+              detail:
+                "This is a placeholder result. The real DSP analyzer will add timecoded issues, metrics and recommendations.",
+            },
+          ],
+        }
+      : {
+          issues: [
+            {
+              title: "Technical listenability problems detected (DEV stub).",
+              detail:
+                "This is a placeholder result. The real DSP analyzer will provide precise causes and timecodes.",
+              severity: "high",
+            },
+          ],
+          metrics: { decision: "rejected" },
+          recommendations: [
+            {
+              title: "Fix technical problems and re-upload.",
+              detail:
+                "Common issues: corrupted file, silence/dropouts, extreme clipping, invalid format.",
+            },
+          ],
+        };
+
+  await admin
+    .from("track_ai_feedback_payloads")
+    .upsert(
+      {
+        queue_id: queueId,
+        user_id: userId,
+        audio_hash: audioHash,
+        payload_version: 1,
+        payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "queue_id" }
+    );
+}
 
 export async function unlockPaidFeedbackAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
@@ -146,6 +239,14 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
 
     throw new Error(`Failed to deduct credit: ${msg || "unknown_error"}`);
   }
+
+  // If the queue is already terminal (approved/rejected), ensure payload exists immediately.
+  // This makes "unlock later" stable without relying on re-processing.
+  await ensureFeedbackPayloadForTerminalQueue({
+    queueId,
+    userId: user.id,
+    audioHash: queueAudioHash,
+  });
 
   // Security/Observability (rein beobachtend, darf niemals den Flow brechen)
   await logSecurityEvent({

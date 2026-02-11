@@ -30,6 +30,7 @@ type OkUnlockedReady = {
   feedback_state: "unlocked_ready";
   status: "unlocked_ready";
   unlocked: true;
+  payload_version: number;
   payload: any; // jsonb payload aus DB (später typisieren)
 };
 
@@ -107,7 +108,7 @@ export async function GET(request: Request) {
   if (queueHash) {
     const { data: payloadRow, error: payloadErr } = await supabase
       .from("track_ai_feedback_payloads")
-      .select("audio_hash, payload")
+      .select("audio_hash, payload_version, payload")
       .eq("queue_id", queueId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -122,6 +123,7 @@ export async function GET(request: Request) {
           feedback_state: "unlocked_ready",
           status: "unlocked_ready",
           unlocked: true,
+          payload_version: Number((payloadRow as any).payload_version ?? 1),
           payload: (payloadRow as any).payload ?? null,
         } satisfies OkUnlockedReady);
       }
