@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { writeFile, readFile, unlink } from "node:fs/promises";
+
+const execFileAsync = promisify(execFile);
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +24,7 @@ async function analyzeAudioStub(
 ): Promise<Decision> {
   try {
     const { data, error } = await supabase.storage
-      .from("tracks")
+      .from("ingest_wavs")
       .download(audioPath);
 
     if (error || !data) return "rejected";
@@ -54,6 +61,54 @@ async function analyzeAudioStub(
     return "approved";
   } catch {
     return "rejected";
+  }
+}
+
+function toHex(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    out += bytes[i].toString(16).padStart(2, "0");
+  }
+  return out;
+}
+
+async function sha256HexFromArrayBuffer(buf: ArrayBuffer) {
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return toHex(digest);
+}
+
+async function transcodeWavToMp3_320(wavBuffer: ArrayBuffer): Promise<Uint8Array> {
+  const inPath = join(tmpdir(), `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.wav`);
+  const outPath = join(tmpdir(), `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`);
+
+  try {
+    await writeFile(inPath, Buffer.from(wavBuffer));
+
+    // MP3 320 kbps CBR, stereo preserved, no video
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      inPath,
+      "-vn",
+      "-codec:a",
+      "libmp3lame",
+      "-b:a",
+      "320k",
+      "-compression_level",
+      "0",
+      outPath,
+    ]);
+
+    const mp3 = await readFile(outPath);
+    return new Uint8Array(mp3);
+  } finally {
+    // best-effort cleanup
+    try { await unlink(inPath); } catch {}
+    try { await unlink(outPath); } catch {}
   }
 }
 
@@ -178,23 +233,12 @@ export async function POST() {
     .eq("status", "processing")
     .lt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
 
-  // Self-heal: if a hash exists, hash_status must be "done" (user-scoped)
-  await supabase
-    .from("tracks_ai_queue")
-    .update({ hash_status: "done" })
-    .eq("user_id", user.id)
-    .eq("status", "pending")
-    .not("audio_hash", "is", null)
-    .neq("hash_status", "done");
-
   // 1) Find oldest pending queue item for this user
   const { data: pendingItem, error: fetchErr } = await supabase
     .from("tracks_ai_queue")
     .select("id, user_id, audio_path, title, status, hash_status, audio_hash")
     .eq("user_id", user.id)
     .eq("status", "pending")
-    .eq("hash_status", "done")
-    .not("audio_hash", "is", null)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -204,29 +248,9 @@ export async function POST() {
   }
 
   if (!pendingItem) {
-    // If there is a pending item but hash is not ready yet, inform the client to keep waiting.
-    const { data: pendingUnhashed, error: unhashedErr } = await supabase
-      .from("tracks_ai_queue")
-      .select("id, hash_status, audio_hash")
-      .eq("user_id", user.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!unhashedErr && pendingUnhashed?.id) {
-      const hashStatus = (pendingUnhashed.hash_status as string | null) ?? "pending";
-      const hasHash = pendingUnhashed.audio_hash != null;
-
-      if (hashStatus !== "done" || !hasHash) {
-        return NextResponse.json({
-          ok: true,
-          processed: false,
-          reason: hashStatus === "error" ? "hash_error" : "waiting_for_hash",
-          queue_id: pendingUnhashed.id,
-        });
-      }
-    }
+    // No pending items to process.
+    // (Hashing is no longer a prerequisite; analysis runs first.)
+    // Continue with terminal-state lookup below.
 
     // If there is no pending item, check the most recent terminal state (approved/rejected)
     const { data: lastItem, error: lastErr } = await supabase
@@ -258,8 +282,6 @@ export async function POST() {
     .eq("id", pendingItem.id)
     .eq("user_id", user.id)
     .eq("status", "pending")
-    .eq("hash_status", "done")
-    .not("audio_hash", "is", null)
     .select("id")
     .limit(1);
 
@@ -291,25 +313,82 @@ export async function POST() {
     // 3) Analyze (stub for now)
     const decision = await analyzeAudioStub(supabase, audioPath);
 
+    let audioHash = pendingItem.audio_hash as string | null;
+
+    if (!audioHash) {
+      try {
+        const { data: fileData, error: downloadErr } =
+          await supabase.storage.from("ingest_wavs").download(audioPath);
+
+        if (!downloadErr && fileData) {
+          const buf = await fileData.arrayBuffer();
+          audioHash = await sha256HexFromArrayBuffer(buf);
+
+          await supabase
+            .from("tracks_ai_queue")
+            .update({
+              audio_hash: audioHash,
+              hash_status: "done",
+              hashed_at: new Date().toISOString(),
+              hash_last_error: null,
+            })
+            .eq("id", queueId)
+            .eq("user_id", user.id);
+        } else {
+          await supabase
+            .from("tracks_ai_queue")
+            .update({
+              hash_status: "error",
+              hash_attempts: (pendingItem as any).hash_attempts + 1,
+              hash_last_error: "download_failed",
+            })
+            .eq("id", queueId)
+            .eq("user_id", user.id);
+        }
+      } catch {
+        await supabase
+          .from("tracks_ai_queue")
+          .update({
+            hash_status: "error",
+            hash_attempts: (pendingItem as any).hash_attempts + 1,
+            hash_last_error: "hash_failed",
+          })
+          .eq("id", queueId)
+          .eq("user_id", user.id);
+      }
+    }
+
     if (decision === "rejected") {
+      // Cleanup WAV (best-effort). Rejects must not leave ingest artifacts behind.
+      try {
+        if (audioPath) {
+          await supabase.storage.from("ingest_wavs").remove([audioPath]);
+        }
+      } catch {
+        // ignore cleanup errors
+      }
+
       await supabase
         .from("tracks_ai_queue")
         .update({
           status: "rejected",
           rejected_at: new Date().toISOString(),
+          reject_reason: "technical",
           message: null,
         })
         .eq("id", queueId)
         .eq("user_id", user.id);
 
-      const audioHash = pendingItem.audio_hash as string;
-      await writeFeedbackPayloadIfUnlocked({
-        admin,
-        userId: user.id,
-        queueId,
-        audioHash,
-        decision: "rejected",
-      });
+      const finalAudioHash = audioHash as string;
+      if (finalAudioHash) {
+        await writeFeedbackPayloadIfUnlocked({
+          admin,
+          userId: user.id,
+          queueId,
+          audioHash: finalAudioHash,
+          decision: "rejected",
+        });
+      }
 
       const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
       return NextResponse.json({
@@ -333,12 +412,137 @@ export async function POST() {
       return NextResponse.json({ ok: true, processed: true, decision: "rejected", feedback_available: unlocked, queue_id: queueId });
     }
 
+    // Placeholder for transcoding output path (WAV -> MP3 happens in next step)
+    const safeTitleOut = (title || "untitled")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    const mp3Path = `${user.id}/${safeTitleOut}-${queueId}.mp3`;
+
+    // Transcode WAV (ingest_wavs) -> MP3 (tracks)
+    const { data: wavBlob, error: wavDlErr } = await supabase.storage
+      .from("ingest_wavs")
+      .download(audioPath);
+
+    if (wavDlErr || !wavBlob) {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({ status: "pending", message: null })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      return NextResponse.json({ ok: false, error: "wav_download_failed" }, { status: 500 });
+    }
+
+    const wavBuf = await wavBlob.arrayBuffer();
+
+    // (Optional safety) reject empty/corrupt
+    if (!wavBuf || wavBuf.byteLength <= 0) {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({ status: "rejected", message: null, rejected_at: new Date().toISOString() })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+      return NextResponse.json({ ok: true, processed: true, decision: "rejected", feedback_available: unlocked, queue_id: queueId });
+    }
+
+    let mp3Bytes: Uint8Array;
+    try {
+      mp3Bytes = await transcodeWavToMp3_320(wavBuf);
+    } catch {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({ status: "pending", message: null })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      return NextResponse.json({ ok: false, error: "transcode_failed" }, { status: 500 });
+    }
+
+    const { error: mp3UpErr } = await supabase.storage
+      .from("tracks")
+      .upload(mp3Path, new Blob([Buffer.from(mp3Bytes)], { type: "audio/mpeg" }), {
+        contentType: "audio/mpeg",
+        upsert: false,
+      });
+
+    if (mp3UpErr) {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({ status: "pending", message: null })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      return NextResponse.json({ ok: false, error: "mp3_upload_failed" }, { status: 500 });
+    }
+
+    // Delete WAV (best-effort). If it fails, we still proceed; cleanup can be retried later.
+    await supabase.storage.from("ingest_wavs").remove([audioPath]);
+
+    const finalAudioHash = audioHash as string | null;
+
+    if (!finalAudioHash) {
+      // Should not happen because we hash after analysis, but keep it safe.
+      await supabase
+        .from("tracks_ai_queue")
+        .update({ status: "pending", message: null })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      return NextResponse.json({ ok: false, error: "missing_audio_hash" }, { status: 500 });
+    }
+
+    // Duplicate protection: same master audio must not be uploaded twice
+    const { data: existingTrack, error: existingErr } = await supabase
+      .from("tracks")
+      .select("id")
+      .eq("audio_hash", finalAudioHash)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingErr) {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({ status: "pending", message: null })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      return NextResponse.json({ ok: false, error: "duplicate_check_failed" }, { status: 500 });
+    }
+
+    if (existingTrack?.id) {
+      await supabase
+        .from("tracks_ai_queue")
+        .update({
+          status: "rejected",
+          rejected_at: new Date().toISOString(),
+          reject_reason: "duplicate",
+          message: null,
+        })
+        .eq("id", queueId)
+        .eq("user_id", user.id);
+
+      const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+      return NextResponse.json({
+        ok: true,
+        processed: true,
+        decision: "rejected",
+        reason: "duplicate",
+        feedback_available: unlocked,
+        queue_id: queueId,
+      });
+    }
+
     const { error: trackError } = await supabase.from("tracks").insert({
       artist_id: user.id,
-      audio_path: audioPath,
+      audio_path: mp3Path,
       title,
       status: "approved",
       source_queue_id: queueId,
+      audio_hash: finalAudioHash,
     });
 
     if (trackError) {
@@ -346,18 +550,19 @@ export async function POST() {
       if ((trackError as any).code === "23505") {
         await supabase
           .from("tracks_ai_queue")
-          .update({ status: "approved", message: null })
+          .update({ status: "approved", message: null, audio_path: mp3Path })
           .eq("id", queueId)
           .eq("user_id", user.id);
 
-        const audioHash = pendingItem.audio_hash as string;
-        await writeFeedbackPayloadIfUnlocked({
-          admin,
-          userId: user.id,
-          queueId,
-          audioHash,
-          decision: "approved",
-        });
+        if (finalAudioHash) {
+          await writeFeedbackPayloadIfUnlocked({
+            admin,
+            userId: user.id,
+            queueId,
+            audioHash: finalAudioHash,
+            decision: "approved",
+          });
+        }
 
         const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
         return NextResponse.json({
@@ -384,18 +589,19 @@ export async function POST() {
 
     await supabase
       .from("tracks_ai_queue")
-      .update({ status: "approved", message: null })
+      .update({ status: "approved", message: null, audio_path: mp3Path })
       .eq("id", queueId)
       .eq("user_id", user.id);
 
-    const audioHash = pendingItem.audio_hash as string;
-    await writeFeedbackPayloadIfUnlocked({
-      admin,
-      userId: user.id,
-      queueId,
-      audioHash,
-      decision: "approved",
-    });
+    if (finalAudioHash) {
+      await writeFeedbackPayloadIfUnlocked({
+        admin,
+        userId: user.id,
+        queueId,
+        audioHash: finalAudioHash,
+        decision: "approved",
+      });
+    }
 
     const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
     return NextResponse.json({ ok: true, processed: true, decision: "approved", feedback_available: unlocked, queue_id: queueId });

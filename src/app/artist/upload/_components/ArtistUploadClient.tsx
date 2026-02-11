@@ -6,6 +6,117 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
 import { submitToQueueAction } from "../actions";
 
+type WavValidation =
+  | { ok: true; durationSeconds: number; sampleRate: number; channels: number; bitsPerSample: number }
+  | { ok: false; reason: string };
+
+function readFourCC(view: DataView, offset: number) {
+  return String.fromCharCode(
+    view.getUint8(offset),
+    view.getUint8(offset + 1),
+    view.getUint8(offset + 2),
+    view.getUint8(offset + 3)
+  );
+}
+
+async function validateWavFile(file: File): Promise<WavValidation> {
+  // Read entire file (your dev WAVs are small; robust chunk scanning needs more than the first bytes)
+  const buf = await file.arrayBuffer();
+  if (buf.byteLength < 44) {
+    return { ok: false, reason: "Invalid WAV: file too small." };
+  }
+
+  const view = new DataView(buf);
+
+  const riff = readFourCC(view, 0);
+  const wave = readFourCC(view, 8);
+  if (riff !== "RIFF" || wave !== "WAVE") {
+    return { ok: false, reason: "Invalid WAV: missing RIFF/WAVE header." };
+  }
+
+  // Scan chunks: "fmt " and "data"
+  let offset = 12;
+  let fmtFound = false;
+  let dataFound = false;
+
+  let audioFormat: number | null = null;
+  let channels: number | null = null;
+  let sampleRate: number | null = null;
+  let bitsPerSample: number | null = null;
+  let dataBytes: number | null = null;
+
+  while (offset + 8 <= view.byteLength) {
+    const id = readFourCC(view, offset);
+    const size = view.getUint32(offset + 4, true);
+    const chunkDataStart = offset + 8;
+
+    // Basic bounds check
+    if (chunkDataStart + size > view.byteLength) break;
+
+    if (id === "fmt ") {
+      // PCM fmt chunk minimal size is 16
+      if (size < 16) return { ok: false, reason: "Invalid WAV: corrupt fmt chunk." };
+
+      audioFormat = view.getUint16(chunkDataStart + 0, true);
+      channels = view.getUint16(chunkDataStart + 2, true);
+      sampleRate = view.getUint32(chunkDataStart + 4, true);
+      bitsPerSample = view.getUint16(chunkDataStart + 14, true);
+
+      fmtFound = true;
+    } else if (id === "data") {
+      dataBytes = size;
+      dataFound = true;
+    }
+
+    // Chunks are padded to even sizes
+    offset = chunkDataStart + size + (size % 2);
+    if (fmtFound && dataFound) break;
+  }
+
+  if (!fmtFound || audioFormat == null || channels == null || sampleRate == null || bitsPerSample == null) {
+    return { ok: false, reason: "Invalid WAV: missing fmt chunk." };
+  }
+  if (!dataFound || dataBytes == null) {
+    return { ok: false, reason: "Invalid WAV: missing data chunk." };
+  }
+
+  // Enforce: PCM only (16/24-bit)
+  if (audioFormat !== 1) {
+    return { ok: false, reason: "Unsupported WAV: only PCM is allowed (16/24-bit)." };
+  }
+
+  // Enforce: stereo
+  if (channels !== 2) {
+    return { ok: false, reason: "Unsupported WAV: must be stereo (2 channels)." };
+  }
+
+  // Enforce: sample rate
+  if (sampleRate !== 44100 && sampleRate !== 48000) {
+    return { ok: false, reason: "Unsupported WAV: sample rate must be 44.1 kHz or 48 kHz." };
+  }
+
+  // Enforce: bit depth
+  if (bitsPerSample !== 16 && bitsPerSample !== 24) {
+    return { ok: false, reason: "Unsupported WAV: bit depth must be 16-bit or 24-bit." };
+  }
+
+  // Duration estimate from data bytes
+  const bytesPerSample = bitsPerSample / 8;
+  const bytesPerSecond = sampleRate * channels * bytesPerSample;
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) {
+    return { ok: false, reason: "Invalid WAV: cannot compute duration." };
+  }
+
+  const durationSeconds = dataBytes / bytesPerSecond;
+
+  // Enforce: max 10 minutes
+  if (durationSeconds > 600.0) {
+    return { ok: false, reason: "Track too long: max length is 10 minutes." };
+  }
+
+  return { ok: true, durationSeconds, sampleRate, channels, bitsPerSample };
+}
+
 type Props = { userId: string };
 
 function formatMB(bytes: number) {
@@ -45,7 +156,7 @@ export default function ArtistUploadClient({ userId }: Props) {
     }
 
     const ext = (next.name.split(".").pop() || "").toLowerCase();
-    if (ext !== "mp3") {
+    if (ext !== "wav") {
       setFileError(true);
       setFile(null);
       setResetSignal((s) => s + 1);
@@ -59,19 +170,37 @@ export default function ArtistUploadClient({ userId }: Props) {
   async function handleUpload() {
     if (!file) return;
 
+    // Validate WAV header BEFORE upload (enforcement)
+    try {
+      const v = await validateWavFile(file);
+      if (!v.ok) {
+        alert(v.reason);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Could not read WAV file. Please re-export and try again.");
+      return;
+    }
+
     const extCheck = (file.name.split(".").pop() || "").toLowerCase();
-    if (extCheck !== "mp3") {
-      alert("Only MP3 files are supported. Please export your track as MP3.");
+    if (extCheck !== "wav") {
+      alert("Only WAV files are supported. Please export your track as WAV.");
+      return;
+    }
+
+    if (!title.trim()) {
+      alert("Please enter a track title.");
       return;
     }
 
     setUploading(true);
 
     const safeTitle = slugify(title.trim()) || "untitled";
-    const filePath = `${userId}/${safeTitle}-${randomId()}.mp3`;
+    const filePath = `${userId}/${safeTitle}-${randomId()}.wav`;
 
-    const { error } = await supabase.storage.from("tracks").upload(filePath, file, {
-      contentType: "audio/mpeg",
+    const { error } = await supabase.storage.from("ingest_wavs").upload(filePath, file, {
+      contentType: "audio/wav",
       upsert: false,
     });
 
@@ -139,11 +268,10 @@ export default function ArtistUploadClient({ userId }: Props) {
         <div className="mt-6">
           <div className="mt-8 text-lg font-semibold text-white">Audio file</div>
           <p className="mt-2 text-sm text-[#B3B3B3]">
-            Recommended for now: <span className="text-white/80">MP3 (320 kbps)</span>, 44.1 kHz or 48 kHz, stereo.
+            Required: <span className="text-white/80">WAV (Master)</span>, 44.1 kHz or 48 kHz, 16-bit or 24-bit, stereo, max 10 min.
           </p>
           <p className="mt-2 text-xs leading-relaxed text-white/60">
-            Most streaming platforms re-encode audio into efficient streaming formats. A high-quality MP3 (320 kbps) is
-            perceptually very close to the original and fully sufficient for streaming.
+            IMUSIC uses lossless WAV ingest for reliable analysis. After quality control, the system transcodes to MP3 for streaming.
           </p>
 
           <div className="mt-3">
@@ -154,7 +282,7 @@ export default function ArtistUploadClient({ userId }: Props) {
             />
             {fileError && (
               <p className="mt-2 text-sm text-red-400/90">
-                Please upload a valid MP3 file (320 kbps recommended).
+                Please upload a valid WAV file.
               </p>
             )}
           </div>
@@ -170,13 +298,13 @@ export default function ArtistUploadClient({ userId }: Props) {
                   </div>
                 </div>
 
-                {(file.name.split(".").pop() || "").toLowerCase() === "mp3" ? (
+                {(file.name.split(".").pop() || "").toLowerCase() === "wav" ? (
                   <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
-                    MP3 detected
+                    WAV detected
                   </span>
                 ) : (
                   <span className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
-                    MP3 320 kbps recommended
+                    WAV required
                   </span>
                 )}
               </div>

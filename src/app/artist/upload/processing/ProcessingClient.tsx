@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type ApiResponse =
   | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean; queue_id?: string }
-  | { ok: true; processed: true; decision: "rejected"; feedback_available?: boolean; queue_id?: string }
+  | { ok: true; processed: true; decision: "rejected"; reason?: string; feedback_available?: boolean; queue_id?: string }
   | { ok: true; processed: false; reason: string; queue_id?: string }
   | { ok: false; error: string };
 
@@ -14,19 +14,18 @@ type Props = { credits: number };
 export default function ProcessingClient({ credits }: Props) {
   const router = useRouter();
   const [statusText, setStatusText] = useState<string>("Processing your track…");
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [rejected, setRejected] = useState(false);
   const [approved, setApproved] = useState(false);
   const [canFeedback, setCanFeedback] = useState(false);
   const [queueId, setQueueId] = useState<string | null>(null);
-  const [hashError, setHashError] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   const pollCountRef = useRef(0);
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
-  const hashKickstartedRef = useRef(false);
 
   useEffect(() => {
     const POLL_MS = 5000;
@@ -40,12 +39,11 @@ export default function ProcessingClient({ credits }: Props) {
     setRejected(false);
     setApproved(false);
     setCanFeedback(false);
-    setHashError(false);
     setStatusText("Processing your track…");
+    setRejectReason(null);
 
     pollCountRef.current = 0;
     startedAtRef.current = Date.now();
-    hashKickstartedRef.current = false;
 
     async function tick() {
       try {
@@ -75,36 +73,7 @@ export default function ProcessingClient({ credits }: Props) {
           setQueueId((data as any).queue_id);
         }
 
-        // Auto-recover: if hash not ready, kick off hash-next once (best-effort)
-        if (
-          data.processed === false &&
-          (data as any).reason === "waiting_for_hash" &&
-          typeof (data as any).queue_id === "string" &&
-          !hashKickstartedRef.current
-        ) {
-          hashKickstartedRef.current = true;
-          try {
-            await fetch("/api/ai/track-check/hash-next", {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ queue_id: (data as any).queue_id }),
-            });
-          } catch {
-            // best-effort
-          }
-        }
-
         if (data.processed === false) {
-          const reason = (data as any).reason as string | undefined;
-
-          if (reason === "hash_error") {
-            setHashError(true);
-            setStatusText("Hashing failed. Please retry.");
-            // Stop polling here: user must click "Retry Hash" (avoids noisy loops)
-            return;
-          }
-
-          setHashError(false);
           setStatusText("Queued… processing will start shortly.");
           timerRef.current = window.setTimeout(tick, POLL_MS);
           return;
@@ -112,7 +81,6 @@ export default function ProcessingClient({ credits }: Props) {
 
         if (data.decision === "approved") {
           setApproved(true);
-          setHashError(false);
           setCanFeedback(!!data.feedback_available);
           setStatusText("Approved. Your track is now in My Tracks.");
           return; // stop polling
@@ -120,8 +88,16 @@ export default function ProcessingClient({ credits }: Props) {
 
         // rejected
         setRejected(true);
-        setHashError(false);
-        setStatusText("Your track was not approved due to technical listenability issues.");
+
+        const rr = (data as any).reason as string | undefined;
+        setRejectReason(rr ?? null);
+
+        if (rr === "duplicate") {
+          setStatusText("This recording already exists on IMUSIC. Re-upload is not allowed.");
+        } else {
+          setStatusText("Your track was not approved due to technical listenability issues.");
+        }
+
         // stop polling
       } catch {
         if (cancelled) return;
@@ -146,40 +122,6 @@ export default function ProcessingClient({ credits }: Props) {
           {statusText}
         </p>
 
-        {hashError && (
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-              onClick={async () => {
-                if (!queueId) return;
-                setHashError(false);
-                setStatusText("Retrying hash…");
-                try {
-                  await fetch("/api/ai/track-check/hash-next", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ queue_id: queueId }),
-                  });
-                } catch {
-                  setHashError(true);
-                  setStatusText("Hashing failed. Please retry.");
-                }
-              }}
-            >
-              Retry Hash
-            </button>
-
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-              onClick={() => router.replace("/artist/upload")}
-            >
-              Back to Upload
-            </button>
-          </div>
-        )}
-
         {timedOut && !approved && !rejected && (
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -203,7 +145,9 @@ export default function ProcessingClient({ credits }: Props) {
         {rejected && (
           <div className="mt-6 text-white/70">
             <p className="mb-3">
-              Der Track konnte aufgrund technischer Hörbarkeitsprobleme nicht freigegeben werden.
+              {rejectReason === "duplicate"
+                ? "Diese Aufnahme existiert bereits auf IMUSIC. Ein erneuter Upload ist nicht erlaubt."
+                : "Der Track konnte aufgrund technischer Hörbarkeitsprobleme nicht freigegeben werden."}
             </p>
             {credits >= 1 ? (
               <button

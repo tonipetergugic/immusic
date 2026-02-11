@@ -50,7 +50,8 @@ export default function AudioDropzone({
   function handleClick() {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "audio/mpeg";
+    // WAV ingest only (Master upload)
+    input.accept = ".wav,audio/wav";
     input.onchange = () => handleFiles(input.files);
     input.click();
   }
