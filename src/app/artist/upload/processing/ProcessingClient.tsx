@@ -100,7 +100,7 @@ export default function ProcessingClient({ credits }: Props) {
           if (reason === "hash_error") {
             setHashError(true);
             setStatusText("Hashing failed. Please retry.");
-            timerRef.current = window.setTimeout(tick, POLL_MS);
+            // Stop polling here: user must click "Retry Hash" (avoids noisy loops)
             return;
           }
 
