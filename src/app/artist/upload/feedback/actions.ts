@@ -39,12 +39,27 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 
   const decision = status === "approved" ? "approved" : "rejected";
 
+  const { data: pm, error: pmErr } = await admin
+    .from("track_ai_private_metrics")
+    .select("integrated_lufs,true_peak_db_tp")
+    .eq("queue_id", queueId)
+    .maybeSingle();
+
+  if (pmErr) {
+    console.error("[TERMINAL] private metrics read failed:", pmErr);
+    throw new Error("private_metrics_read_failed");
+  }
+
+  if (!pm) {
+    throw new Error("private_metrics_missing");
+  }
+
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash,
     decision,
-    integratedLufs: null,
-    truePeakDbTp: null,
+    integratedLufs: pm.integrated_lufs,
+    truePeakDbTp: pm.true_peak_db_tp,
   });
 
   await admin
@@ -63,6 +78,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 }
 
 export async function unlockPaidFeedbackAction(formData: FormData) {
+  const AI_DEBUG = process.env.AI_DEBUG === "1";
   const supabase = await createSupabaseServerClient();
 
   const queueId = String(formData.get("queue_id") ?? "").trim();
@@ -82,7 +98,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   // 1) Ownership check: queue item muss dem User gehören
   const { data: queueRow, error: queueErr } = await supabase
     .from("tracks_ai_queue")
-    .select("id, user_id, audio_hash")
+    .select("id, user_id, audio_hash, status")
     .eq("id", queueId)
     .maybeSingle();
 
@@ -125,26 +141,63 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     throw new Error("Failed to persist unlock: missing_id");
   }
 
-  // 3) Trigger analyzer again AFTER unlock so payload gets written (anti-leak safe)
-  const origin =
-    (process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.NEXT_PUBLIC_VERCEL_URL &&
-        `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`) ||
-      "http://localhost:3000") as string;
+  // Read server-only private metrics and write deterministic V2 payload (no re-run, no HTTP self-call)
+  const admin = getSupabaseAdmin();
+  const userId = user.id;
+  const audioHash = queueAudioHash;
+  const status = String((queueRow as any)?.status ?? "");
 
-  const res = await fetch(`${origin}/api/ai/track-check/process-next`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ queue_id: queueId }),
-    cache: "no-store",
+  type PrivateMetricsRow = {
+    integrated_lufs: number;
+    true_peak_db_tp: number;
+    title: string;
+  };
+
+  const { data: pm, error: pmErr } = await admin
+    .from("track_ai_private_metrics")
+    .select("integrated_lufs,true_peak_db_tp,title")
+    .eq("queue_id", queueId)
+    .maybeSingle<PrivateMetricsRow>();
+
+  if (pmErr) {
+    console.error("[UNLOCK] private metrics read failed:", pmErr);
+    throw new Error("private_metrics_read_failed");
+  }
+
+  if (!pm) {
+    throw new Error("private_metrics_missing");
+  }
+
+  const decision = status === "approved" ? "approved" : "rejected";
+
+  if (!audioHash) {
+    throw new Error("audio_hash_missing");
+  }
+
+  const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
+    queueId,
+    audioHash,
+    decision,
+    integratedLufs: pm.integrated_lufs,
+    truePeakDbTp: pm.true_peak_db_tp,
   });
 
-  if (!res.ok) {
-    // Do not fail the unlock; payload can be generated on next processing run
-    console.error("[UNLOCK] post-unlock process-next failed", {
-      queueId,
-      status: res.status,
-    });
+  const { error: payloadErr } = await (admin as any)
+    .from("track_ai_feedback_payloads")
+    .upsert(
+      {
+        queue_id: queueId,
+        user_id: userId,
+        audio_hash: audioHash,
+        payload_version: 2,
+        payload,
+      },
+      { onConflict: "queue_id" }
+    );
+
+  if (payloadErr) {
+    console.error("[UNLOCK] payload upsert failed:", payloadErr);
+    throw new Error("payload_upsert_failed");
   }
 
   // 3) Credits prüfen (optional, aber UX: sauberer Redirect statt RPC-Exception)

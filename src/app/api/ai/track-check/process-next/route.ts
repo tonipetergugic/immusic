@@ -17,6 +17,8 @@ import { buildFeedbackPayloadV2Mvp, type FeedbackPayloadV2 } from "@/lib/ai/feed
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const AI_DEBUG = process.env.AI_DEBUG === "1";
+
 type Decision = "approved" | "rejected";
 
 /**
@@ -64,7 +66,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
 
   const queueAudioHash = queueRow?.audio_hash ?? null;
   if (queueErr || !queueAudioHash) {
-    console.log("[PAYLOAD DEBUG] abort: queue hash missing", {
+    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] abort: queue hash missing", {
       queueId,
       queueErr: queueErr ? String((queueErr as any).message ?? queueErr) : null,
       queueAudioHash,
@@ -85,7 +87,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
   const unlockRow = unlock as { id?: string } | null;
 
   if (unlockErr || !unlockRow?.id) {
-    console.log("[PAYLOAD DEBUG] abort: unlock missing", {
+    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] abort: unlock missing", {
       queueId,
       userId,
       queueAudioHash,
@@ -103,7 +105,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
     truePeakDbTp,
   });
 
-  console.log("[PAYLOAD DEBUG] built loudness:", {
+  if (AI_DEBUG) console.log("[PAYLOAD DEBUG] built loudness:", {
     queueId,
     queueAudioHash,
     integratedLufs,
@@ -576,9 +578,10 @@ export async function POST() {
       truePeakDb = r.truePeakDbTp;
       integratedLufs = r.integratedLufs;
 
-      // Debug-Ausgabe: nur im Server-Log sichtbar
-      console.log("[AI-CHECK] LUFS:", integratedLufs);
-      console.log("[AI-CHECK] TruePeak:", truePeakDb);
+      if (AI_DEBUG) {
+        console.log("[AI-CHECK] LUFS:", integratedLufs);
+        console.log("[AI-CHECK] TruePeak:", truePeakDb);
+      }
     } catch (err: any) {
       // Infra/runtime issue => do NOT reject user audio.
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -596,6 +599,37 @@ export async function POST() {
       );
 
       return NextResponse.json({ ok: false, error: "ebur128_detect_failed" }, { status: 500 });
+    }
+
+    // 3.5.1) Persist private metrics (server-only truth). Must happen before any cleanup/terminal return.
+    if (!Number.isFinite(truePeakDb) || !Number.isFinite(integratedLufs)) {
+      await resetQueueToPending({ supabase, userId: user.id, queueId });
+      return NextResponse.json({ ok: false, error: "private_metrics_invalid" }, { status: 500 });
+    }
+
+    {
+      const adminClient = admin as any;
+
+      const titleSnapshot = title && title.length > 0 ? title : "untitled";
+
+      const { error: metricsErr } = await adminClient
+        .from("track_ai_private_metrics")
+        .upsert(
+          {
+            queue_id: queueId,
+            title: titleSnapshot,
+            integrated_lufs: integratedLufs,
+            true_peak_db_tp: truePeakDb,
+            analyzed_at: new Date().toISOString(),
+          },
+          { onConflict: "queue_id" }
+        );
+
+      if (metricsErr) {
+        console.error("[AI-CHECK] private metrics upsert failed:", metricsErr);
+        await resetQueueToPending({ supabase, userId: user.id, queueId });
+        return NextResponse.json({ ok: false, error: "private_metrics_upsert_failed" }, { status: 500 });
+      }
     }
 
     // True Peak reject only on extreme cases
@@ -763,7 +797,7 @@ export async function POST() {
       });
 
       const finalAudioHash = audioHash as string;
-      console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
+      if (AI_DEBUG) console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
         integratedLufs,
         truePeakDb,
         decision,
@@ -915,7 +949,7 @@ export async function POST() {
 
         await bestEffortRemoveIngestWav({ supabase, audioPath });
 
-        console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
+        if (AI_DEBUG) console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
           integratedLufs,
           truePeakDb,
           decision,
@@ -962,7 +996,7 @@ export async function POST() {
 
     await bestEffortRemoveIngestWav({ supabase, audioPath });
 
-    console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
+    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
       integratedLufs,
       truePeakDb,
       decision,
