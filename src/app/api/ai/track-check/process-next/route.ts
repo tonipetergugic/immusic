@@ -794,8 +794,8 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "mp3_upload_failed" }, { status: 500 });
     }
 
-    // Delete WAV (best-effort). If it fails, we still proceed; cleanup can be retried later.
-    await bestEffortRemoveIngestWav({ supabase, audioPath });
+    // IMPORTANT: Defer ingest WAV cleanup until we reach a terminal state (approved/rejected).
+    // Otherwise retries after later failures (e.g. DB insert) would break.
 
     const finalAudioHash = audioHash as string | null;
 
@@ -830,6 +830,8 @@ export async function POST() {
 
         // If it's the global audio hash unique constraint => controlled duplicate rejection
         if (isAudioHashUnique && !isQueueUnique) {
+          await bestEffortRemoveIngestWav({ supabase, audioPath });
+
           await markQueueRejected({
             supabase,
             userId: user.id,
@@ -856,6 +858,8 @@ export async function POST() {
           queueId,
           audio_path: mp3Path,
         });
+
+        await bestEffortRemoveIngestWav({ supabase, audioPath });
 
         if (finalAudioHash) {
           await writeFeedbackPayloadIfUnlocked({
@@ -892,6 +896,8 @@ export async function POST() {
       queueId,
       audio_path: mp3Path,
     });
+
+    await bestEffortRemoveIngestWav({ supabase, audioPath });
 
     if (finalAudioHash) {
       await writeFeedbackPayloadIfUnlocked({
