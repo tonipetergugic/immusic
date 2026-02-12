@@ -95,7 +95,7 @@ export default function ProcessingClient({ credits }: Props) {
         if (rr === "duplicate_audio" || rr === "duplicate") {
           setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
         } else {
-          setStatusText("Your track was not approved due to technical listenability issues.");
+          setStatusText("This audio file currently does not meet the platform's technical minimum requirements (e.g. loudness, peak levels, dropouts). You can unlock a detailed AI analysis to receive exact timecodes and improvement suggestions.");
         }
 
         // stop polling
@@ -149,7 +149,7 @@ export default function ProcessingClient({ credits }: Props) {
             <p className="mb-3">
               {rejectReason === "duplicate_audio" || rejectReason === "duplicate"
                 ? "This audio already exists on IMUSIC. Uploading it again is not allowed."
-                : "Your track was not approved due to technical listenability issues."}
+                : "This audio file currently does not meet the platform's technical minimum requirements (e.g. loudness, peak levels, dropouts). You can unlock a detailed AI analysis to receive exact timecodes and improvement suggestions."}
             </p>
             {rejectReason === "duplicate_audio" || rejectReason === "duplicate" ? (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">

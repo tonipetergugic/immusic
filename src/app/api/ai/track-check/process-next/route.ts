@@ -10,6 +10,7 @@ import {
   ffmpegDetectDcOffsetAbsMean,
   ffmpegDetectTruePeakAndIntegratedLufs,
   ffmpegDetectMaxSamplePeakDbfs,
+  ffmpegDetectRmsLevelDbfs,
   ffmpegDetectClippedSampleCount,
   transcodeWavFileToMp3_320,
   writeTempWav,
@@ -578,6 +579,7 @@ export async function POST() {
     let integratedLufs: number;
     let maxSamplePeakDbfs: number;
     let clippedSampleCount: number;
+    let crestFactorDb: number = NaN;
 
     try {
       const tEbur = nowNs();
@@ -592,9 +594,17 @@ export async function POST() {
           ? Math.trunc(clippedSampleCountRaw)
           : 0;
 
+      const rmsDbfs = await ffmpegDetectRmsLevelDbfs({ inPath: tmpWavPath });
+      crestFactorDb =
+        Number.isFinite(truePeakDb) && Number.isFinite(rmsDbfs) ? truePeakDb - rmsDbfs : NaN;
+
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
         console.log("[AI-CHECK] TruePeak:", truePeakDb);
+      }
+      if (process.env.AI_DEBUG === "1") {
+        console.log("[AI-CHECK] RMS dBFS:", rmsDbfs);
+        console.log("[AI-CHECK] Crest dB:", crestFactorDb);
       }
     } catch (err: any) {
       // Infra/runtime issue => do NOT reject user audio.
@@ -642,6 +652,7 @@ export async function POST() {
             true_peak_db_tp: truePeakDb,
             max_sample_peak_dbfs: maxSamplePeakDbfs,
             clipped_sample_count: Math.trunc(clippedSampleCount),
+            crest_factor_db: crestFactorDb,
             analyzed_at: new Date().toISOString(),
           },
           { onConflict: "queue_id" }
@@ -654,8 +665,8 @@ export async function POST() {
       }
     }
 
-    // True Peak reject only on extreme cases
-    if (Number.isFinite(truePeakDb) && truePeakDb > 3.0) {
+    // True Peak hard-fail: any overs above 0.0 dBTP (risk of clipping after encoding)
+    if (Number.isFinite(truePeakDb) && truePeakDb > 0.0) {
       return await hardFailRejectTechnical({
         supabase,
         userId: user.id,
@@ -678,8 +689,8 @@ export async function POST() {
         });
       }
 
-      // Extremely loud => likely broken/clipped export
-      if (integratedLufs > -5) {
+      // Integrated LUFS hard-fail only for extreme loudness (> -4.0 LUFS)
+      if (Number.isFinite(integratedLufs) && integratedLufs > -4.0) {
         return await hardFailRejectTechnical({
           supabase,
           userId: user.id,

@@ -70,6 +70,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
   integratedLufs?: number | null;
   truePeakDbTp?: number | null;
   clippedSampleCount?: number | null;
+  crestFactorDb?: number | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -78,6 +79,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     integratedLufs = null,
     truePeakDbTp = null,
     clippedSampleCount = null,
+    crestFactorDb = null,
   } = params;
 
   const highlights: string[] = [];
@@ -89,15 +91,48 @@ export function buildFeedbackPayloadV2Mvp(params: {
     highlights.push("Technical listenability problems detected (hard-fail).");
   }
 
-  if (typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) && truePeakDbTp > 0) {
-    highlights.push("True Peak is above 0.0 dBTP (risk of clipping after encoding).");
-    recommendations.push({
-      id: "rec_true_peak_headroom",
-      severity: "critical",
-      title: "Reduce true peak overs",
-      why: "True Peak exceeds 0.0 dBTP, which can cause clipping after encoding/normalization.",
-      how: ["Lower limiter ceiling to -1.0 dBTP", "Reduce input gain into the limiter by 1–2 dB"],
-    });
+  if (typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp)) {
+    if (truePeakDbTp > 0) {
+      highlights.push("True Peak is above 0.0 dBTP (very high risk of clipping after encoding).");
+      recommendations.push({
+        id: "rec_true_peak_headroom",
+        severity: "critical",
+        title: "Reduce true peak overs",
+        why: "True Peak exceeds 0.0 dBTP, which can cause clipping after encoding/normalization.",
+        how: ["Lower limiter ceiling to -1.0 dBTP", "Reduce input gain into the limiter by 1–2 dB"],
+      });
+    } else if (truePeakDbTp > -1.0) {
+      highlights.push("True Peak is above -1.0 dBTP (encoding headroom is low).");
+      recommendations.push({
+        id: "rec_true_peak_headroom",
+        severity: "warn",
+        title: "Add more true peak headroom",
+        why: "True Peak is above -1.0 dBTP. Some encoders and playback chains can increase peaks, risking audible distortion.",
+        how: ["Set limiter ceiling to -1.0 dBTP", "Reduce limiter input by ~0.5–1.5 dB"],
+      });
+    }
+  }
+
+  if (typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb)) {
+    if (crestFactorDb < 6) {
+      highlights.push("Crest Factor is very low (track may be over-compressed).");
+      recommendations.push({
+        id: "rec_crest_factor_low",
+        severity: "warn",
+        title: "Increase dynamic impact (crest factor)",
+        why: "A very low crest factor can indicate over-limiting/compression, reducing punch and clarity.",
+        how: ["Reduce limiter gain reduction", "Use slower release times on compression", "Let transients through (less clipping/soft-clip)"],
+      });
+    } else if (crestFactorDb > 16) {
+      highlights.push("Crest Factor is very high (track may be very dynamic).");
+      recommendations.push({
+        id: "rec_crest_factor_high",
+        severity: "info",
+        title: "Check loudness consistency",
+        why: "A very high crest factor can indicate big peak-to-average differences. Ensure perceived loudness is consistent for your target.",
+        how: ["Check if drums/transients are too spiky", "Consider gentle bus compression", "Compare against a reference at matched loudness"],
+      });
+    }
   }
 
   if (recommendations.length === 0) {
@@ -140,7 +175,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
             ? clippedSampleCount
             : null,
       },
-      dynamics: {},
+      dynamics: {
+        crest_factor_db:
+          typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
+      },
       silence: {},
       transients: {},
     },

@@ -321,6 +321,15 @@ export default async function UploadFeedbackPage({
                           </span>
                         </div>
 
+                        {typeof (payload as any)?.metrics?.dynamics?.crest_factor_db === "number" && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                            <span className="text-xs text-white/70">Crest Factor (dB)</span>
+                            <span className="text-xs text-white/50 tabular-nums">
+                              {(payload as any).metrics.dynamics.crest_factor_db.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+
                         {typeof (payload as any)?.metrics?.clipping?.clipped_sample_count === "number" && (
                           <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
                             <span className="text-xs text-white/70">Clipping</span>

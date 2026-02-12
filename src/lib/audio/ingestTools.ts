@@ -286,6 +286,44 @@ export async function ffmpegDetectMaxSamplePeakDbfs(params: {
   return maxPeakDb;
 }
 
+export async function ffmpegDetectRmsLevelDbfs(params: {
+  inPath: string;
+}): Promise<number> {
+  // RMS level (dBFS): parse ffmpeg astats "RMS level dB" and take the max (closest to 0).
+  // We intentionally use astats with reset=0 to consider the whole file.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "astats=metadata=0:reset=0",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  let maxRmsDb = Number.NEGATIVE_INFINITY;
+
+  // Typical line: "RMS level dB: -18.23" (may appear per channel)
+  const re = /RMS\s*level\s*dB:\s*([+-]?[0-9.]+)/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (!Number.isFinite(v)) continue;
+    maxRmsDb = Math.max(maxRmsDb, v);
+  }
+
+  if (maxRmsDb === Number.NEGATIVE_INFINITY) return NaN;
+  return maxRmsDb;
+}
+
 export async function ffmpegDetectClippedSampleCount(params: {
   inPath: string;
 }): Promise<number> {

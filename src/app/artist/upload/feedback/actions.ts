@@ -41,7 +41,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp")
+    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db")
     .eq("queue_id", queueId)
     .maybeSingle();
 
@@ -61,6 +61,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
     clippedSampleCount: pm.clipped_sample_count,
+    crestFactorDb: pm.crest_factor_db,
   });
 
   await admin
@@ -153,11 +154,12 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     true_peak_db_tp: number;
     title: string;
     clipped_sample_count: number;
+    crest_factor_db: number | null;
   };
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count")
+    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db")
     .eq("queue_id", queueId)
     .maybeSingle<PrivateMetricsRow>();
 
@@ -183,6 +185,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
     clippedSampleCount: pm.clipped_sample_count,
+    crestFactorDb: pm.crest_factor_db,
   });
 
   const { error: payloadErr } = await (admin as any)
