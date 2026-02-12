@@ -4,20 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-type FeedbackPayloadV1 = {
-  issues: Array<{
-    t?: number; // seconds
-    title: string;
-    detail?: string;
-    severity?: "low" | "medium" | "high";
-  }>;
-  metrics: Record<string, number | string | null>;
-  recommendations: Array<{
-    title: string;
-    detail?: string;
-  }>;
-};
+import { buildFeedbackPayloadV2Mvp, type FeedbackPayloadV2 } from "@/lib/ai/feedbackPayloadV2";
 
 async function ensureFeedbackPayloadForTerminalQueue(params: {
   queueId: string;
@@ -50,37 +37,15 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
   const status = String(q.status ?? "");
   if (status !== "approved" && status !== "rejected") return;
 
-  const payload: FeedbackPayloadV1 =
-    status === "approved"
-      ? {
-          issues: [],
-          metrics: { decision: "approved" },
-          recommendations: [
-            {
-              title: "No critical technical issues detected (DEV stub).",
-              detail:
-                "This is a placeholder result. The real DSP analyzer will add timecoded issues, metrics and recommendations.",
-            },
-          ],
-        }
-      : {
-          issues: [
-            {
-              title: "Technical listenability problems detected (DEV stub).",
-              detail:
-                "This is a placeholder result. The real DSP analyzer will provide precise causes and timecodes.",
-              severity: "high",
-            },
-          ],
-          metrics: { decision: "rejected" },
-          recommendations: [
-            {
-              title: "Fix technical problems and re-upload.",
-              detail:
-                "Common issues: corrupted file, silence/dropouts, extreme clipping, invalid format.",
-            },
-          ],
-        };
+  const decision = status === "approved" ? "approved" : "rejected";
+
+  const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
+    queueId,
+    audioHash,
+    decision,
+    integratedLufs: null,
+    truePeakDbTp: null,
+  });
 
   await admin
     .from("track_ai_feedback_payloads")
@@ -89,7 +54,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
         queue_id: queueId,
         user_id: userId,
         audio_hash: audioHash,
-        payload_version: 1,
+        payload_version: 2,
         payload,
         updated_at: new Date().toISOString(),
       },

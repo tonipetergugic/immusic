@@ -85,9 +85,16 @@ export default async function UploadFeedbackPage({
         status: "locked" | "unlocked_no_data" | "unlocked_ready";
         unlocked: boolean;
         payload: null | {
+          // v1 legacy (can still exist in old rows)
           issues?: any[];
           metrics?: Record<string, any>;
           recommendations?: any[];
+
+          // v2 (current)
+          schema_version?: number;
+          summary?: { highlights?: string[] };
+          metrics_v2?: any; // not used, but keep forward-compatible if API shape changes
+          recommendations_v2?: any;
         };
       }
     | { ok: false; error: string };
@@ -119,6 +126,25 @@ export default async function UploadFeedbackPage({
     payload?.metrics && typeof payload.metrics === "object" ? payload.metrics : {};
   const recommendations = Array.isArray(payload?.recommendations)
     ? payload.recommendations
+    : [];
+
+  const schemaVersion =
+    typeof (payload as any)?.schema_version === "number"
+      ? ((payload as any).schema_version as number)
+      : null;
+
+  const v2Highlights: string[] = Array.isArray((payload as any)?.summary?.highlights)
+    ? ((payload as any).summary.highlights as string[])
+    : [];
+
+  // v2 metrics are nested (objects). We only render known leaf values for now.
+  const v2Loudness = schemaVersion === 2 ? (metrics as any)?.loudness : null;
+
+  const v2LufsI = safeNumber(v2Loudness?.lufs_i);
+  const v2TruePeak = safeNumber(v2Loudness?.true_peak_dbtp_max);
+
+  const v2Recommendations = schemaVersion === 2 && Array.isArray((payload as any)?.recommendations)
+    ? ((payload as any).recommendations as any[])
     : [];
 
   function formatTime(sec: number) {
@@ -264,24 +290,65 @@ export default async function UploadFeedbackPage({
 
                 <div className="rounded-lg bg-black/20 p-4 border border-white/5">
                   {isReady ? (
-                    Object.keys(metrics).length > 0 ? (
+                    schemaVersion === 2 ? (
                       <div className="mt-2 space-y-2">
-                        {Object.entries(metrics)
-                          .slice(0, 12)
-                          .map(([k, v]) => (
-                            <div
-                              key={k}
-                              className="flex items-center justify-between gap-4 rounded-lg bg-black/20 p-3 border border-white/5"
-                            >
-                              <span className="text-xs text-white/70">{k}</span>
-                              <span className="text-xs text-white/50 tabular-nums">
-                                {v === null || v === undefined ? "—" : String(v)}
-                              </span>
-                            </div>
-                          ))}
+                        {/* v2 Highlights (short, human) */}
+                        {v2Highlights.length > 0 ? (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                            <div className="text-xs text-white/70 mb-2">Highlights</div>
+                            <ul className="space-y-1">
+                              {v2Highlights.slice(0, 5).map((h, idx) => (
+                                <li key={idx} className="text-xs text-white/60">
+                                  {h}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {/* v2 Loudness (known leaf metrics) */}
+                        <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                          <span className="text-xs text-white/70">Integrated LUFS</span>
+                          <span className="text-xs text-white/50 tabular-nums">
+                            {v2LufsI === null ? "—" : v2LufsI.toFixed(1)}
+                          </span>
+                        </div>
+
+                        <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                          <span className="text-xs text-white/70">True Peak (dBTP max)</span>
+                          <span className="text-xs text-white/50 tabular-nums">
+                            {v2TruePeak === null ? "—" : v2TruePeak.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Placeholder for upcoming modules */}
+                        <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                          <p className="text-xs text-white/50">
+                            More technical modules coming next (spectral, stereo, dynamics, transients).
+                          </p>
+                        </div>
                       </div>
                     ) : (
-                      <p className="text-white/50 text-xs mt-2">No metrics</p>
+                      // v1 legacy fallback (flat metrics)
+                      Object.keys(metrics).length > 0 ? (
+                        <div className="mt-2 space-y-2">
+                          {Object.entries(metrics)
+                            .slice(0, 12)
+                            .map(([k, v]) => (
+                              <div
+                                key={k}
+                                className="flex items-center justify-between gap-4 rounded-lg bg-black/20 p-3 border border-white/5"
+                              >
+                                <span className="text-xs text-white/70">{k}</span>
+                                <span className="text-xs text-white/50 tabular-nums">
+                                  {v === null || v === undefined ? "—" : String(v)}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <p className="text-white/50 text-xs mt-2">No metrics</p>
+                      )
                     )
                   ) : (
                     <p className="text-white/50 text-xs mt-1">No data yet</p>
@@ -290,30 +357,65 @@ export default async function UploadFeedbackPage({
 
                 <div className="rounded-lg bg-black/20 p-4 border border-white/5">
                   {isReady ? (
-                    recommendations.length > 0 ? (
-                      <ul className="mt-2 space-y-2">
-                        {recommendations.slice(0, 10).map((it: any, idx: number) => {
-                          const title = safeString(it?.title) || "Recommendation";
-                          const detail = safeString(it?.detail);
-                          return (
-                            <li
-                              key={idx}
-                              className="rounded-lg bg-black/20 p-3 border border-white/5"
-                            >
-                              <span className="text-sm text-white/80 font-medium">
-                                {title}
-                              </span>
-                              {detail ? (
-                                <p className="text-xs text-white/60 mt-1">{detail}</p>
-                              ) : null}
-                            </li>
-                          );
-                        })}
-                      </ul>
+                    schemaVersion === 2 ? (
+                      v2Recommendations.length > 0 ? (
+                        <ul className="mt-2 space-y-2">
+                          {v2Recommendations.slice(0, 10).map((it: any, idx: number) => {
+                            const title = safeString(it?.title) || "Recommendation";
+                            const why = safeString(it?.why);
+                            const howArr = Array.isArray(it?.how) ? (it.how as any[]) : [];
+                            const how = howArr.map((x) => safeString(x)).filter(Boolean);
+
+                            return (
+                              <li
+                                key={idx}
+                                className="rounded-lg bg-black/20 p-3 border border-white/5"
+                              >
+                                <div className="text-sm text-white/80 font-medium">{title}</div>
+
+                                {why ? (
+                                  <p className="text-xs text-white/60 mt-1">{why}</p>
+                                ) : null}
+
+                                {how.length > 0 ? (
+                                  <ul className="mt-2 space-y-1">
+                                    {how.slice(0, 6).map((h, hIdx) => (
+                                      <li key={hIdx} className="text-xs text-white/55">
+                                        • {h}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-white/50 text-xs mt-2">No recommendations</p>
+                      )
                     ) : (
-                      <p className="text-white/50 text-xs mt-2">
-                        No recommendations
-                      </p>
+                      // v1 legacy fallback
+                      recommendations.length > 0 ? (
+                        <ul className="mt-2 space-y-2">
+                          {recommendations.slice(0, 10).map((it: any, idx: number) => {
+                            const title = safeString(it?.title) || "Recommendation";
+                            const detail = safeString(it?.detail);
+                            return (
+                              <li
+                                key={idx}
+                                className="rounded-lg bg-black/20 p-3 border border-white/5"
+                              >
+                                <span className="text-sm text-white/80 font-medium">{title}</span>
+                                {detail ? (
+                                  <p className="text-xs text-white/60 mt-1">{detail}</p>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-white/50 text-xs mt-2">No recommendations</p>
+                      )
                     )
                   ) : (
                     <p className="text-white/50 text-xs mt-1">No data yet</p>
