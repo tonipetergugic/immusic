@@ -54,30 +54,62 @@ async function writeFeedbackPayloadIfUnlocked(params: {
 }) {
   const { admin, userId, queueId, audioHash, decision, integratedLufs, truePeakDbTp } = params;
 
+  // Always use queue.audio_hash as source of truth (unlock and payload must bind to queue hash)
+  const adminClient = admin as any;
+  const { data: queueRow, error: queueErr } = await adminClient
+    .from("tracks_ai_queue")
+    .select("audio_hash")
+    .eq("id", queueId)
+    .maybeSingle();
+
+  const queueAudioHash = queueRow?.audio_hash ?? null;
+  if (queueErr || !queueAudioHash) {
+    console.log("[PAYLOAD DEBUG] abort: queue hash missing", {
+      queueId,
+      queueErr: queueErr ? String((queueErr as any).message ?? queueErr) : null,
+      queueAudioHash,
+    });
+    return;
+  }
+
   // Only write payload if user has paid unlock (anti-leak + cost control)
-  const { data: unlock, error: unlockErr } = await admin
+  const { data: unlock, error: unlockErr } = await adminClient
     // Database typing may not include this table yet -> avoid "never" inference
     .from("track_ai_feedback_unlocks" as any)
     .select("id")
     .eq("queue_id", queueId)
     .eq("user_id", userId)
-    .eq("audio_hash", audioHash)
+    .eq("audio_hash", queueAudioHash)
     .maybeSingle();
 
   const unlockRow = unlock as { id?: string } | null;
 
-  if (unlockErr || !unlockRow?.id) return;
+  if (unlockErr || !unlockRow?.id) {
+    console.log("[PAYLOAD DEBUG] abort: unlock missing", {
+      queueId,
+      userId,
+      queueAudioHash,
+      unlockErr: unlockErr ? String((unlockErr as any).message ?? unlockErr) : null,
+      unlockFound: Boolean(unlockRow?.id),
+    });
+    return;
+  }
 
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
-    audioHash,
+    audioHash: queueAudioHash,
     decision,
     integratedLufs,
     truePeakDbTp,
   });
 
-  // Deterministic write: UPDATE if exists, otherwise INSERT
-  const adminClient = admin as any;
+  console.log("[PAYLOAD DEBUG] built loudness:", {
+    queueId,
+    queueAudioHash,
+    integratedLufs,
+    truePeakDbTp,
+    payloadLoudness: payload.metrics?.loudness,
+  });
 
   const { data: existingPayload } = await adminClient
     .from("track_ai_feedback_payloads")
@@ -90,7 +122,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
       .from("track_ai_feedback_payloads")
       .update({
         user_id: userId,
-        audio_hash: audioHash,
+        audio_hash: queueAudioHash,
         payload_version: 2,
         payload,
         updated_at: new Date().toISOString(),
@@ -102,7 +134,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
       .insert({
         queue_id: queueId,
         user_id: userId,
-        audio_hash: audioHash,
+        audio_hash: queueAudioHash,
         payload_version: 2,
         payload,
       });
@@ -543,6 +575,10 @@ export async function POST() {
       logStage("detect_true_peak_lufs", elapsedMs(tEbur));
       truePeakDb = r.truePeakDbTp;
       integratedLufs = r.integratedLufs;
+
+      // Debug-Ausgabe: nur im Server-Log sichtbar
+      console.log("[AI-CHECK] LUFS:", integratedLufs);
+      console.log("[AI-CHECK] TruePeak:", truePeakDb);
     } catch (err: any) {
       // Infra/runtime issue => do NOT reject user audio.
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -727,6 +763,13 @@ export async function POST() {
       });
 
       const finalAudioHash = audioHash as string;
+      console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
+        integratedLufs,
+        truePeakDb,
+        decision,
+        queueId,
+        finalAudioHash,
+      });
       if (finalAudioHash) {
         await writeFeedbackPayloadIfUnlocked({
           admin,
@@ -872,6 +915,13 @@ export async function POST() {
 
         await bestEffortRemoveIngestWav({ supabase, audioPath });
 
+        console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
+          integratedLufs,
+          truePeakDb,
+          decision,
+          queueId,
+          finalAudioHash,
+        });
         if (finalAudioHash) {
           await writeFeedbackPayloadIfUnlocked({
             admin,
@@ -912,6 +962,13 @@ export async function POST() {
 
     await bestEffortRemoveIngestWav({ supabase, audioPath });
 
+    console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
+      integratedLufs,
+      truePeakDb,
+      decision,
+      queueId,
+      finalAudioHash,
+    });
     if (finalAudioHash) {
       await writeFeedbackPayloadIfUnlocked({
         admin,

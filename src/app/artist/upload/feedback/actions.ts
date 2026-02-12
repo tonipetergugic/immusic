@@ -125,6 +125,28 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     throw new Error("Failed to persist unlock: missing_id");
   }
 
+  // 3) Trigger analyzer again AFTER unlock so payload gets written (anti-leak safe)
+  const origin =
+    (process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.NEXT_PUBLIC_VERCEL_URL &&
+        `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`) ||
+      "http://localhost:3000") as string;
+
+  const res = await fetch(`${origin}/api/ai/track-check/process-next`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ queue_id: queueId }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    // Do not fail the unlock; payload can be generated on next processing run
+    console.error("[UNLOCK] post-unlock process-next failed", {
+      queueId,
+      status: res.status,
+    });
+  }
+
   // 3) Credits prüfen (optional, aber UX: sauberer Redirect statt RPC-Exception)
   const { data: creditRow, error: creditErr } = await supabase
     .from("artist_credits")
