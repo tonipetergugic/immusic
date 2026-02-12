@@ -360,6 +360,53 @@ export async function POST() {
 
     // Global audio dedupe: identical master audio must not enter the system twice
     if (audioHash) {
+      // Queue-level race protection: block duplicates that are already in-flight or already approved in the queue
+      const { data: existingQueue, error: queueErr } = await supabase
+        .from("tracks_ai_queue")
+        .select("id")
+        .eq("audio_hash", audioHash)
+        .in("status", ["pending", "processing", "approved"])
+        .neq("id", queueId)
+        .limit(1)
+        .maybeSingle();
+
+      if (queueErr) {
+        return NextResponse.json(
+          { ok: false, error: "queue_duplicate_check_failed" },
+          { status: 500 }
+        );
+      }
+
+      if (existingQueue?.id) {
+        // Cleanup WAV (best-effort) to avoid ingest leftovers
+        try {
+          await supabase.storage.from("ingest_wavs").remove([audioPath]);
+        } catch {
+          // ignore cleanup errors
+        }
+
+        await supabase
+          .from("tracks_ai_queue")
+          .update({
+            status: "rejected",
+            rejected_at: new Date().toISOString(),
+            reject_reason: "duplicate_audio",
+            message: null,
+          })
+          .eq("id", queueId)
+          .eq("user_id", user.id);
+
+        const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+
+        return NextResponse.json({
+          ok: true,
+          processed: true,
+          decision: "rejected",
+          reason: "duplicate_audio",
+          feedback_available: unlocked,
+          queue_id: queueId,
+        });
+      }
       const { data: existingTrack, error: existingErr } = await supabase
         .from("tracks")
         .select("id")
@@ -558,8 +605,42 @@ export async function POST() {
     });
 
     if (trackError) {
-      // Idempotency: track already exists for this queue (unique violation)
+      // Unique violations can mean either:
+      // - idempotency (source_queue_id already inserted)
+      // - global dedupe (audio_hash already exists)
       if ((trackError as any).code === "23505") {
+        const msg = String((trackError as any).message ?? "");
+        const isAudioHashUnique =
+          msg.includes("tracks_audio_hash_unique") || msg.includes("audio_hash");
+        const isQueueUnique =
+          msg.includes("tracks_source_queue_id_uq") || msg.includes("source_queue_id");
+
+        // If it's the global audio hash unique constraint => controlled duplicate rejection
+        if (isAudioHashUnique && !isQueueUnique) {
+          await supabase
+            .from("tracks_ai_queue")
+            .update({
+              status: "rejected",
+              rejected_at: new Date().toISOString(),
+              reject_reason: "duplicate_audio",
+              message: null,
+            })
+            .eq("id", queueId)
+            .eq("user_id", user.id);
+
+          const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+
+          return NextResponse.json({
+            ok: true,
+            processed: true,
+            decision: "rejected",
+            reason: "duplicate_audio",
+            feedback_available: unlocked,
+            queue_id: queueId,
+          });
+        }
+
+        // Otherwise treat as idempotency for this queue
         await supabase
           .from("tracks_ai_queue")
           .update({ status: "approved", message: null, audio_path: mp3Path })
