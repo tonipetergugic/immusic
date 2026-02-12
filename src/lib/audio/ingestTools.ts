@@ -224,7 +224,7 @@ export async function ffmpegDetectIntegratedLufs(params: {
     "-i",
     params.inPath,
     "-af",
-    "ebur128=peak=false",
+    "ebur128=peak=0",
     "-f",
     "null",
     "-",
@@ -247,5 +247,54 @@ export async function ffmpegDetectIntegratedLufs(params: {
   }
 
   return lastI;
+}
+
+export async function ffmpegDetectTruePeakAndIntegratedLufs(params: {
+  inPath: string;
+}): Promise<{ truePeakDbTp: number; integratedLufs: number }> {
+  // Single ebur128 run: parse both True Peak and Integrated LUFS from stderr.
+  // Use numeric peak option (peak=1) for broader ffmpeg build compatibility.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "ebur128=peak=1",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // True Peak: take the max "Peak:" value
+  let maxPeak = Number.NEGATIVE_INFINITY;
+  const peakRe = /Peak:\s*([+-]?[0-9.]+)\s*dB/i;
+
+  // Integrated LUFS: take last "I:" value
+  let lastI = NaN;
+  const iRe = /\bI:\s*([+-]?[0-9.]+)\s*LUFS\b/i;
+
+  for (const line of lines) {
+    const pm = line.match(peakRe);
+    if (pm) {
+      const v = Number(pm[1]);
+      if (Number.isFinite(v)) maxPeak = Math.max(maxPeak, v);
+    }
+
+    const im = line.match(iRe);
+    if (im) {
+      const v = Number(im[1]);
+      if (Number.isFinite(v)) lastI = v;
+    }
+  }
+
+  return {
+    truePeakDbTp: maxPeak === Number.NEGATIVE_INFINITY ? NaN : maxPeak,
+    integratedLufs: lastI,
+  };
 }
 

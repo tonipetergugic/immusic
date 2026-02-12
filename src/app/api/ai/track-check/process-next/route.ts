@@ -8,13 +8,13 @@ import {
   ffprobeDurationSeconds,
   ffmpegDetectSilence,
   ffmpegDetectDcOffsetAbsMean,
-  ffmpegDetectTruePeakDbTp,
-  ffmpegDetectIntegratedLufs,
+  ffmpegDetectTruePeakAndIntegratedLufs,
   transcodeWavFileToMp3_320,
   writeTempWav,
 } from "@/lib/audio/ingestTools";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type Decision = "approved" | "rejected";
 
@@ -222,6 +222,15 @@ async function hardFailRejectTechnical(params: {
   });
 }
 
+function nowNs() {
+  return process.hrtime.bigint();
+}
+
+function elapsedMs(startNs: bigint) {
+  const diffNs = nowNs() - startNs;
+  return Number(diffNs) / 1e6;
+}
+
 export async function POST() {
   const supabase = await createSupabaseServerClient();
   const admin = getSupabaseAdmin();
@@ -318,6 +327,20 @@ export async function POST() {
   }
 
   const queueId = pendingItem.id as string;
+
+  // --- PERF BASELINE (console only) ---
+  const timings: Record<string, number> = {};
+  const tTotal = nowNs();
+  const PERF_ON = process.env.AI_CHECK_TIMING === "1";
+
+  function logStage(stage: string, ms: number) {
+    timings[stage] = ms;
+    if (!PERF_ON) return;
+    // keep logs compact and greppable
+    console.log(`[AI-CHECK] queue=${queueId} stage=${stage} ms=${ms.toFixed(1)}`);
+  }
+  // --- PERF BASELINE (console only) ---
+
   let tmpWavPath: string | null = null;
   let tmpMp3Path: string | null = null;
 
@@ -343,9 +366,11 @@ export async function POST() {
     }
 
     // 3) Download WAV once (reuse for hash + analysis + transcode)
+    const tDl = nowNs();
     const { data: wavBlob, error: wavDlErr } = await supabase.storage
       .from("ingest_wavs")
       .download(audioPath);
+    logStage("download_wav", elapsedMs(tDl));
 
     if (wavDlErr || !wavBlob) {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -378,7 +403,9 @@ export async function POST() {
     }
 
     try {
+      const tTmp = nowNs();
       tmpWavPath = await writeTempWav({ wavBuf });
+      logStage("write_temp_wav", elapsedMs(tTmp));
     } catch {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
 
@@ -392,7 +419,9 @@ export async function POST() {
     let durationSec: number;
 
     try {
+      const tProbe = nowNs();
       durationSec = await ffprobeDurationSeconds({ inPath: tmpWavPath });
+      logStage("probe_duration", elapsedMs(tProbe));
     } catch {
       // Infra/runtime issue (ffprobe missing/crashed) => do NOT reject user audio.
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -429,7 +458,9 @@ export async function POST() {
     let silences;
 
     try {
+      const tSilence = nowNs();
       silences = await ffmpegDetectSilence({ inPath: tmpWavPath });
+      logStage("detect_silence", elapsedMs(tSilence));
     } catch {
       // Infra/runtime issue => do NOT reject user audio.
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -469,7 +500,9 @@ export async function POST() {
     let dcAbsMean: number;
 
     try {
+      const tDc = nowNs();
       dcAbsMean = await ffmpegDetectDcOffsetAbsMean({ inPath: tmpWavPath });
+      logStage("detect_dc", elapsedMs(tDc));
     } catch {
       // Infra/runtime issue => do NOT reject user audio.
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -491,22 +524,36 @@ export async function POST() {
       });
     }
 
-    // 3.5) Hard-fail gate: extreme true peak (clear technical failure only)
+    // 3.5 + 3.6) Hard-fail gate: True Peak + Integrated LUFS in ONE ebur128 run
     let truePeakDb: number;
+    let integratedLufs: number;
 
     try {
-      truePeakDb = await ffmpegDetectTruePeakDbTp({ inPath: tmpWavPath });
-    } catch {
+      const tEbur = nowNs();
+      const r = await ffmpegDetectTruePeakAndIntegratedLufs({ inPath: tmpWavPath });
+      logStage("detect_true_peak_lufs", elapsedMs(tEbur));
+      truePeakDb = r.truePeakDbTp;
+      integratedLufs = r.integratedLufs;
+    } catch (err: any) {
       // Infra/runtime issue => do NOT reject user audio.
       await resetQueueToPending({ supabase, userId: user.id, queueId });
 
-      return NextResponse.json(
-        { ok: false, error: "true_peak_detect_failed" },
-        { status: 500 }
+      // Keep diagnostics server-side only
+      console.error("[AI-CHECK] EBUR128 ERROR message:", err?.message || err);
+      console.error("[AI-CHECK] EBUR128 ERROR code:", err?.code);
+      console.error(
+        "[AI-CHECK] EBUR128 ERROR stderr:\n",
+        String(err?.stderr || "").slice(0, 4000)
       );
+      console.error(
+        "[AI-CHECK] EBUR128 ERROR stdout:\n",
+        String(err?.stdout || "").slice(0, 2000)
+      );
+
+      return NextResponse.json({ ok: false, error: "ebur128_detect_failed" }, { status: 500 });
     }
 
-    // If we can't parse, don't reject (avoid false positives)
+    // True Peak reject only on extreme cases
     if (Number.isFinite(truePeakDb) && truePeakDb > 3.0) {
       return await hardFailRejectTechnical({
         supabase,
@@ -517,22 +564,7 @@ export async function POST() {
       });
     }
 
-    // 3.6) Hard-fail gate: extreme integrated loudness (clear technical failure only)
-    let integratedLufs: number;
-
-    try {
-      integratedLufs = await ffmpegDetectIntegratedLufs({ inPath: tmpWavPath });
-    } catch {
-      // Infra/runtime issue => do NOT reject user audio.
-      await resetQueueToPending({ supabase, userId: user.id, queueId });
-
-      return NextResponse.json(
-        { ok: false, error: "lufs_detect_failed" },
-        { status: 500 }
-      );
-    }
-
-    // If we can't parse, don't reject (avoid false positives)
+    // Integrated LUFS reject only on extreme cases
     if (Number.isFinite(integratedLufs)) {
       // Extremely quiet => likely silence/corrupt
       if (integratedLufs < -45) {
@@ -562,7 +594,9 @@ export async function POST() {
 
     if (!audioHash) {
       try {
+        const tHash = nowNs();
         audioHash = await sha256HexFromArrayBuffer(wavBuf);
+        logStage("hash_sha256", elapsedMs(tHash));
 
         await supabase
           .from("tracks_ai_queue")
@@ -588,7 +622,9 @@ export async function POST() {
     }
 
     // 5) Analyze (stub for now) using the same buffer
+    const tAnalyze = nowNs();
     const decision = await analyzeAudioStub(wavBuf);
+    logStage("analyze_stub", elapsedMs(tAnalyze));
 
     // Global audio dedupe: identical master audio must not enter the system twice
     if (audioHash) {
@@ -732,7 +768,9 @@ export async function POST() {
 
     let mp3Bytes: Uint8Array;
     try {
+      const tTrans = nowNs();
       const out = await transcodeWavFileToMp3_320({ inPath: tmpWavPath! });
+      logStage("transcode_mp3_320", elapsedMs(tTrans));
       mp3Bytes = out.mp3Bytes;
       tmpMp3Path = out.outPath;
     } catch {
@@ -741,12 +779,14 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "transcode_failed" }, { status: 500 });
     }
 
+    const tUp = nowNs();
     const { error: mp3UpErr } = await supabase.storage
       .from("tracks")
       .upload(mp3Path, new Blob([Buffer.from(mp3Bytes)], { type: "audio/mpeg" }), {
         contentType: "audio/mpeg",
         upsert: false,
       });
+    logStage("upload_mp3", elapsedMs(tUp));
 
     if (mp3UpErr) {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
@@ -766,6 +806,7 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: "missing_audio_hash" }, { status: 500 });
     }
 
+    const tInsert = nowNs();
     const { error: trackError } = await supabase.from("tracks").insert({
       artist_id: user.id,
       audio_path: mp3Path,
@@ -774,6 +815,7 @@ export async function POST() {
       source_queue_id: queueId,
       audio_hash: finalAudioHash,
     });
+    logStage("insert_track", elapsedMs(tInsert));
 
     if (trackError) {
       // Unique violations can mean either:
@@ -878,6 +920,15 @@ export async function POST() {
       { status: 500 }
     );
   } finally {
+    // PERF: total + compact JSON summary (console only)
+    try {
+      const totalMs = elapsedMs(tTotal);
+      logStage("total", totalMs);
+      if (PERF_ON) {
+        console.log(`[AI-CHECK] queue=${queueId} timings=${JSON.stringify(timings)}`);
+      }
+    } catch {}
+
     // best-effort cleanup temp files
     try {
       if (tmpWavPath) await unlink(tmpWavPath);
