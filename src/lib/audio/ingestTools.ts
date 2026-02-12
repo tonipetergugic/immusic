@@ -1,0 +1,251 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { writeFile, readFile } from "node:fs/promises";
+
+const execFileAsync = promisify(execFile);
+
+export const MAX_TRACK_SECONDS = 10 * 60;
+
+function toHex(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    out += bytes[i].toString(16).padStart(2, "0");
+  }
+  return out;
+}
+
+export async function sha256HexFromArrayBuffer(buf: ArrayBuffer) {
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return toHex(digest);
+}
+
+export async function writeTempWav(params: { wavBuf: ArrayBuffer }): Promise<string> {
+  const tmpWavPath = join(
+    tmpdir(),
+    `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.wav`
+  );
+
+  await writeFile(tmpWavPath, Buffer.from(params.wavBuf));
+  return tmpWavPath;
+}
+
+export async function ffprobeDurationSeconds(params: { inPath: string }): Promise<number> {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v",
+    "error",
+    "-print_format",
+    "json",
+    "-show_format",
+    "-i",
+    params.inPath,
+  ]);
+
+  try {
+    const json = JSON.parse(stdout || "{}");
+    const durStr = json?.format?.duration;
+    const dur = typeof durStr === "string" ? Number(durStr) : Number(durStr ?? NaN);
+    return dur;
+  } catch {
+    return NaN;
+  }
+}
+
+export type SilenceSegment = { start: number; end: number; dur: number };
+
+export async function ffmpegDetectSilence(params: {
+  inPath: string;
+  noiseDb?: number;
+  minSilenceSec?: number;
+}): Promise<SilenceSegment[]> {
+  const noiseDb = params.noiseDb ?? -50;
+  const minSilenceSec = params.minSilenceSec ?? 0.5;
+
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    `silencedetect=noise=${noiseDb}dB:d=${minSilenceSec}`,
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  const segs: SilenceSegment[] = [];
+  let currentStart: number | null = null;
+
+  const reStart = /silence_start:\s*([0-9.]+)/i;
+  const reEnd = /silence_end:\s*([0-9.]+)\s*\|\s*silence_duration:\s*([0-9.]+)/i;
+
+  for (const line of lines) {
+    const m1 = line.match(reStart);
+    if (m1) {
+      currentStart = Number(m1[1]);
+      continue;
+    }
+    const m2 = line.match(reEnd);
+    if (m2) {
+      const end = Number(m2[1]);
+      const dur = Number(m2[2]);
+      const start = currentStart ?? (end - dur);
+      segs.push({ start, end, dur });
+      currentStart = null;
+    }
+  }
+
+  return segs.filter(
+    (s) =>
+      Number.isFinite(s.start) &&
+      Number.isFinite(s.end) &&
+      Number.isFinite(s.dur) &&
+      s.dur > 0
+  );
+}
+
+export async function transcodeWavFileToMp3_320(params: {
+  inPath: string;
+}): Promise<{ mp3Bytes: Uint8Array; outPath: string }> {
+  const outPath = join(
+    tmpdir(),
+    `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`
+  );
+
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-i",
+    params.inPath,
+    "-vn",
+    "-codec:a",
+    "libmp3lame",
+    "-b:a",
+    "320k",
+    "-compression_level",
+    "0",
+    outPath,
+  ]);
+
+  const mp3 = await readFile(outPath);
+  return { mp3Bytes: new Uint8Array(mp3), outPath };
+}
+
+export async function ffmpegDetectDcOffsetAbsMean(params: {
+  inPath: string;
+}): Promise<number> {
+  // We parse ffmpeg astats output for "Mean" (per-channel). We take max(abs(meanL), abs(meanR)).
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "astats=metadata=1:reset=1",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // Example line patterns vary; we match "Mean" values.
+  // We'll take the largest absolute mean value found.
+  let maxAbsMean = 0;
+
+  const re = /Mean:\s*([-0-9.]+)/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (!Number.isFinite(v)) continue;
+    maxAbsMean = Math.max(maxAbsMean, Math.abs(v));
+  }
+
+  return maxAbsMean;
+}
+
+export async function ffmpegDetectTruePeakDbTp(params: {
+  inPath: string;
+}): Promise<number> {
+  // ffmpeg ebur128 prints summary lines to stderr. We parse "Peak:" lines and take the max.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "ebur128=peak=true",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  let maxPeak = Number.NEGATIVE_INFINITY;
+
+  // Match e.g. "Peak:  +1.2 dBFS" (format differs by build; accept dB / dBFS)
+  const re = /Peak:\s*([+-]?[0-9.]+)\s*dB/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (!Number.isFinite(v)) continue;
+    maxPeak = Math.max(maxPeak, v);
+  }
+
+  if (maxPeak === Number.NEGATIVE_INFINITY) return NaN;
+  return maxPeak;
+}
+
+export async function ffmpegDetectIntegratedLufs(params: {
+  inPath: string;
+}): Promise<number> {
+  // ebur128 prints a final summary with "I:  -XX.X LUFS" (format varies).
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "ebur128=peak=false",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // We'll take the last seen "I:" value.
+  let lastI = NaN;
+
+  const re = /\bI:\s*([+-]?[0-9.]+)\s*LUFS\b/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (!Number.isFinite(v)) continue;
+    lastI = v;
+  }
+
+  return lastI;
+}
+
