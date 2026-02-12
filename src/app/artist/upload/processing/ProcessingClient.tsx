@@ -118,9 +118,11 @@ export default function ProcessingClient({ credits }: Props) {
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] text-white">
       <div className="text-center mb-6 max-w-lg px-6">
         <h1 className="text-2xl font-bold mb-2">Processing your track</h1>
-        <p className="text-white/60">
-          {statusText}
-        </p>
+        {!rejected && !approved && (
+          <p className="text-white/60">
+            {statusText}
+          </p>
+        )}
 
         {timedOut && !approved && !rejected && (
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
@@ -146,28 +148,34 @@ export default function ProcessingClient({ credits }: Props) {
           <div className="mt-6 text-white/70">
             <p className="mb-3">
               {rejectReason === "duplicate_audio" || rejectReason === "duplicate"
-                ? "Dieses Audio existiert bereits auf IMUSIC. Ein erneuter Upload ist nicht erlaubt."
-                : "Der Track konnte aufgrund technischer Hörbarkeitsprobleme nicht freigegeben werden."}
+                ? "This audio already exists on IMUSIC. Uploading it again is not allowed."
+                : "Your track was not approved due to technical listenability issues."}
             </p>
-            {credits >= 1 ? (
-              <button
-                type="button"
-                className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-                onClick={() => {
-                  if (!queueId) return;
-                  router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
-                }}
-              >
-                Detaillierte KI-Auswertung (1 Credit)
-              </button>
+            {rejectReason === "duplicate_audio" || rejectReason === "duplicate" ? (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  type="button"
+                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
+                  onClick={() => router.replace("/artist/upload")}
+                >
+                  Back to Upload
+                </button>
+                <button
+                  type="button"
+                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
+                  onClick={() => router.replace("/artist/my-tracks")}
+                >
+                  Go to My Tracks
+                </button>
+              </div>
             ) : (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   type="button"
-                  disabled
-                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold opacity-50 cursor-not-allowed"
+                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
+                  onClick={() => router.replace("/artist/upload")}
                 >
-                  Credits kaufen
+                  Back to Upload
                 </button>
                 <button
                   type="button"
@@ -197,17 +205,9 @@ export default function ProcessingClient({ credits }: Props) {
                 className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
                 onClick={() => router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
               >
-                Detaillierte KI-Auswertung (1 Credit)
+                Detailed AI Analysis (1 Credit)
               </button>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold opacity-50 cursor-not-allowed"
-              >
-                Credits kaufen
-              </button>
-            )}
+            ) : null}
           </div>
         )}
 
