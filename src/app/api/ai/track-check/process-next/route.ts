@@ -358,6 +358,59 @@ export async function POST() {
       }
     }
 
+    // Global audio dedupe: identical master audio must not enter the system twice
+    if (audioHash) {
+      const { data: existingTrack, error: existingErr } = await supabase
+        .from("tracks")
+        .select("id")
+        .eq("audio_hash", audioHash)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingErr) {
+        await supabase
+          .from("tracks_ai_queue")
+          .update({ status: "pending", message: null })
+          .eq("id", queueId)
+          .eq("user_id", user.id);
+
+        return NextResponse.json(
+          { ok: false, error: "duplicate_check_failed" },
+          { status: 500 }
+        );
+      }
+
+      if (existingTrack?.id) {
+        // Cleanup WAV (best-effort) to avoid ingest leftovers
+        try {
+          await supabase.storage.from("ingest_wavs").remove([audioPath]);
+        } catch {
+          // ignore cleanup errors
+        }
+
+        await supabase
+          .from("tracks_ai_queue")
+          .update({
+            status: "rejected",
+            rejected_at: new Date().toISOString(),
+            reject_reason: "duplicate_audio",
+            message: null,
+          })
+          .eq("id", queueId)
+          .eq("user_id", user.id);
+
+        const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
+        return NextResponse.json({
+          ok: true,
+          processed: true,
+          decision: "rejected",
+          reason: "duplicate_audio",
+          feedback_available: unlocked,
+          queue_id: queueId,
+        });
+      }
+    }
+
     if (decision === "rejected") {
       // Cleanup WAV (best-effort). Rejects must not leave ingest artifacts behind.
       try {
@@ -493,47 +546,6 @@ export async function POST() {
         .eq("user_id", user.id);
 
       return NextResponse.json({ ok: false, error: "missing_audio_hash" }, { status: 500 });
-    }
-
-    // Duplicate protection: same master audio must not be uploaded twice
-    const { data: existingTrack, error: existingErr } = await supabase
-      .from("tracks")
-      .select("id")
-      .eq("audio_hash", finalAudioHash)
-      .limit(1)
-      .maybeSingle();
-
-    if (existingErr) {
-      await supabase
-        .from("tracks_ai_queue")
-        .update({ status: "pending", message: null })
-        .eq("id", queueId)
-        .eq("user_id", user.id);
-
-      return NextResponse.json({ ok: false, error: "duplicate_check_failed" }, { status: 500 });
-    }
-
-    if (existingTrack?.id) {
-      await supabase
-        .from("tracks_ai_queue")
-        .update({
-          status: "rejected",
-          rejected_at: new Date().toISOString(),
-          reject_reason: "duplicate",
-          message: null,
-        })
-        .eq("id", queueId)
-        .eq("user_id", user.id);
-
-      const unlocked = await hasFeedbackUnlock(supabase, user.id, queueId);
-      return NextResponse.json({
-        ok: true,
-        processed: true,
-        decision: "rejected",
-        reason: "duplicate",
-        feedback_available: unlocked,
-        queue_id: queueId,
-      });
     }
 
     const { error: trackError } = await supabase.from("tracks").insert({

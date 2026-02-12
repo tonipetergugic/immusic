@@ -92,8 +92,8 @@ export default function ProcessingClient({ credits }: Props) {
         const rr = (data as any).reason as string | undefined;
         setRejectReason(rr ?? null);
 
-        if (rr === "duplicate") {
-          setStatusText("This recording already exists on IMUSIC. Re-upload is not allowed.");
+        if (rr === "duplicate_audio" || rr === "duplicate") {
+          setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
         } else {
           setStatusText("Your track was not approved due to technical listenability issues.");
         }
@@ -145,8 +145,8 @@ export default function ProcessingClient({ credits }: Props) {
         {rejected && (
           <div className="mt-6 text-white/70">
             <p className="mb-3">
-              {rejectReason === "duplicate"
-                ? "Diese Aufnahme existiert bereits auf IMUSIC. Ein erneuter Upload ist nicht erlaubt."
+              {rejectReason === "duplicate_audio" || rejectReason === "duplicate"
+                ? "Dieses Audio existiert bereits auf IMUSIC. Ein erneuter Upload ist nicht erlaubt."
                 : "Der Track konnte aufgrund technischer Hörbarkeitsprobleme nicht freigegeben werden."}
             </p>
             {credits >= 1 ? (
