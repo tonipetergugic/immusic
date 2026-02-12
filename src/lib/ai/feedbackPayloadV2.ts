@@ -69,8 +69,16 @@ export function buildFeedbackPayloadV2Mvp(params: {
   decision: "approved" | "rejected";
   integratedLufs?: number | null;
   truePeakDbTp?: number | null;
+  clippedSampleCount?: number | null;
 }): FeedbackPayloadV2 {
-  const { queueId, audioHash, decision, integratedLufs = null, truePeakDbTp = null } = params;
+  const {
+    queueId,
+    audioHash,
+    decision,
+    integratedLufs = null,
+    truePeakDbTp = null,
+    clippedSampleCount = null,
+  } = params;
 
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
@@ -126,7 +134,12 @@ export function buildFeedbackPayloadV2Mvp(params: {
       },
       spectral: {},
       stereo: {},
-      clipping: {},
+      clipping: {
+        clipped_sample_count:
+          typeof clippedSampleCount === "number" && Number.isFinite(clippedSampleCount)
+            ? clippedSampleCount
+            : null,
+      },
       dynamics: {},
       silence: {},
       transients: {},

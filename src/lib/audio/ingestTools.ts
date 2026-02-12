@@ -249,6 +249,83 @@ export async function ffmpegDetectIntegratedLufs(params: {
   return lastI;
 }
 
+export async function ffmpegDetectMaxSamplePeakDbfs(params: {
+  inPath: string;
+}): Promise<number> {
+  // Sample peak (not true peak): parse ffmpeg astats "Peak level dB" and take the max (closest to 0).
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "astats=metadata=0:reset=0",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  let maxPeakDb = Number.NEGATIVE_INFINITY;
+
+  // Typical line: "Peak level dB: -0.23" (may appear per channel)
+  const re = /Peak\s*level\s*dB:\s*([+-]?[0-9.]+)/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (!Number.isFinite(v)) continue;
+    maxPeakDb = Math.max(maxPeakDb, v);
+  }
+
+  if (maxPeakDb === Number.NEGATIVE_INFINITY) return NaN;
+  return maxPeakDb;
+}
+
+export async function ffmpegDetectClippedSampleCount(params: {
+  inPath: string;
+}): Promise<number> {
+  // Count clipped samples (sample-level clipping) via ffmpeg astats.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "astats=metadata=0:reset=0",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // Typical astats line: "Number of clipped samples: 0"
+  const re = /Number\s+of\s+clipped\s+samples:\s*([0-9]+)/i;
+
+  let sum = 0;
+  let foundAny = false;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (!Number.isFinite(v)) continue;
+    sum += v;
+    foundAny = true;
+  }
+
+  // If the build doesn't emit the field, signal "unknown"
+  if (!foundAny) return NaN;
+  return sum;
+}
+
 export async function ffmpegDetectTruePeakAndIntegratedLufs(params: {
   inPath: string;
 }): Promise<{ truePeakDbTp: number; integratedLufs: number }> {

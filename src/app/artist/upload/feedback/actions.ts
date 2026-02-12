@@ -60,6 +60,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     decision,
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
+    clippedSampleCount: pm.clipped_sample_count,
   });
 
   await admin
@@ -151,11 +152,12 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     integrated_lufs: number;
     true_peak_db_tp: number;
     title: string;
+    clipped_sample_count: number;
   };
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,title")
+    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count")
     .eq("queue_id", queueId)
     .maybeSingle<PrivateMetricsRow>();
 
@@ -180,6 +182,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     decision,
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
+    clippedSampleCount: pm.clipped_sample_count,
   });
 
   const { error: payloadErr } = await (admin as any)

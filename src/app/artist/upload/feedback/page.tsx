@@ -321,6 +321,17 @@ export default async function UploadFeedbackPage({
                           </span>
                         </div>
 
+                        {typeof (payload as any)?.metrics?.clipping?.clipped_sample_count === "number" && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                            <span className="text-xs text-white/70">Clipping</span>
+                            <span className="text-xs text-white/50 tabular-nums">
+                              {(payload as any).metrics.clipping.clipped_sample_count === 0
+                                ? "No clipping detected"
+                                : `${(payload as any).metrics.clipping.clipped_sample_count} clipped samples`}
+                            </span>
+                          </div>
+                        )}
+
                         {/* Placeholder for upcoming modules */}
                         <div className="rounded-lg bg-black/20 p-3 border border-white/5">
                           <p className="text-xs text-white/50">

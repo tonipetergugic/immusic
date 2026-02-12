@@ -9,6 +9,8 @@ import {
   ffmpegDetectSilence,
   ffmpegDetectDcOffsetAbsMean,
   ffmpegDetectTruePeakAndIntegratedLufs,
+  ffmpegDetectMaxSamplePeakDbfs,
+  ffmpegDetectClippedSampleCount,
   transcodeWavFileToMp3_320,
   writeTempWav,
 } from "@/lib/audio/ingestTools";
@@ -53,8 +55,9 @@ async function writeFeedbackPayloadIfUnlocked(params: {
   decision: Decision;
   integratedLufs: number | null;
   truePeakDbTp: number | null;
+  clippedSampleCount: number | null;
 }) {
-  const { admin, userId, queueId, audioHash, decision, integratedLufs, truePeakDbTp } = params;
+  const { admin, userId, queueId, audioHash, decision, integratedLufs, truePeakDbTp, clippedSampleCount } = params;
 
   // Always use queue.audio_hash as source of truth (unlock and payload must bind to queue hash)
   const adminClient = admin as any;
@@ -103,6 +106,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
     decision,
     integratedLufs,
     truePeakDbTp,
+    clippedSampleCount,
   });
 
   if (AI_DEBUG) console.log("[PAYLOAD DEBUG] built loudness:", {
@@ -311,6 +315,7 @@ export async function POST() {
           decision: "approved",
           integratedLufs: null,
           truePeakDbTp: null,
+          clippedSampleCount: null,
         });
       }
 
@@ -336,6 +341,7 @@ export async function POST() {
           decision: "rejected",
           integratedLufs: null,
           truePeakDbTp: null,
+          clippedSampleCount: null,
         });
       }
 
@@ -570,6 +576,8 @@ export async function POST() {
     // 3.5 + 3.6) Hard-fail gate: True Peak + Integrated LUFS in ONE ebur128 run
     let truePeakDb: number;
     let integratedLufs: number;
+    let maxSamplePeakDbfs: number;
+    let clippedSampleCount: number;
 
     try {
       const tEbur = nowNs();
@@ -577,6 +585,12 @@ export async function POST() {
       logStage("detect_true_peak_lufs", elapsedMs(tEbur));
       truePeakDb = r.truePeakDbTp;
       integratedLufs = r.integratedLufs;
+      maxSamplePeakDbfs = await ffmpegDetectMaxSamplePeakDbfs({ inPath: tmpWavPath });
+      const clippedSampleCountRaw = await ffmpegDetectClippedSampleCount({ inPath: tmpWavPath });
+      clippedSampleCount =
+        Number.isFinite(clippedSampleCountRaw) && clippedSampleCountRaw >= 0
+          ? Math.trunc(clippedSampleCountRaw)
+          : 0;
 
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
@@ -602,7 +616,13 @@ export async function POST() {
     }
 
     // 3.5.1) Persist private metrics (server-only truth). Must happen before any cleanup/terminal return.
-    if (!Number.isFinite(truePeakDb) || !Number.isFinite(integratedLufs)) {
+    if (
+      !Number.isFinite(truePeakDb) ||
+      !Number.isFinite(integratedLufs) ||
+      !Number.isFinite(maxSamplePeakDbfs) ||
+      !Number.isFinite(clippedSampleCount) ||
+      clippedSampleCount < 0
+    ) {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
       return NextResponse.json({ ok: false, error: "private_metrics_invalid" }, { status: 500 });
     }
@@ -620,6 +640,8 @@ export async function POST() {
             title: titleSnapshot,
             integrated_lufs: integratedLufs,
             true_peak_db_tp: truePeakDb,
+            max_sample_peak_dbfs: maxSamplePeakDbfs,
+            clipped_sample_count: Math.trunc(clippedSampleCount),
             analyzed_at: new Date().toISOString(),
           },
           { onConflict: "queue_id" }
@@ -813,6 +835,7 @@ export async function POST() {
           decision: "rejected",
           integratedLufs: Number.isFinite(integratedLufs) ? integratedLufs : null,
           truePeakDbTp: Number.isFinite(truePeakDb) ? truePeakDb : null,
+          clippedSampleCount: Number.isFinite(clippedSampleCount) ? clippedSampleCount : null,
         });
       }
 
@@ -965,6 +988,7 @@ export async function POST() {
             decision: "approved",
             integratedLufs: Number.isFinite(integratedLufs) ? integratedLufs : null,
             truePeakDbTp: Number.isFinite(truePeakDb) ? truePeakDb : null,
+            clippedSampleCount: Number.isFinite(clippedSampleCount) ? clippedSampleCount : null,
           });
         }
 
@@ -1012,6 +1036,7 @@ export async function POST() {
         decision: "approved",
         integratedLufs: Number.isFinite(integratedLufs) ? integratedLufs : null,
         truePeakDbTp: Number.isFinite(truePeakDb) ? truePeakDb : null,
+        clippedSampleCount: Number.isFinite(clippedSampleCount) ? clippedSampleCount : null,
       });
     }
 
