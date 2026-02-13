@@ -119,6 +119,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 
+  let metaSeverity: "info" | "warn" | "critical" =
+    decision === "approved" ? "info" : "critical";
+
   if (decision === "approved") {
     highlights.push("No hard-fail issues detected.");
   } else {
@@ -433,6 +436,94 @@ export function buildFeedbackPayloadV2Mvp(params: {
     }
   }
 
+  // --- Meta Pattern Layer v1 (cross-metric intelligence) ---
+
+  // Pattern 1: Over-Limited Loudness
+  if (
+    typeof integratedLufs === "number" &&
+    typeof loudnessRangeLu === "number" &&
+    typeof truePeakDbTp === "number" &&
+    integratedLufs >= -9.0 &&
+    loudnessRangeLu < 2.0 &&
+    truePeakDbTp > -1.0
+  ) {
+    const hasTruePeakRec = recommendations.some((r) => r.id === "rec_true_peak_headroom");
+    const hasLraLowRec = recommendations.some((r) => r.id === "rec_lra_very_low");
+
+    if (!(hasTruePeakRec && hasLraLowRec)) {
+      highlights.push(
+        "Compression-dominant loudness pattern detected (high loudness + very low LRA + low true-peak headroom)."
+      );
+
+      recommendations.push({
+        id: "rec_pattern_over_limited",
+        severity: "warn",
+        title: "Reduce aggressive master limiting",
+        why: "This combination often indicates aggressive limiting that can reduce punch and increase distortion risk after encoding.",
+        how: [
+          "Reduce limiter gain reduction and keep true peak ceiling at -1.0 dBTP.",
+          "Let more transient detail through (less clipping/soft-clip on the master).",
+          "Aim for slightly higher LRA by reducing bus compression intensity.",
+        ],
+      });
+
+      if (metaSeverity === "info") metaSeverity = "warn";
+    }
+  }
+
+  // Pattern 2: Wide but Unstable Stereo
+  if (
+    typeof stereoWidthIndex === "number" &&
+    typeof phaseCorrelation === "number" &&
+    stereoWidthIndex > 0.6 &&
+    phaseCorrelation < 0.2
+  ) {
+    highlights.push(
+      "Wide-but-unstable stereo pattern detected (high width + low phase correlation) — mono translation risk."
+    );
+
+    recommendations.push({
+      id: "rec_pattern_wide_unstable",
+      severity: "warn",
+      title: "Stabilize stereo width for better translation",
+      why: "High width combined with low correlation can cause element loss or tonal shifts on mono or speaker playback.",
+      how: [
+        "Reduce widening on core elements; keep width mainly in reverbs/upper layers.",
+        "If using Haas delays, shorten delay times and lower wet mix.",
+        "Test mono playback and adjust until key elements remain stable.",
+      ],
+    });
+    if (metaSeverity === "info") metaSeverity = "warn";
+  }
+
+  // Pattern 3: Harsh but Flat
+  if (
+    typeof highmid === "number" &&
+    typeof mid === "number" &&
+    typeof crestFactorDb === "number" &&
+    typeof loudnessRangeLu === "number" &&
+    highmid > mid + 8 &&
+    crestFactorDb < 8 &&
+    loudnessRangeLu < 3
+  ) {
+    highlights.push(
+      "High-mid dominant + low-dynamics pattern detected — fatigue risk on bright playback systems."
+    );
+
+    recommendations.push({
+      id: "rec_pattern_harsh_flat",
+      severity: "warn",
+      title: "Reduce high-mid fatigue and restore dynamics",
+      why: "Excess high-mid energy plus limited dynamics can sound aggressive and reduce long-term listening comfort.",
+      how: [
+        "Find harsh resonances in the high-mids and tame them with dynamic EQ.",
+        "Reduce saturation/distortion drive on bright elements.",
+        "Ease limiting/compression slightly to restore transient contrast.",
+      ],
+    });
+    if (metaSeverity === "info") metaSeverity = "warn";
+  }
+
   if (recommendations.length === 0) {
     recommendations.push({
       id: "rec_placeholder_v2_mvp",
@@ -457,7 +548,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     },
     summary: {
       status: "ok",
-      severity: decision === "approved" ? "info" : "critical",
+      severity: metaSeverity,
       highlights,
     },
     metrics: {

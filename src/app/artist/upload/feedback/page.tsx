@@ -154,6 +154,15 @@ export default async function UploadFeedbackPage({
     ? ((payload as any).recommendations as any[])
     : [];
 
+  const topSummaryText =
+    !payload?.summary?.severity
+      ? "No issues found"
+      : payload.summary.severity === "critical"
+        ? "Technical listenability problems detected"
+        : payload.summary.severity === "warn"
+          ? "Technical improvements recommended"
+          : "No issues found";
+
   function formatTime(sec: number) {
     const s = Math.max(0, Math.floor(sec));
     const mm = String(Math.floor(s / 60)).padStart(2, "0");
@@ -288,7 +297,7 @@ export default async function UploadFeedbackPage({
                         })}
                       </ul>
                     ) : (
-                      <p className="text-white/50 text-xs mt-2">No issues found</p>
+                      <p className="text-white/50 text-xs mt-2">{topSummaryText}</p>
                     )
                   ) : (
                     <p className="text-white/50 text-xs mt-1">No data yet</p>
@@ -543,12 +552,14 @@ export default async function UploadFeedbackPage({
                           </div>
                         )}
 
-                        {/* Placeholder for upcoming modules */}
-                        <div className="rounded-lg bg-black/20 p-3 border border-white/5">
-                          <p className="text-xs text-white/50">
-                            More technical modules coming next (spectral, stereo, dynamics, transients).
-                          </p>
-                        </div>
+                        {recommendations?.some((r: any) => r?.id === "rec_placeholder_v2_mvp") ? (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                            {/* Placeholder for upcoming modules */}
+                            <p className="text-xs text-white/50">
+                              More technical modules coming next (spectral, stereo, dynamics, transients).
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       // v1 legacy fallback (flat metrics)
