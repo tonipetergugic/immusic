@@ -204,91 +204,230 @@ export function buildFeedbackPayloadV2Mvp(params: {
     }
   }
 
+  // NACHHER (Phase Correlation v2 rule)
   if (typeof phaseCorrelation === "number" && Number.isFinite(phaseCorrelation)) {
-    if (phaseCorrelation < -0.2) {
-      highlights.push("Strong anti-phase content detected (high mono compatibility risk).");
+    // Always neutral highlight (no genre bias)
+    highlights.push("Phase correlation is in a safe range for mono compatibility.");
+
+    // Only classify extremes
+    if (phaseCorrelation < 0) {
+      highlights.push("Phase correlation is negative (< 0) — likely phase cancellation and audible loss in mono.");
       recommendations.push({
-        id: "rec_phase_correlation_critical",
+        id: "rec_phase_corr_negative",
         severity: "critical",
-        title: "Fix anti-phase stereo issues",
-        why: "Phase correlation is strongly negative, which can cause cancellations when played in mono (clubs, phones, some playback chains).",
+        title: "Fix phase cancellation risk (mono compatibility)",
+        why: "Negative phase correlation indicates likely cancellations when summed to mono (clubs, phones, some playback chains).",
         how: [
-          "Check stereo widening on low end (keep bass/kick mono)",
-          "Reduce extreme stereo enhancers or invert/phasey effects",
-          "Use a correlation meter and test in mono",
+          "Disable or reduce any stereo widener / phase-based widening on main elements.",
+          "Check polarity on layered sounds and buses (try flipping polarity on one layer).",
+          "Inspect stereo FX (chorus, flanger, phaser) — reduce depth/mix or move to returns.",
+          "Make sub/bass mono; move wide layers higher in the spectrum.",
         ],
       });
-    } else if (phaseCorrelation < 0) {
-      highlights.push("Negative phase correlation detected (mono compatibility may suffer).");
+    } else if (phaseCorrelation < 0.2) {
+      highlights.push("Phase correlation is low (< 0.2) — mono compatibility may suffer on some systems.");
       recommendations.push({
-        id: "rec_phase_correlation_warn",
+        id: "rec_phase_corr_low",
         severity: "warn",
-        title: "Improve mono compatibility",
-        why: "Phase correlation is below 0, which can indicate phase cancellation in mono playback.",
+        title: "Improve mono compatibility stability",
+        why: "Low phase correlation can reduce stability across speakers and may cause element loss when summed to mono.",
         how: [
-          "Collapse low frequencies to mono (e.g., <120 Hz)",
-          "Reduce stereo width on critical elements",
-          "Check for phase inversion on one channel",
-        ],
-      });
-    } else if (phaseCorrelation <= 0.2) {
-      highlights.push("Stereo correlation is low (very wide/uncorrelated).");
-      recommendations.push({
-        id: "rec_phase_correlation_low",
-        severity: "info",
-        title: "Check stereo stability",
-        why: "Low correlation can be fine, but may reduce punch or stability on some systems.",
-        how: [
-          "Check mono playback for punch/clarity",
-          "Avoid ultra-wide processing on core elements (kick, bass, lead)",
+          "Check mono playback for loss of key elements (lead, bass, kick).",
+          "Reduce stereo widening on critical elements (especially low-mids and bass).",
+          "If using Haas/delays, lower the wet mix or shorten delay times.",
+          "Prefer mid-focused bass; keep sub strictly mono.",
         ],
       });
     }
   }
 
-  // Mid/Side width (objective, no genre bias)
+  // NACHHER (Stereo Width Index v2 rule)
   if (typeof stereoWidthIndex === "number" && Number.isFinite(stereoWidthIndex)) {
+    // Always neutral highlight (no genre bias)
+    highlights.push("Stereo width is in a balanced range.");
+
+    // Only classify extremes
     if (stereoWidthIndex < 0.05) {
-      highlights.push("Stereo image is extremely narrow (almost mono-dominant).");
+      highlights.push("Stereo width is very low (< 0.05) — the mix is strongly mono-focused.");
       recommendations.push({
-        id: "rec_stereo_width_too_narrow",
+        id: "rec_stereo_width_very_low",
         severity: "info",
-        title: "Check stereo width",
-        why: "Stereo width index is very low. This can be intentional, but you may want more stereo separation for ambience/pads/fx.",
+        title: "Check if additional width is desired",
+        why: "Very low stereo width indicates a strongly center-focused mix. This can be intentional, but may feel narrow on headphones.",
         how: [
-          "Add subtle stereo ambience (reverb/room) instead of widening core elements",
-          "Keep kick/bass mono, but allow controlled width on higher elements",
-          "Compare against a reference in mono and stereo",
+          "If the track feels narrow, add width using subtle stereo ambience or short room reverbs.",
+          "Use stereo widening on high-frequency layers only (avoid widening bass/low-mids).",
+          "Check that stereo effects are not collapsed by routing or mono buses.",
         ],
       });
-    } else if (stereoWidthIndex > 0.60) {
-      highlights.push("Stereo image is extremely wide (high side energy).");
+    } else if (stereoWidthIndex > 0.6) {
+      highlights.push("Stereo width is very high (> 0.6) — translation may suffer across speakers and mono playback.");
       recommendations.push({
-        id: "rec_stereo_width_too_wide",
+        id: "rec_stereo_width_very_high",
         severity: "warn",
-        title: "Reduce extreme stereo width",
-        why: "Stereo width index is very high. This can reduce punch/center stability and may create mono compatibility issues.",
+        title: "Reduce extreme stereo width for better translation",
+        why: "Very high stereo width can reduce center stability, perceived punch, and can worsen mono translation on some systems.",
         how: [
-          "Reduce stereo widening on leads/pads",
-          "High-pass the side channel (keep low end centered)",
-          "Test mono playback for punch and phase cancellations",
+          "Reduce stereo widening on core elements (lead, snare, bass fundamentals).",
+          "Keep sub and bass strictly mono; move width to upper layers and reverbs.",
+          "Check mono playback for element loss; adjust widening/FX mix until stable.",
+          "Avoid extreme Haas delays on main elements; lower wet mix or shorten delays.",
         ],
       });
     }
   }
 
+  // NACHHER (Mid/Side Energy Ratio v2 rule)
   if (typeof midSideEnergyRatio === "number" && Number.isFinite(midSideEnergyRatio)) {
-    if (midSideEnergyRatio > 1.0) {
-      highlights.push("Side energy exceeds mid energy (unusual stereo balance).");
+    // Always neutral highlight (no genre bias)
+    highlights.push("Mid/Side energy distribution is balanced.");
+
+    // Only classify extremes
+    if (midSideEnergyRatio < 0.1) {
+      highlights.push("Side energy is very low (< 0.10) — the mix is heavily center-focused.");
       recommendations.push({
-        id: "rec_mid_side_balance",
-        severity: "warn",
-        title: "Rebalance mid/side energy",
-        why: "Side energy ratio is above 1.0, which can indicate unstable center image or overly wide processing.",
+        id: "rec_ms_ratio_low_side",
+        severity: "info",
+        title: "Consider adding controlled side content",
+        why: "Very low side energy indicates an unusually center-focused mix. This can be intentional, but may reduce spaciousness on headphones.",
         how: [
-          "Lower stereo width / side gain on wideners",
-          "Ensure main elements (kick, bass, lead) stay centered",
-          "Check for phasey stereo FX dominating the mix",
+          "If the mix feels narrow, add controlled stereo elements in upper frequencies.",
+          "Use stereo reverbs or ambient layers instead of widening bass or low-mids.",
+          "Keep core elements centered but allow air and FX to spread.",
+        ],
+      });
+    } else if (midSideEnergyRatio > 0.45) {
+      highlights.push("Side energy is very high (> 0.45) — stereo elements may overpower the center image.");
+      recommendations.push({
+        id: "rec_ms_ratio_high_side",
+        severity: "warn",
+        title: "Rebalance mid/side energy for stable translation",
+        why: "High side energy can weaken the center image and reduce translation across different playback systems, especially mono.",
+        how: [
+          "Ensure kick, bass, and main lead remain clearly present in the mid channel.",
+          "Reduce stereo widening on important melodic or rhythmic elements.",
+          "Check mono playback for level drops or tonal imbalance.",
+          "Move extreme stereo FX to background layers.",
+        ],
+      });
+    }
+  }
+
+  // --- Spectral Balance (genre-agnostic, relative band deltas) ---
+  const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+  const sub = spectralSubRmsDbfs;
+  const low = spectralLowRmsDbfs;
+  const lowmid = spectralLowMidRmsDbfs;
+  const mid = spectralMidRmsDbfs;
+  const highmid = spectralHighMidRmsDbfs;
+  const high = spectralHighRmsDbfs;
+  const air = spectralAirRmsDbfs;
+
+  // Neutral highlight only if we have enough bands to say something meaningful
+  const presentBandCount = [sub, low, lowmid, mid, highmid, high, air].filter((v) => isNum(v)).length;
+
+  if (presentBandCount >= 4) {
+    highlights.push("Spectral energy distribution is within a typical broadband range.");
+  }
+
+  // 1) Sub vs Low balance (boom / missing sub)
+  if (isNum(sub) && isNum(low)) {
+    const deltaSubLow = sub - low;
+
+    if (deltaSubLow > 8) {
+      highlights.push("Sub energy is strongly above low band (> 8 dB) — potential boom/translation risk.");
+      recommendations.push({
+        id: "rec_spectral_sub_dominant",
+        severity: "warn",
+        title: "Reduce excessive sub dominance",
+        why: "Sub energy far above the low band can cause boomy playback and inconsistent translation across systems.",
+        how: [
+          "Check sub/bass balance on small speakers and in mono.",
+          "Reduce sub layer level or narrow the sub to mono while controlling resonances.",
+          "Use gentle EQ or dynamic EQ on the sub band to tame peaks.",
+        ],
+      });
+    } else if (deltaSubLow < -10) {
+      highlights.push("Sub energy is far below low band (< -10 dB) — low-end may lack deep sub extension.");
+      recommendations.push({
+        id: "rec_spectral_sub_missing",
+        severity: "info",
+        title: "Check sub extension (if desired)",
+        why: "Very low sub energy relative to the low band can reduce perceived depth on full-range systems.",
+        how: [
+          "Check if the track needs deeper sub extension for your target playback.",
+          "If needed, add a controlled sub layer and keep it mono.",
+          "Avoid boosting sub blindly; balance against low band and monitor headroom.",
+        ],
+      });
+    }
+  }
+
+  // 2) Low-mid dominance (masking/mud risk)
+  if (isNum(lowmid) && isNum(mid)) {
+    if (lowmid > mid + 8) {
+      highlights.push("Low-mid energy is strongly above mid (> 8 dB) — masking/muddiness risk.");
+      recommendations.push({
+        id: "rec_spectral_lowmid_dominant",
+        severity: "warn",
+        title: "Reduce low-mid masking",
+        why: "Excess low-mid density can mask vocals/leads and reduce clarity across playback systems.",
+        how: [
+          "Identify and reduce resonances in the low-mid range with EQ or dynamic EQ.",
+          "Check overlapping instruments (pads/bass/low synths) and carve space.",
+          "Compare to a reference at matched loudness to confirm balance.",
+        ],
+      });
+    }
+  }
+
+  // 3) High-mid dominance (harshness risk)
+  if (isNum(highmid) && isNum(mid)) {
+    if (highmid > mid + 8) {
+      highlights.push("High-mid energy is strongly above mid (> 8 dB) — harshness/fatigue risk.");
+      recommendations.push({
+        id: "rec_spectral_highmid_dominant",
+        severity: "warn",
+        title: "Reduce high-mid harshness risk",
+        why: "Excess high-mid energy can cause fatigue and harsh translation on bright systems.",
+        how: [
+          "Sweep for harsh resonances and reduce with narrow EQ or dynamic EQ.",
+          "Check distortion/saturation on leads and cymbals; reduce drive if needed.",
+          "Test on earbuds and small speakers at moderate volume.",
+        ],
+      });
+    }
+  }
+
+  // 4) Air vs High balance (dull vs excessive ultra-high)
+  if (isNum(air) && isNum(high)) {
+    const deltaAirHigh = air - high;
+
+    if (deltaAirHigh < -12) {
+      highlights.push("Air band is far below high band (< -12 dB) — very little ultra-high energy detected.");
+      recommendations.push({
+        id: "rec_spectral_air_low",
+        severity: "info",
+        title: "Check top-end air (if desired)",
+        why: "Very low air energy can reduce perceived openness on some playback systems.",
+        how: [
+          "Check if the mix feels dull compared to a reference at matched loudness.",
+          "If needed, add subtle high-shelf EQ or controlled excitation on select elements.",
+          "Avoid adding hiss; focus on cymbals/FX brightness and clean transients.",
+        ],
+      });
+    } else if (deltaAirHigh > 6) {
+      highlights.push("Air band is strongly above high band (> 6 dB) — potential excessive ultra-high content.");
+      recommendations.push({
+        id: "rec_spectral_air_high",
+        severity: "warn",
+        title: "Reduce excessive ultra-high content",
+        why: "Excessive air band energy can sound brittle and translate poorly on bright playback chains.",
+        how: [
+          "Check for harsh noise/hiss from exciters, distortion, or overly bright reverbs.",
+          "Reduce high-shelf boosts or exciter mix on buses.",
+          "Test on bright headphones and earbuds at moderate volume.",
         ],
       });
     }

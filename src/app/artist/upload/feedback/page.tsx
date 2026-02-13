@@ -41,7 +41,7 @@ export default async function UploadFeedbackPage({
   if (!queueId) {
     return (
       <div className="min-h-screen bg-[#0E0E10] text-white">
-        <div className="max-w-2xl mx-auto px-6 py-10">
+        <div className="max-w-6xl mx-auto px-6 py-10">
           <BackLink href="/artist/upload/processing" label="Back" />
           <h1 className="text-2xl font-bold mt-6">Detailed AI Feedback</h1>
           <p className="text-white/70 mt-2">
@@ -104,7 +104,7 @@ export default async function UploadFeedbackPage({
     if (data && data.ok === false && data.error === "not_found") {
       return (
         <div className="min-h-screen bg-[#0E0E10] text-white">
-          <div className="max-w-2xl mx-auto px-6 py-10">
+          <div className="max-w-6xl mx-auto px-6 py-10">
             <BackLink href="/artist/upload/processing" label="Back" />
             <h1 className="text-2xl font-bold mt-6">Detailed AI Feedback</h1>
             <p className="text-white/70 mt-2">Not found.</p>
@@ -207,7 +207,7 @@ export default async function UploadFeedbackPage({
 
   return (
     <div className="min-h-screen bg-[#0E0E10] text-white">
-      <div className="max-w-2xl mx-auto px-6 py-10">
+      <div className="max-w-6xl mx-auto px-6 py-10">
         <BackLink href="/artist/upload/processing" label="Back" />
 
         <h1 className="text-2xl font-bold mt-6">Detailed AI Feedback</h1>
@@ -298,10 +298,10 @@ export default async function UploadFeedbackPage({
                 <div className="rounded-lg bg-black/20 p-4 border border-white/5">
                   {isReady ? (
                     schemaVersion === 2 ? (
-                      <div className="mt-2 space-y-2">
+                      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
                         {/* v2 Highlights (short, human) */}
                         {v2Highlights.length > 0 ? (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
                             <div className="text-xs text-white/70 mb-2">Highlights</div>
                             <ul className="space-y-1">
                               {v2Highlights.slice(0, 5).map((h, idx) => (
