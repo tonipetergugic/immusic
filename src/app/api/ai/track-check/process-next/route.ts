@@ -12,6 +12,7 @@ import {
   ffmpegDetectMaxSamplePeakDbfs,
   ffmpegDetectRmsLevelDbfs,
   ffmpegDetectClippedSampleCount,
+  ffmpegDetectPhaseCorrelation,
   transcodeWavFileToMp3_320,
   writeTempWav,
 } from "@/lib/audio/ingestTools";
@@ -580,6 +581,11 @@ export async function POST() {
     let maxSamplePeakDbfs: number;
     let clippedSampleCount: number;
     let crestFactorDb: number = NaN;
+    let phaseCorrelation: number;
+    let midRmsDbfs: number = NaN;
+    let sideRmsDbfs: number = NaN;
+    let midSideEnergyRatio: number = NaN;
+    let stereoWidthIndex: number = NaN;
 
     try {
       const tEbur = nowNs();
@@ -598,6 +604,11 @@ export async function POST() {
       crestFactorDb =
         Number.isFinite(truePeakDb) && Number.isFinite(rmsDbfs) ? truePeakDb - rmsDbfs : NaN;
 
+      const phaseCorrelationRaw = await ffmpegDetectPhaseCorrelation({ inPath: tmpWavPath });
+      phaseCorrelation = phaseCorrelationRaw;
+
+      // TODO: assign when mid/side detection is implemented (midRmsDbfs, sideRmsDbfs, midSideEnergyRatio, stereoWidthIndex)
+
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
         console.log("[AI-CHECK] TruePeak:", truePeakDb);
@@ -605,6 +616,12 @@ export async function POST() {
       if (process.env.AI_DEBUG === "1") {
         console.log("[AI-CHECK] RMS dBFS:", rmsDbfs);
         console.log("[AI-CHECK] Crest dB:", crestFactorDb);
+
+        console.log("[AI-CHECK] PhaseCorr:", phaseCorrelation);
+        console.log("[AI-CHECK] Mid RMS dBFS:", midRmsDbfs);
+        console.log("[AI-CHECK] Side RMS dBFS:", sideRmsDbfs);
+        console.log("[AI-CHECK] Mid/Side Energy Ratio:", midSideEnergyRatio);
+        console.log("[AI-CHECK] Stereo Width Index:", stereoWidthIndex);
       }
     } catch (err: any) {
       // Infra/runtime issue => do NOT reject user audio.
@@ -631,7 +648,8 @@ export async function POST() {
       !Number.isFinite(integratedLufs) ||
       !Number.isFinite(maxSamplePeakDbfs) ||
       !Number.isFinite(clippedSampleCount) ||
-      clippedSampleCount < 0
+      clippedSampleCount < 0 ||
+      !Number.isFinite(phaseCorrelation)
     ) {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
       return NextResponse.json({ ok: false, error: "private_metrics_invalid" }, { status: 500 });
@@ -653,6 +671,7 @@ export async function POST() {
             max_sample_peak_dbfs: maxSamplePeakDbfs,
             clipped_sample_count: Math.trunc(clippedSampleCount),
             crest_factor_db: crestFactorDb,
+            phase_correlation: phaseCorrelation,
             analyzed_at: new Date().toISOString(),
           },
           { onConflict: "queue_id" }

@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -322,6 +322,98 @@ export async function ffmpegDetectRmsLevelDbfs(params: {
 
   if (maxRmsDb === Number.NEGATIVE_INFINITY) return NaN;
   return maxRmsDb;
+}
+
+export async function ffmpegDetectPhaseCorrelation(params: {
+  inPath: string;
+}): Promise<number> {
+  // Pearson correlation coefficient between L and R channels over the whole file.
+  // Range ~ [-1..+1]. +1 = mono/identical, <0 indicates anti-phase risk.
+  // Deterministic, no UI leak: we only persist server-side.
+  return await new Promise<number>((resolve, reject) => {
+    const ff = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      params.inPath,
+      "-vn",
+      "-ac",
+      "2",
+      "-ar",
+      "11025",
+      "-f",
+      "f32le",
+      "pipe:1",
+    ]);
+
+    let stderr = "";
+    ff.stderr?.on("data", (d) => {
+      stderr += String(d);
+      if (stderr.length > 4000) stderr = stderr.slice(-4000);
+    });
+
+    // Streaming accumulation to avoid buffering whole PCM.
+    let leftover: Buffer = Buffer.alloc(0);
+
+    let n = 0; // sample frames
+    let sumL = 0;
+    let sumR = 0;
+    let sumLL = 0;
+    let sumRR = 0;
+    let sumLR = 0;
+
+    ff.stdout?.on("data", (chunk: Buffer) => {
+      const buf = leftover.length ? Buffer.concat([leftover, chunk]) : chunk;
+      const frameBytes = 8; // 2 * float32
+      const frames = Math.floor(buf.length / frameBytes);
+
+      for (let i = 0; i < frames; i++) {
+        const off = i * frameBytes;
+        const l = buf.readFloatLE(off);
+        const r = buf.readFloatLE(off + 4);
+
+        // Ignore non-finite values defensively
+        if (!Number.isFinite(l) || !Number.isFinite(r)) continue;
+
+        n++;
+        sumL += l;
+        sumR += r;
+        sumLL += l * l;
+        sumRR += r * r;
+        sumLR += l * r;
+      }
+
+      const used = frames * frameBytes;
+      leftover = used < buf.length ? Buffer.from(buf.subarray(used)) : Buffer.alloc(0);
+    });
+
+    ff.on("error", (err) => reject(err));
+
+    ff.on("close", (code) => {
+      if (code !== 0) {
+        const e: any = new Error("ffmpeg_phase_correlation_failed");
+        e.code = code;
+        e.stderr = stderr;
+        return reject(e);
+      }
+
+      if (n <= 0) return resolve(NaN);
+
+      const num = n * sumLR - sumL * sumR;
+      const denL = n * sumLL - sumL * sumL;
+      const denR = n * sumRR - sumR * sumR;
+
+      const den = Math.sqrt(denL * denR);
+      if (!Number.isFinite(den) || den <= 0) return resolve(NaN);
+
+      const corr = num / den;
+
+      // Clamp to [-1, 1] to avoid tiny numeric overshoots
+      const clamped = Math.max(-1, Math.min(1, corr));
+      resolve(clamped);
+    });
+  });
 }
 
 export async function ffmpegDetectClippedSampleCount(params: {

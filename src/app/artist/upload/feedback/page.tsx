@@ -330,6 +330,112 @@ export default async function UploadFeedbackPage({
                           </div>
                         )}
 
+                        {typeof (payload as any)?.metrics?.stereo?.phase_correlation === "number" && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                            <span className="text-xs text-white/70">Phase Correlation</span>
+                            <div className="flex items-center gap-2">
+                              {(payload as any).metrics.stereo.phase_correlation < -0.2 ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-red-400/30 bg-red-500/10 text-red-200">
+                                  CRITICAL
+                                </span>
+                              ) : (payload as any).metrics.stereo.phase_correlation < 0 ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-200">
+                                  WARN
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
+                                  OK
+                                </span>
+                              )}
+
+                              <span
+                                className={
+                                  "text-xs tabular-nums " +
+                                  ((payload as any).metrics.stereo.phase_correlation < -0.2
+                                    ? "text-red-300"
+                                    : (payload as any).metrics.stereo.phase_correlation < 0
+                                    ? "text-yellow-300"
+                                    : "text-white/50")
+                                }
+                              >
+                                {(payload as any).metrics.stereo.phase_correlation.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {typeof (payload as any)?.metrics?.stereo?.stereo_width_index === "number" && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                            <span className="text-xs text-white/70">Stereo Width Index</span>
+                            <div className="flex items-center gap-2">
+                              {(payload as any).metrics.stereo.stereo_width_index > 0.6 ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-200">
+                                  WARN
+                                </span>
+                              ) : (payload as any).metrics.stereo.stereo_width_index < 0.05 ? (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
+                                  INFO
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
+                                  OK
+                                </span>
+                              )}
+
+                              <span className="text-xs tabular-nums text-white/50">
+                                {(payload as any).metrics.stereo.stereo_width_index.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {(typeof (payload as any)?.metrics?.stereo?.mid_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.stereo?.side_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.stereo?.mid_side_energy_ratio === "number") && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-white/70">Mid/Side</span>
+                              {typeof (payload as any)?.metrics?.stereo?.mid_side_energy_ratio === "number" ? (
+                                <span className="flex items-center gap-2 text-xs tabular-nums">
+                                  {(payload as any).metrics.stereo.mid_side_energy_ratio > 1.0 ? (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-200">
+                                      WARN
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
+                                      OK
+                                    </span>
+                                  )}
+                                  <span className="text-white/50">
+                                    Ratio {(payload as any).metrics.stereo.mid_side_energy_ratio.toFixed(2)}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="text-xs text-white/50 tabular-nums">—</span>
+                              )}
+                            </div>
+
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+                                <span className="text-[11px] text-white/60">Mid RMS</span>
+                                <span className="text-[11px] text-white/50 tabular-nums">
+                                  {typeof (payload as any)?.metrics?.stereo?.mid_rms_dbfs === "number"
+                                    ? `${(payload as any).metrics.stereo.mid_rms_dbfs.toFixed(1)} dBFS`
+                                    : "—"}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+                                <span className="text-[11px] text-white/60">Side RMS</span>
+                                <span className="text-[11px] text-white/50 tabular-nums">
+                                  {typeof (payload as any)?.metrics?.stereo?.side_rms_dbfs === "number"
+                                    ? `${(payload as any).metrics.stereo.side_rms_dbfs.toFixed(1)} dBFS`
+                                    : "—"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {typeof (payload as any)?.metrics?.clipping?.clipped_sample_count === "number" && (
                           <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
                             <span className="text-xs text-white/70">Clipping</span>
@@ -391,7 +497,23 @@ export default async function UploadFeedbackPage({
                                 key={idx}
                                 className="rounded-lg bg-black/20 p-3 border border-white/5"
                               >
-                                <div className="text-sm text-white/80 font-medium">{title}</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-sm text-white/80 font-medium">{title}</div>
+                                  {typeof it?.severity === "string" ? (
+                                    <span
+                                      className={
+                                        "text-[10px] px-2 py-0.5 rounded-full border " +
+                                        (it.severity === "critical"
+                                          ? "border-red-400/30 bg-red-500/10 text-red-200"
+                                          : it.severity === "warn"
+                                          ? "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"
+                                          : "border-white/10 bg-white/5 text-white/60")
+                                      }
+                                    >
+                                      {String(it.severity).toUpperCase()}
+                                    </span>
+                                  ) : null}
+                                </div>
 
                                 {why ? (
                                   <p className="text-xs text-white/60 mt-1">{why}</p>

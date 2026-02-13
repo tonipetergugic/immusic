@@ -71,6 +71,11 @@ export function buildFeedbackPayloadV2Mvp(params: {
   truePeakDbTp?: number | null;
   clippedSampleCount?: number | null;
   crestFactorDb?: number | null;
+  phaseCorrelation?: number | null;
+  midRmsDbfs?: number | null;
+  sideRmsDbfs?: number | null;
+  midSideEnergyRatio?: number | null;
+  stereoWidthIndex?: number | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -80,6 +85,11 @@ export function buildFeedbackPayloadV2Mvp(params: {
     truePeakDbTp = null,
     clippedSampleCount = null,
     crestFactorDb = null,
+    phaseCorrelation = null,
+    midRmsDbfs = null,
+    sideRmsDbfs = null,
+    midSideEnergyRatio = null,
+    stereoWidthIndex = null,
   } = params;
 
   const highlights: string[] = [];
@@ -135,6 +145,96 @@ export function buildFeedbackPayloadV2Mvp(params: {
     }
   }
 
+  if (typeof phaseCorrelation === "number" && Number.isFinite(phaseCorrelation)) {
+    if (phaseCorrelation < -0.2) {
+      highlights.push("Strong anti-phase content detected (high mono compatibility risk).");
+      recommendations.push({
+        id: "rec_phase_correlation_critical",
+        severity: "critical",
+        title: "Fix anti-phase stereo issues",
+        why: "Phase correlation is strongly negative, which can cause cancellations when played in mono (clubs, phones, some playback chains).",
+        how: [
+          "Check stereo widening on low end (keep bass/kick mono)",
+          "Reduce extreme stereo enhancers or invert/phasey effects",
+          "Use a correlation meter and test in mono",
+        ],
+      });
+    } else if (phaseCorrelation < 0) {
+      highlights.push("Negative phase correlation detected (mono compatibility may suffer).");
+      recommendations.push({
+        id: "rec_phase_correlation_warn",
+        severity: "warn",
+        title: "Improve mono compatibility",
+        why: "Phase correlation is below 0, which can indicate phase cancellation in mono playback.",
+        how: [
+          "Collapse low frequencies to mono (e.g., <120 Hz)",
+          "Reduce stereo width on critical elements",
+          "Check for phase inversion on one channel",
+        ],
+      });
+    } else if (phaseCorrelation <= 0.2) {
+      highlights.push("Stereo correlation is low (very wide/uncorrelated).");
+      recommendations.push({
+        id: "rec_phase_correlation_low",
+        severity: "info",
+        title: "Check stereo stability",
+        why: "Low correlation can be fine, but may reduce punch or stability on some systems.",
+        how: [
+          "Check mono playback for punch/clarity",
+          "Avoid ultra-wide processing on core elements (kick, bass, lead)",
+        ],
+      });
+    }
+  }
+
+  // Mid/Side width (objective, no genre bias)
+  if (typeof stereoWidthIndex === "number" && Number.isFinite(stereoWidthIndex)) {
+    if (stereoWidthIndex < 0.05) {
+      highlights.push("Stereo image is extremely narrow (almost mono-dominant).");
+      recommendations.push({
+        id: "rec_stereo_width_too_narrow",
+        severity: "info",
+        title: "Check stereo width",
+        why: "Stereo width index is very low. This can be intentional, but you may want more stereo separation for ambience/pads/fx.",
+        how: [
+          "Add subtle stereo ambience (reverb/room) instead of widening core elements",
+          "Keep kick/bass mono, but allow controlled width on higher elements",
+          "Compare against a reference in mono and stereo",
+        ],
+      });
+    } else if (stereoWidthIndex > 0.60) {
+      highlights.push("Stereo image is extremely wide (high side energy).");
+      recommendations.push({
+        id: "rec_stereo_width_too_wide",
+        severity: "warn",
+        title: "Reduce extreme stereo width",
+        why: "Stereo width index is very high. This can reduce punch/center stability and may create mono compatibility issues.",
+        how: [
+          "Reduce stereo widening on leads/pads",
+          "High-pass the side channel (keep low end centered)",
+          "Test mono playback for punch and phase cancellations",
+        ],
+      });
+    }
+  }
+
+  if (typeof midSideEnergyRatio === "number" && Number.isFinite(midSideEnergyRatio)) {
+    if (midSideEnergyRatio > 1.0) {
+      highlights.push("Side energy exceeds mid energy (unusual stereo balance).");
+      recommendations.push({
+        id: "rec_mid_side_balance",
+        severity: "warn",
+        title: "Rebalance mid/side energy",
+        why: "Side energy ratio is above 1.0, which can indicate unstable center image or overly wide processing.",
+        how: [
+          "Lower stereo width / side gain on wideners",
+          "Ensure main elements (kick, bass, lead) stay centered",
+          "Check for phasey stereo FX dominating the mix",
+        ],
+      });
+    }
+  }
+
   if (recommendations.length === 0) {
     recommendations.push({
       id: "rec_placeholder_v2_mvp",
@@ -168,7 +268,18 @@ export function buildFeedbackPayloadV2Mvp(params: {
         true_peak_dbtp_max: typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null,
       },
       spectral: {},
-      stereo: {},
+      stereo: {
+        phase_correlation:
+          typeof phaseCorrelation === "number" && Number.isFinite(phaseCorrelation) ? phaseCorrelation : null,
+        mid_rms_dbfs:
+          typeof midRmsDbfs === "number" && Number.isFinite(midRmsDbfs) ? midRmsDbfs : null,
+        side_rms_dbfs:
+          typeof sideRmsDbfs === "number" && Number.isFinite(sideRmsDbfs) ? sideRmsDbfs : null,
+        mid_side_energy_ratio:
+          typeof midSideEnergyRatio === "number" && Number.isFinite(midSideEnergyRatio) ? midSideEnergyRatio : null,
+        stereo_width_index:
+          typeof stereoWidthIndex === "number" && Number.isFinite(stereoWidthIndex) ? stereoWidthIndex : null,
+      },
       clipping: {
         clipped_sample_count:
           typeof clippedSampleCount === "number" && Number.isFinite(clippedSampleCount)

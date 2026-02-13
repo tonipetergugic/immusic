@@ -41,7 +41,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db")
+    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index")
     .eq("queue_id", queueId)
     .maybeSingle();
 
@@ -62,6 +62,11 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     truePeakDbTp: pm.true_peak_db_tp,
     clippedSampleCount: pm.clipped_sample_count,
     crestFactorDb: pm.crest_factor_db,
+    phaseCorrelation: (pm as any).phase_correlation,
+    midRmsDbfs: (pm as any).mid_rms_dbfs,
+    sideRmsDbfs: (pm as any).side_rms_dbfs,
+    midSideEnergyRatio: (pm as any).mid_side_energy_ratio,
+    stereoWidthIndex: (pm as any).stereo_width_index,
   });
 
   await admin
@@ -155,11 +160,16 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     title: string;
     clipped_sample_count: number;
     crest_factor_db: number | null;
+    phase_correlation: number | null;
+    mid_rms_dbfs: number | null;
+    side_rms_dbfs: number | null;
+    mid_side_energy_ratio: number | null;
+    stereo_width_index: number | null;
   };
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db")
+    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index")
     .eq("queue_id", queueId)
     .maybeSingle<PrivateMetricsRow>();
 
@@ -186,6 +196,11 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     truePeakDbTp: pm.true_peak_db_tp,
     clippedSampleCount: pm.clipped_sample_count,
     crestFactorDb: pm.crest_factor_db,
+    phaseCorrelation: pm.phase_correlation,
+    midRmsDbfs: pm.mid_rms_dbfs,
+    sideRmsDbfs: pm.side_rms_dbfs,
+    midSideEnergyRatio: pm.mid_side_energy_ratio,
+    stereoWidthIndex: pm.stereo_width_index,
   });
 
   const { error: payloadErr } = await (admin as any)
