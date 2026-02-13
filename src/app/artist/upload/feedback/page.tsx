@@ -143,6 +143,13 @@ export default async function UploadFeedbackPage({
   const v2LufsI = safeNumber(v2Loudness?.lufs_i);
   const v2TruePeak = safeNumber(v2Loudness?.true_peak_dbtp_max);
 
+  const v2Transients = schemaVersion === 2 ? (metrics as any)?.transients : null;
+
+  const v2MeanShortCrest = safeNumber(v2Transients?.mean_short_crest_db);
+  const v2P95ShortCrest = safeNumber(v2Transients?.p95_short_crest_db);
+  const v2TransientDensity = safeNumber(v2Transients?.transient_density);
+  const v2PunchIndex = safeNumber(v2Transients?.punch_index);
+
   const v2Recommendations = schemaVersion === 2 && Array.isArray((payload as any)?.recommendations)
     ? ((payload as any).recommendations as any[])
     : [];
@@ -327,6 +334,50 @@ export default async function UploadFeedbackPage({
                             <span className="text-xs text-white/50 tabular-nums">
                               {(payload as any).metrics.dynamics.crest_factor_db.toFixed(2)}
                             </span>
+                          </div>
+                        )}
+
+                        {(v2PunchIndex !== null ||
+                          v2P95ShortCrest !== null ||
+                          v2MeanShortCrest !== null ||
+                          v2TransientDensity !== null) && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-white/70">Transients & Punch</span>
+
+                              {v2PunchIndex !== null ? (
+                                <span className="text-xs text-white/50 tabular-nums">
+                                  Punch {v2PunchIndex.toFixed(0)}/100
+                                </span>
+                              ) : (
+                                <span className="text-xs text-white/50 tabular-nums">—</span>
+                              )}
+                            </div>
+
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+                                <span className="text-[11px] text-white/60">p95 Crest</span>
+                                <span className="text-[11px] text-white/50 tabular-nums">
+                                  {v2P95ShortCrest === null ? "—" : `${v2P95ShortCrest.toFixed(2)} dB`}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+                                <span className="text-[11px] text-white/60">Mean Crest</span>
+                                <span className="text-[11px] text-white/50 tabular-nums">
+                                  {v2MeanShortCrest === null ? "—" : `${v2MeanShortCrest.toFixed(2)} dB`}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5 col-span-2">
+                                <span className="text-[11px] text-white/60">Transient Density</span>
+                                <span className="text-[11px] text-white/50 tabular-nums">
+                                  {v2TransientDensity === null
+                                    ? "—"
+                                    : `${(v2TransientDensity * 100).toFixed(1)}%`}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         )}
 

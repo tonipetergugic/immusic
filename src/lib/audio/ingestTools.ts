@@ -499,6 +499,181 @@ export async function ffmpegDetectPhaseCorrelation(params: {
 
 export type PhaseCorrEvent = { t0: number; t1: number; corr: number; severity: "warn" | "critical" };
 
+export type TransientPunchMetrics = {
+  mean_short_rms_dbfs: number;
+  p95_short_rms_dbfs: number;
+  mean_short_peak_dbfs: number;
+  p95_short_peak_dbfs: number;
+  mean_short_crest_db: number;
+  p95_short_crest_db: number;
+  transient_density: number; // 0..1
+  punch_index: number; // 0..100
+};
+
+export async function ffmpegDetectTransientPunchMetrics(params: {
+  inPath: string;
+  windowSec?: number; // default 0.02 (20ms)
+  sampleRate?: number; // default 11025
+}): Promise<TransientPunchMetrics> {
+  const windowSec = params.windowSec ?? 0.02;
+  const sampleRate = params.sampleRate ?? 11025;
+
+  if (!Number.isFinite(windowSec) || windowSec <= 0) {
+    return {
+      mean_short_rms_dbfs: NaN,
+      p95_short_rms_dbfs: NaN,
+      mean_short_peak_dbfs: NaN,
+      p95_short_peak_dbfs: NaN,
+      mean_short_crest_db: NaN,
+      p95_short_crest_db: NaN,
+      transient_density: NaN,
+      punch_index: NaN,
+    };
+  }
+
+  return await new Promise<TransientPunchMetrics>((resolve, reject) => {
+    const windowFrames = Math.max(1, Math.floor(windowSec * sampleRate));
+
+    // Downmix to mono to be genre-agnostic and stable.
+    const ff = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      params.inPath,
+      "-vn",
+      "-ac",
+      "1",
+      "-ar",
+      String(sampleRate),
+      "-f",
+      "f32le",
+      "pipe:1",
+    ]);
+
+    let stderr = "";
+    ff.stderr?.on("data", (d) => {
+      stderr += String(d);
+      if (stderr.length > 4000) stderr = stderr.slice(-4000);
+    });
+
+    let leftover: Buffer = Buffer.alloc(0);
+
+    // Window accumulators (non-overlapping windows: hop = window)
+    let wN = 0;
+    let sumSq = 0;
+    let peakAbs = 0;
+
+    const rmsDbArr: number[] = [];
+    const peakDbArr: number[] = [];
+    const crestArr: number[] = [];
+
+    function finalizeWindow() {
+      if (wN <= 0) return;
+
+      const rms = Math.sqrt(sumSq / wN);
+      const peak = peakAbs;
+
+      // reset
+      wN = 0;
+      sumSq = 0;
+      peakAbs = 0;
+
+      const rmsDb = 20 * Math.log10(rms + 1e-12);
+      const peakDb = 20 * Math.log10(peak + 1e-12);
+      const crestDb = peakDb - rmsDb;
+
+      if (Number.isFinite(rmsDb)) rmsDbArr.push(rmsDb);
+      if (Number.isFinite(peakDb)) peakDbArr.push(peakDb);
+      if (Number.isFinite(crestDb)) crestArr.push(crestDb);
+    }
+
+    ff.stdout?.on("data", (chunk: Buffer) => {
+      const buf = leftover.length ? Buffer.concat([leftover, chunk]) : chunk;
+      const sampleBytes = 4; // float32 mono
+      const samples = Math.floor(buf.length / sampleBytes);
+
+      for (let i = 0; i < samples; i++) {
+        const off = i * sampleBytes;
+        const v = buf.readFloatLE(off);
+        if (!Number.isFinite(v)) continue;
+
+        const a = Math.abs(v);
+        wN++;
+        sumSq += v * v;
+        if (a > peakAbs) peakAbs = a;
+
+        if (wN >= windowFrames) {
+          finalizeWindow();
+        }
+      }
+
+      const used = samples * sampleBytes;
+      leftover = used < buf.length ? Buffer.from(buf.subarray(used)) : Buffer.alloc(0);
+    });
+
+    ff.on("error", (err) => reject(err));
+
+    ff.on("close", (code) => {
+      if (code !== 0) {
+        const e: any = new Error("ffmpeg_transient_punch_failed");
+        e.code = code;
+        e.stderr = stderr;
+        return reject(e);
+      }
+
+      // finalize trailing partial window
+      finalizeWindow();
+
+      if (crestArr.length === 0) {
+        return resolve({
+          mean_short_rms_dbfs: NaN,
+          p95_short_rms_dbfs: NaN,
+          mean_short_peak_dbfs: NaN,
+          p95_short_peak_dbfs: NaN,
+          mean_short_crest_db: NaN,
+          p95_short_crest_db: NaN,
+          transient_density: NaN,
+          punch_index: NaN,
+        });
+      }
+
+      const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+      const p95 = (arr: number[]) => {
+        const sorted = [...arr].sort((a, b) => a - b);
+        const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+        return sorted[idx];
+      };
+
+      const meanRms = rmsDbArr.length ? mean(rmsDbArr) : NaN;
+      const p95Rms = rmsDbArr.length ? p95(rmsDbArr) : NaN;
+
+      const meanPeak = peakDbArr.length ? mean(peakDbArr) : NaN;
+      const p95Peak = peakDbArr.length ? p95(peakDbArr) : NaN;
+
+      const meanCrest = mean(crestArr);
+      const p95Crest = p95(crestArr);
+
+      const transientCount = crestArr.filter((c) => c > meanCrest + 1.5).length;
+      const transientDensity = transientCount / crestArr.length;
+
+      const punchIndex = Math.max(0, Math.min(100, (p95Crest - 6) * 8));
+
+      resolve({
+        mean_short_rms_dbfs: meanRms,
+        p95_short_rms_dbfs: p95Rms,
+        mean_short_peak_dbfs: meanPeak,
+        p95_short_peak_dbfs: p95Peak,
+        mean_short_crest_db: meanCrest,
+        p95_short_crest_db: p95Crest,
+        transient_density: transientDensity,
+        punch_index: punchIndex,
+      });
+    });
+  });
+}
+
 export async function ffmpegDetectPhaseCorrelationEvents(params: {
   inPath: string;
   windowSec?: number; // default 0.5

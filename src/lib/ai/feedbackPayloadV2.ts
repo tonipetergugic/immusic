@@ -83,6 +83,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
   spectralHighMidRmsDbfs?: number | null;
   spectralHighRmsDbfs?: number | null;
   spectralAirRmsDbfs?: number | null;
+  meanShortCrestDb?: number | null;
+  p95ShortCrestDb?: number | null;
+  transientDensity?: number | null;
+  punchIndex?: number | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -104,6 +108,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
     spectralHighMidRmsDbfs = null,
     spectralHighRmsDbfs = null,
     spectralAirRmsDbfs = null,
+    meanShortCrestDb = null,
+    p95ShortCrestDb = null,
+    transientDensity = null,
+    punchIndex = null,
   } = params;
 
   const highlights: string[] = [];
@@ -313,7 +321,16 @@ export function buildFeedbackPayloadV2Mvp(params: {
           typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
       },
       silence: {},
-      transients: {},
+      transients: {
+        mean_short_crest_db:
+          typeof meanShortCrestDb === "number" && Number.isFinite(meanShortCrestDb) ? meanShortCrestDb : null,
+        p95_short_crest_db:
+          typeof p95ShortCrestDb === "number" && Number.isFinite(p95ShortCrestDb) ? p95ShortCrestDb : null,
+        transient_density:
+          typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
+        punch_index:
+          typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
+      },
     },
     events: {
       loudness: { true_peak_overs: [] },

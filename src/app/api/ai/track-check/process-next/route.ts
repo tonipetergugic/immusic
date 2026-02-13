@@ -15,8 +15,10 @@ import {
   ffmpegDetectPhaseCorrelation,
   ffmpegDetectRmsDbfsWithPan,
   ffmpegDetectBandRmsDbfs,
+  ffmpegDetectTransientPunchMetrics,
   transcodeWavFileToMp3_320,
   writeTempWav,
+  type TransientPunchMetrics,
 } from "@/lib/audio/ingestTools";
 import { buildFeedbackPayloadV2Mvp, type FeedbackPayloadV2 } from "@/lib/ai/feedbackPayloadV2";
 
@@ -595,6 +597,16 @@ export async function POST() {
     let spectralHighMidRmsDbfs: number = NaN;
     let spectralHighRmsDbfs: number = NaN;
     let spectralAirRmsDbfs: number = NaN;
+    let transient: TransientPunchMetrics = {
+      mean_short_rms_dbfs: NaN,
+      p95_short_rms_dbfs: NaN,
+      mean_short_peak_dbfs: NaN,
+      p95_short_peak_dbfs: NaN,
+      mean_short_crest_db: NaN,
+      p95_short_crest_db: NaN,
+      transient_density: NaN,
+      punch_index: NaN,
+    };
 
     try {
       const tEbur = nowNs();
@@ -649,6 +661,8 @@ export async function POST() {
       spectralHighMidRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 2000, fHighHz: 6000 });
       spectralHighRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 6000, fHighHz: 12000 });
       spectralAirRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 12000, fHighHz: 16000 });
+
+      transient = await ffmpegDetectTransientPunchMetrics({ inPath: tmpWavPath });
 
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
@@ -735,6 +749,14 @@ export async function POST() {
             spectral_highmid_rms_dbfs: spectralHighMidRmsDbfs,
             spectral_high_rms_dbfs: spectralHighRmsDbfs,
             spectral_air_rms_dbfs: spectralAirRmsDbfs,
+            mean_short_rms_dbfs: transient.mean_short_rms_dbfs,
+            p95_short_rms_dbfs: transient.p95_short_rms_dbfs,
+            mean_short_peak_dbfs: transient.mean_short_peak_dbfs,
+            p95_short_peak_dbfs: transient.p95_short_peak_dbfs,
+            mean_short_crest_db: transient.mean_short_crest_db,
+            p95_short_crest_db: transient.p95_short_crest_db,
+            transient_density: transient.transient_density,
+            punch_index: transient.punch_index,
             analyzed_at: new Date().toISOString(),
           },
           { onConflict: "queue_id" }

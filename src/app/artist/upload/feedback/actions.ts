@@ -41,7 +41,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs")
+    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index")
     .eq("queue_id", queueId)
     .maybeSingle();
 
@@ -74,6 +74,10 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     spectralHighMidRmsDbfs: (pm as any).spectral_highmid_rms_dbfs,
     spectralHighRmsDbfs: (pm as any).spectral_high_rms_dbfs,
     spectralAirRmsDbfs: (pm as any).spectral_air_rms_dbfs,
+    meanShortCrestDb: (pm as any).mean_short_crest_db,
+    p95ShortCrestDb: (pm as any).p95_short_crest_db,
+    transientDensity: (pm as any).transient_density,
+    punchIndex: (pm as any).punch_index,
   });
 
   await admin
@@ -179,11 +183,15 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     spectral_highmid_rms_dbfs: number | null;
     spectral_high_rms_dbfs: number | null;
     spectral_air_rms_dbfs: number | null;
+    mean_short_crest_db: number | null;
+    p95_short_crest_db: number | null;
+    transient_density: number | null;
+    punch_index: number | null;
   };
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs")
+    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index")
     .eq("queue_id", queueId)
     .maybeSingle<PrivateMetricsRow>();
 
@@ -222,6 +230,10 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     spectralHighMidRmsDbfs: pm.spectral_highmid_rms_dbfs,
     spectralHighRmsDbfs: pm.spectral_high_rms_dbfs,
     spectralAirRmsDbfs: pm.spectral_air_rms_dbfs,
+    meanShortCrestDb: pm.mean_short_crest_db,
+    p95ShortCrestDb: pm.p95_short_crest_db,
+    transientDensity: pm.transient_density,
+    punchIndex: pm.punch_index,
   });
 
   const { error: payloadErr } = await (admin as any)
