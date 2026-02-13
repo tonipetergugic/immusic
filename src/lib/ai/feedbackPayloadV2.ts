@@ -169,6 +169,41 @@ export function buildFeedbackPayloadV2Mvp(params: {
     }
   }
 
+  // Loudness Range (LRA) — neutral display + objective extremes (genre-agnostic)
+  if (typeof loudnessRangeLu === "number" && Number.isFinite(loudnessRangeLu)) {
+    // Always show neutral value (no judgement)
+    highlights.push(`Loudness Range (LRA): ${loudnessRangeLu.toFixed(1)} LU`);
+
+    // Only classify extremes
+    if (loudnessRangeLu < 2) {
+      highlights.push("Loudness Range (LRA) is very low (< 2 LU) — dynamics are extremely limited.");
+      recommendations.push({
+        id: "rec_lra_very_low",
+        severity: "warn",
+        title: "Increase loudness range (LRA)",
+        why: "A very low LRA indicates extremely limited dynamics, often caused by heavy limiting or over-compression.",
+        how: [
+          "Reduce limiter gain reduction and/or raise limiter ceiling slightly",
+          "Use slower attack/release or less aggressive compression on the mix bus",
+          "Add transient detail (e.g., drums) without increasing peak overs",
+        ],
+      });
+    } else if (loudnessRangeLu > 10) {
+      highlights.push("Loudness Range (LRA) is very high (> 10 LU) — large dynamic variations detected.");
+      recommendations.push({
+        id: "rec_lra_very_high",
+        severity: "info",
+        title: "Check dynamic consistency (LRA)",
+        why: "A very high LRA means loud and quiet sections differ strongly, which can affect perceived consistency across playback environments.",
+        how: [
+          "Check whether quieter sections remain audible on consumer playback",
+          "Tame occasional peaks with gentle compression instead of hard limiting",
+          "Compare sections at matched loudness and adjust automation if needed",
+        ],
+      });
+    }
+  }
+
   if (typeof phaseCorrelation === "number" && Number.isFinite(phaseCorrelation)) {
     if (phaseCorrelation < -0.2) {
       highlights.push("Strong anti-phase content detected (high mono compatibility risk).");

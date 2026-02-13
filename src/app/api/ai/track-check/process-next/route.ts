@@ -107,21 +107,99 @@ async function writeFeedbackPayloadIfUnlocked(params: {
     return;
   }
 
+  // Source of truth: build payload from persisted private metrics (not from passed-in params)
+  const { data: mRow, error: mErr } = await adminClient
+    .from("track_ai_private_metrics")
+    .select(
+      [
+        "integrated_lufs",
+        "true_peak_db_tp",
+        "loudness_range_lu",
+        "crest_factor_db",
+        "phase_correlation",
+        "mid_rms_dbfs",
+        "side_rms_dbfs",
+        "mid_side_energy_ratio",
+        "stereo_width_index",
+        "spectral_sub_rms_dbfs",
+        "spectral_low_rms_dbfs",
+        "spectral_lowmid_rms_dbfs",
+        "spectral_mid_rms_dbfs",
+        "spectral_highmid_rms_dbfs",
+        "spectral_high_rms_dbfs",
+        "spectral_air_rms_dbfs",
+        "clipped_sample_count",
+        "mean_short_crest_db",
+        "p95_short_crest_db",
+        "transient_density",
+        "punch_index",
+      ].join(",")
+    )
+    .eq("queue_id", queueId)
+    .maybeSingle();
+
+  if (mErr || !mRow) {
+    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] abort: private metrics missing", {
+      queueId,
+      userId,
+      queueAudioHash,
+      mErr: mErr ? String((mErr as any).message ?? mErr) : null,
+      found: Boolean(mRow),
+    });
+    return;
+  }
+
+  const m = mRow as any;
+
+  const integratedLufsSoT =
+    typeof m.integrated_lufs === "number" && Number.isFinite(m.integrated_lufs) ? m.integrated_lufs : null;
+
+  const truePeakDbTpSoT =
+    typeof m.true_peak_db_tp === "number" && Number.isFinite(m.true_peak_db_tp) ? m.true_peak_db_tp : null;
+
+  const clippedSampleCountSoT =
+    typeof m.clipped_sample_count === "number" && Number.isFinite(m.clipped_sample_count) && m.clipped_sample_count >= 0
+      ? Math.trunc(m.clipped_sample_count)
+      : null;
+
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash: queueAudioHash,
     decision,
-    integratedLufs,
-    truePeakDbTp,
-    clippedSampleCount,
+    integratedLufs: integratedLufsSoT,
+    truePeakDbTp: truePeakDbTpSoT,
+    clippedSampleCount: clippedSampleCountSoT,
+
+    crestFactorDb: typeof m.crest_factor_db === "number" && Number.isFinite(m.crest_factor_db) ? m.crest_factor_db : null,
+    loudnessRangeLu: typeof m.loudness_range_lu === "number" && Number.isFinite(m.loudness_range_lu) ? m.loudness_range_lu : null,
+
+    phaseCorrelation: typeof m.phase_correlation === "number" && Number.isFinite(m.phase_correlation) ? m.phase_correlation : null,
+    midRmsDbfs: typeof m.mid_rms_dbfs === "number" && Number.isFinite(m.mid_rms_dbfs) ? m.mid_rms_dbfs : null,
+    sideRmsDbfs: typeof m.side_rms_dbfs === "number" && Number.isFinite(m.side_rms_dbfs) ? m.side_rms_dbfs : null,
+    midSideEnergyRatio: typeof m.mid_side_energy_ratio === "number" && Number.isFinite(m.mid_side_energy_ratio) ? m.mid_side_energy_ratio : null,
+    stereoWidthIndex: typeof m.stereo_width_index === "number" && Number.isFinite(m.stereo_width_index) ? m.stereo_width_index : null,
+
+    spectralSubRmsDbfs: typeof m.spectral_sub_rms_dbfs === "number" && Number.isFinite(m.spectral_sub_rms_dbfs) ? m.spectral_sub_rms_dbfs : null,
+    spectralLowRmsDbfs: typeof m.spectral_low_rms_dbfs === "number" && Number.isFinite(m.spectral_low_rms_dbfs) ? m.spectral_low_rms_dbfs : null,
+    spectralLowMidRmsDbfs: typeof m.spectral_lowmid_rms_dbfs === "number" && Number.isFinite(m.spectral_lowmid_rms_dbfs) ? m.spectral_lowmid_rms_dbfs : null,
+    spectralMidRmsDbfs: typeof m.spectral_mid_rms_dbfs === "number" && Number.isFinite(m.spectral_mid_rms_dbfs) ? m.spectral_mid_rms_dbfs : null,
+    spectralHighMidRmsDbfs: typeof m.spectral_highmid_rms_dbfs === "number" && Number.isFinite(m.spectral_highmid_rms_dbfs) ? m.spectral_highmid_rms_dbfs : null,
+    spectralHighRmsDbfs: typeof m.spectral_high_rms_dbfs === "number" && Number.isFinite(m.spectral_high_rms_dbfs) ? m.spectral_high_rms_dbfs : null,
+    spectralAirRmsDbfs: typeof m.spectral_air_rms_dbfs === "number" && Number.isFinite(m.spectral_air_rms_dbfs) ? m.spectral_air_rms_dbfs : null,
+
+    meanShortCrestDb: typeof m.mean_short_crest_db === "number" && Number.isFinite(m.mean_short_crest_db) ? m.mean_short_crest_db : null,
+    p95ShortCrestDb: typeof m.p95_short_crest_db === "number" && Number.isFinite(m.p95_short_crest_db) ? m.p95_short_crest_db : null,
+    transientDensity: typeof m.transient_density === "number" && Number.isFinite(m.transient_density) ? m.transient_density : null,
+    punchIndex: typeof m.punch_index === "number" && Number.isFinite(m.punch_index) ? m.punch_index : null,
   });
 
-  if (AI_DEBUG) console.log("[PAYLOAD DEBUG] built loudness:", {
+  if (AI_DEBUG) console.log("[PAYLOAD DEBUG] built payload (SoT metrics):", {
     queueId,
     queueAudioHash,
-    integratedLufs,
-    truePeakDbTp,
-    payloadLoudness: payload.metrics?.loudness,
+    integratedLufsSoT,
+    truePeakDbTpSoT,
+    lraSoT: typeof m.loudness_range_lu === "number" ? m.loudness_range_lu : null,
+    crestSoT: typeof m.crest_factor_db === "number" ? m.crest_factor_db : null,
   });
 
   const { data: existingPayload } = await adminClient
