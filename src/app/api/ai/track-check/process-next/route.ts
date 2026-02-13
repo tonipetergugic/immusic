@@ -13,6 +13,7 @@ import {
   ffmpegDetectRmsLevelDbfs,
   ffmpegDetectClippedSampleCount,
   ffmpegDetectPhaseCorrelation,
+  ffmpegDetectRmsDbfsWithPan,
   transcodeWavFileToMp3_320,
   writeTempWav,
 } from "@/lib/audio/ingestTools";
@@ -607,7 +608,30 @@ export async function POST() {
       const phaseCorrelationRaw = await ffmpegDetectPhaseCorrelation({ inPath: tmpWavPath });
       phaseCorrelation = phaseCorrelationRaw;
 
-      // TODO: assign when mid/side detection is implemented (midRmsDbfs, sideRmsDbfs, midSideEnergyRatio, stereoWidthIndex)
+      midRmsDbfs = await ffmpegDetectRmsDbfsWithPan({
+        inPath: tmpWavPath,
+        panExpr: "mono|c0=0.5*c0+0.5*c1",
+      });
+
+      sideRmsDbfs = await ffmpegDetectRmsDbfsWithPan({
+        inPath: tmpWavPath,
+        panExpr: "mono|c0=0.5*c0-0.5*c1",
+      });
+
+      // Energy ratio based on linear RMS (not dB): side_energy / mid_energy
+      const midLin = Number.isFinite(midRmsDbfs) ? Math.pow(10, midRmsDbfs / 20) : NaN;
+      const sideLin = Number.isFinite(sideRmsDbfs) ? Math.pow(10, sideRmsDbfs / 20) : NaN;
+
+      midSideEnergyRatio =
+        Number.isFinite(midLin) && Number.isFinite(sideLin) && midLin > 0
+          ? (sideLin * sideLin) / (midLin * midLin)
+          : NaN;
+
+      // Stereo width index: normalized side vs total energy [0..1]
+      stereoWidthIndex =
+        Number.isFinite(midLin) && Number.isFinite(sideLin) && midLin >= 0 && sideLin >= 0
+          ? (sideLin * sideLin) / ((midLin * midLin) + (sideLin * sideLin) + 1e-12)
+          : NaN;
 
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
@@ -649,7 +673,11 @@ export async function POST() {
       !Number.isFinite(maxSamplePeakDbfs) ||
       !Number.isFinite(clippedSampleCount) ||
       clippedSampleCount < 0 ||
-      !Number.isFinite(phaseCorrelation)
+      !Number.isFinite(phaseCorrelation) ||
+      !Number.isFinite(midRmsDbfs) ||
+      !Number.isFinite(sideRmsDbfs) ||
+      !Number.isFinite(midSideEnergyRatio) ||
+      !Number.isFinite(stereoWidthIndex)
     ) {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
       return NextResponse.json({ ok: false, error: "private_metrics_invalid" }, { status: 500 });
@@ -672,6 +700,10 @@ export async function POST() {
             clipped_sample_count: Math.trunc(clippedSampleCount),
             crest_factor_db: crestFactorDb,
             phase_correlation: phaseCorrelation,
+            mid_rms_dbfs: midRmsDbfs,
+            side_rms_dbfs: sideRmsDbfs,
+            mid_side_energy_ratio: midSideEnergyRatio,
+            stereo_width_index: stereoWidthIndex,
             analyzed_at: new Date().toISOString(),
           },
           { onConflict: "queue_id" }

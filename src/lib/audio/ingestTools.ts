@@ -324,6 +324,43 @@ export async function ffmpegDetectRmsLevelDbfs(params: {
   return maxRmsDb;
 }
 
+export async function ffmpegDetectRmsDbfsWithPan(params: {
+  inPath: string;
+  panExpr: string; // e.g. "mono|c0=0.5*c0+0.5*c1"
+}): Promise<number> {
+  // Deterministic RMS detection after panning to mono.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-vn",
+    "-af",
+    `pan=${params.panExpr},astats=metadata=0:reset=0`,
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // Take the last seen "RMS level dB:" value.
+  let last = NaN;
+  const re = /RMS level dB:\s*([+-]?[0-9.]+)\b/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (m) {
+      const v = Number(m[1]);
+      if (Number.isFinite(v)) last = v;
+    }
+  }
+
+  return last;
+}
+
 export async function ffmpegDetectPhaseCorrelation(params: {
   inPath: string;
 }): Promise<number> {
