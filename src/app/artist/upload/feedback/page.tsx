@@ -436,6 +436,42 @@ export default async function UploadFeedbackPage({
                           </div>
                         )}
 
+                        {(typeof (payload as any)?.metrics?.spectral?.sub_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.spectral?.low_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.spectral?.lowmid_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.spectral?.mid_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.spectral?.highmid_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.spectral?.high_rms_dbfs === "number" ||
+                          typeof (payload as any)?.metrics?.spectral?.air_rms_dbfs === "number") && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+                            <div className="text-xs text-white/70 mb-2">Spectral (RMS by band)</div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              {([
+                                ["Sub", (payload as any).metrics.spectral.sub_rms_dbfs],
+                                ["Low", (payload as any).metrics.spectral.low_rms_dbfs],
+                                ["Low-Mid", (payload as any).metrics.spectral.lowmid_rms_dbfs],
+                                ["Mid", (payload as any).metrics.spectral.mid_rms_dbfs],
+                                ["High-Mid", (payload as any).metrics.spectral.highmid_rms_dbfs],
+                                ["High", (payload as any).metrics.spectral.high_rms_dbfs],
+                                ["Air", (payload as any).metrics.spectral.air_rms_dbfs],
+                              ] as Array<[string, any]>)
+                                .filter(([, v]) => typeof v === "number")
+                                .map(([label, v]) => (
+                                  <div
+                                    key={label}
+                                    className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5"
+                                  >
+                                    <span className="text-[11px] text-white/60">{label}</span>
+                                    <span className="text-[11px] text-white/50 tabular-nums">
+                                      {v.toFixed(1)} dBFS
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
                         {typeof (payload as any)?.metrics?.clipping?.clipped_sample_count === "number" && (
                           <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
                             <span className="text-xs text-white/70">Clipping</span>

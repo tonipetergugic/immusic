@@ -361,6 +361,50 @@ export async function ffmpegDetectRmsDbfsWithPan(params: {
   return last;
 }
 
+export async function ffmpegDetectBandRmsDbfs(params: {
+  inPath: string;
+  fLowHz: number;
+  fHighHz: number;
+}): Promise<number> {
+  const fLow = Number(params.fLowHz);
+  const fHigh = Number(params.fHighHz);
+
+  if (!Number.isFinite(fLow) || !Number.isFinite(fHigh) || fLow <= 0 || fHigh <= 0 || fHigh <= fLow) {
+    return NaN;
+  }
+
+  // Band-limited RMS via ffmpeg filters + astats (whole file, reset=0).
+  // Deterministic: parse last "RMS level dB:" value.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-vn",
+    "-af",
+    `highpass=f=${fLow},lowpass=f=${fHigh},astats=metadata=0:reset=0`,
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  let last = NaN;
+  const re = /RMS level dB:\s*([+-]?[0-9.]+)\b/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (Number.isFinite(v)) last = v;
+  }
+
+  return last;
+}
+
 export async function ffmpegDetectPhaseCorrelation(params: {
   inPath: string;
 }): Promise<number> {
@@ -449,6 +493,154 @@ export async function ffmpegDetectPhaseCorrelation(params: {
       // Clamp to [-1, 1] to avoid tiny numeric overshoots
       const clamped = Math.max(-1, Math.min(1, corr));
       resolve(clamped);
+    });
+  });
+}
+
+export type PhaseCorrEvent = { t0: number; t1: number; corr: number; severity: "warn" | "critical" };
+
+export async function ffmpegDetectPhaseCorrelationEvents(params: {
+  inPath: string;
+  windowSec?: number; // default 0.5
+}): Promise<PhaseCorrEvent[]> {
+  const windowSec = params.windowSec ?? 0.5;
+
+  return await new Promise<PhaseCorrEvent[]>((resolve, reject) => {
+    const sampleRate = 11025;
+    const windowFrames = Math.max(1, Math.floor(windowSec * sampleRate));
+
+    const ff = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      params.inPath,
+      "-vn",
+      "-ac",
+      "2",
+      "-ar",
+      String(sampleRate),
+      "-f",
+      "f32le",
+      "pipe:1",
+    ]);
+
+    let stderr = "";
+    ff.stderr?.on("data", (d) => {
+      stderr += String(d);
+      if (stderr.length > 4000) stderr = stderr.slice(-4000);
+    });
+
+    let leftover: Buffer = Buffer.alloc(0);
+
+    // Window accumulators
+    let wN = 0;
+    let sumL = 0;
+    let sumR = 0;
+    let sumLL = 0;
+    let sumRR = 0;
+    let sumLR = 0;
+
+    let globalFrameIndex = 0; // counts valid frames consumed (including non-finite? we skip non-finite)
+    let windowStartFrameIndex = 0;
+
+    const events: PhaseCorrEvent[] = [];
+
+    function finalizeWindow(t0: number, t1: number) {
+      if (wN <= 0) return;
+
+      const num = wN * sumLR - sumL * sumR;
+      const denL = wN * sumLL - sumL * sumL;
+      const denR = wN * sumRR - sumR * sumR;
+      const den = Math.sqrt(denL * denR);
+
+      // reset window
+      wN = 0;
+      sumL = 0;
+      sumR = 0;
+      sumLL = 0;
+      sumRR = 0;
+      sumLR = 0;
+
+      if (!Number.isFinite(den) || den <= 0) return;
+
+      const corr = Math.max(-1, Math.min(1, num / den));
+
+      if (corr < -0.2) {
+        events.push({ t0, t1, corr, severity: "critical" });
+      } else if (corr < 0) {
+        events.push({ t0, t1, corr, severity: "warn" });
+      }
+    }
+
+    ff.stdout?.on("data", (chunk: Buffer) => {
+      const buf = leftover.length ? Buffer.concat([leftover, chunk]) : chunk;
+      const frameBytes = 8; // 2 * float32
+      const frames = Math.floor(buf.length / frameBytes);
+
+      for (let i = 0; i < frames; i++) {
+        const off = i * frameBytes;
+        const l = buf.readFloatLE(off);
+        const r = buf.readFloatLE(off + 4);
+
+        if (!Number.isFinite(l) || !Number.isFinite(r)) continue;
+
+        wN++;
+        sumL += l;
+        sumR += r;
+        sumLL += l * l;
+        sumRR += r * r;
+        sumLR += l * r;
+
+        globalFrameIndex++;
+
+        if (globalFrameIndex - windowStartFrameIndex >= windowFrames) {
+          const t0 = windowStartFrameIndex / sampleRate;
+          const t1 = globalFrameIndex / sampleRate;
+          finalizeWindow(t0, t1);
+          windowStartFrameIndex = globalFrameIndex;
+        }
+      }
+
+      const used = frames * frameBytes;
+      leftover = used < buf.length ? Buffer.from(buf.subarray(used)) : Buffer.alloc(0);
+    });
+
+    ff.on("error", (err) => reject(err));
+
+    ff.on("close", (code) => {
+      if (code !== 0) {
+        const e: any = new Error("ffmpeg_phase_correlation_events_failed");
+        e.code = code;
+        e.stderr = stderr;
+        return reject(e);
+      }
+
+      // finalize trailing partial window
+      if (globalFrameIndex > windowStartFrameIndex) {
+        const t0 = windowStartFrameIndex / sampleRate;
+        const t1 = globalFrameIndex / sampleRate;
+        finalizeWindow(t0, t1);
+      }
+
+      // Merge adjacent same-severity events if they touch (small cleanup)
+      const merged: PhaseCorrEvent[] = [];
+      for (const ev of events) {
+        const last = merged[merged.length - 1];
+        if (
+          last &&
+          last.severity === ev.severity &&
+          Math.abs(last.t1 - ev.t0) < 1e-6
+        ) {
+          // extend, keep worst corr (more negative)
+          last.t1 = ev.t1;
+          last.corr = Math.min(last.corr, ev.corr);
+        } else {
+          merged.push({ ...ev });
+        }
+      }
+
+      resolve(merged);
     });
   });
 }

@@ -76,6 +76,13 @@ export function buildFeedbackPayloadV2Mvp(params: {
   sideRmsDbfs?: number | null;
   midSideEnergyRatio?: number | null;
   stereoWidthIndex?: number | null;
+  spectralSubRmsDbfs?: number | null;
+  spectralLowRmsDbfs?: number | null;
+  spectralLowMidRmsDbfs?: number | null;
+  spectralMidRmsDbfs?: number | null;
+  spectralHighMidRmsDbfs?: number | null;
+  spectralHighRmsDbfs?: number | null;
+  spectralAirRmsDbfs?: number | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -90,6 +97,13 @@ export function buildFeedbackPayloadV2Mvp(params: {
     sideRmsDbfs = null,
     midSideEnergyRatio = null,
     stereoWidthIndex = null,
+    spectralSubRmsDbfs = null,
+    spectralLowRmsDbfs = null,
+    spectralLowMidRmsDbfs = null,
+    spectralMidRmsDbfs = null,
+    spectralHighMidRmsDbfs = null,
+    spectralHighRmsDbfs = null,
+    spectralAirRmsDbfs = null,
   } = params;
 
   const highlights: string[] = [];
@@ -267,7 +281,15 @@ export function buildFeedbackPayloadV2Mvp(params: {
         lufs_i: typeof integratedLufs === "number" && Number.isFinite(integratedLufs) ? integratedLufs : null,
         true_peak_dbtp_max: typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null,
       },
-      spectral: {},
+      spectral: {
+        sub_rms_dbfs: typeof spectralSubRmsDbfs === "number" && Number.isFinite(spectralSubRmsDbfs) ? spectralSubRmsDbfs : null,
+        low_rms_dbfs: typeof spectralLowRmsDbfs === "number" && Number.isFinite(spectralLowRmsDbfs) ? spectralLowRmsDbfs : null,
+        lowmid_rms_dbfs: typeof spectralLowMidRmsDbfs === "number" && Number.isFinite(spectralLowMidRmsDbfs) ? spectralLowMidRmsDbfs : null,
+        mid_rms_dbfs: typeof spectralMidRmsDbfs === "number" && Number.isFinite(spectralMidRmsDbfs) ? spectralMidRmsDbfs : null,
+        highmid_rms_dbfs: typeof spectralHighMidRmsDbfs === "number" && Number.isFinite(spectralHighMidRmsDbfs) ? spectralHighMidRmsDbfs : null,
+        high_rms_dbfs: typeof spectralHighRmsDbfs === "number" && Number.isFinite(spectralHighRmsDbfs) ? spectralHighRmsDbfs : null,
+        air_rms_dbfs: typeof spectralAirRmsDbfs === "number" && Number.isFinite(spectralAirRmsDbfs) ? spectralAirRmsDbfs : null,
+      },
       stereo: {
         phase_correlation:
           typeof phaseCorrelation === "number" && Number.isFinite(phaseCorrelation) ? phaseCorrelation : null,

@@ -14,6 +14,7 @@ import {
   ffmpegDetectClippedSampleCount,
   ffmpegDetectPhaseCorrelation,
   ffmpegDetectRmsDbfsWithPan,
+  ffmpegDetectBandRmsDbfs,
   transcodeWavFileToMp3_320,
   writeTempWav,
 } from "@/lib/audio/ingestTools";
@@ -587,6 +588,13 @@ export async function POST() {
     let sideRmsDbfs: number = NaN;
     let midSideEnergyRatio: number = NaN;
     let stereoWidthIndex: number = NaN;
+    let spectralSubRmsDbfs: number = NaN;
+    let spectralLowRmsDbfs: number = NaN;
+    let spectralLowMidRmsDbfs: number = NaN;
+    let spectralMidRmsDbfs: number = NaN;
+    let spectralHighMidRmsDbfs: number = NaN;
+    let spectralHighRmsDbfs: number = NaN;
+    let spectralAirRmsDbfs: number = NaN;
 
     try {
       const tEbur = nowNs();
@@ -633,6 +641,15 @@ export async function POST() {
           ? (sideLin * sideLin) / ((midLin * midLin) + (sideLin * sideLin) + 1e-12)
           : NaN;
 
+      // Spectral band RMS (dBFS) - genre-agnostic, deterministic
+      spectralSubRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 20, fHighHz: 60 });
+      spectralLowRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 60, fHighHz: 200 });
+      spectralLowMidRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 200, fHighHz: 500 });
+      spectralMidRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 500, fHighHz: 2000 });
+      spectralHighMidRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 2000, fHighHz: 6000 });
+      spectralHighRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 6000, fHighHz: 12000 });
+      spectralAirRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: tmpWavPath, fLowHz: 12000, fHighHz: 16000 });
+
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
         console.log("[AI-CHECK] TruePeak:", truePeakDb);
@@ -677,7 +694,14 @@ export async function POST() {
       !Number.isFinite(midRmsDbfs) ||
       !Number.isFinite(sideRmsDbfs) ||
       !Number.isFinite(midSideEnergyRatio) ||
-      !Number.isFinite(stereoWidthIndex)
+      !Number.isFinite(stereoWidthIndex) ||
+      !Number.isFinite(spectralSubRmsDbfs) ||
+      !Number.isFinite(spectralLowRmsDbfs) ||
+      !Number.isFinite(spectralLowMidRmsDbfs) ||
+      !Number.isFinite(spectralMidRmsDbfs) ||
+      !Number.isFinite(spectralHighMidRmsDbfs) ||
+      !Number.isFinite(spectralHighRmsDbfs) ||
+      !Number.isFinite(spectralAirRmsDbfs)
     ) {
       await resetQueueToPending({ supabase, userId: user.id, queueId });
       return NextResponse.json({ ok: false, error: "private_metrics_invalid" }, { status: 500 });
@@ -704,6 +728,13 @@ export async function POST() {
             side_rms_dbfs: sideRmsDbfs,
             mid_side_energy_ratio: midSideEnergyRatio,
             stereo_width_index: stereoWidthIndex,
+            spectral_sub_rms_dbfs: spectralSubRmsDbfs,
+            spectral_low_rms_dbfs: spectralLowRmsDbfs,
+            spectral_lowmid_rms_dbfs: spectralLowMidRmsDbfs,
+            spectral_mid_rms_dbfs: spectralMidRmsDbfs,
+            spectral_highmid_rms_dbfs: spectralHighMidRmsDbfs,
+            spectral_high_rms_dbfs: spectralHighRmsDbfs,
+            spectral_air_rms_dbfs: spectralAirRmsDbfs,
             analyzed_at: new Date().toISOString(),
           },
           { onConflict: "queue_id" }
