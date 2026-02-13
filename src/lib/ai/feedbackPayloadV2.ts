@@ -71,6 +71,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
   truePeakDbTp?: number | null;
   clippedSampleCount?: number | null;
   crestFactorDb?: number | null;
+  loudnessRangeLu?: number | null;
   phaseCorrelation?: number | null;
   midRmsDbfs?: number | null;
   sideRmsDbfs?: number | null;
@@ -96,6 +97,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     truePeakDbTp = null,
     clippedSampleCount = null,
     crestFactorDb = null,
+    loudnessRangeLu = null,
     phaseCorrelation = null,
     midRmsDbfs = null,
     sideRmsDbfs = null,
@@ -319,6 +321,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
       dynamics: {
         crest_factor_db:
           typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
+        loudness_range_lu:
+          typeof loudnessRangeLu === "number" && Number.isFinite(loudnessRangeLu) ? loudnessRangeLu : null,
       },
       silence: {},
       transients: {

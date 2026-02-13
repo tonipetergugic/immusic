@@ -41,7 +41,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index")
+    .select("integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index,loudness_range_lu")
     .eq("queue_id", queueId)
     .maybeSingle();
 
@@ -60,6 +60,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     decision,
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
+    loudnessRangeLu: (pm as any).loudness_range_lu,
     clippedSampleCount: pm.clipped_sample_count,
     crestFactorDb: pm.crest_factor_db,
     phaseCorrelation: (pm as any).phase_correlation,
@@ -168,6 +169,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   type PrivateMetricsRow = {
     integrated_lufs: number;
     true_peak_db_tp: number;
+    loudness_range_lu: number | null;
     title: string;
     clipped_sample_count: number;
     crest_factor_db: number | null;
@@ -191,7 +193,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index")
+    .select("integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index,loudness_range_lu")
     .eq("queue_id", queueId)
     .maybeSingle<PrivateMetricsRow>();
 
@@ -216,6 +218,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     decision,
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
+    loudnessRangeLu: pm.loudness_range_lu,
     clippedSampleCount: pm.clipped_sample_count,
     crestFactorDb: pm.crest_factor_db,
     phaseCorrelation: pm.phase_correlation,

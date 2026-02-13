@@ -9,6 +9,7 @@ import {
   ffmpegDetectSilence,
   ffmpegDetectDcOffsetAbsMean,
   ffmpegDetectTruePeakAndIntegratedLufs,
+  ffmpegDetectLoudnessRangeLu,
   ffmpegDetectMaxSamplePeakDbfs,
   ffmpegDetectRmsLevelDbfs,
   ffmpegDetectClippedSampleCount,
@@ -597,6 +598,7 @@ export async function POST() {
     let spectralHighMidRmsDbfs: number = NaN;
     let spectralHighRmsDbfs: number = NaN;
     let spectralAirRmsDbfs: number = NaN;
+    let lraLu: number = NaN;
     let transient: TransientPunchMetrics = {
       mean_short_rms_dbfs: NaN,
       p95_short_rms_dbfs: NaN,
@@ -664,9 +666,12 @@ export async function POST() {
 
       transient = await ffmpegDetectTransientPunchMetrics({ inPath: tmpWavPath });
 
+      lraLu = await ffmpegDetectLoudnessRangeLu({ inPath: tmpWavPath });
+
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
         console.log("[AI-CHECK] TruePeak:", truePeakDb);
+        console.log("[AI-CHECK] LRA (LU):", lraLu);
       }
       if (process.env.AI_DEBUG === "1") {
         console.log("[AI-CHECK] RMS dBFS:", rmsDbfs);
@@ -734,6 +739,7 @@ export async function POST() {
             title: titleSnapshot,
             integrated_lufs: integratedLufs,
             true_peak_db_tp: truePeakDb,
+            loudness_range_lu: lraLu,
             max_sample_peak_dbfs: maxSamplePeakDbfs,
             clipped_sample_count: Math.trunc(clippedSampleCount),
             crest_factor_db: crestFactorDb,

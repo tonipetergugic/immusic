@@ -337,6 +337,15 @@ export default async function UploadFeedbackPage({
                           </div>
                         )}
 
+                        {typeof (payload as any)?.metrics?.dynamics?.loudness_range_lu === "number" && (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+                            <span className="text-xs text-white/70">Loudness Range (LRA)</span>
+                            <span className="text-xs text-white/50 tabular-nums">
+                              {(payload as any).metrics.dynamics.loudness_range_lu.toFixed(1)} LU
+                            </span>
+                          </div>
+                        )}
+
                         {(v2PunchIndex !== null ||
                           v2P95ShortCrest !== null ||
                           v2MeanShortCrest !== null ||

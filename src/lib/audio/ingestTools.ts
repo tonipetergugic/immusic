@@ -948,3 +948,38 @@ export async function ffmpegDetectTruePeakAndIntegratedLufs(params: {
   };
 }
 
+export async function ffmpegDetectLoudnessRangeLu(params: {
+  inPath: string;
+}): Promise<number> {
+  // EBU R128 Loudness Range (LRA) in LU, parsed from ffmpeg ebur128 summary.
+  // Deterministic, whole-file.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    "ebur128=peak=1",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // Typical summary line contains: "LRA:  7.2 LU"
+  // We take the last seen LRA value.
+  let lastLra = NaN;
+  const re = /\bLRA:\s*([+-]?[0-9.]+)\s*LU\b/i;
+
+  for (const line of lines) {
+    const m = line.match(re);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (Number.isFinite(v)) lastLra = v;
+  }
+
+  return lastLra;
+}
