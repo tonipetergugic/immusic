@@ -334,6 +334,35 @@ async function bestEffortRemoveIngestWav(params: {
   } catch {}
 }
 
+async function bestEffortPersistHardFailReasons(params: {
+  admin: any;
+  queueId: string;
+  reasons: any[];
+}) {
+  try {
+    const adminClient = params.admin as any;
+
+    const { data, error } = await adminClient
+      .from("track_ai_private_metrics")
+      .update({ hard_fail_reasons: Array.isArray(params.reasons) ? params.reasons : [] })
+      .eq("queue_id", params.queueId)
+      .select("queue_id");
+
+    if (error) {
+      console.warn("[AI-CHECK] hard_fail_reasons update failed:", error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn("[AI-CHECK] hard_fail_reasons update affected 0 rows (metrics row missing?)", {
+        queueId: params.queueId,
+      });
+    }
+  } catch (e) {
+    console.warn("[AI-CHECK] hard_fail_reasons update crashed (ignored):", String((e as any)?.message ?? e));
+  }
+}
+
 async function hardFailRejectTechnical(params: {
   supabase: any;
   userId: string;
@@ -922,6 +951,7 @@ export async function POST() {
           {
             queue_id: queueId,
             title: titleSnapshot,
+            hard_fail_reasons: [],
             integrated_lufs: integratedLufs,
             true_peak_db_tp: truePeakDbEffective,
             duration_s: durationSec,
@@ -990,41 +1020,49 @@ export async function POST() {
     const clippedSamples =
       typeof clippedSampleCount === "number" ? clippedSampleCount : 0;
 
-    // Hard-Fail 1: True Peak exceeds +0.1 dBTP
+    // Collect all hard-fail reasons (v2). Reject if at least one reason matches.
+    const hardFailReasons: any[] = [];
+
     if (tp !== null && tp > 0.1) {
-      return await hardFailRejectTechnical({
-        supabase,
-        userId: user.id,
-        queueId,
-        audioPath,
-        hasFeedbackUnlockFn: hasFeedbackUnlock,
+      hardFailReasons.push({
+        id: "tp_over_0_1",
+        metric: "true_peak_db_tp",
+        threshold: 0.1,
+        value: tp,
       });
     }
 
-    // Hard-Fail 2: Digital clipping detected
     if (clippedSamples > 0) {
-      return await hardFailRejectTechnical({
-        supabase,
-        userId: user.id,
-        queueId,
-        audioPath,
-        hasFeedbackUnlockFn: hasFeedbackUnlock,
+      hardFailReasons.push({
+        id: "clipped_samples",
+        metric: "clipped_sample_count",
+        threshold: 0,
+        value: clippedSamples,
       });
     }
 
-    // Hard-Fail 3: Extremely loud master (likely limiter destruction)
     if (lufs !== null && lufs > -4.5) {
-      return await hardFailRejectTechnical({
-        supabase,
-        userId: user.id,
-        queueId,
-        audioPath,
-        hasFeedbackUnlockFn: hasFeedbackUnlock,
+      hardFailReasons.push({
+        id: "lufs_too_hot",
+        metric: "integrated_lufs",
+        threshold: -4.5,
+        value: lufs,
       });
     }
 
-    // Hard-Fail 4: Loud + extremely low dynamics (brickwall pattern)
     if (lufs !== null && lra !== null && lufs > -6 && lra < 1.0) {
+      hardFailReasons.push({
+        id: "lufs_plus_low_lra",
+        metrics: ["integrated_lufs", "loudness_range_lu"],
+        thresholds: { integrated_lufs: -6, loudness_range_lu: 1.0 },
+        values: { integrated_lufs: lufs, loudness_range_lu: lra },
+      });
+    }
+
+    if (hardFailReasons.length > 0) {
+      // Best-effort persistence (never blocks / never throws)
+      await bestEffortPersistHardFailReasons({ admin, queueId, reasons: hardFailReasons });
+
       return await hardFailRejectTechnical({
         supabase,
         userId: user.id,

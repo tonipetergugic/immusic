@@ -9,9 +9,9 @@ type ApiResponse =
   | { ok: true; processed: false; reason: string; queue_id?: string }
   | { ok: false; error: string };
 
-type Props = { credits: number };
+type Props = { credits: number; queueId: string };
 
-export default function ProcessingClient({ credits }: Props) {
+export default function ProcessingClient({ credits, queueId }: Props) {
   const router = useRouter();
   const [statusText, setStatusText] = useState<string>("Processing your track…");
   const [rejectReason, setRejectReason] = useState<string | null>(null);
@@ -19,7 +19,6 @@ export default function ProcessingClient({ credits }: Props) {
   const [rejected, setRejected] = useState(false);
   const [approved, setApproved] = useState(false);
   const [canFeedback, setCanFeedback] = useState(false);
-  const [queueId, setQueueId] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -69,12 +68,16 @@ export default function ProcessingClient({ credits }: Props) {
           return;
         }
 
-        if ("queue_id" in data && typeof (data as any).queue_id === "string") {
-          setQueueId((data as any).queue_id);
-        }
+        const resQueueId = (data as any).queue_id as string | undefined;
+        const isOurQueue = typeof resQueueId === "string" && resQueueId === queueId;
 
         if (data.processed === false) {
           setStatusText("Queued… processing will start shortly.");
+          timerRef.current = window.setTimeout(tick, POLL_MS);
+          return;
+        }
+
+        if (!isOurQueue) {
           timerRef.current = window.setTimeout(tick, POLL_MS);
           return;
         }
@@ -86,7 +89,7 @@ export default function ProcessingClient({ credits }: Props) {
           return; // stop polling
         }
 
-        // rejected
+        // rejected (our queue)
         setRejected(true);
 
         const rr = (data as any).reason as string | undefined;
@@ -112,7 +115,7 @@ export default function ProcessingClient({ credits }: Props) {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
-  }, [retryKey]);
+  }, [retryKey, queueId]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] text-white">
@@ -179,15 +182,8 @@ export default function ProcessingClient({ credits }: Props) {
                 </button>
                 <button
                   type="button"
-                  disabled={!queueId}
-                  className={
-                    "px-6 py-3 rounded-xl text-black font-semibold " +
-                    (queueId ? "bg-[#00FFC6] hover:bg-[#00E0B0]" : "bg-[#00FFC6]/40 cursor-not-allowed")
-                  }
-                  onClick={() => {
-                    if (!queueId) return;
-                    router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
-                  }}
+                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
+                  onClick={() => router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
                 >
                   Unlock (1 credit)
                 </button>
@@ -206,7 +202,7 @@ export default function ProcessingClient({ credits }: Props) {
               Go to My Tracks
             </button>
 
-            {credits >= 1 && queueId ? (
+            {credits >= 1 ? (
               <button
                 type="button"
                 className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"

@@ -65,5 +65,5 @@
  
   const queueId = insertedRow.id as string;
 
-  redirect("/artist/upload/processing");
+  redirect(`/artist/upload/processing?queue_id=${encodeURIComponent(queueId)}`);
  }
