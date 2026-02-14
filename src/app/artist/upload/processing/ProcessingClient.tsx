@@ -179,10 +179,17 @@ export default function ProcessingClient({ credits }: Props) {
                 </button>
                 <button
                   type="button"
-                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-                  onClick={() => router.replace("/artist/my-tracks")}
+                  disabled={!queueId}
+                  className={
+                    "px-6 py-3 rounded-xl text-black font-semibold " +
+                    (queueId ? "bg-[#00FFC6] hover:bg-[#00E0B0]" : "bg-[#00FFC6]/40 cursor-not-allowed")
+                  }
+                  onClick={() => {
+                    if (!queueId) return;
+                    router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);
+                  }}
                 >
-                  Go to My Tracks
+                  Unlock (1 credit)
                 </button>
               </div>
             )}

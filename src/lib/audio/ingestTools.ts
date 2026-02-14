@@ -55,6 +55,133 @@ export async function ffprobeDurationSeconds(params: { inPath: string }): Promis
 
 export type SilenceSegment = { start: number; end: number; dur: number };
 
+// --- True Peak Overs (timecoded) ---
+// We approximate true peak via high-rate resampling (ffmpeg resampler) and peak detection per window.
+// Output values are in dBFS but treated as dBTP-approx for encoding headroom.
+export type TruePeakOverWindow = { t0: number; t1: number; peak_db_tp: number };
+
+export async function ffmpegDetectTruePeakOvers(params: {
+  inPath: string;
+  windowSec?: number; // default 0.1s
+  sampleRate?: number; // default 192000 (oversampled)
+}): Promise<TruePeakOverWindow[]> {
+  const windowSec = params.windowSec ?? 0.1;
+  const sampleRate = params.sampleRate ?? 192000;
+
+  if (!Number.isFinite(windowSec) || windowSec <= 0) return [];
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return [];
+
+  return await new Promise<TruePeakOverWindow[]>((resolve, reject) => {
+    const windowFrames = Math.max(1, Math.floor(windowSec * sampleRate));
+
+    // Decode + resample up to high SR, keep stereo, output float32 PCM to pipe.
+    const ff = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      params.inPath,
+      "-vn",
+      "-ac",
+      "2",
+      "-ar",
+      String(sampleRate),
+      "-f",
+      "f32le",
+      "pipe:1",
+    ]);
+
+    let stderr = "";
+    ff.stderr?.on("data", (d) => {
+      stderr += String(d);
+      if (stderr.length > 4000) stderr = stderr.slice(-4000);
+    });
+
+    let leftover: Buffer = Buffer.alloc(0);
+
+    let globalFrameIndex = 0;
+    let windowStartFrameIndex = 0;
+
+    let peakAbs = 0;
+
+    const overs: TruePeakOverWindow[] = [];
+
+    function finalizeWindow(t0: number, t1: number) {
+      const peakDb = 20 * Math.log10(peakAbs + 1e-12);
+      // reset window peak
+      peakAbs = 0;
+
+      if (!Number.isFinite(peakDb)) return;
+
+      // Only emit "overs" above 0.0 dBTP threshold (hard-fail gate)
+      if (peakDb > 0.0) {
+        overs.push({ t0, t1, peak_db_tp: peakDb });
+      }
+    }
+
+    ff.stdout?.on("data", (chunk: Buffer) => {
+      const buf = leftover.length ? Buffer.concat([leftover, chunk]) : chunk;
+      const frameBytes = 8; // 2 * float32 (stereo)
+      const frames = Math.floor(buf.length / frameBytes);
+
+      for (let i = 0; i < frames; i++) {
+        const off = i * frameBytes;
+        const l = buf.readFloatLE(off);
+        const r = buf.readFloatLE(off + 4);
+
+        if (!Number.isFinite(l) || !Number.isFinite(r)) continue;
+
+        const a = Math.max(Math.abs(l), Math.abs(r));
+        if (a > peakAbs) peakAbs = a;
+
+        globalFrameIndex++;
+
+        if (globalFrameIndex - windowStartFrameIndex >= windowFrames) {
+          const t0 = windowStartFrameIndex / sampleRate;
+          const t1 = globalFrameIndex / sampleRate;
+          finalizeWindow(t0, t1);
+          windowStartFrameIndex = globalFrameIndex;
+        }
+      }
+
+      const used = frames * frameBytes;
+      leftover = used < buf.length ? Buffer.from(buf.subarray(used)) : Buffer.alloc(0);
+    });
+
+    ff.on("error", (err) => reject(err));
+
+    ff.on("close", (code) => {
+      if (code !== 0) {
+        const e: any = new Error("ffmpeg_true_peak_overs_failed");
+        e.code = code;
+        e.stderr = stderr;
+        return reject(e);
+      }
+
+      // finalize trailing partial window
+      if (globalFrameIndex > windowStartFrameIndex) {
+        const t0 = windowStartFrameIndex / sampleRate;
+        const t1 = globalFrameIndex / sampleRate;
+        finalizeWindow(t0, t1);
+      }
+
+      // Merge adjacent windows that touch (cleanup)
+      const merged: TruePeakOverWindow[] = [];
+      for (const ev of overs) {
+        const last = merged[merged.length - 1];
+        if (last && Math.abs(last.t1 - ev.t0) < 1e-6) {
+          last.t1 = ev.t1;
+          last.peak_db_tp = Math.max(last.peak_db_tp, ev.peak_db_tp);
+        } else {
+          merged.push({ ...ev });
+        }
+      }
+
+      resolve(merged);
+    });
+  });
+}
+
 export async function ffmpegDetectSilence(params: {
   inPath: string;
   noiseDb?: number;
@@ -982,4 +1109,116 @@ export async function ffmpegDetectLoudnessRangeLu(params: {
   }
 
   return lastLra;
+}
+
+export type TruePeakOverEvent = {
+  t0: number;
+  t1: number;
+  peak_db_tp: number;
+  severity: "warn" | "critical";
+};
+
+export async function ffmpegDetectTruePeakOversEvents(params: {
+  inPath: string;
+  thresholdDbTp?: number; // default 0.0
+}): Promise<TruePeakOverEvent[]> {
+  const threshold = typeof params.thresholdDbTp === "number" ? params.thresholdDbTp : 0.0;
+
+  // Use ebur128 frame logging; parse time + peak-ish fields defensively.
+  // We treat any peak > threshold as an over-segment.
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-af",
+    // framelog=verbose makes ffmpeg print per-frame lines in many builds
+    "ebur128=peak=1:framelog=verbose",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  // We try to detect per-frame entries:
+  // - time: "t: 12.34" (common in ebur128 framelog output)
+  // - peak field: could be "TP:", "True peak:", "Peak:" depending on build
+  const reT = /\bt:\s*([0-9.]+)\b/i;
+  const rePeak = /\b(?:TP|True\s*peak|Peak)\s*:\s*([+-]?[0-9.]+)\s*dB\b/i;
+
+  type Frame = { t: number; peak: number };
+  const frames: Frame[] = [];
+
+  for (const line of lines) {
+    const mt = line.match(reT);
+    if (!mt) continue;
+
+    const t = Number(mt[1]);
+    if (!Number.isFinite(t) || t < 0) continue;
+
+    const mp = line.match(rePeak);
+    if (!mp) continue;
+
+    const peak = Number(mp[1]);
+    if (!Number.isFinite(peak)) continue;
+
+    frames.push({ t, peak });
+  }
+
+  if (frames.length === 0) return [];
+
+  // Sort by time (defensive)
+  frames.sort((a, b) => a.t - b.t);
+
+  // Build contiguous segments where peak > threshold.
+  // We assume frames are roughly ordered; we merge touching/near-touching frames.
+  const events: TruePeakOverEvent[] = [];
+  let cur: TruePeakOverEvent | null = null;
+
+  const mergeGap = 0.25; // seconds; merge small gaps in framelog timing
+
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    const isOver = f.peak > threshold;
+
+    if (!isOver) {
+      if (cur) {
+        // close segment at this frame time
+        cur.t1 = Math.max(cur.t1, f.t);
+        events.push(cur);
+        cur = null;
+      }
+      continue;
+    }
+
+    const sev: "warn" | "critical" = f.peak > 0.5 ? "critical" : "warn";
+
+    if (!cur) {
+      cur = { t0: f.t, t1: f.t, peak_db_tp: f.peak, severity: sev };
+      continue;
+    }
+
+    // Extend or split depending on gap
+    if (f.t - cur.t1 <= mergeGap) {
+      cur.t1 = f.t;
+      if (f.peak > cur.peak_db_tp) cur.peak_db_tp = f.peak;
+      // escalate severity if needed
+      if (sev === "critical") cur.severity = "critical";
+    } else {
+      events.push(cur);
+      cur = { t0: f.t, t1: f.t, peak_db_tp: f.peak, severity: sev };
+    }
+  }
+
+  if (cur) events.push(cur);
+
+  // Ensure minimum segment length (optional): if t0==t1, extend by a tiny epsilon
+  for (const ev of events) {
+    if (ev.t1 <= ev.t0) ev.t1 = ev.t0 + 0.05;
+  }
+
+  return events;
 }

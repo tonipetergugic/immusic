@@ -69,6 +69,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
   decision: "approved" | "rejected";
   integratedLufs?: number | null;
   truePeakDbTp?: number | null;
+  truePeakOversEvents?: FeedbackEventV2[] | null;
   clippedSampleCount?: number | null;
   crestFactorDb?: number | null;
   loudnessRangeLu?: number | null;
@@ -88,6 +89,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
   p95ShortCrestDb?: number | null;
   transientDensity?: number | null;
   punchIndex?: number | null;
+  truePeakOvers?: FeedbackEventV2[];
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -95,6 +97,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     decision,
     integratedLufs = null,
     truePeakDbTp = null,
+    truePeakOversEvents = null,
     clippedSampleCount = null,
     crestFactorDb = null,
     loudnessRangeLu = null,
@@ -114,6 +117,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     p95ShortCrestDb = null,
     transientDensity = null,
     punchIndex = null,
+    truePeakOvers = [],
   } = params;
 
   const highlights: string[] = [];
@@ -602,7 +606,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
       },
     },
     events: {
-      loudness: { true_peak_overs: [] },
+      loudness: { true_peak_overs: Array.isArray(truePeakOversEvents) ? truePeakOversEvents : [] },
       spectral: {},
       stereo: {},
       clipping: {},

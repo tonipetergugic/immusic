@@ -10,6 +10,8 @@ import {
   ffmpegDetectDcOffsetAbsMean,
   ffmpegDetectTruePeakAndIntegratedLufs,
   ffmpegDetectLoudnessRangeLu,
+  ffmpegDetectTruePeakOvers,
+  ffmpegDetectTruePeakOversEvents,
   ffmpegDetectMaxSamplePeakDbfs,
   ffmpegDetectRmsLevelDbfs,
   ffmpegDetectClippedSampleCount,
@@ -133,6 +135,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
         "p95_short_crest_db",
         "transient_density",
         "punch_index",
+        "true_peak_overs",
       ].join(",")
     )
     .eq("queue_id", queueId)
@@ -150,6 +153,34 @@ async function writeFeedbackPayloadIfUnlocked(params: {
   }
 
   const m = mRow as any;
+
+  const truePeakOversSoT =
+    Array.isArray(m.true_peak_overs) ? (m.true_peak_overs as any[]) : [];
+
+  // Map stored events (db shape) -> FeedbackEventV2
+  const truePeakOversEvents =
+    truePeakOversSoT
+      .map((ev) => {
+        const t0 = Number((ev as any).t0);
+        const t1 = Number((ev as any).t1);
+        const peak = Number((ev as any).peak_db_tp);
+        const sevRaw = String((ev as any).severity || "");
+        const severity: "info" | "warn" | "critical" =
+          sevRaw === "critical" ? "critical" : "warn";
+
+        if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 <= t0) return null;
+        if (!Number.isFinite(peak)) return null;
+
+        return {
+          t0,
+          t1,
+          severity,
+          message: "True Peak over 0.0 dBTP",
+          value: peak,
+          unit: "dBTP",
+        };
+      })
+      .filter(Boolean) as any[];
 
   const integratedLufsSoT =
     typeof m.integrated_lufs === "number" && Number.isFinite(m.integrated_lufs) ? m.integrated_lufs : null;
@@ -169,6 +200,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
     integratedLufs: integratedLufsSoT,
     truePeakDbTp: truePeakDbTpSoT,
     clippedSampleCount: clippedSampleCountSoT,
+    truePeakOversEvents,
 
     crestFactorDb: typeof m.crest_factor_db === "number" && Number.isFinite(m.crest_factor_db) ? m.crest_factor_db : null,
     loudnessRangeLu: typeof m.loudness_range_lu === "number" && Number.isFinite(m.loudness_range_lu) ? m.loudness_range_lu : null,
@@ -517,6 +549,38 @@ export async function POST() {
 
     const wavBuf = await wavBlob.arrayBuffer();
 
+    // Ensure audio_hash exists ASAP (required for paid feedback unlock even on hard-fail rejects)
+    // Do this before any terminal return paths.
+    let audioHash = pendingItem.audio_hash as string | null;
+
+    if (!audioHash) {
+      try {
+        audioHash = await sha256HexFromArrayBuffer(wavBuf);
+
+        await supabase
+          .from("tracks_ai_queue")
+          .update({
+            audio_hash: audioHash,
+            hash_status: "done",
+            hashed_at: new Date().toISOString(),
+            hash_last_error: null,
+          })
+          .eq("id", pendingItem.id)
+          .eq("user_id", user.id);
+      } catch {
+        // Hash failure should not hard-reject user audio, but it will block unlock (action will show waiting_for_hash)
+        await supabase
+          .from("tracks_ai_queue")
+          .update({
+            hash_status: "error",
+            hash_attempts: ((pendingItem as any).hash_attempts ?? 0) + 1,
+            hash_last_error: "hash_failed",
+          })
+          .eq("id", pendingItem.id)
+          .eq("user_id", user.id);
+      }
+    }
+
     // Safety: reject empty/corrupt (best-effort)
     if (!wavBuf || wavBuf.byteLength <= 0) {
       await markQueueRejected({
@@ -677,6 +741,9 @@ export async function POST() {
     let spectralHighRmsDbfs: number = NaN;
     let spectralAirRmsDbfs: number = NaN;
     let lraLu: number = NaN;
+    let truePeakOvers: Array<{ t0: number; t1: number; peak_db_tp: number }> = [];
+    let truePeakOverEvents: Array<{ t0: number; t1: number; peak_db_tp: number; severity: "warn" | "critical" }> = [];
+    let truePeakDbEffective: number = NaN;
     let transient: TransientPunchMetrics = {
       mean_short_rms_dbfs: NaN,
       p95_short_rms_dbfs: NaN,
@@ -746,6 +813,24 @@ export async function POST() {
 
       lraLu = await ffmpegDetectLoudnessRangeLu({ inPath: tmpWavPath });
 
+      // Timecoded True Peak Overs (windowed, oversampled SR)
+      truePeakOvers = await ffmpegDetectTruePeakOvers({ inPath: tmpWavPath });
+
+      truePeakOverEvents = await ffmpegDetectTruePeakOversEvents({ inPath: tmpWavPath, thresholdDbTp: 0.0 });
+
+      // Compute effective True Peak from both the measured true peak and any detected overs events.
+      // IMPORTANT: must match the persisted DB shape: { t0, t1, peak_db_tp }
+      const maxOverDbTp =
+        Array.isArray(truePeakOverEvents)
+          ? truePeakOverEvents.reduce((acc: number, ev: any) => {
+              const v = Number(ev?.peak_db_tp);
+              return Number.isFinite(v) ? Math.max(acc, v) : acc;
+            }, -Infinity)
+          : -Infinity;
+
+      truePeakDbEffective =
+        Number.isFinite(maxOverDbTp) ? Math.max(truePeakDb, maxOverDbTp) : truePeakDb;
+
       if (AI_DEBUG) {
         console.log("[AI-CHECK] LUFS:", integratedLufs);
         console.log("[AI-CHECK] TruePeak:", truePeakDb);
@@ -809,6 +894,25 @@ export async function POST() {
 
       const titleSnapshot = title && title.length > 0 ? title : "untitled";
 
+      // DEBUG: verify truePeakDbEffective vs stored overs
+      try {
+        const oversArr = Array.isArray(truePeakOverEvents) ? truePeakOverEvents : [];
+        const maxOverDbg = oversArr.reduce((acc: number, ev: any) => {
+          const v = Number(ev?.peak_db_tp);
+          return Number.isFinite(v) ? Math.max(acc, v) : acc;
+        }, -Infinity);
+
+        console.log("[AI-CHECK][TP-DEBUG]", {
+          queueId,
+          truePeakDb,
+          oversCount: oversArr.length,
+          maxOverDbg: Number.isFinite(maxOverDbg) ? maxOverDbg : null,
+          truePeakDbEffective,
+        });
+      } catch (e) {
+        console.log("[AI-CHECK][TP-DEBUG] failed", String((e as any)?.message ?? e));
+      }
+
       const { error: metricsErr } = await adminClient
         .from("track_ai_private_metrics")
         .upsert(
@@ -816,7 +920,9 @@ export async function POST() {
             queue_id: queueId,
             title: titleSnapshot,
             integrated_lufs: integratedLufs,
-            true_peak_db_tp: truePeakDb,
+            true_peak_db_tp: truePeakDbEffective,
+            duration_s: durationSec,
+            true_peak_overs: Array.isArray(truePeakOvers) ? truePeakOvers : [],
             loudness_range_lu: lraLu,
             max_sample_peak_dbfs: maxSamplePeakDbfs,
             clipped_sample_count: Math.trunc(clippedSampleCount),
@@ -851,10 +957,28 @@ export async function POST() {
         await resetQueueToPending({ supabase, userId: user.id, queueId });
         return NextResponse.json({ ok: false, error: "private_metrics_upsert_failed" }, { status: 500 });
       }
+
+      // Persist timecoded events (server-only). No client leak unless feedback unlock exists.
+      const { error: eventsErr } = await adminClient
+        .from("track_ai_private_events")
+        .upsert(
+          {
+            queue_id: queueId,
+            true_peak_overs: Array.isArray(truePeakOvers) ? truePeakOvers : [],
+            analyzed_at: new Date().toISOString(),
+          },
+          { onConflict: "queue_id" }
+        );
+
+      if (eventsErr) {
+        console.error("[AI-CHECK] private events upsert failed:", eventsErr);
+        await resetQueueToPending({ supabase, userId: user.id, queueId });
+        return NextResponse.json({ ok: false, error: "private_events_upsert_failed" }, { status: 500 });
+      }
     }
 
     // True Peak hard-fail: any overs above 0.0 dBTP (risk of clipping after encoding)
-    if (Number.isFinite(truePeakDb) && truePeakDb > 0.0) {
+    if (Number.isFinite(truePeakDbEffective) && truePeakDbEffective > 0.0) {
       return await hardFailRejectTechnical({
         supabase,
         userId: user.id,
@@ -889,37 +1013,8 @@ export async function POST() {
       }
     }
 
-    // 4) Hash (only if missing) using the same buffer
-    let audioHash = pendingItem.audio_hash as string | null;
-
-    if (!audioHash) {
-      try {
-        const tHash = nowNs();
-        audioHash = await sha256HexFromArrayBuffer(wavBuf);
-        logStage("hash_sha256", elapsedMs(tHash));
-
-        await supabase
-          .from("tracks_ai_queue")
-          .update({
-            audio_hash: audioHash,
-            hash_status: "done",
-            hashed_at: new Date().toISOString(),
-            hash_last_error: null,
-          })
-          .eq("id", queueId)
-          .eq("user_id", user.id);
-      } catch {
-        await supabase
-          .from("tracks_ai_queue")
-          .update({
-            hash_status: "error",
-            hash_attempts: (pendingItem as any).hash_attempts + 1,
-            hash_last_error: "hash_failed",
-          })
-          .eq("id", queueId)
-          .eq("user_id", user.id);
-      }
-    }
+    // 4) Hash already ensured earlier (required for unlock flows)
+    // audioHash is available here as local variable.
 
     // 5) Analyze (stub for now) using the same buffer
     const tAnalyze = nowNs();
