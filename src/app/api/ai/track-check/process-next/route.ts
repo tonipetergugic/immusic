@@ -114,6 +114,7 @@ async function writeFeedbackPayloadIfUnlocked(params: {
     .from("track_ai_private_metrics")
     .select(
       [
+        "duration_s",
         "integrated_lufs",
         "true_peak_db_tp",
         "loudness_range_lu",
@@ -197,6 +198,8 @@ async function writeFeedbackPayloadIfUnlocked(params: {
     queueId,
     audioHash: queueAudioHash,
     decision,
+    durationS:
+      typeof m.duration_s === "number" && Number.isFinite(m.duration_s) ? m.duration_s : null,
     integratedLufs: integratedLufsSoT,
     truePeakDbTp: truePeakDbTpSoT,
     clippedSampleCount: clippedSampleCountSoT,
@@ -977,8 +980,18 @@ export async function POST() {
       }
     }
 
-    // True Peak hard-fail: any overs above 0.0 dBTP (risk of clipping after encoding)
-    if (Number.isFinite(truePeakDbEffective) && truePeakDbEffective > 0.0) {
+    // =============================
+    // IMUSIC Gate v2 – Technical Hard-Fail Rules
+    // =============================
+
+    const tp = Number.isFinite(truePeakDbEffective) ? truePeakDbEffective : null;
+    const lufs = Number.isFinite(integratedLufs) ? integratedLufs : null;
+    const lra = Number.isFinite(lraLu) ? lraLu : null;
+    const clippedSamples =
+      typeof clippedSampleCount === "number" ? clippedSampleCount : 0;
+
+    // Hard-Fail 1: True Peak exceeds +0.1 dBTP
+    if (tp !== null && tp > 0.1) {
       return await hardFailRejectTechnical({
         supabase,
         userId: user.id,
@@ -988,29 +1001,37 @@ export async function POST() {
       });
     }
 
-    // Integrated LUFS reject only on extreme cases
-    if (Number.isFinite(integratedLufs)) {
-      // Extremely quiet => likely silence/corrupt
-      if (integratedLufs < -45) {
-        return await hardFailRejectTechnical({
-          supabase,
-          userId: user.id,
-          queueId,
-          audioPath,
-          hasFeedbackUnlockFn: hasFeedbackUnlock,
-        });
-      }
+    // Hard-Fail 2: Digital clipping detected
+    if (clippedSamples > 0) {
+      return await hardFailRejectTechnical({
+        supabase,
+        userId: user.id,
+        queueId,
+        audioPath,
+        hasFeedbackUnlockFn: hasFeedbackUnlock,
+      });
+    }
 
-      // Integrated LUFS hard-fail only for extreme loudness (> -4.0 LUFS)
-      if (Number.isFinite(integratedLufs) && integratedLufs > -4.0) {
-        return await hardFailRejectTechnical({
-          supabase,
-          userId: user.id,
-          queueId,
-          audioPath,
-          hasFeedbackUnlockFn: hasFeedbackUnlock,
-        });
-      }
+    // Hard-Fail 3: Extremely loud master (likely limiter destruction)
+    if (lufs !== null && lufs > -4.5) {
+      return await hardFailRejectTechnical({
+        supabase,
+        userId: user.id,
+        queueId,
+        audioPath,
+        hasFeedbackUnlockFn: hasFeedbackUnlock,
+      });
+    }
+
+    // Hard-Fail 4: Loud + extremely low dynamics (brickwall pattern)
+    if (lufs !== null && lra !== null && lufs > -6 && lra < 1.0) {
+      return await hardFailRejectTechnical({
+        supabase,
+        userId: user.id,
+        queueId,
+        audioPath,
+        hasFeedbackUnlockFn: hasFeedbackUnlock,
+      });
     }
 
     // 4) Hash already ensured earlier (required for unlock flows)

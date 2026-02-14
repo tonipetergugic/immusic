@@ -67,6 +67,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
   queueId: string;
   audioHash: string;
   decision: "approved" | "rejected";
+  durationS?: number | null;
   integratedLufs?: number | null;
   truePeakDbTp?: number | null;
   truePeakOversEvents?: FeedbackEventV2[] | null;
@@ -95,6 +96,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     queueId,
     audioHash,
     decision,
+    durationS = null,
     integratedLufs = null,
     truePeakDbTp = null,
     truePeakOversEvents = null,
@@ -120,6 +122,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
     truePeakOvers = [],
   } = params;
 
+  console.log("[PAYLOAD-V2][DURATION-DEBUG]", { durationS });
+
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 
@@ -132,25 +136,41 @@ export function buildFeedbackPayloadV2Mvp(params: {
     highlights.push("Technical listenability problems detected (hard-fail).");
   }
 
-  if (typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp)) {
-    if (truePeakDbTp > 0) {
-      highlights.push("True Peak is above 0.0 dBTP (very high risk of clipping after encoding).");
+  // --- True Peak policy (IMUSIC): hard-fail > +0.1 dBTP, warn if (0..+0.1], recommend -1.0 dBTP ---
+  const tp = typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
+
+  if (tp !== null) {
+    if (tp > 0.1) {
+      // CRITICAL (hard-fail threshold)
+      highlights.push("True Peak exceeds +0.1 dBTP (high risk of clipping after encoding).");
+
       recommendations.push({
         id: "rec_true_peak_headroom",
-        severity: "critical",
         title: "Reduce true peak overs",
-        why: "True Peak exceeds 0.0 dBTP, which can cause clipping after encoding/normalization.",
-        how: ["Lower limiter ceiling to -1.0 dBTP", "Reduce input gain into the limiter by 1–2 dB"],
+        severity: "critical",
+        why: "True Peak exceeds +0.1 dBTP, which can cause clipping after encoding/normalization.",
+        how: [
+          "Set limiter ceiling to -1.0 dBTP (streaming-safe)",
+          "Reduce limiter input by ~0.5–2.0 dB",
+        ],
       });
-    } else if (truePeakDbTp > -1.0) {
-      highlights.push("True Peak is above -1.0 dBTP (encoding headroom is low).");
+    } else if (tp > 0.0) {
+      // WARN (borderline)
+      highlights.push("True Peak is slightly above 0.0 dBTP (borderline; encoding headroom is low).");
+
       recommendations.push({
         id: "rec_true_peak_headroom",
-        severity: "warn",
         title: "Add more true peak headroom",
-        why: "True Peak is above -1.0 dBTP. Some encoders and playback chains can increase peaks, risking audible distortion.",
-        how: ["Set limiter ceiling to -1.0 dBTP", "Reduce limiter input by ~0.5–1.5 dB"],
+        severity: "warn",
+        why: "True Peak is slightly above 0.0 dBTP — this may clip after encoding on some platforms.",
+        how: [
+          "Set limiter ceiling to -1.0 dBTP (recommended for streaming)",
+          "Reduce limiter input by ~0.2–1.0 dB",
+        ],
       });
+    } else {
+      // Optional INFO: always recommend best practice (no issue)
+      // (Keep it minimal: no highlight, no recommendation by default)
     }
   }
 
@@ -546,7 +566,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
       track_id: null,
       queue_id: queueId,
       audio_hash_sha256: audioHash,
-      duration_s: null,
+      duration_s: typeof durationS === "number" && Number.isFinite(durationS) ? durationS : null,
       sample_rate_hz: null,
       channels: null,
     },

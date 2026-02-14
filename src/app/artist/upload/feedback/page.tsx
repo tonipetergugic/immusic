@@ -5,6 +5,7 @@ import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 import { headers, cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TruePeakHeatbar } from "@/components/ai/TruePeakHeatbar";
 
 export default async function UploadFeedbackPage({
   searchParams,
@@ -142,6 +143,15 @@ export default async function UploadFeedbackPage({
 
   const v2LufsI = safeNumber(v2Loudness?.lufs_i);
   const v2TruePeak = safeNumber(v2Loudness?.true_peak_dbtp_max);
+
+  const v2DurationS =
+    safeNumber((payload as any)?.track?.duration_s) ??
+    safeNumber((payload as any)?.metrics?.loudness?.duration_s) ??
+    null;
+
+  const v2TruePeakOvers = Array.isArray((payload as any)?.events?.loudness?.true_peak_overs)
+    ? ((payload as any).events.loudness.true_peak_overs as any[])
+    : null;
 
   const v2Transients = schemaVersion === 2 ? (metrics as any)?.transients : null;
 
@@ -337,60 +347,10 @@ export default async function UploadFeedbackPage({
                           </span>
                         </div>
 
-                        {/* v2 Events: True Peak Overs (timecoded) */}
-                        {Array.isArray((payload as any)?.events?.loudness?.true_peak_overs) &&
-                        ((payload as any).events.loudness.true_peak_overs as any[]).length > 0 ? (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
-                            <div className="text-xs text-white/70 mb-2">True Peak Overs (timecoded)</div>
-
-                            <ul className="space-y-2">
-                              {((payload as any).events.loudness.true_peak_overs as any[])
-                                .slice(0, 20)
-                                .map((ev, idx) => {
-                                  const t0 = typeof ev?.t0 === "number" ? ev.t0 : null;
-                                  const t1 = typeof ev?.t1 === "number" ? ev.t1 : null;
-                                  const val = typeof ev?.value === "number" ? ev.value : null;
-                                  const sev = ev?.severity === "critical" ? "critical" : ev?.severity === "warn" ? "warn" : "info";
-
-                                  const fmt = (t: number) => {
-                                    const m = Math.floor(t / 60);
-                                    const s = t - m * 60;
-                                    const ss = s.toFixed(2).padStart(5, "0");
-                                    return `${String(m).padStart(2, "0")}:${ss}`;
-                                  };
-
-                                  return (
-                                    <li key={idx} className="flex items-center justify-between gap-3">
-                                      <div className="text-xs text-white/80 tabular-nums">
-                                        {t0 === null || t1 === null ? "—" : `${fmt(t0)} – ${fmt(t1)}`}
-                                      </div>
-
-                                      <div className="flex items-center gap-2">
-                                        <span
-                                          className={
-                                            "text-[10px] px-2 py-1 rounded-full border " +
-                                            (sev === "critical"
-                                              ? "border-red-500/30 text-red-200 bg-red-500/10"
-                                              : sev === "warn"
-                                              ? "border-yellow-500/30 text-yellow-200 bg-yellow-500/10"
-                                              : "border-white/15 text-white/70 bg-white/5")
-                                          }
-                                        >
-                                          {sev.toUpperCase()}
-                                        </span>
-
-                                        <span className="text-xs text-white/60 tabular-nums">
-                                          {val === null ? "—" : `${val.toFixed(3)} dBTP`}
-                                        </span>
-                                      </div>
-                                    </li>
-                                  );
-                                })}
-                            </ul>
-
-                            <p className="mt-3 text-[11px] text-white/50">
-                              Overs indicate segments where True Peak exceeded 0.0 dBTP.
-                            </p>
+                        {/* v2 Events: True Peak Timeline (timecoded) */}
+                        {v2TruePeakOvers ? (
+                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
+                            <TruePeakHeatbar durationS={v2DurationS} overs={v2TruePeakOvers as any} />
                           </div>
                         ) : null}
 
