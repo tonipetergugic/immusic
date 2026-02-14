@@ -244,14 +244,10 @@ export default async function UploadFeedbackPage({
             {isReady ? (
               <p className="text-white/70">Unlocked – analysis is ready.</p>
             ) : (
-              <>
-                <p className="text-white/70">
-                  Unlocked – analysis is being prepared. This may take a few minutes.
-                </p>
-                <p className="text-white/40 text-sm">
-                  You can leave this page and come back later. Access stays unlocked for this exact audio file.
-                </p>
-              </>
+              <p className="text-white/70">
+                Analysis is running.
+                You will see the result here automatically once finished.
+              </p>
             )}
 
             {/* Guarded placeholder: only visible when unlocked */}
@@ -692,7 +688,7 @@ export default async function UploadFeedbackPage({
           </div>
         ) : (
           <p className="text-white/70 mt-4">
-            Without paid feedback we do not show details, metrics, or reasons.
+            Track could not be released due to technical audibility problems.
           </p>
         )}
 
@@ -736,24 +732,13 @@ export default async function UploadFeedbackPage({
             </div>
           ) : (
             <div className="mt-6 rounded-xl bg-[#111112] p-5">
-              <p className="text-white/80 font-semibold">Unlock required</p>
-              <p className="text-white/70 mt-1">
-                Unlock detailed AI feedback for this upload using 1 credit.
-              </p>
-              <p className="text-white/80 mt-3">
-                Cost: <span className="font-semibold text-white">1 credit</span>
-                <span className="text-white/40 text-sm ml-2">
-                  (Your balance: {creditBalance})
-                </span>
-              </p>
-
-              <form action={unlockPaidFeedbackAction} className="mt-4">
+              <form action={unlockPaidFeedbackAction}>
                 <input type="hidden" name="queue_id" value={queueId} />
                 <button
                   type="submit"
                   className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
                 >
-                  Unlock (1 credit)
+                  Start detailed AI analysis (1 Credit)
                 </button>
               </form>
             </div>

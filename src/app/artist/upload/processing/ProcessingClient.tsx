@@ -98,7 +98,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         if (rr === "duplicate_audio" || rr === "duplicate") {
           setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
         } else {
-          setStatusText("This audio file currently does not meet the platform's technical minimum requirements (e.g. loudness, peak levels, dropouts). You can unlock a detailed AI analysis to receive exact timecodes and improvement suggestions.");
+          setStatusText("Track could not be released due to technical audibility problems.");
         }
 
         // stop polling
@@ -152,7 +152,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
             <p className="mb-3">
               {rejectReason === "duplicate_audio" || rejectReason === "duplicate"
                 ? "This audio already exists on IMUSIC. Uploading it again is not allowed."
-                : "This audio file currently does not meet the platform's technical minimum requirements (e.g. loudness, peak levels, dropouts). You can unlock a detailed AI analysis to receive exact timecodes and improvement suggestions."}
+                : "Track could not be released due to technical audibility problems."}
             </p>
             {rejectReason === "duplicate_audio" || rejectReason === "duplicate" ? (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -185,7 +185,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                   className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
                   onClick={() => router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
                 >
-                  Unlock (1 credit)
+                  Start detailed AI analysis (1 Credit)
                 </button>
               </div>
             )}
@@ -193,7 +193,11 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         )}
 
         {approved && (
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="mt-6">
+            <p className="text-white/70 mb-4">
+              Track approved. You may publish.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               type="button"
               className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
@@ -211,6 +215,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 Detailed AI Analysis (1 Credit)
               </button>
             ) : null}
+            </div>
           </div>
         )}
 
