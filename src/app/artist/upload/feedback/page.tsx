@@ -806,7 +806,7 @@ export default async function UploadFeedbackPage({
           </div>
         ) : (
           <p className="text-white/70 mt-4">
-            Track could not be released due to technical audibility problems.
+            Detailed AI feedback is locked. Unlock to view the full analysis for this upload.
           </p>
         )}
 

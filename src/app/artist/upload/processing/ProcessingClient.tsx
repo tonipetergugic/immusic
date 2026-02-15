@@ -98,7 +98,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         if (rr === "duplicate_audio" || rr === "duplicate") {
           setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
         } else {
-          setStatusText("Track could not be released due to technical audibility problems.");
+          setStatusText("Processing completed. Detailed AI feedback is available to unlock for this upload.");
         }
 
         // stop polling
@@ -152,7 +152,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
             <p className="mb-3">
               {rejectReason === "duplicate_audio" || rejectReason === "duplicate"
                 ? "This audio already exists on IMUSIC. Uploading it again is not allowed."
-                : "Track could not be released due to technical audibility problems."}
+                : "Processing completed. Detailed AI feedback is available to unlock for this upload."}
             </p>
             {rejectReason === "duplicate_audio" || rejectReason === "duplicate" ? (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -212,7 +212,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
                 onClick={() => router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
               >
-                Detailed AI Analysis (1 Credit)
+                Detailed AI Analysis
               </button>
             ) : null}
             </div>

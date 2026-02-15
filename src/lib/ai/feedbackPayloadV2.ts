@@ -137,8 +137,6 @@ export function buildFeedbackPayloadV2Mvp(params: {
     truePeakOvers = [],
   } = params;
 
-  console.log("[PAYLOAD-V2][DURATION-DEBUG]", { durationS });
-
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 

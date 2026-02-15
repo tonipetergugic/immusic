@@ -46,13 +46,6 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
   const unlockRow = unlock as { id?: string } | null;
 
   if (unlockErr || !unlockRow?.id) {
-    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] abort: unlock missing", {
-      queueId,
-      userId,
-      queueAudioHash,
-      unlockErr: unlockErr ? String((unlockErr as any).message ?? unlockErr) : null,
-      unlockFound: Boolean(unlockRow?.id),
-    });
     return;
   }
 
