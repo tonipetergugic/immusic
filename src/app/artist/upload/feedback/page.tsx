@@ -1,11 +1,15 @@
 import BackLink from "@/components/BackLink";
+import IssuesPanel from "./_components/IssuesPanel";
+import RecommendationsPanel from "./_components/RecommendationsPanel";
+import UnlockPanel from "./_components/UnlockPanel";
+import V2MetricsGrid from "./_components/V2MetricsGrid";
+import { formatTime, safeNumber, safeString, formatHardFailReason } from "./_lib/feedbackHelpers";
 import { unlockPaidFeedbackAction } from "./actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 import { headers, cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TruePeakHeatbar } from "@/components/ai/TruePeakHeatbar";
 
 export default async function UploadFeedbackPage({
   searchParams,
@@ -178,103 +182,6 @@ export default async function UploadFeedbackPage({
           ? "Technical improvements recommended"
           : "No issues found";
 
-  function formatTime(sec: number) {
-    const s = Math.max(0, Math.floor(sec));
-    const mm = String(Math.floor(s / 60)).padStart(2, "0");
-    const ss = String(s % 60).padStart(2, "0");
-    return `${mm}:${ss}`;
-  }
-
-  function safeString(v: unknown) {
-    return typeof v === "string" ? v : "";
-  }
-
-  function safeNumber(v: unknown) {
-    return typeof v === "number" && Number.isFinite(v) ? v : null;
-  }
-
-  function formatHardFailReason(r: any): { title: string; detail: string } {
-    const id = typeof r?.id === "string" ? r.id : "unknown";
-    const value = typeof r?.value === "number" && Number.isFinite(r.value) ? r.value : null;
-    const threshold = typeof r?.threshold === "number" && Number.isFinite(r.threshold) ? r.threshold : null;
-
-    const val = value !== null ? value.toFixed(3) : null;
-    const thr = threshold !== null ? threshold.toFixed(3) : null;
-
-    switch (id) {
-      case "dynamic_collapse": {
-        const crest =
-          (typeof r?.values?.crest_factor_db === "number" && Number.isFinite(r.values.crest_factor_db))
-            ? r.values.crest_factor_db
-            : (typeof r?.value === "number" && Number.isFinite(r.value))
-              ? r.value
-              : null;
-
-        const lufs =
-          (typeof r?.values?.integrated_lufs === "number" && Number.isFinite(r.values.integrated_lufs))
-            ? r.values.integrated_lufs
-            : null;
-
-        const crestThr =
-          (typeof r?.thresholds?.crest_factor_db === "number" && Number.isFinite(r.thresholds.crest_factor_db))
-            ? r.thresholds.crest_factor_db
-            : null;
-
-        const lufsThr =
-          (typeof r?.thresholds?.integrated_lufs === "number" && Number.isFinite(r.thresholds.integrated_lufs))
-            ? r.thresholds.integrated_lufs
-            : null;
-
-        const crestText =
-          crest !== null
-            ? `Crest Factor ${crest.toFixed(2)} dB${crestThr !== null ? ` (threshold ${crestThr.toFixed(2)} dB)` : ""}`
-            : null;
-
-        const lufsText =
-          lufs !== null
-            ? `Integrated LUFS ${lufs.toFixed(1)}${lufsThr !== null ? ` (threshold ${lufsThr.toFixed(1)})` : ""}`
-            : null;
-
-        const parts = [crestText, lufsText].filter(Boolean);
-
-        return {
-          title: "Dynamic collapse (over-limited master)",
-          detail:
-            parts.length > 0
-              ? `${parts.join(", ")}. The master is extremely flattened/over-limited and may be distorted or fatiguing.`
-              : "The master is extremely flattened/over-limited (dynamic collapse).",
-        };
-      }
-
-      case "tp_over_1_0":
-        return {
-          title: "Extreme True Peak",
-          detail: `True Peak exceeded +1.0 dBTP${val ? ` (${val} dBTP)` : ""}${thr ? `; threshold ${thr} dBTP` : ""}.`,
-        };
-
-      case "massive_clipping":
-        return {
-          title: "Massive clipping",
-          detail: `Clipping is severe${value !== null ? ` (${Math.trunc(value)} clipped samples)` : ""}.`,
-        };
-
-      // Optional future-proofing if gate reasons are persisted later:
-      case "duration_invalid":
-        return { title: "Invalid duration", detail: "The audio file duration is invalid or unreadable." };
-      case "duration_too_long":
-        return { title: "Track too long", detail: "Track exceeds the maximum allowed duration." };
-      case "silence_dropout":
-        return { title: "Dropout silence", detail: "A long silent dropout was detected." };
-      case "silence_ratio":
-        return { title: "Mostly silence", detail: "The track is mostly silent." };
-      case "dc_offset":
-        return { title: "Extreme DC offset", detail: "DC offset is extreme and can cause distortion/translation issues." };
-
-      default:
-        return { title: `Hard-fail: ${id}`, detail: "Technical listenability problem detected." };
-    }
-  }
-
   // Optional: queue audio_hash für Observability (rein beobachtend, darf niemals den Flow brechen)
   let queueAudioHash: string | null = null;
   try {
@@ -368,330 +275,31 @@ export default async function UploadFeedbackPage({
               )}
 
               <div className="mt-4 grid gap-3">
-                <div className="rounded-lg bg-black/20 p-4 border border-white/5">
-                  {isReady ? (
-                    issues.length > 0 ? (
-                      <ul className="mt-2 space-y-2">
-                        {issues.slice(0, 10).map((it: any, idx: number) => {
-                          const t = safeNumber(it?.t);
-                          const title = safeString(it?.title) || "Issue";
-                          const detail = safeString(it?.detail);
-                          const sev = safeString(it?.severity);
-                          return (
-                            <li
-                              key={idx}
-                              className="rounded-lg bg-black/20 p-3 border border-white/5"
-                            >
-                              <div className="flex items-center gap-2">
-                                {t !== null && (
-                                  <span className="text-xs text-white/50 tabular-nums">
-                                    {formatTime(t)}
-                                  </span>
-                                )}
-                                <span className="text-sm text-white/80 font-medium">
-                                  {title}
-                                </span>
-                                {sev && (
-                                  <span className="ml-auto text-xs text-white/40">
-                                    {sev}
-                                  </span>
-                                )}
-                              </div>
-                              {detail ? (
-                                <p className="text-xs text-white/60 mt-1">{detail}</p>
-                              ) : null}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <p className="text-white/50 text-xs mt-2">{topSummaryText}</p>
-                    )
-                  ) : (
-                    <p className="text-white/50 text-xs mt-1">No data yet</p>
-                  )}
-                </div>
+                <IssuesPanel
+                  isReady={isReady}
+                  issues={issues}
+                  topSummaryText={topSummaryText}
+                />
 
                 <div className="rounded-lg bg-black/20 p-4 border border-white/5">
                   {isReady ? (
                     schemaVersion === 2 ? (
-                      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-                        {/* v2 Highlights (short, human) */}
-                        {v2Highlights.length > 0 ? (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
-                            <div className="text-xs text-white/70 mb-2">Highlights</div>
-                            <ul className="space-y-1">
-                              {v2Highlights.slice(0, 5).map((h, idx) => (
-                                <li key={idx} className="text-xs text-white/60">
-                                  {h}
-                                </li>
-                              ))}
-                            </ul>
-                            {v2HardFailTriggered && v2HardFailReasons.length > 0 ? (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <div className="text-xs text-white/70 mb-2">Hard-fail reasons</div>
-                                <ul className="space-y-2">
-                                  {v2HardFailReasons.map((r, i) => {
-                                    const x = formatHardFailReason(r);
-                                    return (
-                                      <li key={i} className="text-xs">
-                                        <div className="text-white/80 font-medium">{x.title}</div>
-                                        <div className="text-white/60">{x.detail}</div>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-
-                        {/* v2 Loudness (known leaf metrics) */}
-                        <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                          <span className="text-xs text-white/70">Integrated LUFS</span>
-                          <span className="text-xs text-white/50 tabular-nums">
-                            {v2LufsI === null ? "—" : v2LufsI.toFixed(1)}
-                          </span>
-                        </div>
-
-                        <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                          <span className="text-xs text-white/70">True Peak (dBTP max)</span>
-                          <span className="text-xs text-white/50 tabular-nums">
-                            {v2TruePeak === null ? "—" : v2TruePeak.toFixed(2)}
-                          </span>
-                        </div>
-
-                        {/* v2 Events: True Peak Timeline (timecoded) */}
-                        {v2TruePeakOvers ? (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
-                            <TruePeakHeatbar durationS={v2DurationS} overs={v2TruePeakOvers as any} />
-                          </div>
-                        ) : null}
-
-                        {typeof (payload as any)?.metrics?.dynamics?.crest_factor_db === "number" && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                            <span className="text-xs text-white/70">Crest Factor (dB)</span>
-                            <span className="text-xs text-white/50 tabular-nums">
-                              {(payload as any).metrics.dynamics.crest_factor_db.toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-
-                        {typeof (payload as any)?.metrics?.dynamics?.loudness_range_lu === "number" && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                            <span className="text-xs text-white/70">Loudness Range (LRA)</span>
-                            <span className="text-xs text-white/50 tabular-nums">
-                              {(payload as any).metrics.dynamics.loudness_range_lu.toFixed(1)} LU
-                            </span>
-                          </div>
-                        )}
-
-                        {(v2PunchIndex !== null ||
-                          v2P95ShortCrest !== null ||
-                          v2MeanShortCrest !== null ||
-                          v2TransientDensity !== null) && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-white/70">Transients & Punch</span>
-
-                              {v2PunchIndex !== null ? (
-                                <span className="text-xs text-white/50 tabular-nums">
-                                  Punch {v2PunchIndex.toFixed(0)}/100
-                                </span>
-                              ) : (
-                                <span className="text-xs text-white/50 tabular-nums">—</span>
-                              )}
-                            </div>
-
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
-                                <span className="text-[11px] text-white/60">p95 Crest</span>
-                                <span className="text-[11px] text-white/50 tabular-nums">
-                                  {v2P95ShortCrest === null ? "—" : `${v2P95ShortCrest.toFixed(2)} dB`}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
-                                <span className="text-[11px] text-white/60">Mean Crest</span>
-                                <span className="text-[11px] text-white/50 tabular-nums">
-                                  {v2MeanShortCrest === null ? "—" : `${v2MeanShortCrest.toFixed(2)} dB`}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5 col-span-2">
-                                <span className="text-[11px] text-white/60">Transient Density</span>
-                                <span className="text-[11px] text-white/50 tabular-nums">
-                                  {v2TransientDensity === null
-                                    ? "—"
-                                    : `${(v2TransientDensity * 100).toFixed(1)}%`}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {typeof (payload as any)?.metrics?.stereo?.phase_correlation === "number" && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                            <span className="text-xs text-white/70">Phase Correlation</span>
-                            <div className="flex items-center gap-2">
-                              {(payload as any).metrics.stereo.phase_correlation < -0.2 ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-red-400/30 bg-red-500/10 text-red-200">
-                                  CRITICAL
-                                </span>
-                              ) : (payload as any).metrics.stereo.phase_correlation < 0 ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-200">
-                                  WARN
-                                </span>
-                              ) : (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
-                                  OK
-                                </span>
-                              )}
-
-                              <span
-                                className={
-                                  "text-xs tabular-nums " +
-                                  ((payload as any).metrics.stereo.phase_correlation < -0.2
-                                    ? "text-red-300"
-                                    : (payload as any).metrics.stereo.phase_correlation < 0
-                                    ? "text-yellow-300"
-                                    : "text-white/50")
-                                }
-                              >
-                                {(payload as any).metrics.stereo.phase_correlation.toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {typeof (payload as any)?.metrics?.stereo?.stereo_width_index === "number" && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                            <span className="text-xs text-white/70">Stereo Width Index</span>
-                            <div className="flex items-center gap-2">
-                              {(payload as any).metrics.stereo.stereo_width_index > 0.6 ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-200">
-                                  WARN
-                                </span>
-                              ) : (payload as any).metrics.stereo.stereo_width_index < 0.05 ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
-                                  INFO
-                                </span>
-                              ) : (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
-                                  OK
-                                </span>
-                              )}
-
-                              <span className="text-xs tabular-nums text-white/50">
-                                {(payload as any).metrics.stereo.stereo_width_index.toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {(typeof (payload as any)?.metrics?.stereo?.mid_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.stereo?.side_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.stereo?.mid_side_energy_ratio === "number") && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-white/70">Mid/Side</span>
-                              {typeof (payload as any)?.metrics?.stereo?.mid_side_energy_ratio === "number" ? (
-                                <span className="flex items-center gap-2 text-xs tabular-nums">
-                                  {(payload as any).metrics.stereo.mid_side_energy_ratio > 1.0 ? (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-200">
-                                      WARN
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
-                                      OK
-                                    </span>
-                                  )}
-                                  <span className="text-white/50">
-                                    Ratio {(payload as any).metrics.stereo.mid_side_energy_ratio.toFixed(2)}
-                                  </span>
-                                </span>
-                              ) : (
-                                <span className="text-xs text-white/50 tabular-nums">—</span>
-                              )}
-                            </div>
-
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
-                                <span className="text-[11px] text-white/60">Mid RMS</span>
-                                <span className="text-[11px] text-white/50 tabular-nums">
-                                  {typeof (payload as any)?.metrics?.stereo?.mid_rms_dbfs === "number"
-                                    ? `${(payload as any).metrics.stereo.mid_rms_dbfs.toFixed(1)} dBFS`
-                                    : "—"}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
-                                <span className="text-[11px] text-white/60">Side RMS</span>
-                                <span className="text-[11px] text-white/50 tabular-nums">
-                                  {typeof (payload as any)?.metrics?.stereo?.side_rms_dbfs === "number"
-                                    ? `${(payload as any).metrics.stereo.side_rms_dbfs.toFixed(1)} dBFS`
-                                    : "—"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {(typeof (payload as any)?.metrics?.spectral?.sub_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.spectral?.low_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.spectral?.lowmid_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.spectral?.mid_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.spectral?.highmid_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.spectral?.high_rms_dbfs === "number" ||
-                          typeof (payload as any)?.metrics?.spectral?.air_rms_dbfs === "number") && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
-                            <div className="text-xs text-white/70 mb-2">Spectral (RMS by band)</div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                              {([
-                                ["Sub", (payload as any).metrics.spectral.sub_rms_dbfs],
-                                ["Low", (payload as any).metrics.spectral.low_rms_dbfs],
-                                ["Low-Mid", (payload as any).metrics.spectral.lowmid_rms_dbfs],
-                                ["Mid", (payload as any).metrics.spectral.mid_rms_dbfs],
-                                ["High-Mid", (payload as any).metrics.spectral.highmid_rms_dbfs],
-                                ["High", (payload as any).metrics.spectral.high_rms_dbfs],
-                                ["Air", (payload as any).metrics.spectral.air_rms_dbfs],
-                              ] as Array<[string, any]>)
-                                .filter(([, v]) => typeof v === "number")
-                                .map(([label, v]) => (
-                                  <div
-                                    key={label}
-                                    className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5"
-                                  >
-                                    <span className="text-[11px] text-white/60">{label}</span>
-                                    <span className="text-[11px] text-white/50 tabular-nums">
-                                      {v.toFixed(1)} dBFS
-                                    </span>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {typeof (payload as any)?.metrics?.clipping?.clipped_sample_count === "number" && (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
-                            <span className="text-xs text-white/70">Clipping</span>
-                            <span className="text-xs text-white/50 tabular-nums">
-                              {(payload as any).metrics.clipping.clipped_sample_count === 0
-                                ? "No clipping detected"
-                                : `${(payload as any).metrics.clipping.clipped_sample_count} clipped samples`}
-                            </span>
-                          </div>
-                        )}
-
-                        {recommendations?.some((r: any) => r?.id === "rec_placeholder_v2_mvp") ? (
-                          <div className="rounded-lg bg-black/20 p-3 border border-white/5">
-                            {/* Placeholder for upcoming modules */}
-                            <p className="text-xs text-white/50">
-                              More technical modules coming next (spectral, stereo, dynamics, transients).
-                            </p>
-                          </div>
-                        ) : null}
-                      </div>
+                      <V2MetricsGrid
+                        isReady={isReady}
+                        payload={payload}
+                        v2Highlights={v2Highlights}
+                        v2HardFailTriggered={v2HardFailTriggered}
+                        v2HardFailReasons={v2HardFailReasons}
+                        v2LufsI={v2LufsI}
+                        v2TruePeak={v2TruePeak}
+                        v2DurationS={v2DurationS}
+                        v2TruePeakOvers={v2TruePeakOvers}
+                        v2PunchIndex={v2PunchIndex}
+                        v2P95ShortCrest={v2P95ShortCrest}
+                        v2MeanShortCrest={v2MeanShortCrest}
+                        v2TransientDensity={v2TransientDensity}
+                        recommendations={recommendations}
+                      />
                     ) : (
                       // v1 legacy fallback (flat metrics)
                       Object.keys(metrics).length > 0 ? (
@@ -719,88 +327,12 @@ export default async function UploadFeedbackPage({
                   )}
                 </div>
 
-                <div className="rounded-lg bg-black/20 p-4 border border-white/5">
-                  {isReady ? (
-                    schemaVersion === 2 ? (
-                      v2Recommendations.length > 0 ? (
-                        <ul className="mt-2 space-y-2">
-                          {v2Recommendations.slice(0, 10).map((it: any, idx: number) => {
-                            const title = safeString(it?.title) || "Recommendation";
-                            const why = safeString(it?.why);
-                            const howArr = Array.isArray(it?.how) ? (it.how as any[]) : [];
-                            const how = howArr.map((x) => safeString(x)).filter(Boolean);
-
-                            return (
-                              <li
-                                key={idx}
-                                className="rounded-lg bg-black/20 p-3 border border-white/5"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="text-sm text-white/80 font-medium">{title}</div>
-                                  {typeof it?.severity === "string" ? (
-                                    <span
-                                      className={
-                                        "text-[10px] px-2 py-0.5 rounded-full border " +
-                                        (it.severity === "critical"
-                                          ? "border-red-400/30 bg-red-500/10 text-red-200"
-                                          : it.severity === "warn"
-                                          ? "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"
-                                          : "border-white/10 bg-white/5 text-white/60")
-                                      }
-                                    >
-                                      {String(it.severity).toUpperCase()}
-                                    </span>
-                                  ) : null}
-                                </div>
-
-                                {why ? (
-                                  <p className="text-xs text-white/60 mt-1">{why}</p>
-                                ) : null}
-
-                                {how.length > 0 ? (
-                                  <ul className="mt-2 space-y-1">
-                                    {how.slice(0, 6).map((h, hIdx) => (
-                                      <li key={hIdx} className="text-xs text-white/55">
-                                        • {h}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : null}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-white/50 text-xs mt-2">No recommendations</p>
-                      )
-                    ) : (
-                      // v1 legacy fallback
-                      recommendations.length > 0 ? (
-                        <ul className="mt-2 space-y-2">
-                          {recommendations.slice(0, 10).map((it: any, idx: number) => {
-                            const title = safeString(it?.title) || "Recommendation";
-                            const detail = safeString(it?.detail);
-                            return (
-                              <li
-                                key={idx}
-                                className="rounded-lg bg-black/20 p-3 border border-white/5"
-                              >
-                                <span className="text-sm text-white/80 font-medium">{title}</span>
-                                {detail ? (
-                                  <p className="text-xs text-white/60 mt-1">{detail}</p>
-                                ) : null}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-white/50 text-xs mt-2">No recommendations</p>
-                      )
-                    )
-                  ) : (
-                    <p className="text-white/50 text-xs mt-1">No data yet</p>
-                  )}
-                </div>
+                <RecommendationsPanel
+                  isReady={isReady}
+                  schemaVersion={schemaVersion}
+                  v2Recommendations={v2Recommendations}
+                  recommendations={recommendations}
+                />
               </div>
             </div>
           </div>
@@ -810,68 +342,13 @@ export default async function UploadFeedbackPage({
           </p>
         )}
 
-        {!unlocked && error === "insufficient_credits" && (
-          <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/10 p-4">
-            <p className="text-red-200 font-medium">Not enough credits.</p>
-            <p className="text-red-200/80 text-sm mt-1">
-              You need at least 1 credit to unlock this feedback.
-            </p>
-          </div>
-        )}
-
-        {error === "missing_queue_id" && (
-          <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/10 p-4">
-            <p className="text-red-200 font-medium">Missing queue_id.</p>
-          </div>
-        )}
-
-        {!unlocked ? (
-          creditBalance <= 0 ? (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-              <div className="text-lg font-semibold text-white">No credits available</div>
-              <p className="mt-2 text-sm text-white/60">
-                You currently have 0 credits. Detailed AI feedback requires 1 credit.
-              </p>
-              <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  disabled
-                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold opacity-50 cursor-not-allowed"
-                >
-                  Credits kaufen
-                </button>
-                <Link
-                  href="/artist/my-tracks"
-                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0] inline-flex items-center justify-center text-center"
-                >
-                  Back to My Tracks
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-6 rounded-xl bg-[#111112] p-5">
-              <form action={unlockPaidFeedbackAction}>
-                <input type="hidden" name="queue_id" value={queueId} />
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-                >
-                  Start detailed AI analysis (1 Credit)
-                </button>
-              </form>
-            </div>
-          )
-        ) : (
-          <div className="mt-6 rounded-xl bg-[#111112] p-5 border border-white/5">
-            <p className="text-white/80 font-semibold">Feedback unlocked</p>
-            <p className="text-white/70 mt-1">
-              This feedback has already been unlocked. Your current credit balance does not affect access.
-            </p>
-            <p className="text-white/50 mt-2 text-sm">
-              Credits are required for unlocking additional AI feedback.
-            </p>
-          </div>
-        )}
+        <UnlockPanel
+          unlocked={!unlocked ? false : true}
+          error={error}
+          creditBalance={creditBalance}
+          queueId={queueId}
+          unlockPaidFeedbackAction={unlockPaidFeedbackAction}
+        />
       </div>
     </div>
   );
