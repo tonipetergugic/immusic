@@ -41,7 +41,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("duration_s,integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index,loudness_range_lu")
+    .select("duration_s,integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index,loudness_range_lu,hard_fail_reasons")
     .eq("queue_id", queueId)
     .maybeSingle();
 
@@ -54,10 +54,25 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     throw new Error("private_metrics_missing");
   }
 
+  const hardFailReasonsSoT = Array.isArray((pm as any).hard_fail_reasons)
+    ? ((pm as any).hard_fail_reasons as any[])
+    : [];
+
+  const decisionForPayload =
+    hardFailReasonsSoT.length > 0 ? "rejected" : decision;
+
+  const hardFailReasonsForPayload = hardFailReasonsSoT
+    .map((r) => {
+      const id = typeof (r as any)?.id === "string" ? String((r as any).id) : null;
+      if (!id) return null;
+      return { id };
+    })
+    .filter(Boolean) as Array<{ id: string }>;
+
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash,
-    decision,
+    decision: decisionForPayload,
     durationS: typeof (pm as any).duration_s === "number" && Number.isFinite((pm as any).duration_s) ? (pm as any).duration_s : null,
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
@@ -80,6 +95,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     p95ShortCrestDb: (pm as any).p95_short_crest_db,
     transientDensity: (pm as any).transient_density,
     punchIndex: (pm as any).punch_index,
+    hardFailReasons: hardFailReasonsForPayload,
   });
 
   await admin
@@ -194,7 +210,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
 
   const { data: pm, error: pmErr } = await admin
     .from("track_ai_private_metrics")
-    .select("duration_s,integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index,loudness_range_lu")
+    .select("duration_s,integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,punch_index,loudness_range_lu,hard_fail_reasons")
     .eq("queue_id", queueId)
     .maybeSingle<PrivateMetricsRow>();
 
@@ -207,7 +223,22 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     throw new Error("private_metrics_missing");
   }
 
+  const hardFailReasonsSoT = Array.isArray((pm as any).hard_fail_reasons)
+    ? ((pm as any).hard_fail_reasons as any[])
+    : [];
+
   const decision = status === "approved" ? "approved" : "rejected";
+
+  const decisionForPayload =
+    hardFailReasonsSoT.length > 0 ? "rejected" : decision;
+
+  const hardFailReasonsForPayload = hardFailReasonsSoT
+    .map((r) => {
+      const id = typeof (r as any)?.id === "string" ? String((r as any).id) : null;
+      if (!id) return null;
+      return { id };
+    })
+    .filter(Boolean) as Array<{ id: string }>;
 
   if (!audioHash) {
     throw new Error("audio_hash_missing");
@@ -216,7 +247,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash,
-    decision,
+    decision: decisionForPayload,
     durationS: typeof (pm as any).duration_s === "number" && Number.isFinite((pm as any).duration_s) ? (pm as any).duration_s : null,
     integratedLufs: pm.integrated_lufs,
     truePeakDbTp: pm.true_peak_db_tp,
@@ -239,6 +270,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     p95ShortCrestDb: pm.p95_short_crest_db,
     transientDensity: pm.transient_density,
     punchIndex: pm.punch_index,
+    hardFailReasons: hardFailReasonsForPayload,
   });
 
   const { error: payloadErr } = await (admin as any)

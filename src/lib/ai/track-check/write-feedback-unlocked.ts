@@ -14,11 +14,26 @@ export async function writeFeedbackIfUnlocked(params: {
 }): Promise<void> {
   const finalAudioHash = params.audioHash;
 
+  // Source of truth: if hard-fail reasons exist in persisted private metrics, payload must be "rejected"
+  const { data: mRow, error: mErr } = await params.admin
+    .from("track_ai_private_metrics")
+    .select("hard_fail_reasons")
+    .eq("queue_id", params.queueId)
+    .maybeSingle();
+
+  const hardFailReasons =
+    !mErr && mRow && Array.isArray((mRow as any).hard_fail_reasons)
+      ? ((mRow as any).hard_fail_reasons as any[])
+      : [];
+
+  const decisionForPayload: TrackCheckDecision =
+    hardFailReasons.length > 0 ? "rejected" : params.decision;
+
   if (AI_DEBUG) {
     console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
       integratedLufs: params.integratedLufs,
       truePeakDb: params.truePeakDb,
-      decision: params.decision,
+      decision: decisionForPayload,
       queueId: params.queueId,
       finalAudioHash,
     });
@@ -31,7 +46,7 @@ export async function writeFeedbackIfUnlocked(params: {
     userId: params.userId,
     queueId: params.queueId,
     audioHash: finalAudioHash,
-    decision: params.decision,
+    decision: decisionForPayload,
     integratedLufs: Number.isFinite(params.integratedLufs) ? params.integratedLufs : null,
     truePeakDbTp: Number.isFinite(params.truePeakDb) ? params.truePeakDb : null,
     clippedSampleCount: Number.isFinite(params.clippedSampleCount) ? params.clippedSampleCount : null,

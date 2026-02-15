@@ -17,10 +17,12 @@ export function collectHardFailReasonsV2(params: {
   integratedLufs: number;
   lraLu: number;
   clippedSampleCount: number;
+  crestFactorDb: number;
 }): HardFailReason[] {
   const tp = Number.isFinite(params.truePeakDbEffective) ? params.truePeakDbEffective : null;
   const clippedSamples =
     typeof params.clippedSampleCount === "number" ? params.clippedSampleCount : 0;
+  const crest = Number.isFinite(params.crestFactorDb) ? params.crestFactorDb : null;
 
   // IMUSIC AI Gate Policy v1.0
   // Hard-Fail only for objectively broken / audibly damaged audio.
@@ -30,6 +32,8 @@ export function collectHardFailReasonsV2(params: {
 
   const HARDFAIL_TRUEPEAK_DBTP = 1.0;
   const HARDFAIL_CLIPPED_SAMPLES = 100;
+  const HARDFAIL_DYNAMIC_COLLAPSE_CREST_DB = 3.0;
+  const HARDFAIL_DYNAMIC_COLLAPSE_LUFS = -4.0;
 
   const hardFailReasons: HardFailReason[] = [];
 
@@ -48,6 +52,26 @@ export function collectHardFailReasonsV2(params: {
       metric: "clipped_sample_count",
       threshold: HARDFAIL_CLIPPED_SAMPLES,
       value: clippedSamples,
+    });
+  }
+
+  if (
+    crest !== null &&
+    Number.isFinite(params.integratedLufs) &&
+    crest < HARDFAIL_DYNAMIC_COLLAPSE_CREST_DB &&
+    params.integratedLufs > HARDFAIL_DYNAMIC_COLLAPSE_LUFS
+  ) {
+    hardFailReasons.push({
+      id: "dynamic_collapse",
+      metrics: ["crest_factor_db", "integrated_lufs"],
+      thresholds: {
+        crest_factor_db: HARDFAIL_DYNAMIC_COLLAPSE_CREST_DB,
+        integrated_lufs: HARDFAIL_DYNAMIC_COLLAPSE_LUFS,
+      },
+      values: {
+        crest_factor_db: crest,
+        integrated_lufs: params.integratedLufs,
+      },
     });
   }
 

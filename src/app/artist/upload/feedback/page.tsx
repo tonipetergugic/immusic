@@ -138,6 +138,11 @@ export default async function UploadFeedbackPage({
     ? ((payload as any).summary.highlights as string[])
     : [];
 
+  const v2HardFail = schemaVersion === 2 ? (payload as any)?.hard_fail : null;
+  const v2HardFailTriggered = Boolean(v2HardFail?.triggered);
+  const v2HardFailReasons: Array<{ id: string; metric?: string; threshold?: number; value?: number }> =
+    Array.isArray(v2HardFail?.reasons) ? (v2HardFail.reasons as any[]) : [];
+
   // v2 metrics are nested (objects). We only render known leaf values for now.
   const v2Loudness = schemaVersion === 2 ? (metrics as any)?.loudness : null;
 
@@ -186,6 +191,88 @@ export default async function UploadFeedbackPage({
 
   function safeNumber(v: unknown) {
     return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+
+  function formatHardFailReason(r: any): { title: string; detail: string } {
+    const id = typeof r?.id === "string" ? r.id : "unknown";
+    const value = typeof r?.value === "number" && Number.isFinite(r.value) ? r.value : null;
+    const threshold = typeof r?.threshold === "number" && Number.isFinite(r.threshold) ? r.threshold : null;
+
+    const val = value !== null ? value.toFixed(3) : null;
+    const thr = threshold !== null ? threshold.toFixed(3) : null;
+
+    switch (id) {
+      case "dynamic_collapse": {
+        const crest =
+          (typeof r?.values?.crest_factor_db === "number" && Number.isFinite(r.values.crest_factor_db))
+            ? r.values.crest_factor_db
+            : (typeof r?.value === "number" && Number.isFinite(r.value))
+              ? r.value
+              : null;
+
+        const lufs =
+          (typeof r?.values?.integrated_lufs === "number" && Number.isFinite(r.values.integrated_lufs))
+            ? r.values.integrated_lufs
+            : null;
+
+        const crestThr =
+          (typeof r?.thresholds?.crest_factor_db === "number" && Number.isFinite(r.thresholds.crest_factor_db))
+            ? r.thresholds.crest_factor_db
+            : null;
+
+        const lufsThr =
+          (typeof r?.thresholds?.integrated_lufs === "number" && Number.isFinite(r.thresholds.integrated_lufs))
+            ? r.thresholds.integrated_lufs
+            : null;
+
+        const crestText =
+          crest !== null
+            ? `Crest Factor ${crest.toFixed(2)} dB${crestThr !== null ? ` (threshold ${crestThr.toFixed(2)} dB)` : ""}`
+            : null;
+
+        const lufsText =
+          lufs !== null
+            ? `Integrated LUFS ${lufs.toFixed(1)}${lufsThr !== null ? ` (threshold ${lufsThr.toFixed(1)})` : ""}`
+            : null;
+
+        const parts = [crestText, lufsText].filter(Boolean);
+
+        return {
+          title: "Dynamic collapse (over-limited master)",
+          detail:
+            parts.length > 0
+              ? `${parts.join(", ")}. The master is extremely flattened/over-limited and may be distorted or fatiguing.`
+              : "The master is extremely flattened/over-limited (dynamic collapse).",
+        };
+      }
+
+      case "tp_over_1_0":
+        return {
+          title: "Extreme True Peak",
+          detail: `True Peak exceeded +1.0 dBTP${val ? ` (${val} dBTP)` : ""}${thr ? `; threshold ${thr} dBTP` : ""}.`,
+        };
+
+      case "massive_clipping":
+        return {
+          title: "Massive clipping",
+          detail: `Clipping is severe${value !== null ? ` (${Math.trunc(value)} clipped samples)` : ""}.`,
+        };
+
+      // Optional future-proofing if gate reasons are persisted later:
+      case "duration_invalid":
+        return { title: "Invalid duration", detail: "The audio file duration is invalid or unreadable." };
+      case "duration_too_long":
+        return { title: "Track too long", detail: "Track exceeds the maximum allowed duration." };
+      case "silence_dropout":
+        return { title: "Dropout silence", detail: "A long silent dropout was detected." };
+      case "silence_ratio":
+        return { title: "Mostly silence", detail: "The track is mostly silent." };
+      case "dc_offset":
+        return { title: "Extreme DC offset", detail: "DC offset is extreme and can cause distortion/translation issues." };
+
+      default:
+        return { title: `Hard-fail: ${id}`, detail: "Technical listenability problem detected." };
+    }
   }
 
   // Optional: queue audio_hash für Observability (rein beobachtend, darf niemals den Flow brechen)
@@ -251,10 +338,25 @@ export default async function UploadFeedbackPage({
             )}
 
             {/* Guarded placeholder: only visible when unlocked */}
-            <div className="rounded-xl bg-[#111112] p-5 border border-white/5">
-              <h2 className="text-base font-semibold">
-                {isReady ? "Analysis" : "Analysis (Placeholder)"}
-              </h2>
+            <div
+              className={
+                "rounded-xl bg-[#111112] p-5 border " +
+                (v2HardFailTriggered
+                  ? "border-red-500/30 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]"
+                  : "border-white/5")
+              }
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold">
+                  {isReady ? "Analysis" : "Analysis (Placeholder)"}
+                </h2>
+
+                {v2HardFailTriggered ? (
+                  <span className="text-[10px] px-2 py-1 rounded-full border border-red-400/30 bg-red-500/10 text-red-200 font-semibold tracking-wide">
+                    HARD FAIL
+                  </span>
+                ) : null}
+              </div>
               {isReady ? (
                 <p className="text-white/60 text-sm mt-2">
                   This analysis is generated by AI and is tied to this exact audio file.
@@ -325,6 +427,22 @@ export default async function UploadFeedbackPage({
                                 </li>
                               ))}
                             </ul>
+                            {v2HardFailTriggered && v2HardFailReasons.length > 0 ? (
+                              <div className="mt-3 pt-3 border-t border-white/10">
+                                <div className="text-xs text-white/70 mb-2">Hard-fail reasons</div>
+                                <ul className="space-y-2">
+                                  {v2HardFailReasons.map((r, i) => {
+                                    const x = formatHardFailReason(r);
+                                    return (
+                                      <li key={i} className="text-xs">
+                                        <div className="text-white/80 font-medium">{x.title}</div>
+                                        <div className="text-white/60">{x.detail}</div>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
 

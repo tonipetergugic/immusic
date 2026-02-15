@@ -5,11 +5,13 @@ export function collectHardFailReasonsFromMetrics(params: {
   integratedLufs: number;
   lraLu: number;
   clippedSampleCount: number;
+  crestFactorDb: number;
 }): HardFailReason[] {
   return collectHardFailReasonsV2({
     truePeakDbEffective: params.truePeakDbEffective,
     integratedLufs: params.integratedLufs,
     lraLu: params.lraLu,
     clippedSampleCount: params.clippedSampleCount,
+    crestFactorDb: params.crestFactorDb,
   });
 }

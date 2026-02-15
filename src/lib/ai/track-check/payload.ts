@@ -148,6 +148,36 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
           const id = typeof (r as any)?.id === "string" ? String((r as any).id) : null;
           if (!id) return null;
 
+          // Shape B: multi-metric reasons (e.g. dynamic_collapse)
+          const metricsRaw = (r as any)?.metrics;
+          const thresholdsRaw = (r as any)?.thresholds;
+          const valuesRaw = (r as any)?.values;
+
+          const metrics =
+            Array.isArray(metricsRaw) && metricsRaw.every((x: any) => typeof x === "string")
+              ? (metricsRaw as string[])
+              : null;
+
+          const thresholdsOk =
+            thresholdsRaw &&
+            typeof thresholdsRaw === "object" &&
+            !Array.isArray(thresholdsRaw);
+
+          const valuesOk =
+            valuesRaw &&
+            typeof valuesRaw === "object" &&
+            !Array.isArray(valuesRaw);
+
+          if (metrics && thresholdsOk && valuesOk) {
+            return {
+              id,
+              metrics,
+              thresholds: thresholdsRaw as Record<string, number>,
+              values: valuesRaw as Record<string, number>,
+            };
+          }
+
+          // Shape A: single metric reasons
           const metric = typeof (r as any)?.metric === "string" ? String((r as any).metric) : undefined;
 
           const thresholdRaw = (r as any)?.threshold;
@@ -158,10 +188,7 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
 
           return { id, metric, threshold, value };
         })
-        .filter(
-          (x): x is { id: string; metric: string | undefined; threshold: number | undefined; value: number | undefined } =>
-            x !== null
-        )
+        .filter(Boolean) as any[]
     : [];
 
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({

@@ -329,6 +329,7 @@ async function runTechnicalGatesAndPersistMetrics(params: {
     integratedLufs,
     lraLu,
     clippedSampleCount,
+    crestFactorDb,
   });
 
   if (hardFailReasons.length > 0) {

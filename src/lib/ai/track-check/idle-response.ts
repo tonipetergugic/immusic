@@ -22,6 +22,21 @@ export async function respondFromLastTerminalOrIdle(params: {
 
   if (!lastErr && last) {
     const { id, audio_hash, status } = last;
+
+    // Source of truth for hard-fail: persisted private metrics
+    const { data: mRow, error: mErr } = await params.admin
+      .from("track_ai_private_metrics")
+      .select("hard_fail_reasons")
+      .eq("queue_id", id)
+      .maybeSingle();
+
+    const hardFailReasons = !mErr && mRow && Array.isArray((mRow as any).hard_fail_reasons)
+      ? ((mRow as any).hard_fail_reasons as any[])
+      : [];
+
+    const decisionForPayload =
+      hardFailReasons.length > 0 ? "rejected" : status;
+
     const unlocked = await hasFeedbackUnlock(params.supabase, params.userId, id);
 
     const finalAudioHash = audio_hash;
@@ -31,7 +46,7 @@ export async function respondFromLastTerminalOrIdle(params: {
         userId: params.userId,
         queueId: id,
         audioHash: finalAudioHash,
-        decision: status,
+        decision: decisionForPayload,
         integratedLufs: null,
         truePeakDbTp: null,
         clippedSampleCount: null,
