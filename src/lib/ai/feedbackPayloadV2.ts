@@ -38,6 +38,15 @@ export type FeedbackPayloadV2 = {
     severity: "info" | "warn" | "critical";
     highlights: string[];
   };
+  hard_fail: {
+    triggered: boolean;
+    reasons: Array<{
+      id: string;
+      metric?: string;
+      threshold?: number;
+      value?: number;
+    }>;
+  };
   metrics: {
     loudness: {
       lufs_i: number | null;
@@ -91,6 +100,12 @@ export function buildFeedbackPayloadV2Mvp(params: {
   transientDensity?: number | null;
   punchIndex?: number | null;
   truePeakOvers?: FeedbackEventV2[];
+  hardFailReasons?: Array<{
+    id: string;
+    metric?: string;
+    threshold?: number;
+    value?: number;
+  }> | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -127,6 +142,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 
+  const hardFailReasons = Array.isArray(params.hardFailReasons) ? params.hardFailReasons : [];
+  const hardFailTriggered = decision === "rejected" && hardFailReasons.length > 0;
+
   let metaSeverity: "info" | "warn" | "critical" =
     decision === "approved" ? "info" : "critical";
 
@@ -136,41 +154,84 @@ export function buildFeedbackPayloadV2Mvp(params: {
     highlights.push("Technical listenability problems detected (hard-fail).");
   }
 
-  // --- True Peak policy (IMUSIC): hard-fail > +0.1 dBTP, warn if (0..+0.1], recommend -1.0 dBTP ---
-  const tp = typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
+  // --- True Peak policy (IMUSIC v1.0): hard-fail > +1.0 dBTP, warn if (0..+1.0], recommend -1.0 dBTP ---
+  const tp =
+    typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
+
+  const HARDFAIL_TRUEPEAK_DBTP = 1.0;
+  const WARN_TRUEPEAK_EPS_DBTP = 0.01;
 
   if (tp !== null) {
-    if (tp > 0.1) {
+    if (tp > HARDFAIL_TRUEPEAK_DBTP) {
       // CRITICAL (hard-fail threshold)
-      highlights.push("True Peak exceeds +0.1 dBTP (high risk of clipping after encoding).");
+      highlights.push(`True Peak exceeds +1.0 dBTP (${tp.toFixed(3)} dBTP) — extreme; high risk of audible distortion after encoding.`);
 
       recommendations.push({
         id: "rec_true_peak_headroom",
         title: "Reduce true peak overs",
         severity: "critical",
-        why: "True Peak exceeds +0.1 dBTP, which can cause clipping after encoding/normalization.",
+        why: "True Peak exceeds +1.0 dBTP, which is extreme and likely to cause audible distortion after encoding/normalization.",
         how: [
           "Set limiter ceiling to -1.0 dBTP (streaming-safe)",
-          "Reduce limiter input by ~0.5–2.0 dB",
+          "Reduce limiter input until True Peak stays <= 0.0 dBTP (aim for <= -1.0 dBTP ceiling)",
         ],
       });
-    } else if (tp > 0.0) {
+    } else if (tp > WARN_TRUEPEAK_EPS_DBTP) {
       // WARN (borderline)
-      highlights.push("True Peak is slightly above 0.0 dBTP (borderline; encoding headroom is low).");
+      highlights.push(`True Peak is above 0.0 dBTP (${tp.toFixed(3)} dBTP) — low encoding headroom; may clip after encoding.`);
 
       recommendations.push({
         id: "rec_true_peak_headroom",
         title: "Add more true peak headroom",
         severity: "warn",
-        why: "True Peak is slightly above 0.0 dBTP — this may clip after encoding on some platforms.",
+        why: "True Peak is above 0.0 dBTP — this can clip after encoding on some platforms.",
         how: [
           "Set limiter ceiling to -1.0 dBTP (recommended for streaming)",
           "Reduce limiter input by ~0.2–1.0 dB",
         ],
       });
     } else {
-      // Optional INFO: always recommend best practice (no issue)
-      // (Keep it minimal: no highlight, no recommendation by default)
+      // No highlight by default when OK
+    }
+  }
+
+  // --- Clipping policy (IMUSIC v1.0): hard-fail only if massive (>= 100 clipped samples) ---
+  const clipped =
+    typeof clippedSampleCount === "number" && Number.isFinite(clippedSampleCount)
+      ? clippedSampleCount
+      : null;
+
+  const HARDFAIL_CLIPPED_SAMPLES = 100;
+
+  if (clipped !== null) {
+    if (clipped >= HARDFAIL_CLIPPED_SAMPLES) {
+      highlights.push("Massive clipping detected (>= 100 clipped samples) — likely audible distortion.");
+
+      recommendations.push({
+        id: "rec_massive_clipping",
+        title: "Fix massive clipping",
+        severity: "critical",
+        why: "Massive clipping is likely audible and indicates a broken or severely overdriven master.",
+        how: [
+          "Reduce master gain / limiter input until clipping stops",
+          "Disable hard clipper or reduce drive",
+          "Check inter-sample peaks; set limiter ceiling to -1.0 dBTP",
+        ],
+      });
+    } else if (clipped > 0) {
+      highlights.push("Minor clipping detected (some clipped samples) — may be inaudible but risky for encoding.");
+
+      recommendations.push({
+        id: "rec_minor_clipping",
+        title: "Reduce clipping risk",
+        severity: "warn",
+        why: "A small number of clipped samples may be inaudible but can become worse after encoding.",
+        how: [
+          "Reduce limiter input slightly",
+          "Check for overs on transient hits; ease clipper drive if used",
+          "Keep true peak headroom (ceiling -1.0 dBTP recommended)",
+        ],
+      });
     }
   }
 
@@ -574,6 +635,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
       status: "ok",
       severity: metaSeverity,
       highlights,
+    },
+    hard_fail: {
+      triggered: hardFailTriggered,
+      reasons: hardFailReasons,
     },
     metrics: {
       loudness: {

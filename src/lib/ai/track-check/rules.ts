@@ -19,47 +19,35 @@ export function collectHardFailReasonsV2(params: {
   clippedSampleCount: number;
 }): HardFailReason[] {
   const tp = Number.isFinite(params.truePeakDbEffective) ? params.truePeakDbEffective : null;
-  const lufs = Number.isFinite(params.integratedLufs) ? params.integratedLufs : null;
-  const lra = Number.isFinite(params.lraLu) ? params.lraLu : null;
   const clippedSamples =
     typeof params.clippedSampleCount === "number" ? params.clippedSampleCount : 0;
 
-  // Collect all hard-fail reasons (v2). Reject if at least one reason matches.
+  // IMUSIC AI Gate Policy v1.0
+  // Hard-Fail only for objectively broken / audibly damaged audio.
+  // - True Peak: hard-fail only if extreme (> +1.0 dBTP). 0..+1.0 is warning/feedback-only (handled elsewhere).
+  // - Clipping: hard-fail only if massive (>= 100 clipped samples). Single/rare clipped samples are warning/feedback-only.
+  // - LUFS / LRA are never hard-fail (feedback-only), per policy.
+
+  const HARDFAIL_TRUEPEAK_DBTP = 1.0;
+  const HARDFAIL_CLIPPED_SAMPLES = 100;
+
   const hardFailReasons: HardFailReason[] = [];
 
-  if (tp !== null && tp > 0.1) {
+  if (tp !== null && tp > HARDFAIL_TRUEPEAK_DBTP) {
     hardFailReasons.push({
-      id: "tp_over_0_1",
+      id: "tp_over_1_0",
       metric: "true_peak_db_tp",
-      threshold: 0.1,
+      threshold: HARDFAIL_TRUEPEAK_DBTP,
       value: tp,
     });
   }
 
-  if (clippedSamples > 0) {
+  if (clippedSamples >= HARDFAIL_CLIPPED_SAMPLES) {
     hardFailReasons.push({
-      id: "clipped_samples",
+      id: "massive_clipping",
       metric: "clipped_sample_count",
-      threshold: 0,
+      threshold: HARDFAIL_CLIPPED_SAMPLES,
       value: clippedSamples,
-    });
-  }
-
-  if (lufs !== null && lufs > -4.5) {
-    hardFailReasons.push({
-      id: "lufs_too_hot",
-      metric: "integrated_lufs",
-      threshold: -4.5,
-      value: lufs,
-    });
-  }
-
-  if (lufs !== null && lra !== null && lufs > -6 && lra < 1.0) {
-    hardFailReasons.push({
-      id: "lufs_plus_low_lra",
-      metrics: ["integrated_lufs", "loudness_range_lu"],
-      thresholds: { integrated_lufs: -6, loudness_range_lu: 1.0 },
-      values: { integrated_lufs: lufs, loudness_range_lu: lra },
     });
   }
 

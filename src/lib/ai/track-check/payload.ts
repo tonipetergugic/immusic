@@ -84,6 +84,7 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
         "transient_density",
         "punch_index",
         "true_peak_overs",
+        "hard_fail_reasons",
       ].join(",")
     )
     .eq("queue_id", queueId)
@@ -141,6 +142,28 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
       ? Math.trunc(m.clipped_sample_count)
       : null;
 
+  const hardFailReasonsSoT = Array.isArray(m.hard_fail_reasons)
+    ? (m.hard_fail_reasons as any[])
+        .map((r) => {
+          const id = typeof (r as any)?.id === "string" ? String((r as any).id) : null;
+          if (!id) return null;
+
+          const metric = typeof (r as any)?.metric === "string" ? String((r as any).metric) : undefined;
+
+          const thresholdRaw = (r as any)?.threshold;
+          const threshold = typeof thresholdRaw === "number" && Number.isFinite(thresholdRaw) ? thresholdRaw : undefined;
+
+          const valueRaw = (r as any)?.value;
+          const value = typeof valueRaw === "number" && Number.isFinite(valueRaw) ? valueRaw : undefined;
+
+          return { id, metric, threshold, value };
+        })
+        .filter(
+          (x): x is { id: string; metric: string | undefined; threshold: number | undefined; value: number | undefined } =>
+            x !== null
+        )
+    : [];
+
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash: queueAudioHash,
@@ -151,6 +174,7 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
     truePeakDbTp: truePeakDbTpSoT,
     clippedSampleCount: clippedSampleCountSoT,
     truePeakOversEvents,
+    hardFailReasons: hardFailReasonsSoT,
 
     crestFactorDb: typeof m.crest_factor_db === "number" && Number.isFinite(m.crest_factor_db) ? m.crest_factor_db : null,
     loudnessRangeLu: typeof m.loudness_range_lu === "number" && Number.isFinite(m.loudness_range_lu) ? m.loudness_range_lu : null,
