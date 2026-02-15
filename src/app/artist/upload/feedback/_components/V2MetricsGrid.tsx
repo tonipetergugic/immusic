@@ -2,6 +2,7 @@
 
 import { TruePeakHeatbar } from "@/components/ai/TruePeakHeatbar";
 import { formatHardFailReason } from "../_lib/feedbackHelpers";
+import CodecSimulationPanel from "./CodecSimulationPanel";
 
 export default function V2MetricsGrid(props: {
   isReady: boolean;
@@ -82,6 +83,9 @@ export default function V2MetricsGrid(props: {
           {v2TruePeak === null ? "—" : v2TruePeak.toFixed(2)}
         </span>
       </div>
+
+      {/* Phase 2: Streaming Safety (unlock-gated via payload) */}
+      <CodecSimulationPanel payload={payload} />
 
       {/* v2 Events: True Peak Timeline (timecoded) */}
       {v2TruePeakOvers ? (

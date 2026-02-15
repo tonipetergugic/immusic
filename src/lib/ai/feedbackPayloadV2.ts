@@ -69,8 +69,83 @@ export type FeedbackPayloadV2 = {
     transients: Record<string, FeedbackEventV2[]>;
   };
   recommendations: FeedbackRecommendationV2[];
+  // Phase 2 (additiv, unlock-gated via payload writer):
+  // Streaming/Codec simulation metrics (encode->decode->analyze).
+  codec_simulation?: {
+    pre_true_peak_db: number | null;
+    aac128: {
+      post_true_peak_db: number | null;
+      overs_count: number | null;
+      headroom_delta_db: number | null;
+      distortion_risk: "low" | "moderate" | "high" | null;
+    } | null;
+    mp3128: {
+      post_true_peak_db: number | null;
+      overs_count: number | null;
+      headroom_delta_db: number | null;
+      distortion_risk: "low" | "moderate" | "high" | null;
+    } | null;
+  } | null;
   debug: null;
 };
+
+function headroomHealthFromCodecSim(codecSim: any): { highlight: string; severity: "info" | "warn" | "critical" } | null {
+  if (!codecSim) return null;
+
+  const pre = typeof codecSim?.pre_true_peak_db === "number" && Number.isFinite(codecSim.pre_true_peak_db)
+    ? codecSim.pre_true_peak_db
+    : null;
+
+  const aacPost = typeof codecSim?.aac128?.post_true_peak_db === "number" && Number.isFinite(codecSim.aac128.post_true_peak_db)
+    ? codecSim.aac128.post_true_peak_db
+    : null;
+
+  const mp3Post = typeof codecSim?.mp3128?.post_true_peak_db === "number" && Number.isFinite(codecSim.mp3128.post_true_peak_db)
+    ? codecSim.mp3128.post_true_peak_db
+    : null;
+
+  if (pre === null || (aacPost === null && mp3Post === null)) return null;
+
+  // Worst-case post-encode true peak (closest to +infinity)
+  const worstPost = Math.max(
+    aacPost === null ? -999 : aacPost,
+    mp3Post === null ? -999 : mp3Post
+  );
+
+  // Headroom to 0.0 dBTP AFTER encoding (positive means still below 0.0)
+  const headroomToZero = 0.0 - worstPost;
+
+  // Deterministic thresholds (purely technical):
+  // - <= 0.00 dBTP: already over -> critical
+  // - <= 0.10 dBTP: extremely tight -> critical
+  // - <= 0.30 dBTP: tight -> warn
+  // - else: info
+  if (headroomToZero <= 0) {
+    return {
+      severity: "critical",
+      highlight: `Streaming headroom (post-encode) is negative (${headroomToZero.toFixed(3)} dBTP): worst-case True Peak ${worstPost.toFixed(3)} dBTP — high risk of audible distortion.`,
+    };
+  }
+
+  if (headroomToZero <= 0.10) {
+    return {
+      severity: "critical",
+      highlight: `Only ${headroomToZero.toFixed(2)} dBTP streaming headroom (post-encode) — high encoding risk (worst-case True Peak ${worstPost.toFixed(3)} dBTP).`,
+    };
+  }
+
+  if (headroomToZero <= 0.30) {
+    return {
+      severity: "warn",
+      highlight: `Low streaming headroom (post-encode): ${headroomToZero.toFixed(2)} dBTP — may clip on some platforms (worst-case True Peak ${worstPost.toFixed(3)} dBTP).`,
+    };
+  }
+
+  return {
+    severity: "info",
+    highlight: `Streaming headroom (post-encode) looks healthy: ${headroomToZero.toFixed(2)} dBTP (worst-case True Peak ${worstPost.toFixed(3)} dBTP).`,
+  };
+}
 
 export function buildFeedbackPayloadV2Mvp(params: {
   queueId: string;
@@ -106,6 +181,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     threshold?: number;
     value?: number;
   }> | null;
+  codecSimulation?: FeedbackPayloadV2["codec_simulation"] | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -135,16 +211,29 @@ export function buildFeedbackPayloadV2Mvp(params: {
     transientDensity = null,
     punchIndex = null,
     truePeakOvers = [],
+    codecSimulation = null,
   } = params;
 
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 
-  const hardFailReasons = Array.isArray(params.hardFailReasons) ? params.hardFailReasons : [];
-  const hardFailTriggered = decision === "rejected" && hardFailReasons.length > 0;
-
+  // Phase 2: Headroom Health (derived from codec simulation, if present)
   let metaSeverity: "info" | "warn" | "critical" =
     decision === "approved" ? "info" : "critical";
+  const hh = headroomHealthFromCodecSim((params as any).codecSimulation);
+  if (hh) {
+    highlights.push(hh.highlight);
+
+    // Escalate summary severity minimally (never lowers existing severity)
+    if (hh.severity === "critical") {
+      metaSeverity = "critical";
+    } else if (hh.severity === "warn" && metaSeverity === "info") {
+      metaSeverity = "warn";
+    }
+  }
+
+  const hardFailReasons = Array.isArray(params.hardFailReasons) ? params.hardFailReasons : [];
+  const hardFailTriggered = decision === "rejected" && hardFailReasons.length > 0;
 
   if (decision === "approved") {
     highlights.push("No hard-fail issues detected.");
@@ -698,6 +787,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
       transients: {},
     },
     recommendations,
+    codec_simulation: codecSimulation ?? null,
     debug: null,
   };
 }

@@ -96,6 +96,96 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
 
   const m = mRow as any;
 
+  // Phase 2 (additiv, unlock-gated): load codec simulation metrics (best-effort)
+  let codecSimulation: any = null;
+
+  try {
+    const { data: cRow, error: cErr } = await adminClient
+      .from("track_ai_codec_simulation")
+      .select(
+        [
+          "pre_true_peak_db",
+          "aac128_post_true_peak_db",
+          "aac128_overs_count",
+          "aac128_headroom_delta_db",
+          "aac128_distortion_risk",
+          "mp3128_post_true_peak_db",
+          "mp3128_overs_count",
+          "mp3128_headroom_delta_db",
+          "mp3128_distortion_risk",
+        ].join(",")
+      )
+      .eq("queue_id", queueId)
+      .maybeSingle();
+
+    if (!cErr && cRow) {
+      const c = cRow as any;
+
+      const n = (x: any) => {
+        if (typeof x === "number" && Number.isFinite(x)) return x;
+        if (typeof x === "string") {
+          const p = Number(x);
+          return Number.isFinite(p) ? p : null;
+        }
+        return null;
+      };
+
+      const i = (x: any) => {
+        if (typeof x === "number" && Number.isFinite(x)) return Math.trunc(x);
+        if (typeof x === "string") {
+          const p = Number(x);
+          return Number.isFinite(p) ? Math.trunc(p) : null;
+        }
+        return null;
+      };
+
+      // numbers may come as string from Postgres
+      const preTruePeakDb = n(c?.pre_true_peak_db);
+
+      const aacPost = n(c?.aac128_post_true_peak_db);
+      const aacOvers = i(c?.aac128_overs_count);
+      const aacDelta = n(c?.aac128_headroom_delta_db);
+      const aacRisk = typeof c?.aac128_distortion_risk === "string" ? String(c.aac128_distortion_risk) : null;
+
+      const mp3Post = n(c?.mp3128_post_true_peak_db);
+      const mp3Overs = i(c?.mp3128_overs_count);
+      const mp3Delta = n(c?.mp3128_headroom_delta_db);
+      const mp3Risk = typeof c?.mp3128_distortion_risk === "string" ? String(c.mp3128_distortion_risk) : null;
+
+      const hasAny =
+        preTruePeakDb !== null ||
+        aacPost !== null ||
+        aacOvers !== null ||
+        aacDelta !== null ||
+        mp3Post !== null ||
+        mp3Overs !== null ||
+        mp3Delta !== null;
+
+      codecSimulation = hasAny
+        ? {
+            pre_true_peak_db: preTruePeakDb,
+            aac128: {
+              post_true_peak_db: aacPost,
+              overs_count: aacOvers,
+              headroom_delta_db: aacDelta,
+              distortion_risk:
+                aacRisk === "low" || aacRisk === "moderate" || aacRisk === "high" ? aacRisk : null,
+            },
+            mp3128: {
+              post_true_peak_db: mp3Post,
+              overs_count: mp3Overs,
+              headroom_delta_db: mp3Delta,
+              distortion_risk:
+                mp3Risk === "low" || mp3Risk === "moderate" || mp3Risk === "high" ? mp3Risk : null,
+            },
+          }
+        : null;
+    }
+  } catch {
+    // best-effort: no throw
+    codecSimulation = null;
+  }
+
   const truePeakOversSoT =
     Array.isArray(m.true_peak_overs) ? (m.true_peak_overs as any[]) : [];
 
@@ -217,6 +307,7 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
     p95ShortCrestDb: typeof m.p95_short_crest_db === "number" && Number.isFinite(m.p95_short_crest_db) ? m.p95_short_crest_db : null,
     transientDensity: typeof m.transient_density === "number" && Number.isFinite(m.transient_density) ? m.transient_density : null,
     punchIndex: typeof m.punch_index === "number" && Number.isFinite(m.punch_index) ? m.punch_index : null,
+    codecSimulation,
   });
 
   if (AI_DEBUG) console.log("[PAYLOAD DEBUG] built payload (SoT metrics):", {

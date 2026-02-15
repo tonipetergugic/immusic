@@ -30,6 +30,8 @@ import { bestEffortRemoveIngestWav } from "@/lib/ai/track-check/cleanup";
 import { checkDuplicateAudio } from "@/lib/ai/track-check/duplicate";
 import { hasFeedbackUnlock } from "@/lib/ai/track-check/unlock";
 import { analyzeAudioStub } from "@/lib/ai/track-check/analyzer";
+import { runCodecSimulationBestEffort } from "@/lib/ai/track-check/codec-simulation";
+import { persistCodecSimulationBestEffort } from "@/lib/ai/track-check/codec-sim-persist";
 import { ensureQueueAudioHash } from "@/lib/ai/track-check/hash";
 import { downloadIngestWavOrFail } from "@/lib/ai/track-check/wav-download";
 import { writeTempWavOrFail } from "@/lib/ai/track-check/temp-wav";
@@ -280,6 +282,23 @@ async function runTechnicalGatesAndPersistMetrics(params: {
     truePeakOverEvents,
     truePeakDbEffective,
   } = mapExtractToPrivateMetrics(extract);
+
+  // Phase 2 (additiv, best-effort): Codec Simulation (MP3 128) for streaming-risk metrics
+  // IMPORTANT: Never blocks, never rejects, never changes existing gates/decisions.
+  const codecSim = await runCodecSimulationBestEffort({
+    tmpWavPath,
+    preTruePeakDb: truePeakDbEffective,
+    logStage,
+    nowNs,
+    elapsedMs,
+  });
+
+  await persistCodecSimulationBestEffort({
+    admin,
+    queueId,
+    preTruePeakDb: truePeakDbEffective,
+    sim: codecSim,
+  });
 
   const persist = await persistExtractedMetricsOrFail({
     admin,

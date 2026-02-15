@@ -35,9 +35,9 @@ export function TruePeakHeatbar({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <div className="text-xs text-white/70">True Peak Timeline</div>
+        <div className="text-xs text-white/70">True Peak Timeline (source)</div>
         <div className="text-[11px] text-white/50 tabular-nums">
-          {hasOvers ? `${overs.length} event${overs.length === 1 ? "" : "s"}` : "no overs"}
+          {hasOvers ? `${overs.length} source event${overs.length === 1 ? "" : "s"}` : "no source overs"}
         </div>
       </div>
 

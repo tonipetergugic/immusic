@@ -6,6 +6,91 @@ import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildFeedbackPayloadV2Mvp, type FeedbackPayloadV2 } from "@/lib/ai/feedbackPayloadV2";
 
+async function loadCodecSimulationBestEffort(admin: any, queueId: string): Promise<FeedbackPayloadV2["codec_simulation"] | null> {
+  try {
+    const { data: cRow, error: cErr } = await admin
+      .from("track_ai_codec_simulation")
+      .select(
+        [
+          "pre_true_peak_db",
+          "aac128_post_true_peak_db",
+          "aac128_overs_count",
+          "aac128_headroom_delta_db",
+          "aac128_distortion_risk",
+          "mp3128_post_true_peak_db",
+          "mp3128_overs_count",
+          "mp3128_headroom_delta_db",
+          "mp3128_distortion_risk",
+        ].join(",")
+      )
+      .eq("queue_id", queueId)
+      .maybeSingle();
+
+    if (cErr || !cRow) return null;
+
+    const n = (x: any) => {
+      if (typeof x === "number" && Number.isFinite(x)) return x;
+      if (typeof x === "string") {
+        const p = Number(x);
+        return Number.isFinite(p) ? p : null;
+      }
+      return null;
+    };
+
+    const i = (x: any) => {
+      if (typeof x === "number" && Number.isFinite(x)) return Math.trunc(x);
+      if (typeof x === "string") {
+        const p = Number(x);
+        return Number.isFinite(p) ? Math.trunc(p) : null;
+      }
+      return null;
+    };
+
+    const c: any = cRow as any;
+
+    const preTruePeakDb = n(c?.pre_true_peak_db);
+
+    const aacPost = n(c?.aac128_post_true_peak_db);
+    const aacOvers = i(c?.aac128_overs_count);
+    const aacDelta = n(c?.aac128_headroom_delta_db);
+    const aacRisk = typeof c?.aac128_distortion_risk === "string" ? String(c.aac128_distortion_risk) : null;
+
+    const mp3Post = n(c?.mp3128_post_true_peak_db);
+    const mp3Overs = i(c?.mp3128_overs_count);
+    const mp3Delta = n(c?.mp3128_headroom_delta_db);
+    const mp3Risk = typeof c?.mp3128_distortion_risk === "string" ? String(c.mp3128_distortion_risk) : null;
+
+    const hasAny =
+      preTruePeakDb !== null ||
+      aacPost !== null ||
+      aacOvers !== null ||
+      aacDelta !== null ||
+      mp3Post !== null ||
+      mp3Overs !== null ||
+      mp3Delta !== null;
+
+    if (!hasAny) return null;
+
+    return {
+      pre_true_peak_db: preTruePeakDb,
+      aac128: {
+        post_true_peak_db: aacPost,
+        overs_count: aacOvers,
+        headroom_delta_db: aacDelta,
+        distortion_risk: aacRisk === "low" || aacRisk === "moderate" || aacRisk === "high" ? aacRisk : null,
+      },
+      mp3128: {
+        post_true_peak_db: mp3Post,
+        overs_count: mp3Overs,
+        headroom_delta_db: mp3Delta,
+        distortion_risk: mp3Risk === "low" || mp3Risk === "moderate" || mp3Risk === "high" ? mp3Risk : null,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function ensureFeedbackPayloadForTerminalQueue(params: {
   queueId: string;
   userId: string;
@@ -69,6 +154,8 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     })
     .filter(Boolean) as Array<{ id: string }>;
 
+  const codecSimulation = await loadCodecSimulationBestEffort(admin, queueId);
+
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash,
@@ -96,6 +183,7 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
     transientDensity: (pm as any).transient_density,
     punchIndex: (pm as any).punch_index,
     hardFailReasons: hardFailReasonsForPayload,
+    codecSimulation,
   });
 
   await admin
@@ -244,6 +332,8 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     throw new Error("audio_hash_missing");
   }
 
+  const codecSimulation = await loadCodecSimulationBestEffort(admin, queueId);
+
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash,
@@ -271,6 +361,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     transientDensity: pm.transient_density,
     punchIndex: pm.punch_index,
     hardFailReasons: hardFailReasonsForPayload,
+    codecSimulation,
   });
 
   const { error: payloadErr } = await (admin as any)
