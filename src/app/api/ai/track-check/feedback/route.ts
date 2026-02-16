@@ -131,62 +131,66 @@ export async function GET(request: Request) {
     // best-effort: ignore
   }
 
-  // If unlocked + terminal decision exists, refresh payload best-effort before returning it.
-  // This prevents stale/partial payloads (race between metrics persistence and payload cache).
+  // If unlocked + terminal decision exists, refresh payload only when needed.
+  // Needed = private metrics already contain true_peak_overs events but cached payload still has none.
   const terminalStatus = (queueRow as any)?.status as string | null;
 
-  const needsRefresh =
-    !existingPayloadHash ||
-    existingPayloadHash !== queueHash ||
-    existingPayloadVersion === null ||
-    existingPayloadVersion < REQUIRED_PAYLOAD_VERSION;
-
-  if (queueHash && needsRefresh && (terminalStatus === "approved" || terminalStatus === "rejected")) {
+  if (queueHash && (terminalStatus === "approved" || terminalStatus === "rejected")) {
     try {
-      if (AI_DEBUG) {
-        console.log("[FEEDBACK ROUTE] payload refresh:start", {
-          queueId,
-          userId: user.id,
-          decision: terminalStatus,
-          needsRefresh,
-          existingPayloadVersion,
-          requiredPayloadVersion: REQUIRED_PAYLOAD_VERSION,
-          payloadHashMatches: existingPayloadHash ? existingPayloadHash === queueHash : false,
-        });
-      }
+      // Read current payload (cheap) to detect stale cache
+      const { data: prePayloadRow, error: prePayloadErr } = await supabase
+        .from("track_ai_feedback_payloads")
+        .select("audio_hash, payload_version, payload")
+        .eq("queue_id", queueId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
+      const payloadHash = (prePayloadRow as any)?.audio_hash as string | null;
+      const payloadVersion = Number((prePayloadRow as any)?.payload_version ?? 0);
+
+      const payloadOversLen = (() => {
+        const arr = (prePayloadRow as any)?.payload?.events?.loudness?.true_peak_overs;
+        return Array.isArray(arr) ? arr.length : null;
+      })();
+
+      // Read private metrics overs length (source of truth)
       const admin = getSupabaseAdmin();
+      const { data: mRow, error: mErr } = await admin
+        .from("track_ai_private_metrics")
+        .select("true_peak_overs")
+        .eq("queue_id", queueId)
+        .maybeSingle();
 
-      await writeFeedbackPayloadIfUnlocked({
-        admin,
-        userId: user.id,
-        queueId,
-        audioHash: queueHash,
-        decision: terminalStatus,
-        integratedLufs: null,
-        truePeakDbTp: null,
-        clippedSampleCount: null,
-      });
+      const metricsOversLen = Array.isArray((mRow as any)?.true_peak_overs)
+        ? ((mRow as any).true_peak_overs as any[]).length
+        : null;
 
-      if (AI_DEBUG) {
-        console.log("[FEEDBACK ROUTE] payload refresh:done", {
-          queueId,
+      // Decide if refresh is needed:
+      // - payload is missing or wrong hash OR old payload version OR mismatch: metrics have overs but payload has none
+      const needsRefresh =
+        !prePayloadErr &&
+        queueHash &&
+        (
+          !prePayloadRow ||
+          !payloadHash ||
+          payloadHash !== queueHash ||
+          payloadVersion < 2 ||
+          (typeof metricsOversLen === "number" && metricsOversLen > 0 && payloadOversLen === 0)
+        );
+
+      if (!mErr && needsRefresh) {
+        await writeFeedbackPayloadIfUnlocked({
+          admin,
           userId: user.id,
+          queueId,
+          audioHash: queueHash,
           decision: terminalStatus,
-          needsRefresh,
-          existingPayloadVersion,
-          requiredPayloadVersion: REQUIRED_PAYLOAD_VERSION,
+          integratedLufs: null,
+          truePeakDbTp: null,
+          clippedSampleCount: null,
         });
       }
-    } catch (e) {
-      if (AI_DEBUG) {
-        console.log("[FEEDBACK ROUTE] payload refresh:fail", {
-          queueId,
-          userId: user.id,
-          decision: terminalStatus,
-          error: e instanceof Error ? e.message : String(e),
-        });
-      }
+    } catch {
       // best-effort: never break API response
     }
   }
