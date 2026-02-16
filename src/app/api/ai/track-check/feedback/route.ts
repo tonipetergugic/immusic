@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { writeFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/payload";
+import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 
 export const dynamic = "force-dynamic";
+const REQUIRED_PAYLOAD_VERSION = 2;
 
 type OkLocked = {
   ok: true;
@@ -106,12 +108,53 @@ export async function GET(request: Request) {
     );
   }
 
+  // Precheck: determine whether payload cache is missing/outdated for this queue/audio.
+  let existingPayloadHash: string | null = null;
+  let existingPayloadVersion: number | null = null;
+
+  try {
+    const { data: prePayloadRow, error: prePayloadErr } = await supabase
+      .from("track_ai_feedback_payloads")
+      .select("audio_hash, payload_version")
+      .eq("queue_id", queueId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!prePayloadErr && prePayloadRow) {
+      existingPayloadHash = (prePayloadRow as any)?.audio_hash ?? null;
+
+      const pvRaw = (prePayloadRow as any)?.payload_version;
+      const pvNum = typeof pvRaw === "number" ? pvRaw : Number(pvRaw);
+      existingPayloadVersion = Number.isFinite(pvNum) ? pvNum : null;
+    }
+  } catch {
+    // best-effort: ignore
+  }
+
   // If unlocked + terminal decision exists, refresh payload best-effort before returning it.
   // This prevents stale/partial payloads (race between metrics persistence and payload cache).
   const terminalStatus = (queueRow as any)?.status as string | null;
 
-  if (queueHash && (terminalStatus === "approved" || terminalStatus === "rejected")) {
+  const needsRefresh =
+    !existingPayloadHash ||
+    existingPayloadHash !== queueHash ||
+    existingPayloadVersion === null ||
+    existingPayloadVersion < REQUIRED_PAYLOAD_VERSION;
+
+  if (queueHash && needsRefresh && (terminalStatus === "approved" || terminalStatus === "rejected")) {
     try {
+      if (AI_DEBUG) {
+        console.log("[FEEDBACK ROUTE] payload refresh:start", {
+          queueId,
+          userId: user.id,
+          decision: terminalStatus,
+          needsRefresh,
+          existingPayloadVersion,
+          requiredPayloadVersion: REQUIRED_PAYLOAD_VERSION,
+          payloadHashMatches: existingPayloadHash ? existingPayloadHash === queueHash : false,
+        });
+      }
+
       const admin = getSupabaseAdmin();
 
       await writeFeedbackPayloadIfUnlocked({
@@ -124,7 +167,26 @@ export async function GET(request: Request) {
         truePeakDbTp: null,
         clippedSampleCount: null,
       });
-    } catch {
+
+      if (AI_DEBUG) {
+        console.log("[FEEDBACK ROUTE] payload refresh:done", {
+          queueId,
+          userId: user.id,
+          decision: terminalStatus,
+          needsRefresh,
+          existingPayloadVersion,
+          requiredPayloadVersion: REQUIRED_PAYLOAD_VERSION,
+        });
+      }
+    } catch (e) {
+      if (AI_DEBUG) {
+        console.log("[FEEDBACK ROUTE] payload refresh:fail", {
+          queueId,
+          userId: user.id,
+          decision: terminalStatus,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
       // best-effort: never break API response
     }
   }
