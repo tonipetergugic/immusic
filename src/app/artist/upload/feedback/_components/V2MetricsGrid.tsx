@@ -61,6 +61,33 @@ export default function V2MetricsGrid(props: {
       ? (payload as any).metrics.low_end.mono_energy_loss_pct_20_120
       : null;
 
+  const dynamicsHealth =
+    (payload as any)?.dynamics_health && typeof (payload as any).dynamics_health === "object"
+      ? (payload as any).dynamics_health
+      : null;
+
+  const dynamicsScore =
+    dynamicsHealth && typeof dynamicsHealth.score === "number" && Number.isFinite(dynamicsHealth.score)
+      ? dynamicsHealth.score
+      : null;
+
+  const dynamicsLabel =
+    dynamicsHealth && typeof dynamicsHealth.label === "string" ? String(dynamicsHealth.label) : null;
+
+  const dynamicsBadge =
+    dynamicsLabel === null
+      ? null
+      : dynamicsLabel === "over-limited"
+        ? { label: "OVER-LIMITED", badgeClass: "border-red-400/30 bg-red-500/10 text-red-200", valueClass: "text-red-300" }
+        : dynamicsLabel === "borderline"
+          ? { label: "BORDERLINE", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
+          : { label: "HEALTHY", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/50" };
+
+  const dynamicsFactors =
+    dynamicsHealth && typeof dynamicsHealth.factors === "object" && dynamicsHealth.factors
+      ? dynamicsHealth.factors
+      : null;
+
   const lowEndBadge =
     lowEndPhaseCorr === null && lowEndMonoLossPct === null
       ? null
@@ -124,6 +151,58 @@ export default function V2MetricsGrid(props: {
           {v2TruePeak === null ? "—" : v2TruePeak.toFixed(2)}
         </span>
       </div>
+
+      {dynamicsHealth ? (
+        <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs text-white/70">Dynamics Health</span>
+              <span className="text-[10px] text-white/40">Technical • No gate</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {dynamicsBadge ? (
+                <span className={"text-[10px] px-2 py-0.5 rounded-full border " + dynamicsBadge.badgeClass}>
+                  {dynamicsBadge.label}
+                </span>
+              ) : null}
+
+              <span className={"text-xs tabular-nums " + (dynamicsBadge ? dynamicsBadge.valueClass : "text-white/50")}>
+                {dynamicsScore === null ? "—" : `${dynamicsScore}/100`}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+              <span className="text-[11px] text-white/60">LUFS</span>
+              <span className="text-[11px] text-white/50 tabular-nums">
+                {dynamicsFactors && typeof (dynamicsFactors as any).lufs === "number"
+                  ? (dynamicsFactors as any).lufs.toFixed(1)
+                  : "—"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+              <span className="text-[11px] text-white/60">LRA</span>
+              <span className="text-[11px] text-white/50 tabular-nums">
+                {dynamicsFactors && typeof (dynamicsFactors as any).lra === "number"
+                  ? (dynamicsFactors as any).lra.toFixed(1)
+                  : "—"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+              <span className="text-[11px] text-white/60">Crest</span>
+              <span className="text-[11px] text-white/50 tabular-nums">
+                {dynamicsFactors && typeof (dynamicsFactors as any).crest === "number"
+                  ? (dynamicsFactors as any).crest.toFixed(2)
+                  : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
         <div className="flex flex-col">

@@ -17,6 +17,85 @@ export type FeedbackRecommendationV2 = {
   refs?: Array<{ module: string; event_list: string; index: number }>;
 };
 
+type DynamicsHealthLabelV1 = "healthy" | "borderline" | "over-limited";
+
+function clamp01(x: number): number {
+  if (!Number.isFinite(x)) return 0;
+  if (x < 0) return 0;
+  if (x > 1) return 1;
+  return x;
+}
+
+function computeDynamicsHealthV1(input: {
+  lufs: number | null | undefined;
+  lra: number | null | undefined;
+  crest: number | null | undefined;
+}): {
+  score: number; // 0–100
+  label: DynamicsHealthLabelV1;
+  factors: { lufs: number | null; lra: number | null; crest: number | null };
+} {
+  const lufs = typeof input.lufs === "number" && Number.isFinite(input.lufs) ? input.lufs : null;
+  const lra = typeof input.lra === "number" && Number.isFinite(input.lra) ? input.lra : null;
+  const crest = typeof input.crest === "number" && Number.isFinite(input.crest) ? input.crest : null;
+
+  // Health mappings (technisch, nicht genre-spezifisch):
+  // - Sehr laute Masters (z.B. > -8 LUFS) erhöhen Limiting-Risiko.
+  // - Sehr niedrige Crest/LRA sprechen für Over-Limiting.
+  //
+  // Crest health: 5 dB (schlecht) .. 12 dB (gut)
+  const crestHealth =
+    crest === null ? null : clamp01((crest - 5) / (12 - 5));
+
+  // LRA health: 3 LU (schlecht) .. 8 LU (gut)
+  const lraHealth =
+    lra === null ? null : clamp01((lra - 3) / (8 - 3));
+
+  // LUFS health: <= -12 (gut/low risk) .. >= -7 (schlecht/high risk), linear dazwischen
+  // (Sehr leise Werte bleiben "gesund" bzgl. Limiting-Risiko)
+  const lufsHealth =
+    lufs === null ? null : clamp01(((-7) - lufs) / ((-7) - (-12)));
+
+  const parts: Array<{ w: number; v: number | null }> = [
+    { w: 0.45, v: crestHealth },
+    { w: 0.35, v: lraHealth },
+    { w: 0.20, v: lufsHealth },
+  ];
+
+  const available = parts.filter((p) => typeof p.v === "number");
+  let score: number;
+
+  if (available.length === 0) {
+    // neutral, falls Metriken fehlen (kein "Hard Fail", kein Gate)
+    score = 50;
+  } else {
+    const wSum = available.reduce((a, p) => a + p.w, 0);
+    const vSum = available.reduce((a, p) => a + p.w * (p.v as number), 0);
+    score = Math.round((vSum / wSum) * 100);
+  }
+
+  // Labeling: score-basiert + ein harter "Over-Limited"-Heuristik-Override (nur Analyse)
+  let label: DynamicsHealthLabelV1 =
+    score >= 70 ? "healthy" : score >= 40 ? "borderline" : "over-limited";
+
+  // Override: klassisches Over-Limiting Muster
+  // (laut + wenig Crest + wenig LRA)
+  if (
+    lufs !== null && lufs > -9 &&
+    crest !== null && crest < 6 &&
+    lra !== null && lra < 4
+  ) {
+    label = "over-limited";
+    if (score > 39) score = 39;
+  }
+
+  return {
+    score,
+    label,
+    factors: { lufs, lra, crest },
+  };
+}
+
 export type FeedbackPayloadV2 = {
   schema_version: 2;
   generated_at: string;
@@ -59,6 +138,15 @@ export type FeedbackPayloadV2 = {
     dynamics: Record<string, unknown>;
     silence: Record<string, unknown>;
     transients: Record<string, unknown>;
+  };
+  dynamics_health: {
+    score: number; // 0–100
+    label: "healthy" | "borderline" | "over-limited";
+    factors: {
+      lufs: number | null;
+      lra: number | null;
+      crest: number | null;
+    };
   };
   events: {
     loudness: { true_peak_overs: FeedbackEventV2[] };
@@ -145,6 +233,44 @@ function headroomHealthFromCodecSim(codecSim: any): { highlight: string; severit
   return {
     severity: "info",
     highlight: `Streaming headroom (post-encode) looks healthy: ${headroomToZero.toFixed(2)} dBTP (worst-case True Peak ${worstPost.toFixed(3)} dBTP).`,
+  };
+}
+
+function distortionRiskFromCodecSim(codecSim: any): { highlight: string; severity: "info" | "warn" } | null {
+  if (!codecSim) return null;
+
+  const aacRisk =
+    codecSim?.aac128?.distortion_risk === "low" ||
+    codecSim?.aac128?.distortion_risk === "moderate" ||
+    codecSim?.aac128?.distortion_risk === "high"
+      ? codecSim.aac128.distortion_risk
+      : null;
+
+  const mp3Risk =
+    codecSim?.mp3128?.distortion_risk === "low" ||
+    codecSim?.mp3128?.distortion_risk === "moderate" ||
+    codecSim?.mp3128?.distortion_risk === "high"
+      ? codecSim.mp3128.distortion_risk
+      : null;
+
+  if (aacRisk === null && mp3Risk === null) return null;
+
+  const rank = (r: "low" | "moderate" | "high" | null): number =>
+    r === "high" ? 3 : r === "moderate" ? 2 : r === "low" ? 1 : 0;
+
+  const worstRank = Math.max(rank(aacRisk), rank(mp3Risk));
+
+  const worstLabel =
+    worstRank === 3 ? "HIGH" : worstRank === 2 ? "MODERATE" : "LOW";
+
+  const severity: "info" | "warn" = worstRank >= 3 ? "warn" : "info";
+
+  const aacTxt = aacRisk ? `AAC 128: ${aacRisk.toUpperCase()}` : "AAC 128: —";
+  const mp3Txt = mp3Risk ? `MP3 128: ${mp3Risk.toUpperCase()}` : "MP3 128: —";
+
+  return {
+    severity,
+    highlight: `Codec distortion risk (${worstLabel}) — ${aacTxt}, ${mp3Txt}.`,
   };
 }
 
@@ -324,6 +450,12 @@ export function buildFeedbackPayloadV2Mvp(params: {
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 
+  const dynamicsHealth = computeDynamicsHealthV1({
+    lufs: typeof integratedLufs === "number" && Number.isFinite(integratedLufs) ? integratedLufs : null,
+    lra: typeof loudnessRangeLu === "number" && Number.isFinite(loudnessRangeLu) ? loudnessRangeLu : null,
+    crest: typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
+  });
+
   // Phase 2: Headroom Health (derived from codec simulation, if present)
   let metaSeverity: "info" | "warn" | "critical" =
     decision === "approved" ? "info" : "critical";
@@ -336,6 +468,35 @@ export function buildFeedbackPayloadV2Mvp(params: {
       metaSeverity = "critical";
     } else if (hh.severity === "warn" && metaSeverity === "info") {
       metaSeverity = "warn";
+    }
+  }
+
+  // Phase 2: Codec Distortion Risk (derived from codec simulation, if present)
+  const dr = distortionRiskFromCodecSim((params as any).codecSimulation);
+  if (dr) {
+    highlights.push(dr.highlight);
+
+    // Escalate summary severity minimally (never lowers existing severity)
+    if (dr.severity === "warn" && metaSeverity === "info") {
+      metaSeverity = "warn";
+    }
+
+    const hasCodecRec = recommendations.some((r) => r.id === "rec_codec_distortion_risk");
+
+    // Only recommend when worst risk is HIGH (warn). For MODERATE we only highlight.
+    if (dr.severity === "warn" && !hasCodecRec) {
+      recommendations.push({
+        id: "rec_codec_distortion_risk",
+        severity: "warn",
+        title: "Reduce encoding distortion risk (codec safety)",
+        why: "Some masters stay clean in WAV but distort after lossy encoding (AAC/MP3). This is purely technical and can affect streaming playback.",
+        how: [
+          "Increase true-peak headroom (set limiter ceiling to -1.0 dBTP recommended).",
+          "Reduce aggressive limiting/soft clipping on the master to lower codec stress.",
+          "Re-check post-encode True Peak and overs after adjustments.",
+          "If distortion persists, reduce high-frequency harshness and extreme transient peaks.",
+        ],
+      });
     }
   }
 
@@ -763,28 +924,53 @@ export function buildFeedbackPayloadV2Mvp(params: {
 
   // --- Meta Pattern Layer v1 (cross-metric intelligence) ---
 
-  // Pattern 1: Over-Limited Loudness
-  if (
+  // Pattern 1: Over-Limited Loudness (now also driven by Dynamics Health Index)
+  const dynLabel =
+    dynamicsHealth?.label && typeof dynamicsHealth.label === "string"
+      ? String(dynamicsHealth.label)
+      : null;
+
+  const dynOverLimited = dynLabel === "over-limited";
+  const dynBorderline = dynLabel === "borderline";
+
+  const classicOverLimitedPattern =
     typeof integratedLufs === "number" &&
     typeof loudnessRangeLu === "number" &&
     typeof truePeakDbTp === "number" &&
     integratedLufs >= -9.0 &&
     loudnessRangeLu < 2.0 &&
-    truePeakDbTp > -1.0
-  ) {
+    truePeakDbTp > -1.0;
+
+  if (classicOverLimitedPattern || dynOverLimited || dynBorderline) {
+    const hasPatternRec = recommendations.some((r) => r.id === "rec_pattern_over_limited");
+
+    // Keep existing safeguard for classic metric-specific recs
     const hasTruePeakRec = recommendations.some((r) => r.id === "rec_true_peak_headroom");
     const hasLraLowRec = recommendations.some((r) => r.id === "rec_lra_very_low");
 
-    if (!(hasTruePeakRec && hasLraLowRec)) {
+    // Highlight always when dynamics signals "borderline/over-limited" OR classic pattern triggers
+    if (dynOverLimited) {
+      highlights.push("Dynamics Health indicates OVER-LIMITING — dynamics are extremely restricted.");
+    } else if (dynBorderline) {
+      highlights.push("Dynamics Health indicates borderline dynamics — limiting/compression may be reducing impact.");
+    } else {
       highlights.push(
         "Compression-dominant loudness pattern detected (high loudness + very low LRA + low true-peak headroom)."
       );
+    }
 
+    // Only push the master-limiting recommendation when dynamics is clearly over-limited,
+    // OR the classic pattern triggers and we don't already have the two specific recs covering it.
+    const shouldPushRec =
+      (!hasPatternRec) &&
+      (dynOverLimited || (classicOverLimitedPattern && !(hasTruePeakRec && hasLraLowRec)));
+
+    if (shouldPushRec) {
       recommendations.push({
         id: "rec_pattern_over_limited",
         severity: "warn",
         title: "Reduce aggressive master limiting",
-        why: "This combination often indicates aggressive limiting that can reduce punch and increase distortion risk after encoding.",
+        why: "This pattern indicates aggressive limiting/compression that can reduce punch and increase distortion risk after encoding.",
         how: [
           "Reduce limiter gain reduction and keep true peak ceiling at -1.0 dBTP.",
           "Let more transient detail through (less clipping/soft-clip on the master).",
@@ -967,6 +1153,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
           typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
       },
     },
+    dynamics_health: dynamicsHealth,
     events: {
       loudness: { true_peak_overs: Array.isArray(truePeakOversEvents) ? truePeakOversEvents : [] },
       spectral: {},
