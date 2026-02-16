@@ -39,58 +39,139 @@ function computeDynamicsHealthV1(input: {
   const lra = typeof input.lra === "number" && Number.isFinite(input.lra) ? input.lra : null;
   const crest = typeof input.crest === "number" && Number.isFinite(input.crest) ? input.crest : null;
 
-  // Health mappings (technisch, nicht genre-spezifisch):
-  // - Sehr laute Masters (z.B. > -8 LUFS) erhöhen Limiting-Risiko.
-  // - Sehr niedrige Crest/LRA sprechen für Over-Limiting.
-  //
-  // Crest health: 5 dB (schlecht) .. 12 dB (gut)
-  const crestHealth =
-    crest === null ? null : clamp01((crest - 5) / (12 - 5));
+  // Festival-/Trance-Kalibrierung (Realistische Streaming-Preflight-Logik)
+  // - LUFS ist Kontext (kein "Loudness-Polizei"-Gate)
+  // - Crest ist Hauptindikator, LRA sekundär
+  // - "Over-limited" nur bei echten Extremwert-Kombinationen
 
-  // LRA health: 3 LU (schlecht) .. 8 LU (gut)
-  const lraHealth =
-    lra === null ? null : clamp01((lra - 3) / (8 - 3));
+  const clamp100 = (x: number) => Math.max(0, Math.min(100, x));
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * clamp01(t);
 
-  // LUFS health: <= -12 (gut/low risk) .. >= -7 (schlecht/high risk), linear dazwischen
-  // (Sehr leise Werte bleiben "gesund" bzgl. Limiting-Risiko)
-  const lufsHealth =
-    lufs === null ? null : clamp01(((-7) - lufs) / ((-7) - (-12)));
+  const scoreFromRanges = (x: number, ranges: Array<[number, number, number, number]>): number => {
+    // ranges: [x0, x1, y0, y1] piecewise linear
+    for (const [x0, x1, y0, y1] of ranges) {
+      if (x >= x0 && x <= x1) {
+        const t = (x - x0) / (x1 - x0);
+        return clamp100(lerp(y0, y1, t));
+      }
+    }
+    // outside: clamp to nearest end
+    const first = ranges[0];
+    const last = ranges[ranges.length - 1];
+    if (x < first[0]) return clamp100(first[2]);
+    return clamp100(last[3]);
+  };
 
+  // CrestScore (0–100) – Hauptindikator
+  // >=8.5 => 100
+  // 7–8.5 => 85..100
+  // 5.5–7 => 70..85
+  // 4.5–5.5 => 45..70
+  // <4.5 => 0..45
+  const crestScore =
+    crest === null
+      ? null
+      : scoreFromRanges(crest, [
+          [4.5, 5.5, 45, 70],
+          [5.5, 7.0, 70, 85],
+          [7.0, 8.5, 85, 100],
+          [8.5, 20.0, 100, 100],
+        ]);
+
+  // LRAScore (0–100)
+  // >=8 => 100
+  // 5–8 => 80..100
+  // 3–5 => 65..80
+  // 2–3 => 40..65
+  // <2 => 0..40
+  const lraScore =
+    lra === null
+      ? null
+      : scoreFromRanges(lra, [
+          // LRA < 2 LU soll stärker drücken: 2..3 => 30..60 (statt 40..65)
+          [2.0, 3.0, 30, 60],
+          [3.0, 5.0, 65, 80],
+          [5.0, 8.0, 80, 100],
+          [8.0, 30.0, 100, 100],
+        ]);
+
+  // LUFSScore (0–100) – nur Kontext, keine harte Strafe
+  // <=-12 => 100
+  // -12..-8 => 90..100
+  // -8..-6 => 75..90
+  // >-6 => 60..75
+  const lufsScore =
+    lufs === null
+      ? null
+      : (() => {
+          if (lufs <= -12) return 100;
+          if (lufs <= -8) {
+            // -12..-8 => 100..90 (leicht sinkend)
+            const t = (lufs - (-12)) / ((-8) - (-12));
+            return clamp100(lerp(100, 90, t));
+          }
+          if (lufs <= -6) {
+            // -8..-6 => 90..75
+            const t = (lufs - (-8)) / ((-6) - (-8));
+            return clamp100(lerp(90, 75, t));
+          }
+          // > -6 => 75..60 (aber nie "rot" allein wegen LUFS)
+          // bis -3 linear abfallen
+          const t = clamp01((lufs - (-6)) / ((-3) - (-6)));
+          return clamp100(lerp(75, 60, t));
+        })();
+
+  // CodecImpactScore: aktuell nicht verfügbar in den Inputs -> neutral (100)
+  const codecImpactScore = 100;
+
+  // Gewichte (Festival-Kalibrierung): Crest 40%, LRA 30%, LUFS 20%, Codec 10%
   const parts: Array<{ w: number; v: number | null }> = [
-    { w: 0.45, v: crestHealth },
-    { w: 0.35, v: lraHealth },
-    { w: 0.20, v: lufsHealth },
+    { w: 0.40, v: crestScore },
+    { w: 0.30, v: lraScore },
+    { w: 0.20, v: lufsScore },
+    { w: 0.10, v: codecImpactScore },
   ];
 
   const available = parts.filter((p) => typeof p.v === "number");
   let score: number;
 
   if (available.length === 0) {
-    // neutral, falls Metriken fehlen (kein "Hard Fail", kein Gate)
-    score = 50;
+    // neutral, falls Metriken fehlen (kein Gate)
+    score = 65; // Festival-Preflight: neutral eher "okay" als "hart"
   } else {
     const wSum = available.reduce((a, p) => a + p.w, 0);
     const vSum = available.reduce((a, p) => a + p.w * (p.v as number), 0);
-    score = Math.round((vSum / wSum) * 100);
+    score = Math.round(vSum / wSum);
   }
 
-  // Labeling: score-basiert + ein harter "Over-Limited"-Heuristik-Override (nur Analyse)
+  // Labeling (Festival): Healthy ab 75
   let label: DynamicsHealthLabelV1 =
-    score >= 70 ? "healthy" : score >= 40 ? "borderline" : "over-limited";
+    score >= 75 ? "healthy" : score >= 55 ? "borderline" : "over-limited";
 
-  // Override: klassisches Over-Limiting Muster
-  // (laut + wenig Crest + wenig LRA)
-  if (
-    lufs !== null && lufs > -9 &&
-    crest !== null && crest < 6 &&
-    lra !== null && lra < 4
-  ) {
+  // Over-limited Override (nur bei echten Extremkombinationen)
+  // Mindestens 2 von 3 Bedingungen müssen zutreffen:
+  // - Crest < 4.5
+  // - LRA < 2.0
+  // - LUFS > -6.0 (extrem laut)
+  const condCrest = crest !== null && crest < 4.5;
+  const condLra = lra !== null && lra < 2.0;
+  const condLufs = lufs !== null && lufs > -6.0;
+
+  const condCount = Number(condCrest) + Number(condLra) + Number(condLufs);
+  if (condCount >= 2) {
     label = "over-limited";
-    if (score > 39) score = 39;
+    if (score > 54) score = 54;
+  }
+
+  // Festival-Preflight: extrem flache Makrodynamik soll nicht als "Healthy" durchrutschen
+  // LRA < 1.0 LU => maximal "borderline" (Score-Deckel unter Healthy-Schwelle)
+  if (lra !== null && lra < 1.0) {
+    if (score > 74) score = 74;
+    if (label === "healthy") label = "borderline";
   }
 
   return {
-    score,
+    score: clamp100(score),
     label,
     factors: { lufs, lra, crest },
   };
@@ -236,6 +317,24 @@ function headroomHealthFromCodecSim(codecSim: any): { highlight: string; severit
   };
 }
 
+function recommendedLimiterCeilingTextV1(codecSim: any): string | null {
+  const aacPost = typeof codecSim?.aac128?.post_true_peak_db === "number" ? codecSim.aac128.post_true_peak_db : null;
+  const mp3Post = typeof codecSim?.mp3128?.post_true_peak_db === "number" ? codecSim.mp3128.post_true_peak_db : null;
+
+  if (aacPost === null && mp3Post === null) return null;
+
+  const worstPost = Math.max(aacPost ?? -999, mp3Post ?? -999);
+
+  // Sicherheitsmarge-Policy (Preflight, keine Sperre):
+  // Wenn Post-Encode True Peak nahe 0 dBTP liegt, empfehlen wir -1.0 dBTP Ceiling.
+  // "Nahe 0" definieren wir als >= -0.2 dBTP.
+  if (worstPost >= -0.2) {
+    return "Tip: Keep true peak ceiling around -1.0 dBTP to add streaming headroom (reduces encoding overs/distortion risk).";
+  }
+
+  return null;
+}
+
 function distortionRiskFromCodecSim(codecSim: any): { highlight: string; severity: "info" | "warn" } | null {
   if (!codecSim) return null;
 
@@ -268,9 +367,13 @@ function distortionRiskFromCodecSim(codecSim: any): { highlight: string; severit
   const aacTxt = aacRisk ? `AAC 128: ${aacRisk.toUpperCase()}` : "AAC 128: —";
   const mp3Txt = mp3Risk ? `MP3 128: ${mp3Risk.toUpperCase()}` : "MP3 128: —";
 
+  const tip = recommendedLimiterCeilingTextV1(codecSim);
+
   return {
     severity,
-    highlight: `Codec distortion risk (${worstLabel}) — ${aacTxt}, ${mp3Txt}.`,
+    highlight: tip
+      ? `Codec distortion risk (${worstLabel}) — ${aacTxt}, ${mp3Txt}. ${tip}`
+      : `Codec distortion risk (${worstLabel}) — ${aacTxt}, ${mp3Txt}.`,
   };
 }
 

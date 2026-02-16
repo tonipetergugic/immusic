@@ -32,12 +32,27 @@ function oversCountFromMapped(mapped: any): number {
 function riskFromPostPeakAndOvers(params: { postTruePeakDb: number; oversCount: number }): DistortionRisk {
   const { postTruePeakDb, oversCount } = params;
 
-  // Deterministisch, rein technisch:
-  // - > +1.0 dBTP gilt als klar hohes Risiko
-  // - > +0.3 dBTP oder viele Overs => moderat
+  // Festival-/Streaming-Preflight Kalibrierung (deterministisch, rein technisch)
+  //
+  // Grundidee:
+  // - Post-Encode True Peak ist der stärkste Indikator.
+  // - "Overs" sind erst relevant, wenn sie wirklich gehäuft auftreten (sonst zu viele False-Moderates).
+  // - MODERATE soll nur bei echter Nähe/Überschreitung von 0 dBTP ODER sehr vielen Overs triggern.
+  //
+  // HIGH:
+  // - klar über 0 dBTP (deutlich) oder extrem viele Overs
   if (postTruePeakDb > 1.0) return "high";
-  if (postTruePeakDb > 0.3) return "moderate";
-  if (oversCount >= 5) return "moderate";
+  if (oversCount >= 250) return "high";
+
+  // MODERATE:
+  // - merkliche Überschreitung oder
+  // - knapp an 0 dBTP + viele Overs
+  // - oder sehr viele Overs auch ohne Überschreitung
+  if (postTruePeakDb > 0.5) return "moderate";
+  if (postTruePeakDb > 0.0 && oversCount >= 80) return "moderate";
+  if (oversCount >= 150) return "moderate";
+
+  // LOW:
   return "low";
 }
 
