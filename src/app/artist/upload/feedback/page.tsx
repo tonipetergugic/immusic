@@ -160,7 +160,7 @@ export default async function UploadFeedbackPage({
 
   const v2TruePeakOvers = Array.isArray((payload as any)?.events?.loudness?.true_peak_overs)
     ? ((payload as any).events.loudness.true_peak_overs as any[])
-    : null;
+    : [];
 
   const v2Transients = schemaVersion === 2 ? (metrics as any)?.transients : null;
 

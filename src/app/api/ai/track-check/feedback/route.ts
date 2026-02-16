@@ -135,15 +135,22 @@ export async function GET(request: Request) {
   // Needed = private metrics already contain true_peak_overs events but cached payload still has none.
   const terminalStatus = (queueRow as any)?.status as string | null;
 
+  let prePayloadRow: any = null;
+  let prePayloadErr: any = null;
+  let didRefresh = false;
+
   if (queueHash && (terminalStatus === "approved" || terminalStatus === "rejected")) {
     try {
       // Read current payload (cheap) to detect stale cache
-      const { data: prePayloadRow, error: prePayloadErr } = await supabase
+      const pre = await supabase
         .from("track_ai_feedback_payloads")
         .select("audio_hash, payload_version, payload")
         .eq("queue_id", queueId)
         .eq("user_id", user.id)
         .maybeSingle();
+
+      prePayloadRow = pre.data as any;
+      prePayloadErr = pre.error as any;
 
       const payloadHash = (prePayloadRow as any)?.audio_hash as string | null;
       const payloadVersion = Number((prePayloadRow as any)?.payload_version ?? 0);
@@ -189,20 +196,32 @@ export async function GET(request: Request) {
           truePeakDbTp: null,
           clippedSampleCount: null,
         });
+        didRefresh = true;
       }
     } catch {
       // best-effort: never break API response
     }
   }
 
-  // If unlocked, check whether payload exists and matches the exact audio hash.
+  // If unlocked, return payload (reuse precheck result if no refresh happened)
   if (queueHash) {
-    const { data: payloadRow, error: payloadErr } = await supabase
-      .from("track_ai_feedback_payloads")
-      .select("audio_hash, payload_version, payload")
-      .eq("queue_id", queueId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    let payloadRow: any = null;
+    let payloadErr: any = null;
+
+    if (!didRefresh && !prePayloadErr && prePayloadRow) {
+      payloadRow = prePayloadRow;
+      payloadErr = null;
+    } else {
+      const res = await supabase
+        .from("track_ai_feedback_payloads")
+        .select("audio_hash, payload_version, payload")
+        .eq("queue_id", queueId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      payloadRow = res.data as any;
+      payloadErr = res.error as any;
+    }
 
     if (!payloadErr && payloadRow) {
       const payloadHash = (payloadRow as any)?.audio_hash as string | null;

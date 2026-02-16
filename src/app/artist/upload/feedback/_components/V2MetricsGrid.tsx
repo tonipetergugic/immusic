@@ -152,11 +152,9 @@ export default function V2MetricsGrid(props: {
       <CodecSimulationPanel payload={payload} />
 
       {/* v2 Events: True Peak Timeline (timecoded) */}
-      {v2TruePeakOvers ? (
-        <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
-          <TruePeakHeatbar durationS={v2DurationS} overs={v2TruePeakOvers as any} />
-        </div>
-      ) : null}
+      <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
+        <TruePeakHeatbar durationS={v2DurationS} overs={v2TruePeakOvers as any} />
+      </div>
 
       {typeof (payload as any)?.metrics?.dynamics?.crest_factor_db === "number" && (
         <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
