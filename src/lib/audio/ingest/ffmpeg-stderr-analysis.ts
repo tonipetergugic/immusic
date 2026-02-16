@@ -540,6 +540,98 @@ export type TruePeakOverEvent = {
   severity: "warn" | "critical";
 };
 
+export type ShortTermLufsPoint = {
+  t: number;     // seconds
+  lufs: number;  // LUFS (short-term if available, otherwise momentary fallback)
+};
+
+export async function ffmpegDetectShortTermLufsTimeline(params: {
+  inPath: string;
+  maxPoints?: number; // default 1200
+}): Promise<ShortTermLufsPoint[]> {
+  const maxPoints = typeof params.maxPoints === "number" && Number.isFinite(params.maxPoints) ? Math.max(50, Math.trunc(params.maxPoints)) : 1200;
+
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "verbose",
+    "-i",
+    params.inPath,
+    "-af",
+    "ebur128=peak=1:framelog=verbose",
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  if (process.env.NODE_ENV !== "production") {
+    // Useful debug when regex doesn't match the local ffmpeg framelog format
+    const sample = lines
+      .filter((l) => /t:\s*[0-9.]+/i.test(l) || /\b(?:M:|S:|I:|TP|True\s*peak|Peak)\b/i.test(l))
+      .slice(0, 40);
+    void sample; // reserved for optional debug
+  }
+
+  const reT = /\bt:\s*([0-9.]+)\b/i;
+
+  // Accept "S:" / "M:" numbers with or without "LUFS"/"LU" suffix (builds vary)
+  const reS = /\bS:\s*([+-]?[0-9.]+)\b(?:\s*(?:LUFS|LU))?\b/i;
+  const reM = /\bM:\s*([+-]?[0-9.]+)\b(?:\s*(?:LUFS|LU))?\b/i;
+
+  const points: ShortTermLufsPoint[] = [];
+
+  for (const line of lines) {
+    const mt = line.match(reT);
+    if (!mt) continue;
+    const t = Number(mt[1]);
+    if (!Number.isFinite(t) || t < 0) continue;
+
+    const ms = line.match(reS);
+    const mm = line.match(reM);
+
+    const raw = ms ? Number(ms[1]) : mm ? Number(mm[1]) : NaN;
+    if (!Number.isFinite(raw)) continue;
+
+    // Filter out "no signal" / gating sentinel values (ffmpeg often prints ~-120.7)
+    if (raw <= -70) continue;
+
+    // Clamp to a sane loudness range for UI + robustness
+    const lufs = Math.max(-70, Math.min(0, raw));
+
+    // Optional: drop exact duplicates to reduce payload noise
+    const prev = points.length > 0 ? points[points.length - 1] : null;
+    if (prev && Math.abs(prev.lufs - lufs) < 1e-9) {
+      // keep time progression but avoid duplicate loudness values
+      continue;
+    }
+
+    points.push({ t, lufs });
+  }
+
+  if (points.length === 0) {
+    return [];
+  }
+
+  // Sort by time (defensive)
+  points.sort((a, b) => a.t - b.t);
+
+  // Downsample to maxPoints (uniform pick)
+  if (points.length > maxPoints) {
+    const step = points.length / maxPoints;
+    const slim: ShortTermLufsPoint[] = [];
+    for (let i = 0; i < maxPoints; i++) {
+      const idx = Math.min(points.length - 1, Math.floor(i * step));
+      slim.push(points[idx]);
+    }
+    return slim;
+  }
+
+  return points;
+}
+
 export async function ffmpegDetectTruePeakOversEvents(params: {
   inPath: string;
   thresholdDbTp?: number; // default 0.0

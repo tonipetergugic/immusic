@@ -283,6 +283,7 @@ async function runTechnicalGatesAndPersistMetrics(params: {
     truePeakOvers,
     truePeakOverEvents,
     truePeakDbEffective,
+    shortTermLufsTimeline,
   } = mapExtractToPrivateMetrics(extract);
 
   // Phase 2 (additiv, best-effort): Codec Simulation (MP3 128) for streaming-risk metrics
@@ -331,6 +332,7 @@ async function runTechnicalGatesAndPersistMetrics(params: {
     truePeakOvers,
     truePeakOverEvents,
     truePeakDb,
+    shortTermLufsTimeline,
   });
 
   if (!persist.ok) {

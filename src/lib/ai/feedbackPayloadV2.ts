@@ -211,6 +211,7 @@ export type FeedbackPayloadV2 = {
     loudness: {
       lufs_i: number | null;
       true_peak_dbtp_max: number | null;
+      short_term_lufs_timeline?: Array<{ t: number; lufs: number }>;
       headroom_engineering?: {
         score_0_100: number | null;
         badge: "healthy" | "ok" | "warn" | "critical" | null;
@@ -547,6 +548,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     value?: number;
   }> | null;
   codecSimulation?: FeedbackPayloadV2["codec_simulation"] | null;
+  shortTermLufsTimeline?: Array<{ t: number; lufs: number }> | null;
 }): FeedbackPayloadV2 {
   const {
     queueId,
@@ -579,6 +581,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
     punchIndex = null,
     truePeakOvers = [],
     codecSimulation = null,
+    shortTermLufsTimeline = null,
   } = params;
 
   const highlights: string[] = [];
@@ -1367,6 +1370,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
       loudness: {
         lufs_i: typeof integratedLufs === "number" && Number.isFinite(integratedLufs) ? integratedLufs : null,
         true_peak_dbtp_max: typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null,
+        ...(Array.isArray(shortTermLufsTimeline) && shortTermLufsTimeline.length > 0 ? { short_term_lufs_timeline: shortTermLufsTimeline } : {}),
         ...(headroomEngineering ? { headroom_engineering: headroomEngineering } : {}),
         ...(streamingNormalization ? { streaming_normalization: streamingNormalization } : {}),
       },

@@ -32,6 +32,7 @@ export type PrivateMetricsMapped = {
   truePeakOvers: Array<{ t0: number; t1: number; peak_db_tp: number }>;
   truePeakOverEvents: Array<{ t0: number; t1: number; peak_db_tp: number; severity: "warn" | "critical" }>;
   truePeakDbEffective: number;
+  shortTermLufsTimeline: Array<{ t: number; lufs: number }>;
 };
 
 export function mapExtractToPrivateMetrics(extract: {
@@ -60,6 +61,7 @@ export function mapExtractToPrivateMetrics(extract: {
   truePeakOvers: PrivateMetricsMapped["truePeakOvers"];
   truePeakOverEvents: PrivateMetricsMapped["truePeakOverEvents"];
   truePeakDbEffective: number;
+  shortTermLufsTimeline: PrivateMetricsMapped["shortTermLufsTimeline"];
 }): PrivateMetricsMapped {
   return {
     truePeakDb: extract.truePeakDb,
@@ -86,5 +88,6 @@ export function mapExtractToPrivateMetrics(extract: {
     truePeakOvers: extract.truePeakOvers,
     truePeakOverEvents: extract.truePeakOverEvents,
     truePeakDbEffective: extract.truePeakDbEffective,
+    shortTermLufsTimeline: extract.shortTermLufsTimeline,
   };
 }

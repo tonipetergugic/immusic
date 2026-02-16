@@ -14,6 +14,7 @@ import {
   ffmpegDetectTruePeakOversEvents,
   type TransientPunchMetrics,
 } from "@/lib/audio/ingestTools";
+import { ffmpegDetectShortTermLufsTimeline } from "@/lib/audio/ingest/ffmpeg-stderr-analysis";
 import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 
 type ExtractOk = {
@@ -42,6 +43,7 @@ type ExtractOk = {
   truePeakOverEvents: Array<{ t0: number; t1: number; peak_db_tp: number; severity: "warn" | "critical" }>;
   truePeakDbEffective: number;
   transient: TransientPunchMetrics;
+  shortTermLufsTimeline: Array<{ t: number; lufs: number }>;
 };
 
 type ExtractErr = {
@@ -79,6 +81,7 @@ export async function extractPrivateMetricsFromTmpWav(params: {
   let truePeakOvers: Array<{ t0: number; t1: number; peak_db_tp: number }> = [];
   let truePeakOverEvents: Array<{ t0: number; t1: number; peak_db_tp: number; severity: "warn" | "critical" }> = [];
   let truePeakDbEffective: number = NaN;
+  let shortTermLufsTimeline: Array<{ t: number; lufs: number }> = [];
   let transient: TransientPunchMetrics = {
     mean_short_rms_dbfs: NaN,
     p95_short_rms_dbfs: NaN,
@@ -96,6 +99,8 @@ export async function extractPrivateMetricsFromTmpWav(params: {
     params.logStage("detect_true_peak_lufs", params.elapsedMs(tEbur));
     truePeakDb = r.truePeakDbTp;
     integratedLufs = r.integratedLufs;
+    // Short-term (or momentary fallback) LUFS timeline via ebur128 framelog
+    shortTermLufsTimeline = await ffmpegDetectShortTermLufsTimeline({ inPath: params.tmpWavPath, maxPoints: 1200 });
     maxSamplePeakDbfs = await ffmpegDetectMaxSamplePeakDbfs({ inPath: params.tmpWavPath });
     const clippedSampleCountRaw = await ffmpegDetectClippedSampleCount({ inPath: params.tmpWavPath });
     clippedSampleCount =
@@ -254,6 +259,7 @@ export async function extractPrivateMetricsFromTmpWav(params: {
       truePeakOverEvents,
       truePeakDbEffective,
       transient,
+      shortTermLufsTimeline,
     };
   } catch (err: any) {
     return { ok: false, error: "ebur128_detect_failed", err };

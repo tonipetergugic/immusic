@@ -35,6 +35,7 @@ export async function persistPrivateMetricsAndEvents(params: {
   truePeakOvers: any[];
   truePeakOverEvents: any[];
   truePeakDb: number;
+  shortTermLufsTimeline?: Array<{ t: number; lufs: number }>;
 }) : Promise<PersistPrivateResult> {
   // 3.5.1) Persist private metrics (server-only truth). Must happen before any cleanup/terminal return.
   if (
@@ -120,6 +121,7 @@ export async function persistPrivateMetricsAndEvents(params: {
           p95_short_crest_db: params.transient.p95_short_crest_db,
           transient_density: params.transient.transient_density,
           punch_index: params.transient.punch_index,
+          short_term_lufs_timeline: Array.isArray(params.shortTermLufsTimeline) ? params.shortTermLufsTimeline : [],
           analyzed_at: new Date().toISOString(),
         },
         { onConflict: "queue_id" }

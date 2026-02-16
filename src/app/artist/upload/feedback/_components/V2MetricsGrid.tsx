@@ -3,6 +3,7 @@
 import { TruePeakHeatbar } from "@/components/ai/TruePeakHeatbar";
 import { formatHardFailReason } from "../_lib/feedbackHelpers";
 import CodecSimulationPanel from "./CodecSimulationPanel";
+import ShortTermLufsChart from "./ShortTermLufsChart";
 
 export default function V2MetricsGrid(props: {
   isReady: boolean;
@@ -173,6 +174,27 @@ export default function V2MetricsGrid(props: {
             </div>
           </div>
         );
+      })()}
+
+      {(() => {
+        const raw =
+          (payload as any)?.metrics?.loudness?.short_term_lufs_timeline ??
+          (payload as any)?.metrics?.loudness?.shortTermLufsTimeline ??
+          (payload as any)?.metrics?.loudness?.short_term ??
+          null;
+
+        const pts = Array.isArray(raw)
+          ? raw
+              .map((p: any) => ({
+                t: typeof p?.t === "number" ? p.t : typeof p?.time_s === "number" ? p.time_s : null,
+                lufs: typeof p?.lufs === "number" ? p.lufs : typeof p?.short_term_lufs === "number" ? p.short_term_lufs : null,
+              }))
+              .filter((p: any) => typeof p.t === "number" && Number.isFinite(p.t) && typeof p.lufs === "number" && Number.isFinite(p.lufs))
+          : [];
+
+        if (pts.length < 2) return null;
+
+        return <ShortTermLufsChart points={pts} />;
       })()}
 
       {(() => {

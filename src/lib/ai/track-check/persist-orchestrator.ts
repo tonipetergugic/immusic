@@ -30,6 +30,7 @@ export async function persistExtractedMetricsOrFail(params: {
   truePeakOvers: Array<{ t0: number; t1: number; peak_db_tp: number }>;
   truePeakOverEvents: Array<{ t0: number; t1: number; peak_db_tp: number; severity: "warn" | "critical" }>;
   truePeakDb: number;
+  shortTermLufsTimeline?: Array<{ t: number; lufs: number }>;
 }) {
   return await persistPrivateMetricsAndEvents({
     admin: params.admin,
@@ -60,5 +61,6 @@ export async function persistExtractedMetricsOrFail(params: {
     truePeakOvers: params.truePeakOvers,
     truePeakOverEvents: params.truePeakOverEvents,
     truePeakDb: params.truePeakDb,
+    shortTermLufsTimeline: params.shortTermLufsTimeline,
   });
 }

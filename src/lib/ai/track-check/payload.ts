@@ -80,6 +80,7 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
         "punch_index",
         "true_peak_overs",
         "hard_fail_reasons",
+        "short_term_lufs_timeline",
       ].join(",")
     )
     .eq("queue_id", queueId)
@@ -280,6 +281,7 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
     queueId,
     audioHash: queueAudioHash,
     decision,
+    shortTermLufsTimeline: Array.isArray((m as any).short_term_lufs_timeline) ? (m as any).short_term_lufs_timeline : [],
     durationS:
       typeof m.duration_s === "number" && Number.isFinite(m.duration_s) ? m.duration_s : null,
     integratedLufs: integratedLufsSoT,
