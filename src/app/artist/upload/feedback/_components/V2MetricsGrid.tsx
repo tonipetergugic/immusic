@@ -37,6 +37,20 @@ export default function V2MetricsGrid(props: {
     recommendations,
   } = props;
 
+  const headroomSourceDb =
+    typeof v2TruePeak === "number" && Number.isFinite(v2TruePeak) ? 0.0 - v2TruePeak : null;
+
+  const headroomSourceBadge =
+    headroomSourceDb === null
+      ? null
+      : headroomSourceDb <= 0
+        ? { label: "CRITICAL", badgeClass: "border-red-400/30 bg-red-500/10 text-red-200", valueClass: "text-red-300" }
+        : headroomSourceDb <= 0.10
+          ? { label: "CRITICAL", badgeClass: "border-red-400/30 bg-red-500/10 text-red-200", valueClass: "text-red-300" }
+          : headroomSourceDb <= 0.30
+            ? { label: "WARN", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
+            : { label: "INFO", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/50" };
+
   return (
     <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
       {/* v2 Highlights (short, human) */}
@@ -44,11 +58,17 @@ export default function V2MetricsGrid(props: {
         <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
           <div className="text-xs text-white/70 mb-2">Highlights</div>
           <ul className="space-y-1">
-            {v2Highlights.slice(0, 5).map((h, idx) => (
-              <li key={idx} className="text-xs text-white/60">
-                {h}
-              </li>
-            ))}
+            {Array.from(
+              new Map(
+                v2Highlights.map((h) => [String(h).trim().toLowerCase(), String(h).trim()] as const)
+              ).values()
+            )
+              .slice(0, 5)
+              .map((h, idx) => (
+                <li key={idx} className="text-xs text-white/60">
+                  {h}
+                </li>
+              ))}
           </ul>
           {v2HardFailTriggered && v2HardFailReasons.length > 0 ? (
             <div className="mt-3 pt-3 border-t border-white/10">
@@ -82,6 +102,29 @@ export default function V2MetricsGrid(props: {
         <span className="text-xs text-white/50 tabular-nums">
           {v2TruePeak === null ? "—" : v2TruePeak.toFixed(2)}
         </span>
+      </div>
+
+      <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-xs text-white/70">Headroom (source)</span>
+          <span className="text-[10px] text-white/40">Pre-encode (source)</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {headroomSourceBadge ? (
+            <span
+              className={
+                "text-[10px] px-2 py-0.5 rounded-full border " + headroomSourceBadge.badgeClass
+              }
+            >
+              {headroomSourceBadge.label}
+            </span>
+          ) : null}
+
+          <span className={"text-xs tabular-nums " + (headroomSourceBadge ? headroomSourceBadge.valueClass : "text-white/50")}>
+            {headroomSourceDb === null ? "—" : `${headroomSourceDb.toFixed(2)} dBTP`}
+          </span>
+        </div>
       </div>
 
       {/* Phase 2: Streaming Safety (unlock-gated via payload) */}

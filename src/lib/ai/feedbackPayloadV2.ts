@@ -147,6 +147,47 @@ function headroomHealthFromCodecSim(codecSim: any): { highlight: string; severit
   };
 }
 
+function headroomHealthFromSourceTruePeak(truePeakDbTp: any): { highlight: string; severity: "info" | "warn" | "critical" } | null {
+  const tp =
+    typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
+
+  if (tp === null) return null;
+
+  // Headroom to 0.0 dBTP at SOURCE (pre-encode). Positive means below 0.0 dBTP.
+  const headroomToZero = 0.0 - tp;
+
+  // Deterministic thresholds (purely technical, informational only):
+  // - <= 0.00 dBTP: already over -> critical
+  // - <= 0.10 dBTP: extremely tight -> critical
+  // - <= 0.30 dBTP: tight -> warn
+  // - else: info
+  if (headroomToZero <= 0) {
+    return {
+      severity: "critical",
+      highlight: `Headroom (source) is negative (${headroomToZero.toFixed(3)} dBTP): True Peak ${tp.toFixed(3)} dBTP — high encoding risk.`,
+    };
+  }
+
+  if (headroomToZero <= 0.10) {
+    return {
+      severity: "critical",
+      highlight: `Headroom (source): only ${headroomToZero.toFixed(2)} dBTP → high encoding risk (True Peak ${tp.toFixed(3)} dBTP).`,
+    };
+  }
+
+  if (headroomToZero <= 0.30) {
+    return {
+      severity: "warn",
+      highlight: `Headroom (source): ${headroomToZero.toFixed(2)} dBTP → low encoding headroom (True Peak ${tp.toFixed(3)} dBTP).`,
+    };
+  }
+
+  return {
+    severity: "info",
+    highlight: `Headroom (source) looks healthy: ${headroomToZero.toFixed(2)} dBTP (True Peak ${tp.toFixed(3)} dBTP).`,
+  };
+}
+
 export function buildFeedbackPayloadV2Mvp(params: {
   queueId: string;
   audioHash: string;
@@ -228,6 +269,19 @@ export function buildFeedbackPayloadV2Mvp(params: {
     if (hh.severity === "critical") {
       metaSeverity = "critical";
     } else if (hh.severity === "warn" && metaSeverity === "info") {
+      metaSeverity = "warn";
+    }
+  }
+
+  // Phase 2: Headroom Health (source / pre-encode)
+  const hs = headroomHealthFromSourceTruePeak(truePeakDbTp);
+  if (hs) {
+    highlights.push(hs.highlight);
+
+    // Escalate summary severity minimally (never lowers existing severity)
+    if (hs.severity === "critical") {
+      metaSeverity = "critical";
+    } else if (hs.severity === "warn" && metaSeverity === "info") {
       metaSeverity = "warn";
     }
   }

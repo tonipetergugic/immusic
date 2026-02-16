@@ -70,13 +70,24 @@ export default function CodecSimulationPanel(props: { payload: any }) {
   const mp3Delta = n(mp3.headroom_delta_db);
   const mp3Risk = risk(mp3.distortion_risk);
 
+  const worstPostTp =
+    aacPost !== null && mp3Post !== null
+      ? Math.max(aacPost, mp3Post)
+      : aacPost !== null
+        ? aacPost
+        : mp3Post !== null
+          ? mp3Post
+          : null;
+
+  const worstPostHeadroom = worstPostTp === null ? null : 0.0 - worstPostTp;
+
   return (
     <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs text-white/70">Streaming Safety (Codec Simulation)</div>
           <div className="text-[11px] text-white/50 mt-1">
-            Lossy encode→decode check (AAC 128 / MP3 128). Purely technical: post-encode True Peak + overs risk.
+            Lossy encode→decode check (AAC 128 / MP3 128). Purely technical: post-encode True Peak, overs, and worst-case post-encode headroom.
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -100,6 +111,10 @@ export default function CodecSimulationPanel(props: { payload: any }) {
         <Row
           label="Pre-encode True Peak"
           value={preTp === null ? "—" : `${preTp.toFixed(3)} dBTP`}
+        />
+        <Row
+          label="Worst-case post-encode headroom"
+          value={worstPostHeadroom === null ? "—" : `${worstPostHeadroom.toFixed(3)} dBTP`}
         />
       </div>
 
