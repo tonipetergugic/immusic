@@ -211,6 +211,37 @@ export type FeedbackPayloadV2 = {
     loudness: {
       lufs_i: number | null;
       true_peak_dbtp_max: number | null;
+      headroom_engineering?: {
+        score_0_100: number | null;
+        badge: "healthy" | "ok" | "warn" | "critical" | null;
+        effective_headroom_dbtp: number | null;
+        source_headroom_dbtp: number | null;
+        post_encode_headroom_dbtp: number | null;
+        worst_post_true_peak_dbtp: number | null;
+      };
+      streaming_normalization?: {
+        spotify: {
+          target_lufs_i: number;
+          desired_gain_db: number | null;
+          applied_gain_db: number | null;
+          max_up_gain_db: number | null;
+          mode: "up_down";
+        };
+        youtube: {
+          target_lufs_i: number;
+          desired_gain_db: number | null;
+          applied_gain_db: number | null;
+          max_up_gain_db: null;
+          mode: "down_only";
+        };
+        apple_music: {
+          target_lufs_i: number;
+          desired_gain_db: number | null;
+          applied_gain_db: number | null;
+          max_up_gain_db: number | null;
+          mode: "limited_up";
+        };
+      };
     };
     spectral: Record<string, unknown>;
     stereo: Record<string, unknown>;
@@ -1175,6 +1206,137 @@ export function buildFeedbackPayloadV2Mvp(params: {
     });
   }
 
+  const lufsI =
+    typeof integratedLufs === "number" && Number.isFinite(integratedLufs) ? integratedLufs : null;
+
+  const tpDbTp =
+    typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
+
+  // Headroom to the recommended -1.0 dBTP ceiling (positive means "can turn up", negative means already above).
+  const maxUpGainDb =
+    tpDbTp === null ? null : Number.isFinite(-1.0 - tpDbTp) ? (-1.0 - tpDbTp) : null;
+
+  const computeDesiredGain = (target: number) =>
+    lufsI === null ? null : Number.isFinite(target - lufsI) ? (target - lufsI) : null;
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+  const desiredSpotify = computeDesiredGain(-14);
+  const desiredYouTube = computeDesiredGain(-14);
+  const desiredApple = computeDesiredGain(-16);
+
+  // Spotify: up/down, but up-gain limited by headroom to -1.0 dBTP ceiling.
+  const appliedSpotify =
+    desiredSpotify === null
+      ? null
+      : desiredSpotify <= 0
+        ? desiredSpotify
+        : maxUpGainDb === null
+          ? desiredSpotify
+          : clamp(desiredSpotify, 0, Math.max(0, maxUpGainDb));
+
+  // YouTube: down-only (never turns up).
+  const appliedYouTube =
+    desiredYouTube === null ? null : Math.min(0, desiredYouTube);
+
+  // Apple Music: up-gain limited by headroom; down works as-is.
+  const appliedApple =
+    desiredApple === null
+      ? null
+      : desiredApple <= 0
+        ? desiredApple
+        : maxUpGainDb === null
+          ? desiredApple
+          : clamp(desiredApple, 0, Math.max(0, maxUpGainDb));
+
+  const streamingNormalization =
+    lufsI === null
+      ? undefined
+      : {
+          spotify: {
+            target_lufs_i: -14,
+            desired_gain_db: desiredSpotify,
+            applied_gain_db: appliedSpotify,
+            max_up_gain_db: maxUpGainDb,
+            mode: "up_down" as const,
+          },
+          youtube: {
+            target_lufs_i: -14,
+            desired_gain_db: desiredYouTube,
+            applied_gain_db: appliedYouTube,
+            max_up_gain_db: null,
+            mode: "down_only" as const,
+          },
+          apple_music: {
+            target_lufs_i: -16,
+            desired_gain_db: desiredApple,
+            applied_gain_db: appliedApple,
+            max_up_gain_db: maxUpGainDb,
+            mode: "limited_up" as const,
+          },
+        };
+
+  const sourceHeadroomToZeroDbTp =
+    typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? (0.0 - truePeakDbTp) : null;
+
+  const aacPostTp =
+    typeof (codecSimulation as any)?.aac128?.post_true_peak_db === "number" && Number.isFinite((codecSimulation as any).aac128.post_true_peak_db)
+      ? (codecSimulation as any).aac128.post_true_peak_db
+      : null;
+
+  const mp3PostTp =
+    typeof (codecSimulation as any)?.mp3128?.post_true_peak_db === "number" && Number.isFinite((codecSimulation as any).mp3128.post_true_peak_db)
+      ? (codecSimulation as any).mp3128.post_true_peak_db
+      : null;
+
+  const worstPostTpDbTp =
+    aacPostTp === null && mp3PostTp === null
+      ? null
+      : Math.max(aacPostTp ?? -999, mp3PostTp ?? -999);
+
+  const postHeadroomToZeroDbTp =
+    typeof worstPostTpDbTp === "number" && Number.isFinite(worstPostTpDbTp) ? (0.0 - worstPostTpDbTp) : null;
+
+  const effectiveHeadroomDbTp =
+    sourceHeadroomToZeroDbTp === null && postHeadroomToZeroDbTp === null
+      ? null
+      : sourceHeadroomToZeroDbTp === null
+        ? postHeadroomToZeroDbTp
+        : postHeadroomToZeroDbTp === null
+          ? sourceHeadroomToZeroDbTp
+          : Math.min(sourceHeadroomToZeroDbTp, postHeadroomToZeroDbTp);
+
+  const headroomScoreFromEffective = (h: number | null): number | null => {
+    if (h === null || !Number.isFinite(h)) return null;
+    if (h < 0) return 0;
+    if (h <= 0.10) return 15;
+    if (h <= 0.30) return 35;
+    if (h <= 0.50) return 55;
+    if (h <= 0.70) return 70;
+    if (h < 1.00) return 85;
+    return 100;
+  };
+
+  const headroomBadgeFromScore = (s: number | null): "healthy" | "ok" | "warn" | "critical" | null => {
+    if (s === null) return null;
+    if (s >= 80) return "healthy";
+    if (s >= 60) return "ok";
+    if (s >= 35) return "warn";
+    return "critical";
+  };
+
+  const headroomEngineering =
+    effectiveHeadroomDbTp === null && sourceHeadroomToZeroDbTp === null && postHeadroomToZeroDbTp === null
+      ? undefined
+      : {
+          score_0_100: headroomScoreFromEffective(effectiveHeadroomDbTp),
+          badge: headroomBadgeFromScore(headroomScoreFromEffective(effectiveHeadroomDbTp)),
+          effective_headroom_dbtp: effectiveHeadroomDbTp,
+          source_headroom_dbtp: sourceHeadroomToZeroDbTp,
+          post_encode_headroom_dbtp: postHeadroomToZeroDbTp,
+          worst_post_true_peak_dbtp: worstPostTpDbTp,
+        };
+
   return {
     schema_version: 2,
     generated_at: new Date().toISOString(),
@@ -1205,6 +1367,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
       loudness: {
         lufs_i: typeof integratedLufs === "number" && Number.isFinite(integratedLufs) ? integratedLufs : null,
         true_peak_dbtp_max: typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null,
+        ...(headroomEngineering ? { headroom_engineering: headroomEngineering } : {}),
+        ...(streamingNormalization ? { streaming_normalization: streamingNormalization } : {}),
       },
       spectral: {
         sub_rms_dbfs: typeof spectralSubRmsDbfs === "number" && Number.isFinite(spectralSubRmsDbfs) ? spectralSubRmsDbfs : null,

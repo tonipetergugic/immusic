@@ -137,6 +137,112 @@ export default function V2MetricsGrid(props: {
         </div>
       ) : null}
 
+      {(() => {
+        const sn = (payload as any)?.metrics?.loudness?.streaming_normalization;
+        if (!sn) return null;
+
+        const fmt = (v: any) =>
+          typeof v === "number" && Number.isFinite(v)
+            ? `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`
+            : "—";
+
+        return (
+          <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
+            <div className="text-xs text-white/70 mb-2">Streaming normalization (estimated)</div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">Spotify (−14 LUFS)</div>
+                <div className="mt-1 text-sm text-white/80">Gain: {fmt(sn.spotify?.applied_gain_db)}</div>
+                <div className="text-[11px] text-white/45">Desired: {fmt(sn.spotify?.desired_gain_db)}</div>
+              </div>
+
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">YouTube (−14 LUFS)</div>
+                <div className="mt-1 text-sm text-white/80">Gain: {fmt(sn.youtube?.applied_gain_db)}</div>
+                <div className="text-[11px] text-white/45">Down-only</div>
+              </div>
+
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">Apple Music (−16 LUFS)</div>
+                <div className="mt-1 text-sm text-white/80">Gain: {fmt(sn.apple_music?.applied_gain_db)}</div>
+                <div className="text-[11px] text-white/45">
+                  Up capped by headroom: {fmt(sn.apple_music?.max_up_gain_db)}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {(() => {
+        const he = (payload as any)?.metrics?.loudness?.headroom_engineering;
+        if (!he) return null;
+
+        const fmtDbTp = (v: any) =>
+          typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(2)} dBTP` : "—";
+
+        const score =
+          typeof he.score_0_100 === "number" && Number.isFinite(he.score_0_100) ? he.score_0_100 : null;
+
+        const badge =
+          typeof he.badge === "string" ? he.badge : null;
+
+        const badgeClass =
+          badge === "healthy"
+            ? "text-emerald-300 border-emerald-400/30 bg-emerald-500/10"
+            : badge === "ok"
+              ? "text-white/70 border-white/15 bg-white/5"
+              : badge === "warn"
+                ? "text-yellow-300 border-yellow-400/30 bg-yellow-500/10"
+                : "text-red-300 border-red-400/30 bg-red-500/10";
+
+        const badgeLabel =
+          badge === "healthy" ? "HEALTHY" : badge === "ok" ? "OK" : badge === "warn" ? "WARN" : "CRITICAL";
+
+        return (
+          <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-white/70">Headroom engineering</div>
+              <div className="flex items-center gap-2">
+                <span className={"text-[10px] px-2 py-0.5 rounded-full border " + badgeClass}>
+                  {badgeLabel}
+                </span>
+                <span className="text-xs text-white/60 tabular-nums">
+                  {score === null ? "—" : `${score}/100`}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">Effective headroom</div>
+                <div className="mt-1 text-sm text-white/80 tabular-nums">{fmtDbTp(he.effective_headroom_dbtp)}</div>
+                <div className="text-[11px] text-white/45">min(source, post-encode)</div>
+              </div>
+
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">Source headroom</div>
+                <div className="mt-1 text-sm text-white/80 tabular-nums">{fmtDbTp(he.source_headroom_dbtp)}</div>
+                <div className="text-[11px] text-white/45">to 0.0 dBTP</div>
+              </div>
+
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">Post-encode headroom</div>
+                <div className="mt-1 text-sm text-white/80 tabular-nums">{fmtDbTp(he.post_encode_headroom_dbtp)}</div>
+                <div className="text-[11px] text-white/45">worst-case to 0.0</div>
+              </div>
+
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                <div className="text-[11px] text-white/60">Worst post TP</div>
+                <div className="mt-1 text-sm text-white/80 tabular-nums">{fmtDbTp(he.worst_post_true_peak_dbtp)}</div>
+                <div className="text-[11px] text-white/45">AAC/MP3 max</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* v2 Loudness (known leaf metrics) */}
       <div className="rounded-lg bg-black/20 p-3 border border-white/5 flex items-center justify-between">
         <span className="text-xs text-white/70">Integrated LUFS</span>
