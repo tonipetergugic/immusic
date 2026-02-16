@@ -113,7 +113,7 @@ export type FeedbackPayloadV2 = {
     channels: number | null;
   };
   summary: {
-    status: "ok";
+    status: "ok" | "approved" | "approved_with_risks" | "hard-fail";
     severity: "info" | "warn" | "critical";
     highlights: string[];
   };
@@ -1085,7 +1085,12 @@ export function buildFeedbackPayloadV2Mvp(params: {
       channels: null,
     },
     summary: {
-      status: "ok",
+      status:
+        decision === "rejected"
+          ? "hard-fail"
+          : metaSeverity === "warn"
+            ? "approved_with_risks"
+            : "approved",
       severity: metaSeverity,
       highlights,
     },

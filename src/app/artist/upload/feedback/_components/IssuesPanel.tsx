@@ -6,8 +6,9 @@ export default function IssuesPanel(props: {
   isReady: boolean;
   issues: any[];
   topSummaryText: string;
+  summaryBanner?: React.ReactNode;
 }) {
-  const { isReady, issues, topSummaryText } = props;
+  const { isReady, issues, topSummaryText, summaryBanner } = props;
 
   return (
     <div className="rounded-lg bg-black/20 p-4 border border-white/5">
@@ -35,6 +36,8 @@ export default function IssuesPanel(props: {
               );
             })}
           </ul>
+        ) : summaryBanner != null ? (
+          <div className="mt-2">{summaryBanner}</div>
         ) : (
           <p className="text-white/50 text-xs mt-2">{topSummaryText}</p>
         )

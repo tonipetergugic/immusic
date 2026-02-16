@@ -11,6 +11,36 @@ import { headers, cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+function renderAnalysisStatusBanner(payload: any) {
+  const hardFail = !!payload?.hard_fail?.triggered;
+  const decision = payload?.track?.decision; // may or may not exist; we only trust hard_fail + severity
+  const severity = payload?.summary?.severity; // "info" | "warn" | "critical"
+
+  if (hardFail) {
+    return {
+      badge: "HARD-FAIL",
+      badgeClass: "border-red-400/30 bg-red-500/10 text-red-200",
+      text: "Hard-fail triggered — release blocked due to technical issues.",
+    };
+  }
+
+  // If severity is warn/critical (but not hard-fail), it's approved with risks.
+  // We intentionally do NOT rely on summary.status string here.
+  if (severity === "warn" || severity === "critical") {
+    return {
+      badge: "APPROVED",
+      badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200",
+      text: "Approved — but technical risk factors detected.",
+    };
+  }
+
+  return {
+    badge: "APPROVED",
+    badgeClass: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200",
+    text: "Approved — no major technical risks detected.",
+  };
+}
+
 export default async function UploadFeedbackPage({
   searchParams,
 }: {
@@ -279,6 +309,19 @@ export default async function UploadFeedbackPage({
                   isReady={isReady}
                   issues={issues}
                   topSummaryText={topSummaryText}
+                  summaryBanner={
+                    (() => {
+                      const s = renderAnalysisStatusBanner(payload as any);
+                      return (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className={"text-[10px] px-2 py-0.5 rounded-full border " + s.badgeClass}>
+                            {s.badge}
+                          </span>
+                          <span className="text-xs text-white/70">{s.text}</span>
+                        </div>
+                      );
+                    })()
+                  }
                 />
 
                 <div className="rounded-lg bg-black/20 p-4 border border-white/5">
