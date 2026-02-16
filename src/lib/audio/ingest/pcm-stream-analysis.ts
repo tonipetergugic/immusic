@@ -219,6 +219,104 @@ export async function ffmpegDetectPhaseCorrelation(params: {
   });
 }
 
+export async function ffmpegDetectPhaseCorrelationBand(params: {
+  inPath: string;
+  fLowHz: number;
+  fHighHz: number;
+}): Promise<number> {
+  const fLow = Number(params.fLowHz);
+  const fHigh = Number(params.fHighHz);
+
+  if (!Number.isFinite(fLow) || !Number.isFinite(fHigh) || fLow <= 0 || fHigh <= 0 || fHigh <= fLow) {
+    return NaN;
+  }
+
+  // Pearson correlation coefficient between L and R channels, but only within a frequency band.
+  // Deterministic, whole-file streaming PCM.
+  return await new Promise<number>((resolve, reject) => {
+    const ff = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      params.inPath,
+      "-vn",
+      "-af",
+      `highpass=f=${fLow},lowpass=f=${fHigh}`,
+      "-ac",
+      "2",
+      "-ar",
+      "11025",
+      "-f",
+      "f32le",
+      "pipe:1",
+    ]);
+
+    let stderr = "";
+    ff.stderr?.on("data", (d) => {
+      stderr += String(d);
+      if (stderr.length > 4000) stderr = stderr.slice(-4000);
+    });
+
+    let leftover: Buffer = Buffer.alloc(0);
+
+    let n = 0;
+    let sumX = 0;
+    let sumY = 0;
+    let sumXX = 0;
+    let sumYY = 0;
+    let sumXY = 0;
+
+    ff.stdout?.on("data", (chunk: Buffer) => {
+      const buf = leftover.length ? Buffer.concat([leftover, chunk]) : chunk;
+      const frameBytes = 8; // 2 * float32 (stereo)
+      const frames = Math.floor(buf.length / frameBytes);
+
+      for (let i = 0; i < frames; i++) {
+        const off = i * frameBytes;
+        const x = buf.readFloatLE(off);
+        const y = buf.readFloatLE(off + 4);
+
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+        n++;
+        sumX += x;
+        sumY += y;
+        sumXX += x * x;
+        sumYY += y * y;
+        sumXY += x * y;
+      }
+
+      leftover = buf.slice(frames * frameBytes);
+    });
+
+    ff.on("error", reject);
+
+    ff.on("close", (code) => {
+      if (code !== 0) {
+        // Avoid leaking details; only NaN on failure
+        return resolve(NaN);
+      }
+
+      if (n < 10) return resolve(NaN);
+
+      const meanX = sumX / n;
+      const meanY = sumY / n;
+
+      const cov = sumXY / n - meanX * meanY;
+      const varX = sumXX / n - meanX * meanX;
+      const varY = sumYY / n - meanY * meanY;
+
+      const den = Math.sqrt(Math.max(0, varX * varY)) + 1e-12;
+      if (!Number.isFinite(den) || den <= 0) return resolve(NaN);
+
+      const corr = cov / den;
+      const clamped = Math.max(-1, Math.min(1, corr));
+      resolve(clamped);
+    });
+  });
+}
+
 export type PhaseCorrEvent = { t0: number; t1: number; corr: number; severity: "warn" | "critical" };
 
 export type TransientPunchMetrics = {

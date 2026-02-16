@@ -4,8 +4,10 @@ import {
   ffmpegDetectClippedSampleCount,
   ffmpegDetectRmsLevelDbfs,
   ffmpegDetectPhaseCorrelation,
+  ffmpegDetectPhaseCorrelationBand,
   ffmpegDetectRmsDbfsWithPan,
   ffmpegDetectBandRmsDbfs,
+  ffmpegDetectBandRmsDbfsWithPan,
   ffmpegDetectTransientPunchMetrics,
   ffmpegDetectLoudnessRangeLu,
   ffmpegDetectTruePeakOvers,
@@ -22,6 +24,8 @@ type ExtractOk = {
   clippedSampleCount: number;
   crestFactorDb: number;
   phaseCorrelation: number;
+  lowEndPhaseCorrelation20_120: number;
+  lowEndMonoEnergyLossPct20_120: number;
   midRmsDbfs: number;
   sideRmsDbfs: number;
   midSideEnergyRatio: number;
@@ -58,6 +62,8 @@ export async function extractPrivateMetricsFromTmpWav(params: {
   let clippedSampleCount: number;
   let crestFactorDb: number = NaN;
   let phaseCorrelation: number;
+  let lowEndPhaseCorrelation20_120: number = NaN;
+  let lowEndMonoEnergyLossPct20_120: number = NaN;
   let midRmsDbfs: number = NaN;
   let sideRmsDbfs: number = NaN;
   let midSideEnergyRatio: number = NaN;
@@ -103,6 +109,52 @@ export async function extractPrivateMetricsFromTmpWav(params: {
 
     const phaseCorrelationRaw = await ffmpegDetectPhaseCorrelation({ inPath: params.tmpWavPath });
     phaseCorrelation = phaseCorrelationRaw;
+
+    // Low-End Mono Stability (20–120 Hz) - purely technical, deterministic
+    lowEndPhaseCorrelation20_120 = await ffmpegDetectPhaseCorrelationBand({
+      inPath: params.tmpWavPath,
+      fLowHz: 20,
+      fHighHz: 120,
+    });
+
+    const lowMidDbfs_20_120 = await ffmpegDetectBandRmsDbfsWithPan({
+      inPath: params.tmpWavPath,
+      fLowHz: 20,
+      fHighHz: 120,
+      panExpr: "mono|c0=0.5*c0+0.5*c1",
+    });
+
+    const lowLDbfs_20_120 = await ffmpegDetectBandRmsDbfsWithPan({
+      inPath: params.tmpWavPath,
+      fLowHz: 20,
+      fHighHz: 120,
+      panExpr: "mono|c0=c0",
+    });
+
+    const lowRDbfs_20_120 = await ffmpegDetectBandRmsDbfsWithPan({
+      inPath: params.tmpWavPath,
+      fLowHz: 20,
+      fHighHz: 120,
+      panExpr: "mono|c0=c1",
+    });
+
+    const midLin_20_120 = Number.isFinite(lowMidDbfs_20_120) ? Math.pow(10, lowMidDbfs_20_120 / 20) : NaN;
+    const lLin_20_120 = Number.isFinite(lowLDbfs_20_120) ? Math.pow(10, lowLDbfs_20_120 / 20) : NaN;
+    const rLin_20_120 = Number.isFinite(lowRDbfs_20_120) ? Math.pow(10, lowRDbfs_20_120 / 20) : NaN;
+
+    const monoEnergy_20_120 = Number.isFinite(midLin_20_120) ? midLin_20_120 * midLin_20_120 : NaN;
+    const stereoEnergy_20_120 =
+      Number.isFinite(lLin_20_120) && Number.isFinite(rLin_20_120)
+        ? 0.5 * ((lLin_20_120 * lLin_20_120) + (rLin_20_120 * rLin_20_120))
+        : NaN;
+
+    if (Number.isFinite(monoEnergy_20_120) && Number.isFinite(stereoEnergy_20_120) && stereoEnergy_20_120 > 0) {
+      const loss = 1 - monoEnergy_20_120 / (stereoEnergy_20_120 + 1e-12);
+      const clamped = Math.max(0, Math.min(1, loss));
+      lowEndMonoEnergyLossPct20_120 = clamped * 100;
+    } else {
+      lowEndMonoEnergyLossPct20_120 = NaN;
+    }
 
     midRmsDbfs = await ffmpegDetectRmsDbfsWithPan({
       inPath: params.tmpWavPath,
@@ -184,6 +236,8 @@ export async function extractPrivateMetricsFromTmpWav(params: {
       clippedSampleCount,
       crestFactorDb,
       phaseCorrelation,
+      lowEndPhaseCorrelation20_120,
+      lowEndMonoEnergyLossPct20_120,
       midRmsDbfs,
       sideRmsDbfs,
       midSideEnergyRatio,

@@ -326,6 +326,49 @@ export async function ffmpegDetectBandRmsDbfs(params: {
   return last;
 }
 
+export async function ffmpegDetectBandRmsDbfsWithPan(params: {
+  inPath: string;
+  fLowHz: number;
+  fHighHz: number;
+  panExpr: string; // e.g. "mono|c0=0.5*c0+0.5*c1"
+}): Promise<number> {
+  const fLow = Number(params.fLowHz);
+  const fHigh = Number(params.fHighHz);
+
+  if (!Number.isFinite(fLow) || !Number.isFinite(fHigh) || fLow <= 0 || fHigh <= 0 || fHigh <= fLow) {
+    return NaN;
+  }
+
+  const { stderr } = await execFileAsync("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "info",
+    "-i",
+    params.inPath,
+    "-vn",
+    "-af",
+    `highpass=f=${fLow},lowpass=f=${fHigh},pan=${params.panExpr},astats=metadata=0:reset=0`,
+    "-f",
+    "null",
+    "-",
+  ]);
+
+  const out = String(stderr || "");
+  const lines = out.split(/\r?\n/);
+
+  let last = NaN;
+  const re = /RMS level dB:\s*([+-]?[0-9.]+)\b/i;
+
+  for (const line of lines) {
+    const m = re.exec(line);
+    if (!m) continue;
+    const v = Number(m[1]);
+    if (Number.isFinite(v)) last = v;
+  }
+
+  return last;
+}
+
 export async function ffmpegDetectClippedSampleCount(params: {
   inPath: string;
 }): Promise<number> {

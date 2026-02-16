@@ -17,6 +17,8 @@ export async function persistExtractedMetricsOrFail(params: {
   sideRmsDbfs: number;
   midSideEnergyRatio: number;
   stereoWidthIndex: number;
+  lowEndPhaseCorrelation20_120: number;
+  lowEndMonoEnergyLossPct20_120: number;
   spectralSubRmsDbfs: number;
   spectralLowRmsDbfs: number;
   spectralLowMidRmsDbfs: number;
@@ -45,6 +47,8 @@ export async function persistExtractedMetricsOrFail(params: {
     sideRmsDbfs: params.sideRmsDbfs,
     midSideEnergyRatio: params.midSideEnergyRatio,
     stereoWidthIndex: params.stereoWidthIndex,
+    lowEndPhaseCorrelation20_120: params.lowEndPhaseCorrelation20_120,
+    lowEndMonoEnergyLossPct20_120: params.lowEndMonoEnergyLossPct20_120,
     spectralSubRmsDbfs: params.spectralSubRmsDbfs,
     spectralLowRmsDbfs: params.spectralLowRmsDbfs,
     spectralLowMidRmsDbfs: params.spectralLowMidRmsDbfs,

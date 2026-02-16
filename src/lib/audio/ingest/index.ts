@@ -5,6 +5,7 @@ export { writeTempWav, transcodeWavFileToMp3_320 } from "@/lib/audio/ingest/wav-
 export {
   ffmpegDetectTruePeakOvers,
   ffmpegDetectPhaseCorrelation,
+  ffmpegDetectPhaseCorrelationBand,
   ffmpegDetectTransientPunchMetrics,
   ffmpegDetectPhaseCorrelationEvents,
 } from "@/lib/audio/ingest/pcm-stream-analysis";
@@ -24,6 +25,7 @@ export {
   ffmpegDetectRmsLevelDbfs,
   ffmpegDetectRmsDbfsWithPan,
   ffmpegDetectBandRmsDbfs,
+  ffmpegDetectBandRmsDbfsWithPan,
   ffmpegDetectClippedSampleCount,
   ffmpegDetectTruePeakAndIntegratedLufs,
   ffmpegDetectLoudnessRangeLu,

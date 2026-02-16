@@ -51,6 +51,27 @@ export default function V2MetricsGrid(props: {
             ? { label: "WARN", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
             : { label: "INFO", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/50" };
 
+  const lowEndPhaseCorr =
+    typeof (payload as any)?.metrics?.low_end?.phase_correlation_20_120 === "number"
+      ? (payload as any).metrics.low_end.phase_correlation_20_120
+      : null;
+
+  const lowEndMonoLossPct =
+    typeof (payload as any)?.metrics?.low_end?.mono_energy_loss_pct_20_120 === "number"
+      ? (payload as any).metrics.low_end.mono_energy_loss_pct_20_120
+      : null;
+
+  const lowEndBadge =
+    lowEndPhaseCorr === null && lowEndMonoLossPct === null
+      ? null
+      : (lowEndPhaseCorr !== null && lowEndPhaseCorr < 0) || (lowEndMonoLossPct !== null && lowEndMonoLossPct > 30)
+        ? { label: "CRITICAL", badgeClass: "border-red-400/30 bg-red-500/10 text-red-200", valueClass: "text-red-300" }
+        : (lowEndPhaseCorr !== null && lowEndPhaseCorr < 0.2) || (lowEndMonoLossPct !== null && lowEndMonoLossPct > 15)
+          ? { label: "HIGH", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
+          : (lowEndPhaseCorr !== null && lowEndPhaseCorr < 0.5) || (lowEndMonoLossPct !== null && lowEndMonoLossPct > 5)
+            ? { label: "WARN", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/50" }
+            : { label: "OK", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/50" };
+
   return (
     <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
       {/* v2 Highlights (short, human) */}
@@ -227,6 +248,43 @@ export default function V2MetricsGrid(props: {
             >
               {(payload as any).metrics.stereo.phase_correlation.toFixed(2)}
             </span>
+          </div>
+        </div>
+      )}
+
+      {(lowEndPhaseCorr !== null || lowEndMonoLossPct !== null) && (
+        <div className="rounded-lg bg-black/20 p-3 border border-white/5">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs text-white/70">Low-End Mono Stability (20–120 Hz)</span>
+              <span className="text-[10px] text-white/40">Purely technical • Club translation</span>
+            </div>
+
+            {lowEndBadge ? (
+              <span className={"text-[10px] px-2 py-0.5 rounded-full border " + lowEndBadge.badgeClass}>
+                {lowEndBadge.label}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-2 grid grid-cols-1 gap-2">
+            <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+              <span className="text-[11px] text-white/60">Phase correlation (20–120 Hz)</span>
+              <span className={"text-[11px] tabular-nums " + (lowEndBadge ? lowEndBadge.valueClass : "text-white/50")}>
+                {lowEndPhaseCorr === null ? "—" : lowEndPhaseCorr.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 border border-white/5">
+              <span className="text-[11px] text-white/60">Mono energy loss (20–120 Hz)</span>
+              <span className={"text-[11px] tabular-nums " + (lowEndBadge ? lowEndBadge.valueClass : "text-white/50")}>
+                {lowEndMonoLossPct === null ? "—" : `${lowEndMonoLossPct.toFixed(1)}%`}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2 text-[11px] text-white/50">
+            Tip: High mono loss or negative correlation can make bass disappear on mono club systems.
           </div>
         </div>
       )}

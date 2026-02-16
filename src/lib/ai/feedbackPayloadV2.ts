@@ -54,6 +54,7 @@ export type FeedbackPayloadV2 = {
     };
     spectral: Record<string, unknown>;
     stereo: Record<string, unknown>;
+    low_end: Record<string, unknown>;
     clipping: Record<string, unknown>;
     dynamics: Record<string, unknown>;
     silence: Record<string, unknown>;
@@ -188,6 +189,67 @@ function headroomHealthFromSourceTruePeak(truePeakDbTp: any): { highlight: strin
   };
 }
 
+function lowEndMonoStabilityHealth(params: {
+  phaseCorr20_120: any;
+  monoLossPct20_120: any;
+}): { severity: "info" | "warn" | "critical"; highlight: string; recSeverity: "info" | "warn" | "critical" } | null {
+  const pc =
+    typeof params.phaseCorr20_120 === "number" && Number.isFinite(params.phaseCorr20_120)
+      ? params.phaseCorr20_120
+      : null;
+
+  const loss =
+    typeof params.monoLossPct20_120 === "number" && Number.isFinite(params.monoLossPct20_120)
+      ? params.monoLossPct20_120
+      : null;
+
+  if (pc === null && loss === null) return null;
+
+  // Deterministic thresholds (technical only; no gating):
+  // Phase correlation (20–120 Hz): <0 critical, <0.2 high, <0.5 warn, else ok
+  // Mono energy loss (20–120 Hz): >30 critical, >15 high, >5 warn, else ok
+  const critical =
+    (pc !== null && pc < 0) || (loss !== null && loss > 30);
+
+  const high =
+    (pc !== null && pc < 0.2) || (loss !== null && loss > 15);
+
+  const warn =
+    (pc !== null && pc < 0.5) || (loss !== null && loss > 5);
+
+  if (critical) {
+    const pcTxt = pc === null ? "—" : pc.toFixed(2);
+    const lossTxt = loss === null ? "—" : `${loss.toFixed(1)}%`;
+    return {
+      severity: "critical",
+      recSeverity: "critical",
+      highlight: `Low-end mono stability (20–120 Hz) is CRITICAL: phase corr ${pcTxt}, mono loss ${lossTxt} → bass may disappear on mono club systems.`,
+    };
+  }
+
+  if (high) {
+    const pcTxt = pc === null ? "—" : pc.toFixed(2);
+    const lossTxt = loss === null ? "—" : `${loss.toFixed(1)}%`;
+    return {
+      severity: "warn",
+      recSeverity: "warn",
+      highlight: `Low-end mono stability (20–120 Hz) is HIGH RISK: phase corr ${pcTxt}, mono loss ${lossTxt} → check sub stereo/phase.`,
+    };
+  }
+
+  if (warn) {
+    const pcTxt = pc === null ? "—" : pc.toFixed(2);
+    const lossTxt = loss === null ? "—" : `${loss.toFixed(1)}%`;
+    return {
+      severity: "info",
+      recSeverity: "info",
+      highlight: `Low-end mono stability (20–120 Hz) looks borderline: phase corr ${pcTxt}, mono loss ${lossTxt}.`,
+    };
+  }
+
+  return null;
+}
+
 export function buildFeedbackPayloadV2Mvp(params: {
   queueId: string;
   audioHash: string;
@@ -200,6 +262,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
   crestFactorDb?: number | null;
   loudnessRangeLu?: number | null;
   phaseCorrelation?: number | null;
+  lowEndPhaseCorrelation20_120?: number | null;
+  lowEndMonoEnergyLossPct20_120?: number | null;
   midRmsDbfs?: number | null;
   sideRmsDbfs?: number | null;
   midSideEnergyRatio?: number | null;
@@ -236,6 +300,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
     crestFactorDb = null,
     loudnessRangeLu = null,
     phaseCorrelation = null,
+    lowEndPhaseCorrelation20_120 = null,
+    lowEndMonoEnergyLossPct20_120 = null,
     midRmsDbfs = null,
     sideRmsDbfs = null,
     midSideEnergyRatio = null,
@@ -284,6 +350,39 @@ export function buildFeedbackPayloadV2Mvp(params: {
     } else if (hs.severity === "warn" && metaSeverity === "info") {
       metaSeverity = "warn";
     }
+  }
+
+  // Phase 2: Low-End Mono Stability (20–120 Hz) - purely technical
+  const le = lowEndMonoStabilityHealth({
+    phaseCorr20_120: lowEndPhaseCorrelation20_120,
+    monoLossPct20_120: lowEndMonoEnergyLossPct20_120,
+  });
+
+  if (le) {
+    highlights.push(le.highlight);
+
+    // Escalate summary severity minimally (never lowers existing severity)
+    if (le.severity === "critical") {
+      metaSeverity = "critical";
+    } else if (le.severity === "warn" && metaSeverity === "info") {
+      metaSeverity = "warn";
+    }
+
+    // Add recommendation (artist-centric): show already from WARN/borderline.
+    // Keep severity at least "warn" so it doesn't get lost.
+    recommendations.push({
+      id: "rec_low_end_mono_stability",
+      severity: le.recSeverity === "critical" ? "critical" : "warn",
+      title: "Check low-end mono compatibility (20–120 Hz)",
+      why: "Even moderate sub stereo/phase issues can collapse in mono and reduce bass impact on club systems.",
+      how: [
+        "Make sub (below ~80–100 Hz) mono or near-mono.",
+        "Check kick/bass phase alignment (sample-level if needed).",
+        "Avoid wide stereo imaging on sub layers; use width higher up instead.",
+        "Verify in mono: the drop should keep weight and not hollow out.",
+      ],
+    });
+    if (metaSeverity === "info") metaSeverity = "warn";
   }
 
   const hardFailReasons = Array.isArray(params.hardFailReasons) ? params.hardFailReasons : [];
@@ -750,6 +849,33 @@ export function buildFeedbackPayloadV2Mvp(params: {
     if (metaSeverity === "info") metaSeverity = "warn";
   }
 
+  // ---- Low-End Mono Stability (20–120 Hz) ----
+  if (
+    typeof lowEndMonoEnergyLossPct20_120 === "number" &&
+    Number.isFinite(lowEndMonoEnergyLossPct20_120) &&
+    lowEndMonoEnergyLossPct20_120 > 5
+  ) {
+    const lossPct = Math.round(lowEndMonoEnergyLossPct20_120);
+
+    highlights.push(
+      `Low-end mono compatibility risk (20–120 Hz): ~${lossPct}% energy loss when collapsed to mono.`
+    );
+
+    recommendations.push({
+      id: "rec_low_end_mono_instability",
+      severity: lossPct > 12 ? "warn" : "info",
+      title: "Improve low-end mono compatibility (20–120 Hz)",
+      why: `Approximately ${lossPct}% low-frequency energy is lost when summed to mono. Club and festival systems often operate mono-compatible, which may reduce bass impact.`,
+      how: [
+        "Collapse sub-bass below 100 Hz to mono.",
+        "Use M/S EQ to narrow the sub band only.",
+        "Keep stereo width mainly above 120 Hz.",
+      ],
+    });
+
+    if (metaSeverity === "info") metaSeverity = "warn";
+  }
+
   if (recommendations.length === 0) {
     recommendations.push({
       id: "rec_placeholder_v2_mvp",
@@ -806,6 +932,16 @@ export function buildFeedbackPayloadV2Mvp(params: {
           typeof midSideEnergyRatio === "number" && Number.isFinite(midSideEnergyRatio) ? midSideEnergyRatio : null,
         stereo_width_index:
           typeof stereoWidthIndex === "number" && Number.isFinite(stereoWidthIndex) ? stereoWidthIndex : null,
+      },
+      low_end: {
+        phase_correlation_20_120:
+          typeof lowEndPhaseCorrelation20_120 === "number" && Number.isFinite(lowEndPhaseCorrelation20_120)
+            ? lowEndPhaseCorrelation20_120
+            : null,
+        mono_energy_loss_pct_20_120:
+          typeof lowEndMonoEnergyLossPct20_120 === "number" && Number.isFinite(lowEndMonoEnergyLossPct20_120)
+            ? lowEndMonoEnergyLossPct20_120
+            : null,
       },
       clipping: {
         clipped_sample_count:

@@ -22,6 +22,8 @@ export async function persistPrivateMetricsAndEvents(params: {
   sideRmsDbfs: number;
   midSideEnergyRatio: number;
   stereoWidthIndex: number;
+  lowEndPhaseCorrelation20_120?: number | null;
+  lowEndMonoEnergyLossPct20_120?: number | null;
   spectralSubRmsDbfs: number;
   spectralLowRmsDbfs: number;
   spectralLowMidRmsDbfs: number;
@@ -101,6 +103,8 @@ export async function persistPrivateMetricsAndEvents(params: {
           side_rms_dbfs: params.sideRmsDbfs,
           mid_side_energy_ratio: params.midSideEnergyRatio,
           stereo_width_index: params.stereoWidthIndex,
+          low_end_phase_corr_20_120: params.lowEndPhaseCorrelation20_120,
+          low_end_mono_loss_pct_20_120: params.lowEndMonoEnergyLossPct20_120,
           spectral_sub_rms_dbfs: params.spectralSubRmsDbfs,
           spectral_low_rms_dbfs: params.spectralLowRmsDbfs,
           spectral_lowmid_rms_dbfs: params.spectralLowMidRmsDbfs,

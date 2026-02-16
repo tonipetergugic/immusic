@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { writeFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/payload";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +60,7 @@ export async function GET(request: Request) {
   // 1) Ownership check: queue item muss dem User gehören
   const { data: queueRow, error: queueErr } = await supabase
     .from("tracks_ai_queue")
-    .select("id, user_id, title, audio_hash")
+    .select("id, user_id, title, audio_hash, status")
     .eq("id", queueId)
     .maybeSingle();
 
@@ -102,6 +104,29 @@ export async function GET(request: Request) {
       } satisfies OkLocked,
       { status: 200 }
     );
+  }
+
+  // If unlocked + terminal decision exists, refresh payload best-effort before returning it.
+  // This prevents stale/partial payloads (race between metrics persistence and payload cache).
+  const terminalStatus = (queueRow as any)?.status as string | null;
+
+  if (queueHash && (terminalStatus === "approved" || terminalStatus === "rejected")) {
+    try {
+      const admin = getSupabaseAdmin();
+
+      await writeFeedbackPayloadIfUnlocked({
+        admin,
+        userId: user.id,
+        queueId,
+        audioHash: queueHash,
+        decision: terminalStatus,
+        integratedLufs: null,
+        truePeakDbTp: null,
+        clippedSampleCount: null,
+      });
+    } catch {
+      // best-effort: never break API response
+    }
   }
 
   // If unlocked, check whether payload exists and matches the exact audio hash.
