@@ -19,6 +19,49 @@ export type FeedbackRecommendationV2 = {
 
 export type DynamicsHealthLabelV1 = "healthy" | "borderline" | "over-limited";
 
+export type StructureAnalysisV1 = {
+  energy_curve: Array<{ t: number; e: number }>;
+  density_zones: {
+    distribution: { low: number; mid: number; high: number; extreme: number };
+    dominant_zone: "low" | "mid" | "high" | "extreme" | null;
+    entropy_score: number; // 0..100
+  };
+  tension_release: {
+    tension_index: number; // 0..100
+    release_index: number; // 0..100
+    balance: number; // 0..100
+    drops: Array<{
+      t: number;
+      drop_energy: number;
+      build_mean_energy: number;
+      impact: number; // 0..1 (raw)
+      impact_score: number; // 0..100
+    }>;
+  };
+  primary_peak: {
+    t: number;
+    energy: number;
+    score: number; // 0..1
+    contrast: number; // raw
+    sustain: number; // 0..1
+    is_drop_peak: boolean;
+  } | null;
+  peaks: Array<{
+    t: number;
+    energy: number;
+    score: number; // 0..1
+    contrast: number; // raw
+    sustain: number; // 0..1
+  }>;
+  sections: Array<
+    | { type: "intro"; start: number; end: number }
+    | { type: "build"; start: number; end: number }
+    | { type: "break"; start: number; end: number }
+    | { type: "outro"; start: number; end: number }
+    | { type: "drop"; t: number; impact: number; impact_score: number }
+  >;
+};
+
 export type FeedbackPayloadV2 = {
   schema_version: 2;
   generated_at: string;
@@ -93,6 +136,7 @@ export type FeedbackPayloadV2 = {
     dynamics: Record<string, unknown>;
     silence: Record<string, unknown>;
     transients: Record<string, unknown>;
+    structure?: StructureAnalysisV1;
   };
   dynamics_health: {
     score: number; // 0–100

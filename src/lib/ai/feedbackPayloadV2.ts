@@ -14,6 +14,7 @@ export type {
 
 import { clamp01, clamp100 } from "@/lib/ai/payload/v2/utils";
 import { computeDynamicsHealthV1 } from "@/lib/ai/payload/v2/modules/dynamicsHealth";
+import { buildStructureAnalysisV1 } from "@/lib/ai/payload/v2/modules/structureAnalysisV1";
 import {
   headroomHealthFromCodecSim,
   recommendedLimiterCeilingTextV1,
@@ -858,6 +859,13 @@ export function buildFeedbackPayloadV2Mvp(params: {
           worst_post_true_peak_dbtp: worstPostTpDbTp,
         };
 
+  const structureAnalysis = buildStructureAnalysisV1({
+    shortTermLufsTimeline: shortTermLufsTimeline,
+    transientDensity: transientDensity,
+    meanShortCrestDb: meanShortCrestDb,
+    p95ShortCrestDb: p95ShortCrestDb,
+  });
+
   return {
     schema_version: 2,
     generated_at: new Date().toISOString(),
@@ -946,6 +954,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
         punch_index:
           typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
       },
+      ...(structureAnalysis ? { structure: structureAnalysis } : {}),
     },
     dynamics_health: dynamicsHealth,
     events: {
