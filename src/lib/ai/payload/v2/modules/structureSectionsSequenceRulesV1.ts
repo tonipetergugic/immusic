@@ -4,6 +4,9 @@ type Section = StructureAnalysisV1["sections"][number];
 type RangeSection = Exclude<Section, { type: "drop"; t: number; impact: number; impact_score: number }>;
 type DropSection = Extract<Section, { type: "drop"; t: number; impact: number; impact_score: number }>;
 
+// Anti-flip: collapse short A-B-A islands (deterministic)
+const MAX_ISLAND_DURATION_S = 4;
+
 function isDrop(s: Section): s is DropSection {
   return (s as any).type === "drop" && typeof (s as any).t === "number";
 }
@@ -166,6 +169,35 @@ export function applyStructureSequenceRulesV1(params: {
         }
       }
     }
+  }
+
+  // Rule G: collapse short A-B-A islands (e.g. build-break-build) to reduce flip noise
+  // If the middle segment is very short and neighbors have the same type, merge all three.
+  for (let guard = 0; guard < 50; guard++) {
+    let changed = false;
+
+    for (let i = 1; i < ranges.length - 1; i++) {
+      const a = ranges[i - 1]!;
+      const b = ranges[i]!;
+      const c = ranges[i + 1]!;
+
+      if (a.type !== c.type) continue;
+      if (durationOf(b) >= MAX_ISLAND_DURATION_S) continue;
+
+      // Merge a+b+c into a single range with the outer type (stable, deterministic)
+      const merged: RangeSection = {
+        type: a.type,
+        start: Math.min(clampTime(a.start), clampTime(b.start), clampTime(c.start)),
+        end: Math.max(clampTime(a.end), clampTime(b.end), clampTime(c.end)),
+      } as RangeSection;
+
+      ranges[i - 1] = merged;
+      ranges.splice(i, 2); // remove b and c
+      changed = true;
+      break;
+    }
+
+    if (!changed) break;
   }
 
   // Rule E: merge adjacent ranges with same type (stable)

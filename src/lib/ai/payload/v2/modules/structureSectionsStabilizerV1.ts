@@ -7,10 +7,16 @@ type DropSection = Extract<Section, { type: "drop"; t: number; impact: number; i
 const MIN_SECTION_DURATION_S: Record<RangeSection["type"], number> = {
   intro: 6,
   build: 4,
-  drop: 6, // NOTE: drop is not a range section in current schema, kept here for future-proofing
   break: 4,
   outro: 6,
-} as any;
+};
+
+// Anti-chatter: if two adjacent range sections start extremely close to each other,
+// we merge them deterministically to avoid boundary flapping.
+const MIN_SECTION_START_GAP_S = 3;
+
+// Collapse very short middle segments by energy similarity (reduces rapid alternation noise)
+const MAX_MIDDLE_SEGMENT_S = 3;
 
 function isDrop(s: Section): s is DropSection {
   return (s as any).type === "drop" && typeof (s as any).t === "number";
@@ -177,6 +183,63 @@ export function stabilizeStructureSectionsV1(params: {
     if (!changed) break;
   }
 
+  // Pass A2: Minimum start-gap merge (anti-chatter)
+  // If two adjacent sections start too close in time, merge them to avoid rapid flips.
+  for (let guard = 0; guard < 50; guard++) {
+    let changed = false;
+
+    for (let i = 0; i < ranges.length - 1; i++) {
+      const a = ranges[i]!;
+      const b = ranges[i + 1]!;
+      const startGap = clampTime(b.start) - clampTime(a.start);
+
+      if (startGap > 0 && startGap < MIN_SECTION_START_GAP_S) {
+        ranges[i] = mergeTwoRanges(a, b);
+        ranges.splice(i + 1, 1);
+        changed = true;
+        break;
+      }
+    }
+
+    if (!changed) break;
+  }
+
+  // Pass A3: Collapse very short middle segments by energy similarity
+  // If a short segment sits between two neighbors, merge it into the closer-energy neighbor (tie -> prev).
+  for (let guard = 0; guard < 50; guard++) {
+    let changed = false;
+
+    for (let i = 1; i < ranges.length - 1; i++) {
+      const prev = ranges[i - 1]!;
+      const mid = ranges[i]!;
+      const next = ranges[i + 1]!;
+
+      if (durationOf(mid) >= MAX_MIDDLE_SEGMENT_S) continue;
+
+      const mE = meanEnergyInRange(energy, mid.start, mid.end);
+      const pE = meanEnergyInRange(energy, prev.start, prev.end);
+      const nE = meanEnergyInRange(energy, next.start, next.end);
+
+      const dP = Math.abs(mE - pE);
+      const dN = Math.abs(mE - nE);
+
+      const mergeIntoPrev = dP <= dN;
+
+      if (mergeIntoPrev) {
+        ranges[i - 1] = mergeTwoRanges(prev, mid);
+        ranges.splice(i, 1);
+      } else {
+        ranges[i] = mergeTwoRanges(mid, next);
+        ranges.splice(i + 1, 1);
+      }
+
+      changed = true;
+      break;
+    }
+
+    if (!changed) break;
+  }
+
   // Pass B: Energy-continuity merge for adjacent ranges
   // If mean energy is almost same, merge to remove artificial splits.
   // Thresholds are intentionally conservative.
@@ -200,6 +263,23 @@ export function stabilizeStructureSectionsV1(params: {
 
     if (!changed) break;
   }
+
+  // Pass C: Overlap guard (mathematical consistency)
+  // Ensure ranges are sequential and non-overlapping after merges.
+  for (let i = 1; i < ranges.length; i++) {
+    const prev = ranges[i - 1]!;
+    const cur = ranges[i]!;
+
+    if (clampTime(cur.start) < clampTime(prev.end)) {
+      const fixedStart = clampTime(prev.end);
+      const fixedEnd = Math.max(fixedStart, clampTime(cur.end));
+
+      ranges[i] = { ...cur, start: fixedStart, end: fixedEnd } as RangeSection;
+    }
+  }
+
+  // Remove any zero-length segments created by the guard
+  ranges = ranges.filter((r) => durationOf(r) > 0.001);
 
   // Re-assemble: keep drops as-is (point events). Sort everything deterministically.
   const out: StructureAnalysisV1["sections"] = [

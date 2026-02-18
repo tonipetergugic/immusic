@@ -91,6 +91,33 @@ export default function V2MetricsGrid(props: {
 
   const structure = (payload as any)?.metrics?.structure ?? null;
 
+  const stabilization =
+    structure && typeof (structure as any).stabilization === "object" ? (structure as any).stabilization : null;
+
+  const stabBefore =
+    stabilization && typeof stabilization.ranges_before === "number" && Number.isFinite(stabilization.ranges_before)
+      ? stabilization.ranges_before
+      : null;
+
+  const stabAfterStabilize =
+    stabilization &&
+    typeof stabilization.ranges_after_stabilize === "number" &&
+    Number.isFinite(stabilization.ranges_after_stabilize)
+      ? stabilization.ranges_after_stabilize
+      : null;
+
+  const stabAfterSequence =
+    stabilization &&
+    typeof stabilization.ranges_after_sequence === "number" &&
+    Number.isFinite(stabilization.ranges_after_sequence)
+      ? stabilization.ranges_after_sequence
+      : null;
+
+  const stabMerges =
+    stabilization && typeof stabilization.merges_estimated === "number" && Number.isFinite(stabilization.merges_estimated)
+      ? stabilization.merges_estimated
+      : null;
+
   const arrangementDensity =
     structure && typeof structure.arrangement_density === "object"
       ? structure.arrangement_density
@@ -161,8 +188,6 @@ export default function V2MetricsGrid(props: {
     balance && typeof balance.score_0_100 === "number" && Number.isFinite(balance.score_0_100)
       ? balance.score_0_100
       : null;
-
-  const balanceLabel = balance && typeof balance.label === "string" ? String(balance.label) : null;
 
   const balanceDominant =
     balance && typeof balance.dominant_section === "string" ? String(balance.dominant_section) : null;
@@ -320,7 +345,7 @@ export default function V2MetricsGrid(props: {
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-white/70">Structure balance</div>
                   <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
-                    {balanceLabel ? balanceLabel.replaceAll("_", " ").toUpperCase() : "BALANCE"}
+                    {balanceDominant ? `DOMINANT: ${balanceDominant.replaceAll("_", " ").toUpperCase()}` : "STRUCTURE BALANCE"}
                   </span>
                 </div>
 
@@ -338,6 +363,15 @@ export default function V2MetricsGrid(props: {
                 {balanceDominant ? (
                   <div className="mt-2 text-[12px] text-white/55">
                     Dominant section: {balanceDominant.replaceAll("_", " ")}
+                  </div>
+                ) : null}
+
+                {typeof (balance as any)?.features?.covered_s === "number" &&
+                typeof (balance as any)?.features?.duration_s === "number" &&
+                Number.isFinite((balance as any).features.covered_s) &&
+                Number.isFinite((balance as any).features.duration_s) ? (
+                  <div className="mt-1 text-[12px] text-white/45">
+                    Coverage: {Math.round(((balance as any).features.covered_s / (balance as any).features.duration_s) * 100)}%
                   </div>
                 ) : null}
 
@@ -421,6 +455,13 @@ export default function V2MetricsGrid(props: {
           <div className="mt-2 text-[11px] text-white/50">
             Tip: A high-impact drop means the drop stands out clearly from the build-up. This is a structural measurement, not a judgment of your music.
           </div>
+          {stabBefore !== null && stabAfterSequence !== null ? (
+            <div className="mt-1 text-[11px] text-white/40">
+              Stabilization: {stabBefore} → {stabAfterSequence}
+              {stabMerges !== null ? ` (merges: ${stabMerges})` : ""}
+              {stabAfterStabilize !== null ? ` • after stabilize: ${stabAfterStabilize}` : ""}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

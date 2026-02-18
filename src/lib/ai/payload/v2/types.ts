@@ -60,6 +60,12 @@ export type StructureAnalysisV1 = {
     | { type: "outro"; start: number; end: number }
     | { type: "drop"; t: number; impact: number; impact_score: number }
   >;
+  stabilization?: {
+    ranges_before: number;
+    ranges_after_stabilize: number;
+    ranges_after_sequence: number;
+    merges_estimated: number;
+  };
   arc?: import("@/lib/ai/payload/v2/modules/structureEnergyArcTypizerV1").EnergyArcResultV1;
   drop_confidence?: import("@/lib/ai/payload/v2/modules/structureDropConfidenceV1").DropConfidenceResultV1;
   hook?: import("@/lib/ai/payload/v2/modules/structureHookDetectionV1").HookDetectionResultV1 | null;

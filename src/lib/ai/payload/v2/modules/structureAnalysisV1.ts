@@ -2,6 +2,7 @@ import type { StructureAnalysisV1 } from "@/lib/ai/payload/v2/types";
 import { clamp01, clamp100 } from "@/lib/ai/payload/v2/utils";
 import { stabilizeStructureSectionsV1 } from "@/lib/ai/payload/v2/modules/structureSectionsStabilizerV1";
 import { applyStructureSequenceRulesV1 } from "@/lib/ai/payload/v2/modules/structureSectionsSequenceRulesV1";
+import { computeStructuralBalanceIndexV1 } from "@/lib/ai/payload/v2/modules/structureBalanceIndexV1";
 
 type EnergyPointV1 = { t: number; e: number };
 
@@ -28,6 +29,16 @@ function mean(values: number[]): number {
   let s = 0;
   for (const v of values) s += v;
   return s / values.length;
+}
+
+function countRangeSections(sections: any[]): number {
+  if (!Array.isArray(sections)) return 0;
+  let n = 0;
+  for (const s of sections) {
+    if (!s || typeof s !== "object") continue;
+    if ("start" in s && "end" in s) n++;
+  }
+  return n;
 }
 
 function windowIndicesBySeconds(
@@ -308,18 +319,43 @@ export function buildStructureAnalysisV1(input: {
   sections.length = 0;
   sections.push(...dedupedSections);
 
+  const ranges_before = countRangeSections(sections);
+
   const stabilized = stabilizeStructureSectionsV1({
     energy_curve,
     sections,
   });
+
+  const ranges_after_stabilize = countRangeSections(stabilized as any);
 
   const sequenced = applyStructureSequenceRulesV1({
     energy_curve,
     sections: stabilized,
   });
 
+  const ranges_after_sequence = countRangeSections(sequenced as any);
+  const merges_estimated = Math.max(0, ranges_before - ranges_after_sequence);
+
   sections.length = 0;
   sections.push(...(sequenced as any));
+
+  const structural_balance = computeStructuralBalanceIndexV1({
+    energy_curve,
+    density_zones: {
+      distribution: dist,
+      dominant_zone,
+      entropy_score,
+    },
+    tension_release: {
+      tension_index,
+      release_index,
+      balance,
+      drops,
+    },
+    primary_peak,
+    peaks,
+    sections,
+  });
 
   return {
     energy_curve,
@@ -336,6 +372,13 @@ export function buildStructureAnalysisV1(input: {
     },
     primary_peak,
     peaks,
+    stabilization: {
+      ranges_before,
+      ranges_after_stabilize,
+      ranges_after_sequence,
+      merges_estimated,
+    },
+    balance: structural_balance,
     sections,
   };
 }
