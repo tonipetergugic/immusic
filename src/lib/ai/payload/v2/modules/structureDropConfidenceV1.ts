@@ -111,26 +111,32 @@ export function scoreDropConfidenceV1(params: {
     const c_td = td != null ? clamp01(td) : 0;
 
     // Weighted score (0..1) (deterministic)
-    // impact is the core, then peak score + contrast, sustain last, transient density tiny.
+    // Core: impact + peak/contrast/sustain. Additionally: allow rhythm/texture-driven drops
+    // to score fairly via transient density (genre-agnostic, but EDM-friendly).
     const score01 =
-      0.42 * c_impact +
+      0.36 * c_impact +
       0.22 * c_peak +
       0.18 * c_contrast +
       0.14 * c_sustain +
-      0.04 * c_td;
+      0.10 * c_td;
 
     const confidence = clamp100(score01 * 100);
 
     // Labels (conservative thresholds)
+    // High-impact stays impact-bound (avoid false positives).
+    // Solid drop can also be earned via strong transient/peak/contrast even if loudness-impact is smaller.
     let label: DropConfidenceLabelV1 = "insufficient_data";
     if (impactScore == null && peakScore == null) {
       label = "insufficient_data";
     } else if (confidence >= 75 && (impactScore ?? 0) >= 70) {
       label = "high_impact_drop";
-    } else if (confidence >= 45 && (impactScore ?? 0) >= 35) {
-      label = "solid_drop";
     } else {
-      label = "weak_drop";
+      const strongRhythmSignal = c_td >= 0.65 && c_peak >= 0.60 && c_contrast >= 0.50;
+      if (confidence >= 45 && ((impactScore ?? 0) >= 35 || strongRhythmSignal)) {
+        label = "solid_drop";
+      } else {
+        label = "weak_drop";
+      }
     }
 
     const highlights: string[] = [];

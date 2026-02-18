@@ -120,13 +120,32 @@ export function stabilizeStructureSectionsV1(params: {
       const prev = i > 0 ? ranges[i - 1]! : null;
       const next = i < ranges.length - 1 ? ranges[i + 1]! : null;
 
-      // Choose merge target based on energy similarity if both exist
+      // Choose merge target deterministically.
+      // Goal: remove mini-sections (especially mini-break dips) without changing core detection logic.
       let mergeIntoPrev = false;
+
       if (prev && next) {
         const rE = meanEnergyInRange(energy, r.start, r.end);
         const pE = meanEnergyInRange(energy, prev.start, prev.end);
         const nE = meanEnergyInRange(energy, next.start, next.end);
-        mergeIntoPrev = Math.abs(rE - pE) <= Math.abs(rE - nE);
+
+        if (r.type === "break") {
+          // Mini-breaks are usually brief dips; merge into the higher-energy neighbor.
+          // Tie-break: prefer previous for determinism.
+          if (pE === nE) mergeIntoPrev = true;
+          else mergeIntoPrev = pE > nE;
+        } else if (r.type === "build") {
+          // For builds, keep the neighbor that matches energy best.
+          // Tie-break: prefer previous for determinism.
+          const dP = Math.abs(rE - pE);
+          const dN = Math.abs(rE - nE);
+          mergeIntoPrev = dP <= dN;
+        } else {
+          // Default: energy similarity
+          const dP = Math.abs(rE - pE);
+          const dN = Math.abs(rE - nE);
+          mergeIntoPrev = dP <= dN;
+        }
       } else if (prev) {
         mergeIntoPrev = true;
       } else if (next) {

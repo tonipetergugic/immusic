@@ -132,21 +132,31 @@ export default function V2MetricsGrid(props: {
 
   const structureBadgeForArc = (label: string | null) => {
     if (!label) return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
-    // neutral, informational: structure is not a gate
-    return { label: prettyLabel(label), badgeClass: "border-white/10 bg-white/5 text-white/60" };
+
+    // UI-only mapping: same underlying analysis, friendlier wording for artists
+    const map: Record<string, string> = {
+      rising_arc: "Rising arc",
+      plateau: "Plateau",
+      late_drop: "Late drop",
+      early_peak: "Early peak",
+      energy_collapse: "Energy drop-off",
+      chaotic_distribution: "Multi-peak arc",
+    };
+
+    const mapped = map[label] ?? prettyLabel(label);
+    return { label: mapped, badgeClass: "border-white/10 bg-white/5 text-white/60" };
   };
 
   const structureBadgeForDrop = (label: string | null) => {
-    if (label === "high_impact_drop") {
-      return { label: "HIGH IMPACT", badgeClass: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200" };
-    }
-    if (label === "solid_drop") {
-      return { label: "SOLID", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200" };
-    }
-    if (label === "weak_drop") {
-      return { label: "WEAK", badgeClass: "border-red-400/30 bg-red-500/10 text-red-200" };
-    }
-    return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
+    if (!label) return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
+    const map: Record<string, { label: string; badgeClass: string }> = {
+      // Neutral wording: expresses separation from build-up, not quality
+      weak_drop: { label: "LOW SEPARATION", badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-200" },
+      solid_drop: { label: "CLEAR SEPARATION", badgeClass: "border-white/10 bg-white/5 text-white/70" },
+      high_impact_drop: { label: "STRONG SEPARATION", badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200" },
+      insufficient_data: { label: "INSUFFICIENT DATA", badgeClass: "border-white/10 bg-white/5 text-white/60" },
+    };
+    return map[label] ?? { label: prettyLabel(label), badgeClass: "border-white/10 bg-white/5 text-white/60" };
   };
 
   const lowEndBadge =
@@ -162,6 +172,82 @@ export default function V2MetricsGrid(props: {
 
   return (
     <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+      {/* Structure (Phase 3) */}
+      {structure ? (
+        <div className="rounded-lg bg-black/20 p-4 border border-white/10 md:col-span-2 xl:col-span-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col">
+              <span className="text-xs text-white/70">Structure (Phase 3)</span>
+              <span className="text-[10px] text-white/40">Pattern-based • No taste • No gate</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="rounded-md border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-white/70">Energy flow</div>
+                <span
+                  className={
+                    "text-[11px] px-2 py-0.5 rounded-full border " +
+                    structureBadgeForArc(arcLabel).badgeClass
+                  }
+                >
+                  {structureBadgeForArc(arcLabel).label}
+                </span>
+              </div>
+
+              <div className="mt-2 text-sm text-white">
+                Structural clarity: {fmtPct(arcConfidence)}
+              </div>
+
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+                <div
+                  className="h-full bg-white/35"
+                  style={{ width: `${Math.max(0, Math.min(100, arcConfidence ?? 0))}%` }}
+                />
+              </div>
+
+              <div className="mt-2 text-[12px] text-white/50">
+                Shows how clearly the track builds and releases energy over time.
+              </div>
+            </div>
+
+            <div className="rounded-md border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-white/70">Drop impact</div>
+                <span
+                  className={
+                    "text-[11px] px-2 py-0.5 rounded-full border " +
+                    structureBadgeForDrop(bestDropLabel).badgeClass
+                  }
+                >
+                  {structureBadgeForDrop(bestDropLabel).label}
+                </span>
+              </div>
+
+              <div className="mt-2 text-sm text-white">
+                Impact confidence: {fmtPct(bestDropConfidence)}
+              </div>
+
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+                <div
+                  className="h-full bg-white/35"
+                  style={{ width: `${Math.max(0, Math.min(100, bestDropConfidence ?? 0))}%` }}
+                />
+              </div>
+
+              <div className="mt-2 text-[12px] text-white/50">
+                Indicates how clearly the drop separates itself from the build-up.
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 text-[11px] text-white/50">
+            Tip: A high-impact drop means the drop stands out clearly from the build-up. This is a structural measurement, not a judgment of your music.
+          </div>
+        </div>
+      ) : null}
+
       {/* v2 Highlights (short, human) */}
       {v2Highlights.length > 0 ? (
         <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
@@ -236,44 +322,7 @@ export default function V2MetricsGrid(props: {
         );
       })()}
 
-      {structure ? (
-        <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex flex-col">
-              <span className="text-xs text-white/70">Structure (experimental)</span>
-              <span className="text-[10px] text-white/40">Pattern-based • No taste • No gate</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div className="rounded-md border border-white/10 bg-white/5 p-2">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] text-white/60">Energy arc</div>
-                <span className={"text-[10px] px-2 py-0.5 rounded-full border " + structureBadgeForArc(arcLabel).badgeClass}>
-                  {structureBadgeForArc(arcLabel).label}
-                </span>
-              </div>
-              <div className="mt-1 text-[11px] text-white/45">Confidence: {fmtPct(arcConfidence)}</div>
-              <div className="text-[11px] text-white/45">Primary peak: {fmtTime(primaryPeakT)}</div>
-            </div>
-
-            <div className="rounded-md border border-white/10 bg-white/5 p-2">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] text-white/60">Best drop</div>
-                <span className={"text-[10px] px-2 py-0.5 rounded-full border " + structureBadgeForDrop(bestDropLabel).badgeClass}>
-                  {structureBadgeForDrop(bestDropLabel).label}
-                </span>
-              </div>
-              <div className="mt-1 text-[11px] text-white/45">Time: {fmtTime(bestDrop ? bestDrop.t : null)}</div>
-              <div className="text-[11px] text-white/45">Confidence: {fmtPct(bestDropConfidence)}</div>
-            </div>
-          </div>
-
-          <div className="mt-2 text-[11px] text-white/50">
-            Tip: A high-impact drop means strong contrast vs build-up (measurable). It does not judge music quality.
-          </div>
-        </div>
-      ) : null}
+      {/* Structure panel moved to top */}
 
       {(() => {
         const raw =
