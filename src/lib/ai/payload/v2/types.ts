@@ -62,6 +62,9 @@ export type StructureAnalysisV1 = {
   >;
   arc?: import("@/lib/ai/payload/v2/modules/structureEnergyArcTypizerV1").EnergyArcResultV1;
   drop_confidence?: import("@/lib/ai/payload/v2/modules/structureDropConfidenceV1").DropConfidenceResultV1;
+  hook?: import("@/lib/ai/payload/v2/modules/structureHookDetectionV1").HookDetectionResultV1 | null;
+  balance?: import("@/lib/ai/payload/v2/modules/structureBalanceIndexV1").StructuralBalanceResultV1 | null;
+  arrangement_density?: import("@/lib/ai/payload/v2/modules/structureArrangementDensityV1").ArrangementDensityResultV1;
 };
 
 export type FeedbackPayloadV2 = {

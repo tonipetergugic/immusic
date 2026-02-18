@@ -98,6 +98,7 @@ export function scoreDropConfidenceV1(params: {
     const dropEnergy = safeNum(d.drop_energy); // 0..1
     const buildMean = safeNum(d.build_mean_energy); // 0..1
     const impactScore = safeNum(d.impact_score); // 0..100
+    const separation = dropEnergy != null && buildMean != null ? dropEnergy - buildMean : null;
 
     // Normalize conservative components (0..1)
     const c_peak = peakScore != null ? clamp01(peakScore) : 0;
@@ -141,6 +142,7 @@ export function scoreDropConfidenceV1(params: {
 
     const highlights: string[] = [];
     if (impactScore != null) highlights.push(`Impact score: ${impactScore.toFixed(1)} / 100.`);
+    if (separation != null) highlights.push(`Build→Drop separation (drop_energy - build_mean): ${separation.toFixed(2)} (0..1 scale).`);
     if (peakScore != null) highlights.push(`Peak score: ${peakScore.toFixed(2)} (0..1).`);
     if (contrastRaw != null) highlights.push(`Contrast (raw): ${contrastRaw.toFixed(2)}.`);
     if (sustain != null) highlights.push(`Sustain: ${sustain.toFixed(2)} (0..1).`);

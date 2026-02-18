@@ -1,0 +1,160 @@
+import type { StructureAnalysisV1 } from "@/lib/ai/payload/v2/types";
+
+export type BalanceSectionTypeV1 = "intro" | "build" | "drop" | "break" | "outro";
+
+export type StructuralBalanceResultV1 = {
+  score_0_100: number; // higher = more evenly distributed (non-normative)
+  dominant_section: BalanceSectionTypeV1 | null;
+  shares_pct: Record<BalanceSectionTypeV1, number>; // 0..100
+  features: {
+    duration_s: number | null;
+    covered_s: number; // how much of timeline was attributed to sections
+    unclassified_s: number; // leftover time
+    dominance_pct: number; // max share
+    evenness_0_1: number; // 0..1 (Simpson evenness)
+    drop_share_pct: number;
+  };
+  highlights: string[];
+};
+
+function clamp01(x: number): number {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
+function clamp100(x: number): number {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(100, x));
+}
+
+function round1(x: number): number {
+  return Math.round(x * 10) / 10;
+}
+
+function toSectionType(x: any): BalanceSectionTypeV1 | null {
+  return x === "intro" || x === "build" || x === "drop" || x === "break" || x === "outro" ? x : null;
+}
+
+/**
+ * Modul 6 (V1): Structural Balance Index (deterministisch)
+ *
+ * Ziel:
+ * - rein proportionale Beschreibung: wie verteilen sich Section-Typen über die Track-Zeit?
+ * - kein Genre, keine Wertung, keine "richtig/falsch" Aussage
+ *
+ * Score-Idee (V1):
+ * - Evenness (0..1) basierend auf Simpson evenness über Section-Shares
+ * - Score = evenness * 100 (konservativ, leicht interpretierbar)
+ *
+ * Inputs:
+ * - structure.sections
+ */
+export function computeStructuralBalanceIndexV1(structure: StructureAnalysisV1 | null | undefined): StructuralBalanceResultV1 {
+  const empty: StructuralBalanceResultV1 = {
+    score_0_100: 0,
+    dominant_section: null,
+    shares_pct: { intro: 0, build: 0, drop: 0, break: 0, outro: 0 },
+    features: {
+      duration_s: null,
+      covered_s: 0,
+      unclassified_s: 0,
+      dominance_pct: 0,
+      evenness_0_1: 0,
+      drop_share_pct: 0,
+    },
+    highlights: ["Insufficient section data for balance analysis."],
+  };
+
+  if (!structure || !Array.isArray(structure.sections) || structure.sections.length === 0) return empty;
+  if (!Array.isArray(structure.energy_curve) || structure.energy_curve.length < 3) return empty;
+
+  const t0 = structure.energy_curve[0]!.t;
+  const t1 = structure.energy_curve[structure.energy_curve.length - 1]!.t;
+  const duration_s = Number.isFinite(t1 - t0) && t1 > t0 ? t1 - t0 : null;
+  if (duration_s == null || duration_s <= 0) return empty;
+
+  // accumulate durations by type from sections
+  const durBy: Record<BalanceSectionTypeV1, number> = { intro: 0, build: 0, drop: 0, break: 0, outro: 0 };
+
+  for (const s of structure.sections) {
+    if (!s || typeof s !== "object") continue;
+
+    // timeline sections
+    if ("start" in (s as any) && "end" in (s as any) && "type" in (s as any)) {
+      const type = toSectionType((s as any).type);
+      const start = (s as any).start;
+      const end = (s as any).end;
+      if (!type) continue;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+      durBy[type] += Math.max(0, end - start);
+      continue;
+    }
+
+    // drop markers: count as 0s here (V1 is proportion-based on explicit spans only)
+    // We keep drop share driven by actual drop spans if present (future: convert drops to windows).
+  }
+
+  const covered_s = Object.values(durBy).reduce((a, b) => a + b, 0);
+  const unclassified_s = Math.max(0, duration_s - covered_s);
+
+  // shares
+  const shares: Record<BalanceSectionTypeV1, number> = { intro: 0, build: 0, drop: 0, break: 0, outro: 0 };
+  for (const k of Object.keys(shares) as BalanceSectionTypeV1[]) {
+    shares[k] = clamp01(durBy[k] / duration_s);
+  }
+
+  // dominance & dominant section
+  let dominant_section: BalanceSectionTypeV1 | null = null;
+  let dom = -Infinity;
+  for (const k of Object.keys(shares) as BalanceSectionTypeV1[]) {
+    if (shares[k] > dom) {
+      dom = shares[k];
+      dominant_section = k;
+    }
+  }
+
+  // Evenness (Simpson): E = (1 - sum(p_i^2)) / (1 - 1/n) where n=5
+  const ps = (Object.keys(shares) as BalanceSectionTypeV1[]).map((k) => shares[k]);
+  const sumSq = ps.reduce((a, p) => a + p * p, 0);
+  const n = 5;
+  const simpson = 1 - sumSq; // 0..(1-1/n) ideally when perfectly even
+  const denom = 1 - 1 / n;
+  const evenness_0_1 = denom > 0 ? clamp01(simpson / denom) : 0;
+
+  const score_0_100 = clamp100(evenness_0_1 * 100);
+
+  const shares_pct: Record<BalanceSectionTypeV1, number> = {
+    intro: round1(shares.intro * 100),
+    build: round1(shares.build * 100),
+    drop: round1(shares.drop * 100),
+    break: round1(shares.break * 100),
+    outro: round1(shares.outro * 100),
+  };
+
+  const dominance_pct = round1(dom * 100);
+  const drop_share_pct = shares_pct.drop;
+
+  const highlights: string[] = [];
+  highlights.push(`Dominant section: ${dominant_section ?? "—"} (${dominance_pct.toFixed(1)}%).`);
+  if (unclassified_s / duration_s >= 0.15) {
+    highlights.push(`Large unclassified timeline: ${round1((unclassified_s / duration_s) * 100)}% (sections do not cover full track).`);
+  } else {
+    highlights.push(`Section coverage: ${round1((covered_s / duration_s) * 100)}%.`);
+  }
+
+  return {
+    score_0_100,
+    dominant_section,
+    shares_pct,
+    features: {
+      duration_s,
+      covered_s,
+      unclassified_s,
+      dominance_pct,
+      evenness_0_1,
+      drop_share_pct,
+    },
+    highlights,
+  };
+}
+

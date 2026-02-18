@@ -91,7 +91,81 @@ export default function V2MetricsGrid(props: {
 
   const structure = (payload as any)?.metrics?.structure ?? null;
 
+  const arrangementDensity =
+    structure && typeof structure.arrangement_density === "object"
+      ? structure.arrangement_density
+      : null;
+
+  const densityLabel =
+    arrangementDensity && typeof arrangementDensity.label === "string"
+      ? arrangementDensity.label
+      : null;
+
+  const densityScore =
+    arrangementDensity &&
+    typeof arrangementDensity.score_0_100 === "number" &&
+    Number.isFinite(arrangementDensity.score_0_100)
+      ? arrangementDensity.score_0_100
+      : null;
+
+  const structureBadgeForDensity = (label: string | null) => {
+    if (!label)
+      return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
+
+    const map: Record<string, { label: string; badgeClass: string }> = {
+      balanced: {
+        label: "BALANCED",
+        badgeClass: "border-white/10 bg-white/5 text-white/70",
+      },
+      overfilled: {
+        label: "OVERFILLED",
+        badgeClass: "border-red-400/30 bg-red-500/10 text-red-200",
+      },
+      sparse: {
+        label: "SPARSE",
+        badgeClass: "border-amber-400/30 bg-amber-500/10 text-amber-200",
+      },
+    };
+
+    return map[label] ?? {
+      label: label.toUpperCase(),
+      badgeClass: "border-white/10 bg-white/5 text-white/60",
+    };
+  };
+
   const arc = structure && typeof structure.arc === "object" ? structure.arc : null;
+
+  const balance = structure && typeof (structure as any).balance === "object" ? (structure as any).balance : null;
+
+  const hook = structure && typeof (structure as any).hook === "object" ? (structure as any).hook : null;
+
+  const hookDetected = hook && typeof hook.detected === "boolean" ? hook.detected : null;
+
+  const hookConfidence =
+    hook && typeof hook.confidence_0_100 === "number" && Number.isFinite(hook.confidence_0_100)
+      ? hook.confidence_0_100
+      : null;
+
+  const hookOccurrencesCount = Array.isArray(hook?.occurrences) ? hook.occurrences.length : null;
+
+  const hookWindowLen =
+    hook &&
+    typeof hook.features === "object" &&
+    hook.features &&
+    typeof hook.features.window_len_s === "number" &&
+    Number.isFinite(hook.features.window_len_s)
+      ? hook.features.window_len_s
+      : null;
+
+  const balanceScore =
+    balance && typeof balance.score_0_100 === "number" && Number.isFinite(balance.score_0_100)
+      ? balance.score_0_100
+      : null;
+
+  const balanceLabel = balance && typeof balance.label === "string" ? String(balance.label) : null;
+
+  const balanceDominant =
+    balance && typeof balance.dominant_section === "string" ? String(balance.dominant_section) : null;
 
   const arcLabel = arc && typeof arc.label === "string" ? String(arc.label) : null;
   const arcConfidence =
@@ -140,6 +214,7 @@ export default function V2MetricsGrid(props: {
       late_drop: "Late drop",
       early_peak: "Early peak",
       energy_collapse: "Energy drop-off",
+      multi_peak_arc: "Multi-peak arc",
       chaotic_distribution: "Multi-peak arc",
     };
 
@@ -240,6 +315,107 @@ export default function V2MetricsGrid(props: {
                 Indicates how clearly the drop separates itself from the build-up.
               </div>
             </div>
+            {balance ? (
+              <div className="rounded-md border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/70">Structure balance</div>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/60">
+                    {balanceLabel ? balanceLabel.replaceAll("_", " ").toUpperCase() : "BALANCE"}
+                  </span>
+                </div>
+
+                <div className="mt-2 text-sm text-white">
+                  Balance score: {balanceScore === null ? "—" : `${Math.round(balanceScore)}/100`}
+                </div>
+
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+                  <div
+                    className="h-full bg-white/35"
+                    style={{ width: `${Math.max(0, Math.min(100, balanceScore ?? 0))}%` }}
+                  />
+                </div>
+
+                {balanceDominant ? (
+                  <div className="mt-2 text-[12px] text-white/55">
+                    Dominant section: {balanceDominant.replaceAll("_", " ")}
+                  </div>
+                ) : null}
+
+                <div className="mt-2 text-[12px] text-white/50">
+                  Shows how evenly sections are distributed over the timeline (non-judgmental).
+                </div>
+              </div>
+            ) : null}
+            {/* Arrangement density */}
+            {arrangementDensity ? (
+              <div className="rounded-md border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/70">Arrangement density</div>
+                  <span
+                    className={
+                      "text-[11px] px-2 py-0.5 rounded-full border " +
+                      structureBadgeForDensity(densityLabel).badgeClass
+                    }
+                  >
+                    {structureBadgeForDensity(densityLabel).label}
+                  </span>
+                </div>
+
+                <div className="mt-2 text-sm text-white">
+                  Density score: {densityScore !== null ? `${Math.round(densityScore)} / 100` : "—"}
+                </div>
+
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+                  <div
+                    className="h-full bg-white/35"
+                    style={{ width: `${Math.max(0, Math.min(100, densityScore ?? 0))}%` }}
+                  />
+                </div>
+
+                <div className="mt-2 text-[12px] text-white/50">
+                  Indicates whether the arrangement feels structurally dense, sparse, or balanced.
+                </div>
+              </div>
+            ) : null}
+            {hook ? (
+              <div className="rounded-md border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/70">Hook detection</div>
+                  <span
+                    className={
+                      "text-[11px] px-2 py-0.5 rounded-full border " +
+                      (hookDetected === true
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                        : hookDetected === false
+                          ? "border-white/10 bg-white/5 text-white/60"
+                          : "border-white/10 bg-white/5 text-white/60")
+                    }
+                  >
+                    {hookDetected === true ? "DETECTED" : hookDetected === false ? "NOT DETECTED" : "—"}
+                  </span>
+                </div>
+
+                <div className="mt-2 text-sm text-white">
+                  Confidence: {hookConfidence === null ? "—" : `${Math.round(hookConfidence)}%`}
+                </div>
+
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+                  <div
+                    className="h-full bg-white/35"
+                    style={{ width: `${Math.max(0, Math.min(100, hookConfidence ?? 0))}%` }}
+                  />
+                </div>
+
+                <div className="mt-2 text-[12px] text-white/55">
+                  Occurrences: {hookOccurrencesCount === null ? "—" : hookOccurrencesCount}
+                  {hookWindowLen !== null ? ` • Window: ${Math.round(hookWindowLen)}s` : ""}
+                </div>
+
+                <div className="mt-2 text-[12px] text-white/50">
+                  Detects repeated energy patterns across time windows (non-judgmental).
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-2 text-[11px] text-white/50">

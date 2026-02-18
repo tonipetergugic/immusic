@@ -17,6 +17,9 @@ import { computeDynamicsHealthV1 } from "@/lib/ai/payload/v2/modules/dynamicsHea
 import { buildStructureAnalysisV1 } from "@/lib/ai/payload/v2/modules/structureAnalysisV1";
 import { classifyEnergyArcV1 } from "@/lib/ai/payload/v2/modules/structureEnergyArcTypizerV1";
 import { scoreDropConfidenceV1 } from "@/lib/ai/payload/v2/modules/structureDropConfidenceV1";
+import { detectHookV1 } from "@/lib/ai/payload/v2/modules/structureHookDetectionV1";
+import { computeStructuralBalanceIndexV1 } from "@/lib/ai/payload/v2/modules/structureBalanceIndexV1";
+import { analyzeArrangementDensityV1 } from "@/lib/ai/payload/v2/modules/structureArrangementDensityV1";
 import {
   headroomHealthFromCodecSim,
   recommendedLimiterCeilingTextV1,
@@ -875,6 +878,31 @@ export function buildFeedbackPayloadV2Mvp(params: {
     transientDensity_0_1: typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
   });
 
+  const structureHook =
+    structureAnalysis != null
+      ? detectHookV1({
+          structure: structureAnalysis,
+          transientDensity_0_1:
+            typeof transientDensity === "number" && Number.isFinite(transientDensity)
+              ? transientDensity
+              : null,
+        })
+      : null;
+
+  const structureBalance =
+    structureAnalysis != null
+      ? computeStructuralBalanceIndexV1(structureAnalysis)
+      : null;
+
+  const arrangementDensity = analyzeArrangementDensityV1({
+    transientDensity_0_1:
+      typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
+    crestFactorDb:
+      typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
+    loudnessRangeLu:
+      typeof loudnessRangeLu === "number" && Number.isFinite(loudnessRangeLu) ? loudnessRangeLu : null,
+  });
+
   return {
     schema_version: 2,
     generated_at: new Date().toISOString(),
@@ -963,7 +991,18 @@ export function buildFeedbackPayloadV2Mvp(params: {
         punch_index:
           typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
       },
-      ...(structureAnalysis != null ? { structure: { ...structureAnalysis, arc: structureArc, drop_confidence: dropConfidence } } : { structure: undefined }),
+      ...(structureAnalysis != null
+        ? {
+            structure: {
+              ...structureAnalysis,
+              arc: structureArc,
+              drop_confidence: dropConfidence,
+              hook: structureHook,
+              balance: structureBalance,
+              arrangement_density: arrangementDensity,
+            },
+          }
+        : { structure: undefined }),
     },
     dynamics_health: dynamicsHealth,
     events: {

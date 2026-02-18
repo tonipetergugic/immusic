@@ -6,7 +6,7 @@ export type EnergyArcLabelV1 =
   | "late_drop"
   | "early_peak"
   | "energy_collapse"
-  | "chaotic_distribution"
+  | "multi_peak_arc"
   | "insufficient_data";
 
 export type EnergyArcResultV1 = {
@@ -158,7 +158,7 @@ export function classifyEnergyArcV1(structure: StructureAnalysisV1 | null | unde
     );
     if (peak_count != null) highlights.push(`Detected peaks: ${peak_count}.`);
     return {
-      label: "chaotic_distribution",
+      label: "multi_peak_arc",
       confidence_0_100: clamp100(Math.max(55, conf)),
       highlights,
       features: {
