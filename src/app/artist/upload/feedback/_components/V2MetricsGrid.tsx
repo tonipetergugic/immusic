@@ -89,6 +89,66 @@ export default function V2MetricsGrid(props: {
       ? dynamicsHealth.factors
       : null;
 
+  const structure = (payload as any)?.metrics?.structure ?? null;
+
+  const arc = structure && typeof structure.arc === "object" ? structure.arc : null;
+
+  const arcLabel = arc && typeof arc.label === "string" ? String(arc.label) : null;
+  const arcConfidence =
+    arc && typeof arc.confidence_0_100 === "number" && Number.isFinite(arc.confidence_0_100)
+      ? arc.confidence_0_100
+      : null;
+
+  const dropItems = Array.isArray(structure?.drop_confidence?.items) ? structure.drop_confidence.items : [];
+  const bestDrop =
+    dropItems.length > 0
+      ? [...dropItems]
+          .filter((x: any) => x && typeof x.t === "number" && Number.isFinite(x.t))
+          .sort((a: any, b: any) => (Number(b.confidence_0_100) || 0) - (Number(a.confidence_0_100) || 0))[0]
+      : null;
+
+  const bestDropLabel = bestDrop && typeof bestDrop.label === "string" ? String(bestDrop.label) : null;
+  const bestDropConfidence =
+    bestDrop && typeof bestDrop.confidence_0_100 === "number" && Number.isFinite(bestDrop.confidence_0_100)
+      ? bestDrop.confidence_0_100
+      : null;
+
+  const primaryPeakT =
+    structure?.primary_peak && typeof structure.primary_peak.t === "number" && Number.isFinite(structure.primary_peak.t)
+      ? structure.primary_peak.t
+      : null;
+
+  const fmtTime = (s: number | null) => {
+    if (s === null) return "—";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s - m * 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  };
+
+  const fmtPct = (v: number | null) => (v === null ? "—" : `${Math.round(v)}%`);
+
+  const prettyLabel = (x: string | null) =>
+    x === null ? "—" : x.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const structureBadgeForArc = (label: string | null) => {
+    if (!label) return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
+    // neutral, informational: structure is not a gate
+    return { label: prettyLabel(label), badgeClass: "border-white/10 bg-white/5 text-white/60" };
+  };
+
+  const structureBadgeForDrop = (label: string | null) => {
+    if (label === "high_impact_drop") {
+      return { label: "HIGH IMPACT", badgeClass: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200" };
+    }
+    if (label === "solid_drop") {
+      return { label: "SOLID", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200" };
+    }
+    if (label === "weak_drop") {
+      return { label: "WEAK", badgeClass: "border-red-400/30 bg-red-500/10 text-red-200" };
+    }
+    return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
+  };
+
   const lowEndBadge =
     lowEndPhaseCorr === null && lowEndMonoLossPct === null
       ? null
@@ -175,6 +235,45 @@ export default function V2MetricsGrid(props: {
           </div>
         );
       })()}
+
+      {structure ? (
+        <div className="rounded-lg bg-black/20 p-3 border border-white/5 md:col-span-2 xl:col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col">
+              <span className="text-xs text-white/70">Structure (experimental)</span>
+              <span className="text-[10px] text-white/40">Pattern-based • No taste • No gate</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="rounded-md border border-white/10 bg-white/5 p-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] text-white/60">Energy arc</div>
+                <span className={"text-[10px] px-2 py-0.5 rounded-full border " + structureBadgeForArc(arcLabel).badgeClass}>
+                  {structureBadgeForArc(arcLabel).label}
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] text-white/45">Confidence: {fmtPct(arcConfidence)}</div>
+              <div className="text-[11px] text-white/45">Primary peak: {fmtTime(primaryPeakT)}</div>
+            </div>
+
+            <div className="rounded-md border border-white/10 bg-white/5 p-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] text-white/60">Best drop</div>
+                <span className={"text-[10px] px-2 py-0.5 rounded-full border " + structureBadgeForDrop(bestDropLabel).badgeClass}>
+                  {structureBadgeForDrop(bestDropLabel).label}
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] text-white/45">Time: {fmtTime(bestDrop ? bestDrop.t : null)}</div>
+              <div className="text-[11px] text-white/45">Confidence: {fmtPct(bestDropConfidence)}</div>
+            </div>
+          </div>
+
+          <div className="mt-2 text-[11px] text-white/50">
+            Tip: A high-impact drop means strong contrast vs build-up (measurable). It does not judge music quality.
+          </div>
+        </div>
+      ) : null}
 
       {(() => {
         const raw =

@@ -1,5 +1,7 @@
 import type { StructureAnalysisV1 } from "@/lib/ai/payload/v2/types";
 import { clamp01, clamp100 } from "@/lib/ai/payload/v2/utils";
+import { stabilizeStructureSectionsV1 } from "@/lib/ai/payload/v2/modules/structureSectionsStabilizerV1";
+import { applyStructureSequenceRulesV1 } from "@/lib/ai/payload/v2/modules/structureSectionsSequenceRulesV1";
 
 type EnergyPointV1 = { t: number; e: number };
 
@@ -305,6 +307,19 @@ export function buildStructureAnalysisV1(input: {
   }
   sections.length = 0;
   sections.push(...dedupedSections);
+
+  const stabilized = stabilizeStructureSectionsV1({
+    energy_curve,
+    sections,
+  });
+
+  const sequenced = applyStructureSequenceRulesV1({
+    energy_curve,
+    sections: stabilized,
+  });
+
+  sections.length = 0;
+  sections.push(...(sequenced as any));
 
   return {
     energy_curve,

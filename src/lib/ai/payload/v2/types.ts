@@ -60,6 +60,8 @@ export type StructureAnalysisV1 = {
     | { type: "outro"; start: number; end: number }
     | { type: "drop"; t: number; impact: number; impact_score: number }
   >;
+  arc?: import("@/lib/ai/payload/v2/modules/structureEnergyArcTypizerV1").EnergyArcResultV1;
+  drop_confidence?: import("@/lib/ai/payload/v2/modules/structureDropConfidenceV1").DropConfidenceResultV1;
 };
 
 export type FeedbackPayloadV2 = {
