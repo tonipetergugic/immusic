@@ -102,27 +102,38 @@ export async function extractPrivateMetricsFromTmpWav(params: {
     truePeakDb = r.truePeakDbTp;
     integratedLufs = r.integratedLufs;
     // Short-term (or momentary fallback) LUFS timeline via ebur128 framelog
+    const tSt = params.nowNs();
     shortTermLufsTimeline = await ffmpegDetectShortTermLufsTimeline({ inPath: params.tmpWavPath, maxPoints: 1200 });
+    params.logStage("detect_shortterm_lufs_timeline", params.elapsedMs(tSt));
+
+    const tMax = params.nowNs();
     maxSamplePeakDbfs = await ffmpegDetectMaxSamplePeakDbfs({ inPath: params.tmpWavPath });
+    params.logStage("detect_max_sample_peak", params.elapsedMs(tMax));
     const clippedSampleCountRaw = await ffmpegDetectClippedSampleCount({ inPath: params.tmpWavPath });
     clippedSampleCount =
       Number.isFinite(clippedSampleCountRaw) && clippedSampleCountRaw >= 0
         ? Math.trunc(clippedSampleCountRaw)
         : 0;
 
+    const tRms = params.nowNs();
     const rmsDbfs = await ffmpegDetectRmsLevelDbfs({ inPath: params.tmpWavPath });
+    params.logStage("detect_rms_dbfs", params.elapsedMs(tRms));
     crestFactorDb =
       Number.isFinite(truePeakDb) && Number.isFinite(rmsDbfs) ? truePeakDb - rmsDbfs : NaN;
 
+    const tPhase = params.nowNs();
     const phaseCorrelationRaw = await ffmpegDetectPhaseCorrelation({ inPath: params.tmpWavPath });
+    params.logStage("detect_phase_corr", params.elapsedMs(tPhase));
     phaseCorrelation = phaseCorrelationRaw;
 
     // Low-End Mono Stability (20–120 Hz) - purely technical, deterministic
+    const tLowPhase = params.nowNs();
     lowEndPhaseCorrelation20_120 = await ffmpegDetectPhaseCorrelationBand({
       inPath: params.tmpWavPath,
       fLowHz: 20,
       fHighHz: 120,
     });
+    params.logStage("detect_phase_corr_20_120", params.elapsedMs(tLowPhase));
 
     const lowMidDbfs_20_120 = await ffmpegDetectBandRmsDbfsWithPan({
       inPath: params.tmpWavPath,
@@ -197,14 +208,21 @@ export async function extractPrivateMetricsFromTmpWav(params: {
     spectralHighRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: params.tmpWavPath, fLowHz: 6000, fHighHz: 12000 });
     spectralAirRmsDbfs = await ffmpegDetectBandRmsDbfs({ inPath: params.tmpWavPath, fLowHz: 12000, fHighHz: 16000 });
 
+    const tTrans = params.nowNs();
     transient = await ffmpegDetectTransientPunchMetrics({ inPath: params.tmpWavPath });
+    params.logStage("detect_transient_punch", params.elapsedMs(tTrans));
 
+    const tLra = params.nowNs();
     lraLu = await ffmpegDetectLoudnessRangeLu({ inPath: params.tmpWavPath });
+    params.logStage("detect_lra_lu", params.elapsedMs(tLra));
 
-    // Timecoded True Peak Overs (windowed, oversampled SR)
+    const tOvers = params.nowNs();
     truePeakOvers = await ffmpegDetectTruePeakOvers({ inPath: params.tmpWavPath });
+    params.logStage("detect_true_peak_overs_windows", params.elapsedMs(tOvers));
 
+    const tOverEv = params.nowNs();
     truePeakOverEvents = await ffmpegDetectTruePeakOversEvents({ inPath: params.tmpWavPath, thresholdDbTp: 0.0 });
+    params.logStage("detect_true_peak_overs_events", params.elapsedMs(tOverEv));
 
     // Compute effective True Peak from both the measured true peak and any detected overs events.
     // IMPORTANT: must match the persisted DB shape: { t0, t1, peak_db_tp }
@@ -223,8 +241,7 @@ export async function extractPrivateMetricsFromTmpWav(params: {
       console.log("[AI-CHECK] LUFS:", integratedLufs);
       console.log("[AI-CHECK] TruePeak:", truePeakDb);
       console.log("[AI-CHECK] LRA (LU):", lraLu);
-    }
-    if (process.env.AI_DEBUG === "1") {
+
       console.log("[AI-CHECK] RMS dBFS:", rmsDbfs);
       console.log("[AI-CHECK] Crest dB:", crestFactorDb);
 

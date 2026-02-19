@@ -50,8 +50,8 @@ export async function POST() {
       continue;
     }
 
-    // 2) Try delete from Storage (tracks bucket)
-    const { error: delErr } = await supabase.storage.from("tracks").remove([audioPath]);
+    // 2) Try delete from Storage (ingest bucket)
+    const { error: delErr } = await supabase.storage.from("ingest_wavs").remove([audioPath]);
 
     if (delErr) {
       failed += 1;

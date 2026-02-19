@@ -5,7 +5,6 @@ import { writeFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/payload";
 import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 
 export const dynamic = "force-dynamic";
-const REQUIRED_PAYLOAD_VERSION = 2;
 
 type OkLocked = {
   ok: true;
@@ -39,6 +38,29 @@ type OkUnlockedReady = {
 };
 
 type Err = { ok: false; error: string };
+
+type QueueRow = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  audio_hash: string | null;
+  status: string | null;
+};
+
+type UnlockRow = {
+  id: string;
+  audio_hash: string | null;
+};
+
+type FeedbackPayloadRow = {
+  audio_hash: string | null;
+  payload_version: number | string | null;
+  payload?: any;
+};
+
+type PrivateMetricsRow = {
+  true_peak_overs: Array<any> | null;
+};
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -87,8 +109,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "unlock_fetch_failed" } satisfies Err, { status: 500 });
   }
 
-  const queueHash = (queueRow as any)?.audio_hash as string | null;
-  const unlockHash = (unlockRow as any)?.audio_hash as string | null;
+  const queueHash = (queueRow as QueueRow).audio_hash;
+  const unlockHash = unlockRow ? (unlockRow as UnlockRow).audio_hash : null;
 
   // Unlock gilt nur, wenn er zur exakt gleichen Audiodatei gehört.
   const unlocked = !!unlockRow?.id && !!queueHash && !!unlockHash && queueHash === unlockHash;
@@ -108,32 +130,9 @@ export async function GET(request: Request) {
     );
   }
 
-  // Precheck: determine whether payload cache is missing/outdated for this queue/audio.
-  let existingPayloadHash: string | null = null;
-  let existingPayloadVersion: number | null = null;
-
-  try {
-    const { data: prePayloadRow, error: prePayloadErr } = await supabase
-      .from("track_ai_feedback_payloads")
-      .select("audio_hash, payload_version")
-      .eq("queue_id", queueId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!prePayloadErr && prePayloadRow) {
-      existingPayloadHash = (prePayloadRow as any)?.audio_hash ?? null;
-
-      const pvRaw = (prePayloadRow as any)?.payload_version;
-      const pvNum = typeof pvRaw === "number" ? pvRaw : Number(pvRaw);
-      existingPayloadVersion = Number.isFinite(pvNum) ? pvNum : null;
-    }
-  } catch {
-    // best-effort: ignore
-  }
-
   // If unlocked + terminal decision exists, refresh payload only when needed.
   // Needed = private metrics already contain true_peak_overs events but cached payload still has none.
-  const terminalStatus = (queueRow as any)?.status as string | null;
+  const terminalStatus = (queueRow as QueueRow).status;
 
   let prePayloadRow: any = null;
   let prePayloadErr: any = null;
@@ -149,11 +148,11 @@ export async function GET(request: Request) {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      prePayloadRow = pre.data as any;
-      prePayloadErr = pre.error as any;
+      prePayloadRow = (pre.data as FeedbackPayloadRow | null) ?? null;
+      prePayloadErr = pre.error;
 
-      const payloadHash = (prePayloadRow as any)?.audio_hash as string | null;
-      const payloadVersion = Number((prePayloadRow as any)?.payload_version ?? 0);
+      const payloadHash = prePayloadRow?.audio_hash ?? null;
+      const payloadVersion = Number(prePayloadRow?.payload_version ?? 0);
 
       const payloadOversLen = (() => {
         const arr = (prePayloadRow as any)?.payload?.events?.loudness?.true_peak_overs;
@@ -168,9 +167,8 @@ export async function GET(request: Request) {
         .eq("queue_id", queueId)
         .maybeSingle();
 
-      const metricsOversLen = Array.isArray((mRow as any)?.true_peak_overs)
-        ? ((mRow as any).true_peak_overs as any[]).length
-        : null;
+      const mOvers = (mRow as PrivateMetricsRow | null)?.true_peak_overs;
+      const metricsOversLen = Array.isArray(mOvers) ? mOvers.length : null;
 
       // Decide if refresh is needed:
       // - payload is missing or wrong hash OR old payload version OR mismatch: metrics have overs but payload has none
@@ -198,8 +196,11 @@ export async function GET(request: Request) {
         });
         didRefresh = true;
       }
-    } catch {
+    } catch (e) {
       // best-effort: never break API response
+      if (AI_DEBUG) {
+        console.log("[AI-CHECK][feedback] best-effort refresh failed", { queueId, err: String(e) });
+      }
     }
   }
 
@@ -219,22 +220,22 @@ export async function GET(request: Request) {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      payloadRow = res.data as any;
-      payloadErr = res.error as any;
+      payloadRow = (res.data as FeedbackPayloadRow | null) ?? null;
+      payloadErr = res.error;
     }
 
     if (!payloadErr && payloadRow) {
-      const payloadHash = (payloadRow as any)?.audio_hash as string | null;
+      const payloadHash = (payloadRow as FeedbackPayloadRow).audio_hash ?? null;
       if (payloadHash && payloadHash === queueHash) {
         return NextResponse.json({
           ok: true,
           queue_id: queueId,
-          queue_title: ((queueRow as any).title as string | null) ?? null,
+          queue_title: (queueRow as QueueRow).title ?? null,
           feedback_state: "unlocked_ready",
           status: "unlocked_ready",
           unlocked: true,
-          payload_version: Number((payloadRow as any).payload_version ?? 1),
-          payload: (payloadRow as any).payload ?? null,
+          payload_version: Number((payloadRow as FeedbackPayloadRow).payload_version ?? 1),
+          payload: (payloadRow as FeedbackPayloadRow).payload ?? null,
         } satisfies OkUnlockedReady);
       }
     }
