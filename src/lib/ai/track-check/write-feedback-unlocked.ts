@@ -29,16 +29,6 @@ export async function writeFeedbackIfUnlocked(params: {
   const decisionForPayload: TrackCheckDecision =
     hardFailReasons.length > 0 ? "rejected" : params.decision;
 
-  if (AI_DEBUG) {
-    console.log("[PAYLOAD DEBUG] sending to writeFeedback:", {
-      integratedLufs: params.integratedLufs,
-      truePeakDb: params.truePeakDb,
-      decision: decisionForPayload,
-      queueId: params.queueId,
-      finalAudioHash,
-    });
-  }
-
   if (!finalAudioHash) return;
 
   await writeFeedbackPayloadIfUnlocked({

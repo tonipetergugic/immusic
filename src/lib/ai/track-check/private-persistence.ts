@@ -65,25 +65,6 @@ export async function persistPrivateMetricsAndEvents(params: {
 
     const titleSnapshot = params.title && params.title.length > 0 ? params.title : "untitled";
 
-    // DEBUG: verify truePeakDbEffective vs stored overs
-    try {
-      const oversArr = Array.isArray(params.truePeakOverEvents) ? params.truePeakOverEvents : [];
-      const maxOverDbg = oversArr.reduce((acc: number, ev: any) => {
-        const v = Number(ev?.peak_db_tp);
-        return Number.isFinite(v) ? Math.max(acc, v) : acc;
-      }, -Infinity);
-
-      console.log("[AI-CHECK][TP-DEBUG]", {
-        queueId: params.queueId,
-        truePeakDb: params.truePeakDb,
-        oversCount: oversArr.length,
-        maxOverDbg: Number.isFinite(maxOverDbg) ? maxOverDbg : null,
-        truePeakDbEffective: params.truePeakDbEffective,
-      });
-    } catch (e) {
-      console.log("[AI-CHECK][TP-DEBUG] failed", String((e as any)?.message ?? e));
-    }
-
     const { error: metricsErr } = await adminClient
       .from("track_ai_private_metrics")
       .upsert(
@@ -120,6 +101,8 @@ export async function persistPrivateMetricsAndEvents(params: {
           mean_short_crest_db: params.transient.mean_short_crest_db,
           p95_short_crest_db: params.transient.p95_short_crest_db,
           transient_density: params.transient.transient_density,
+          transient_density_std: params.transient.transient_density_std,
+          transient_density_cv: params.transient.transient_density_cv,
           punch_index: params.transient.punch_index,
           short_term_lufs_timeline: Array.isArray(params.shortTermLufsTimeline) ? params.shortTermLufsTimeline : [],
           analyzed_at: new Date().toISOString(),

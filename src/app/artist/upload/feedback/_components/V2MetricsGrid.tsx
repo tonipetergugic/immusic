@@ -414,6 +414,45 @@ export default function V2MetricsGrid(props: {
                   Indicates the measured structural density distribution over time.
                 </div>
 
+                {/* Debug-Output entfernt – Production Clean UI */}
+
+                {(() => {
+                  const f = (arrangementDensity as any)?.features ?? null;
+
+                  const stability =
+                    typeof f?.stability_class === "string" ? (f.stability_class as string) : null;
+
+                  const tdCv =
+                    typeof f?.td_cv === "number" && Number.isFinite(f.td_cv) ? (f.td_cv as number) : null;
+
+                  const tdStd =
+                    typeof f?.td_std_0_1 === "number" && Number.isFinite(f.td_std_0_1) ? (f.td_std_0_1 as number) : null;
+
+                  const stabilityLabel =
+                    stability === "consistent"
+                      ? "CONSISTENT"
+                      : stability === "mixed"
+                        ? "MIXED"
+                        : stability === "swingy"
+                          ? "SWINGY"
+                          : null;
+
+                  if (!stabilityLabel && tdCv === null && tdStd === null) return null;
+
+                  return (
+                    <div className="mt-2 text-[12px] text-white/55">
+                      <span className="text-white/45">Density stability:</span>{" "}
+                      {stabilityLabel ?? "—"}
+                      {tdCv !== null ? (
+                        <span className="text-white/45"> • CV {tdCv.toFixed(2)}</span>
+                      ) : null}
+                      {tdStd !== null ? (
+                        <span className="text-white/45"> • Std {tdStd.toFixed(2)}</span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+
                 {Array.isArray(payload?.metrics?.structure?.arrangement_density?.highlights) &&
                   payload.metrics.structure.arrangement_density.highlights.length > 0 && (
                   <div className="mt-3 space-y-1">

@@ -327,6 +327,8 @@ export type TransientPunchMetrics = {
   mean_short_crest_db: number;
   p95_short_crest_db: number;
   transient_density: number; // 0..1
+  transient_density_std: number; // 0..1 (std over segments)
+  transient_density_cv: number; // unitless (std/mean)
   punch_index: number; // 0..100
 };
 
@@ -347,6 +349,8 @@ export async function ffmpegDetectTransientPunchMetrics(params: {
       mean_short_crest_db: NaN,
       p95_short_crest_db: NaN,
       transient_density: NaN,
+      transient_density_std: NaN,
+      transient_density_cv: NaN,
       punch_index: NaN,
     };
   }
@@ -454,6 +458,8 @@ export async function ffmpegDetectTransientPunchMetrics(params: {
           mean_short_crest_db: NaN,
           p95_short_crest_db: NaN,
           transient_density: NaN,
+          transient_density_std: NaN,
+          transient_density_cv: NaN,
           punch_index: NaN,
         });
       }
@@ -478,6 +484,29 @@ export async function ffmpegDetectTransientPunchMetrics(params: {
       const transientCount = crestArr.filter((c) => c > meanCrest + 1.5).length;
       const transientDensity = transientCount / crestArr.length;
 
+      // Density stability (deterministic):
+      // Compute transient density per coarse segment using the SAME global crest threshold.
+      // No ML, no genre logic, no timeline persistence.
+      const SEGMENT_SEC = 2.0;
+      const windowsPerSeg = Math.max(1, Math.floor(SEGMENT_SEC / windowSec));
+      const crestThr = meanCrest + 1.5;
+
+      const segVals: number[] = [];
+      for (let i = 0; i < crestArr.length; i += windowsPerSeg) {
+        const seg = crestArr.slice(i, i + windowsPerSeg);
+        if (seg.length < windowsPerSeg * 0.5) continue; // conservative
+        const cnt = seg.filter((c) => c > crestThr).length;
+        segVals.push(cnt / seg.length);
+      }
+
+      const meanSeg = segVals.length ? segVals.reduce((a, b) => a + b, 0) / segVals.length : NaN;
+      const stdSeg =
+        segVals.length >= 2
+          ? Math.sqrt(segVals.reduce((acc, v) => acc + Math.pow(v - meanSeg, 2), 0) / segVals.length)
+          : NaN;
+
+      const cvSeg = Number.isFinite(meanSeg) && meanSeg > 0 ? stdSeg / meanSeg : NaN;
+
       const punchIndex = Math.max(0, Math.min(100, (p95Crest - 6) * 8));
 
       resolve({
@@ -488,6 +517,8 @@ export async function ffmpegDetectTransientPunchMetrics(params: {
         mean_short_crest_db: meanCrest,
         p95_short_crest_db: p95Crest,
         transient_density: transientDensity,
+        transient_density_std: stdSeg,
+        transient_density_cv: cvSeg,
         punch_index: punchIndex,
       });
     });

@@ -90,6 +90,8 @@ export async function extractPrivateMetricsFromTmpWav(params: {
     mean_short_crest_db: NaN,
     p95_short_crest_db: NaN,
     transient_density: NaN,
+    transient_density_std: NaN,
+    transient_density_cv: NaN,
     punch_index: NaN,
   };
 

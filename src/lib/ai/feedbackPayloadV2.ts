@@ -56,6 +56,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
   meanShortCrestDb?: number | null;
   p95ShortCrestDb?: number | null;
   transientDensity?: number | null;
+  transientDensityStd?: number | null;
+  transientDensityCv?: number | null;
   punchIndex?: number | null;
   truePeakOvers?: FeedbackEventV2[];
   hardFailReasons?: Array<{
@@ -95,11 +97,26 @@ export function buildFeedbackPayloadV2Mvp(params: {
     meanShortCrestDb = null,
     p95ShortCrestDb = null,
     transientDensity = null,
+    transientDensityStd = null,
+    transientDensityCv = null,
     punchIndex = null,
     truePeakOvers = [],
     codecSimulation = null,
     shortTermLufsTimeline = null,
   } = params;
+
+  const n = (x: any): number | null => {
+    if (typeof x === "number" && Number.isFinite(x)) return x;
+    if (typeof x === "string") {
+      const p = Number(x);
+      return Number.isFinite(p) ? p : null;
+    }
+    return null;
+  };
+
+  const transientDensityNum = n(transientDensity);
+  const transientDensityStdNum = n(transientDensityStd);
+  const transientDensityCvNum = n(transientDensityCv);
 
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
@@ -111,7 +128,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
 
     meanShortCrestDb: typeof meanShortCrestDb === "number" && Number.isFinite(meanShortCrestDb) ? meanShortCrestDb : null,
     p95ShortCrestDb: typeof p95ShortCrestDb === "number" && Number.isFinite(p95ShortCrestDb) ? p95ShortCrestDb : null,
-    transientDensity: typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
+    transientDensity: transientDensityNum,
     punchIndex: typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
 
     truePeakOversCount: Array.isArray(truePeakOvers) ? truePeakOvers.length : 0,
@@ -866,7 +883,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
 
   const structureAnalysis = buildStructureAnalysisV1({
     shortTermLufsTimeline: shortTermLufsTimeline,
-    transientDensity: transientDensity,
+    transientDensity: transientDensityNum,
     meanShortCrestDb: meanShortCrestDb,
     p95ShortCrestDb: p95ShortCrestDb,
   });
@@ -875,17 +892,14 @@ export function buildFeedbackPayloadV2Mvp(params: {
 
   const dropConfidence = scoreDropConfidenceV1({
     structure: structureAnalysis,
-    transientDensity_0_1: typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
+    transientDensity_0_1: transientDensityNum,
   });
 
   const structureHook =
     structureAnalysis != null
       ? detectHookV1({
           structure: structureAnalysis,
-          transientDensity_0_1:
-            typeof transientDensity === "number" && Number.isFinite(transientDensity)
-              ? transientDensity
-              : null,
+          transientDensity_0_1: transientDensityNum,
         })
       : null;
 
@@ -895,8 +909,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
       : null;
 
   const arrangementDensity = analyzeArrangementDensityV1({
-    transientDensity_0_1:
-      typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
+    transientDensity_0_1: transientDensityNum,
+    transientDensityStd_0_1: transientDensityStdNum,
+    transientDensityCv: transientDensityCvNum,
     crestFactorDb:
       typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
     loudnessRangeLu:
@@ -915,6 +930,11 @@ export function buildFeedbackPayloadV2Mvp(params: {
       duration_s: typeof durationS === "number" && Number.isFinite(durationS) ? durationS : null,
       sample_rate_hz: null,
       channels: null,
+      private_metrics: {
+        transient_density: transientDensityNum,
+        transient_density_std: transientDensityStdNum,
+        transient_density_cv: transientDensityCvNum,
+      },
     },
     summary: {
       status:
@@ -987,8 +1007,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
           typeof meanShortCrestDb === "number" && Number.isFinite(meanShortCrestDb) ? meanShortCrestDb : null,
         p95_short_crest_db:
           typeof p95ShortCrestDb === "number" && Number.isFinite(p95ShortCrestDb) ? p95ShortCrestDb : null,
-        transient_density:
-          typeof transientDensity === "number" && Number.isFinite(transientDensity) ? transientDensity : null,
+        transient_density: transientDensityNum,
+        transient_density_std: transientDensityStdNum,
+        transient_density_cv: transientDensityCvNum,
         punch_index:
           typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
       },

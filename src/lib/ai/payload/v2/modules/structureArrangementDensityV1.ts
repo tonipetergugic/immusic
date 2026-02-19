@@ -22,6 +22,7 @@ export type ArrangementDensityResultV1 = {
     energy_mid_share_0_1?: number | null;
     energy_low_share_0_1?: number | null;
 
+    td_std_0_1?: number | null;
     td_mean_0_1?: number | null;
     td_p25_0_1?: number | null;
     td_p75_0_1?: number | null;
@@ -54,6 +55,8 @@ export type ArrangementDensityResultV1 = {
  */
 export function analyzeArrangementDensityV1(params: {
   transientDensity_0_1?: number | null | undefined; // expected 0..1
+  transientDensityStd_0_1?: number | null | undefined;
+  transientDensityCv?: number | null | undefined;
   crestFactorDb?: number | null | undefined;
   loudnessRangeLu?: number | null | undefined;
   structure?: StructureAnalysisV1 | null | undefined;
@@ -61,6 +64,16 @@ export function analyzeArrangementDensityV1(params: {
   const td =
     typeof params.transientDensity_0_1 === "number" && Number.isFinite(params.transientDensity_0_1)
       ? clamp01(params.transientDensity_0_1)
+      : null;
+
+  const tdStd =
+    typeof params.transientDensityStd_0_1 === "number" && Number.isFinite(params.transientDensityStd_0_1)
+      ? clamp01(params.transientDensityStd_0_1)
+      : null;
+
+  const tdCv =
+    typeof params.transientDensityCv === "number" && Number.isFinite(params.transientDensityCv)
+      ? params.transientDensityCv
       : null;
 
   const crest =
@@ -82,6 +95,15 @@ export function analyzeArrangementDensityV1(params: {
 
   const highlights: string[] = [];
 
+  const stabilityClass =
+    typeof tdCv === "number" && Number.isFinite(tdCv)
+      ? tdCv < 0.15
+        ? "consistent"
+        : tdCv < 0.30
+          ? "mixed"
+          : "swingy"
+      : null;
+
   if (td === null && crest === null && lra === null) {
     return {
       label: "insufficient_data",
@@ -97,14 +119,15 @@ export function analyzeArrangementDensityV1(params: {
         energy_mid_share_0_1: energyMidShare,
         energy_high_share_0_1: energyHighShare,
 
+        td_std_0_1: tdStd,
         td_mean_0_1: td,
         td_p25_0_1: null,
         td_p75_0_1: null,
-        td_cv: null,
+        td_cv: tdCv,
 
         high_energy_low_transients_pct: null,
         low_energy_high_transients_pct: null,
-        stability_class: null,
+        stability_class: stabilityClass,
       },
       drivers: {
         overfill_0_1: null,
@@ -185,14 +208,15 @@ export function analyzeArrangementDensityV1(params: {
       energy_mid_share_0_1: energyMidShare,
       energy_high_share_0_1: energyHighShare,
 
+      td_std_0_1: tdStd,
       td_mean_0_1: td,
       td_p25_0_1: null,
       td_p75_0_1: null,
-      td_cv: null,
+      td_cv: tdCv,
 
       high_energy_low_transients_pct: null,
       low_energy_high_transients_pct: null,
-      stability_class: null,
+      stability_class: stabilityClass,
     },
     drivers: {
       overfill_0_1: overfill01,

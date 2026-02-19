@@ -26,6 +26,8 @@ export type PrivateMetricsMapped = {
     mean_short_crest_db: number;
     p95_short_crest_db: number;
     transient_density: number;
+    transient_density_std: number;
+    transient_density_cv: number;
     punch_index: number;
   };
   lraLu: number;

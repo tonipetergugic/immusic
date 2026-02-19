@@ -88,6 +88,13 @@ export type FeedbackPayloadV2 = {
     duration_s: number | null;
     sample_rate_hz: number | null;
     channels: number | null;
+
+    // Private metrics (persisted from track_ai_private_metrics; not shown to listeners)
+    private_metrics?: {
+      transient_density: number | null;
+      transient_density_std: number | null;
+      transient_density_cv: number | null;
+    };
   };
   summary: {
     status: "ok" | "approved" | "approved_with_risks" | "hard-fail";

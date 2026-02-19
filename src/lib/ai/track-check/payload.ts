@@ -77,6 +77,8 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
         "mean_short_crest_db",
         "p95_short_crest_db",
         "transient_density",
+        "transient_density_std",
+        "transient_density_cv",
         "punch_index",
         "true_peak_overs",
         "hard_fail_reasons",
@@ -320,17 +322,10 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
     meanShortCrestDb: typeof m.mean_short_crest_db === "number" && Number.isFinite(m.mean_short_crest_db) ? m.mean_short_crest_db : null,
     p95ShortCrestDb: typeof m.p95_short_crest_db === "number" && Number.isFinite(m.p95_short_crest_db) ? m.p95_short_crest_db : null,
     transientDensity: typeof m.transient_density === "number" && Number.isFinite(m.transient_density) ? m.transient_density : null,
+    transientDensityStd: typeof m.transient_density_std === "number" && Number.isFinite(m.transient_density_std) ? m.transient_density_std : null,
+    transientDensityCv: typeof m.transient_density_cv === "number" && Number.isFinite(m.transient_density_cv) ? m.transient_density_cv : null,
     punchIndex: typeof m.punch_index === "number" && Number.isFinite(m.punch_index) ? m.punch_index : null,
     codecSimulation,
-  });
-
-  if (AI_DEBUG) console.log("[PAYLOAD DEBUG] built payload (SoT metrics):", {
-    queueId,
-    queueAudioHash,
-    integratedLufsSoT,
-    truePeakDbTpSoT,
-    lraSoT: typeof m.loudness_range_lu === "number" ? m.loudness_range_lu : null,
-    crestSoT: typeof m.crest_factor_db === "number" ? m.crest_factor_db : null,
   });
 
   const { data: existingPayload } = await adminClient
