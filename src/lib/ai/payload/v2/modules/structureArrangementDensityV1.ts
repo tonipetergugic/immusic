@@ -1,4 +1,5 @@
 import { clamp01, clamp100 } from "@/lib/ai/payload/v2/utils";
+import type { StructureAnalysisV1 } from "@/lib/ai/payload/v2/types";
 
 export type ArrangementDensityLabelV1 =
   | "balanced"
@@ -8,13 +9,34 @@ export type ArrangementDensityLabelV1 =
 
 export type ArrangementDensityResultV1 = {
   label: ArrangementDensityLabelV1;
-  score_0_100: number; // 0..100, deterministic
-  confidence_0_100: number; // conservative
+  score_0_100: number; // 0..100, deterministic (higher = stronger imbalance signal)
+  confidence_0_100: number; // conservative, 0..100
   highlights: string[];
   features: {
     transient_density_0_1: number | null;
     crest_factor_db: number | null;
     loudness_range_lu: number | null;
+
+    // extended (optional for backward-compat)
+    energy_high_share_0_1?: number | null;
+    energy_mid_share_0_1?: number | null;
+    energy_low_share_0_1?: number | null;
+
+    td_mean_0_1?: number | null;
+    td_p25_0_1?: number | null;
+    td_p75_0_1?: number | null;
+    td_cv?: number | null;
+
+    high_energy_low_transients_pct?: number | null;
+    low_energy_high_transients_pct?: number | null;
+
+    stability_class?: "consistent" | "mixed" | "swingy" | null;
+  };
+  drivers?: {
+    overfill_0_1: number | null;
+    sparse_0_1: number | null;
+    context_mismatch_0_1: number | null;
+    stability_0_1: number | null;
   };
 };
 
@@ -34,6 +56,7 @@ export function analyzeArrangementDensityV1(params: {
   transientDensity_0_1?: number | null | undefined; // expected 0..1
   crestFactorDb?: number | null | undefined;
   loudnessRangeLu?: number | null | undefined;
+  structure?: StructureAnalysisV1 | null | undefined;
 }): ArrangementDensityResultV1 {
   const td =
     typeof params.transientDensity_0_1 === "number" && Number.isFinite(params.transientDensity_0_1)
@@ -50,6 +73,13 @@ export function analyzeArrangementDensityV1(params: {
       ? params.loudnessRangeLu
       : null;
 
+  const structure = params.structure ?? null;
+
+  const dist = structure?.density_zones?.distribution ?? null;
+  const energyLowShare = dist ? clamp01(dist.low / 100) : null;
+  const energyMidShare = dist ? clamp01(dist.mid / 100) : null;
+  const energyHighShare = dist ? clamp01((dist.high + dist.extreme) / 100) : null;
+
   const highlights: string[] = [];
 
   if (td === null && crest === null && lra === null) {
@@ -62,53 +92,70 @@ export function analyzeArrangementDensityV1(params: {
         transient_density_0_1: td,
         crest_factor_db: crest,
         loudness_range_lu: lra,
+
+        energy_low_share_0_1: energyLowShare,
+        energy_mid_share_0_1: energyMidShare,
+        energy_high_share_0_1: energyHighShare,
+
+        td_mean_0_1: td,
+        td_p25_0_1: null,
+        td_p75_0_1: null,
+        td_cv: null,
+
+        high_energy_low_transients_pct: null,
+        low_energy_high_transients_pct: null,
+        stability_class: null,
+      },
+      drivers: {
+        overfill_0_1: null,
+        sparse_0_1: null,
+        context_mismatch_0_1: null,
+        stability_0_1: null,
       },
     };
   }
 
-  // Conservative bands (calibrate later)
-  const TD_TOO_SPARSE = 0.08;
-  const TD_HIGH = 0.30;
+  const LRA_LOW = 4.0;
+  const CREST_LOW = 7.0;
+  const ENERGY_HIGH_SHARE_REF = 0.35;
 
-  const LRA_LOW = 3.0; // very low macro-dynamics
-  const CREST_LOW = 8.0; // tends to indicate heavy limiting
+  // Overfill risk
+  const a1 = td === null ? 0 : clamp01((td - 0.16) / 0.10);
+  const a2 = lra === null ? 0 : lra < LRA_LOW ? 1 : clamp01((6.0 - lra) / 2.0);
+  const a3 = crest === null ? 0 : crest < CREST_LOW ? 1 : clamp01((8.0 - crest) / 1.0);
+  const a4 = energyHighShare === null ? 0 : clamp01((energyHighShare - ENERGY_HIGH_SHARE_REF) / 0.25);
+  const overfill01 = clamp01(0.35 * a1 + 0.25 * a2 + 0.25 * a3 + 0.15 * a4);
 
-  // Score components (0..1)
-  // overfill signal grows when td is high AND (lra/crest are low)
-  const tdOver = td === null ? 0 : clamp01((td - TD_HIGH) / 0.20); // 0 above ~0.30..0.50
-  const lraLimited = lra === null ? 0 : clamp01((LRA_LOW - lra) / LRA_LOW); // 1 if lra ~0
-  const crestLimited = crest === null ? 0 : clamp01((CREST_LOW - crest) / CREST_LOW); // 1 if crest ~0
+  // Sparse risk
+  const b1 = td === null ? 0 : clamp01((0.10 - td) / 0.06);
+  const b2 = energyHighShare === null ? 0 : clamp01((0.25 - energyHighShare) / 0.25);
+  const sparse01 = clamp01(0.70 * b1 + 0.30 * b2);
 
-  const overfill01 = clamp01(0.55 * tdOver + 0.25 * lraLimited + 0.20 * crestLimited);
+  // not available without timeline data
+  const contextMismatch01 = null;
+  const stability01 = null;
 
-  // sparse signal mostly driven by low td (avoid false positives)
-  const tdSparse = td === null ? 0 : clamp01((TD_TOO_SPARSE - td) / TD_TOO_SPARSE);
-  const sparse01 = clamp01(tdSparse);
-
-  // Decide label (conservative)
   let label: ArrangementDensityLabelV1 = "balanced";
-  let confidence = 55;
+  if (sparse01 >= 0.6) label = "too_sparse";
+  else if (overfill01 >= 0.6) label = "overfilled";
 
-  if (td !== null && td <= TD_TOO_SPARSE) {
-    label = "too_sparse";
-    confidence = 65;
-    highlights.push(`Transient density is very low (${td.toFixed(2)} ≤ ${TD_TOO_SPARSE.toFixed(2)}).`);
-  } else if (overfill01 >= 0.55) {
-    label = "overfilled";
-    confidence = 65;
-    if (td !== null) highlights.push(`Transient density is high (${td.toFixed(2)}).`);
-    if (lra !== null && lra <= LRA_LOW) highlights.push(`Loudness range is low (LRA ${lra.toFixed(1)} ≤ ${LRA_LOW.toFixed(1)}).`);
-    if (crest !== null && crest <= CREST_LOW) highlights.push(`Crest factor is low (${crest.toFixed(1)} dB ≤ ${CREST_LOW.toFixed(1)} dB).`);
-  } else {
-    label = "balanced";
-    confidence = 60;
-    highlights.push("No strong density imbalance detected with conservative thresholds.");
-  }
-
-  // score_0_100: "risk-like" density imbalance score (higher = more potential issue)
-  // For balanced, it will stay low-ish.
   const score01 = clamp01(Math.max(overfill01, sparse01));
   const score = clamp100(score01 * 100);
+
+  const dominance = clamp01(Math.abs(overfill01 - sparse01));
+  const confidence = clamp100(Math.round(55 + 45 * dominance));
+
+  if (label === "overfilled") {
+    if (td !== null) highlights.push(`High transient activity (${td.toFixed(2)}) combined with compact dynamics can feel very dense.`);
+    if (lra !== null && lra < LRA_LOW) highlights.push(`Macro-dynamics are limited (LRA ${lra.toFixed(1)} < ${LRA_LOW.toFixed(1)}).`);
+    if (crest !== null && crest < CREST_LOW) highlights.push(`Crest factor is low (${crest.toFixed(1)} dB < ${CREST_LOW.toFixed(1)} dB).`);
+    if (energyHighShare !== null) highlights.push(`High-energy coverage is ${(energyHighShare * 100).toFixed(0)}% of the track.`);
+  } else if (label === "too_sparse") {
+    if (td !== null) highlights.push(`Transient activity stays low overall (${td.toFixed(2)}), indicating a very open density profile.`);
+    if (energyHighShare !== null) highlights.push(`High-energy coverage is ${(energyHighShare * 100).toFixed(0)}% of the track.`);
+  } else {
+    highlights.push("No strong density imbalance detected with conservative thresholds.");
+  }
 
   return {
     label,
@@ -119,6 +166,25 @@ export function analyzeArrangementDensityV1(params: {
       transient_density_0_1: td,
       crest_factor_db: crest,
       loudness_range_lu: lra,
+
+      energy_low_share_0_1: energyLowShare,
+      energy_mid_share_0_1: energyMidShare,
+      energy_high_share_0_1: energyHighShare,
+
+      td_mean_0_1: td,
+      td_p25_0_1: null,
+      td_p75_0_1: null,
+      td_cv: null,
+
+      high_energy_low_transients_pct: null,
+      low_energy_high_transients_pct: null,
+      stability_class: null,
+    },
+    drivers: {
+      overfill_0_1: overfill01,
+      sparse_0_1: sparse01,
+      context_mismatch_0_1: contextMismatch01,
+      stability_0_1: stability01,
     },
   };
 }

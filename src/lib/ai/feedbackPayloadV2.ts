@@ -901,6 +901,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
       typeof crestFactorDb === "number" && Number.isFinite(crestFactorDb) ? crestFactorDb : null,
     loudnessRangeLu:
       typeof loudnessRangeLu === "number" && Number.isFinite(loudnessRangeLu) ? loudnessRangeLu : null,
+    structure: structureAnalysis,
   });
 
   return {

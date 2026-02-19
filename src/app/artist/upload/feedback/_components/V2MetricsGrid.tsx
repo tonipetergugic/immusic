@@ -152,6 +152,10 @@ export default function V2MetricsGrid(props: {
         label: "SPARSE",
         badgeClass: "border-amber-400/30 bg-amber-500/10 text-amber-200",
       },
+      too_sparse: {
+        label: "SPARSE",
+        badgeClass: "border-amber-400/30 bg-amber-500/10 text-amber-200",
+      },
     };
 
     return map[label] ?? {
