@@ -155,6 +155,20 @@ export function analyzeArrangementDensityV1(params: {
     if (energyHighShare !== null) highlights.push(`High-energy coverage is ${(energyHighShare * 100).toFixed(0)}% of the track.`);
   } else {
     highlights.push("No strong density imbalance detected with conservative thresholds.");
+
+    if (td !== null) {
+      highlights.push(`Transient activity baseline: ${td.toFixed(2)} (relative measure).`);
+    }
+
+    if (energyHighShare !== null) {
+      highlights.push(`High-energy coverage: ${(energyHighShare * 100).toFixed(0)}% of the track.`);
+    }
+
+    if (lra !== null) {
+      highlights.push(`Macro-dynamics (LRA): ${lra.toFixed(1)} LU.`);
+    } else if (crest !== null) {
+      highlights.push(`Crest factor: ${crest.toFixed(1)} dB.`);
+    }
   }
 
   return {

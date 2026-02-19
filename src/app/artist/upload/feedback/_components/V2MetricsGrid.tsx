@@ -255,9 +255,9 @@ export default function V2MetricsGrid(props: {
     if (!label) return { label: "—", badgeClass: "border-white/10 bg-white/5 text-white/60" };
     const map: Record<string, { label: string; badgeClass: string }> = {
       // Neutral wording: expresses separation from build-up, not quality
-      weak_drop: { label: "LOW SEPARATION", badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-200" },
-      solid_drop: { label: "CLEAR SEPARATION", badgeClass: "border-white/10 bg-white/5 text-white/70" },
-      high_impact_drop: { label: "STRONG SEPARATION", badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200" },
+      weak_drop: { label: "LOW CONTRAST", badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-200" },
+      solid_drop: { label: "MODERATE CONTRAST", badgeClass: "border-white/10 bg-white/5 text-white/70" },
+      high_impact_drop: { label: "HIGH CONTRAST", badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200" },
       insufficient_data: { label: "INSUFFICIENT DATA", badgeClass: "border-white/10 bg-white/5 text-white/60" },
     };
     return map[label] ?? { label: prettyLabel(label), badgeClass: "border-white/10 bg-white/5 text-white/60" };
@@ -289,7 +289,7 @@ export default function V2MetricsGrid(props: {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-md border border-white/10 bg-white/5 p-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-white/70">Energy flow</div>
+                <div className="text-base font-semibold text-white/70">Energy flow</div>
                 <span
                   className={
                     "text-[11px] px-2 py-0.5 rounded-full border " +
@@ -304,7 +304,7 @@ export default function V2MetricsGrid(props: {
                 Structural clarity: {fmtPct(arcConfidence)}
               </div>
 
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+              <div className="mt-1 h-2 w-full overflow-hidden rounded bg-white/10">
                 <div
                   className="h-full bg-white/35"
                   style={{ width: `${Math.max(0, Math.min(100, arcConfidence ?? 0))}%` }}
@@ -312,13 +312,13 @@ export default function V2MetricsGrid(props: {
               </div>
 
               <div className="mt-2 text-[12px] text-white/50">
-                Shows how clearly the track builds and releases energy over time.
+                Measures the structural energy progression across the timeline.
               </div>
             </div>
 
             <div className="rounded-md border border-white/10 bg-white/5 p-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-white/70">Drop impact</div>
+                <div className="text-base font-semibold text-white/70">Drop impact</div>
                 <span
                   className={
                     "text-[11px] px-2 py-0.5 rounded-full border " +
@@ -333,7 +333,7 @@ export default function V2MetricsGrid(props: {
                 Impact confidence: {fmtPct(bestDropConfidence)}
               </div>
 
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
+              <div className="mt-1 h-2 w-full overflow-hidden rounded bg-white/10">
                 <div
                   className="h-full bg-white/35"
                   style={{ width: `${Math.max(0, Math.min(100, bestDropConfidence ?? 0))}%` }}
@@ -341,7 +341,7 @@ export default function V2MetricsGrid(props: {
               </div>
 
               <div className="mt-2 text-[12px] text-white/50">
-                Indicates how clearly the drop separates itself from the build-up.
+                Measures structural contrast between build and drop segments.
               </div>
             </div>
             {balance ? (
@@ -354,7 +354,7 @@ export default function V2MetricsGrid(props: {
                 </div>
 
                 <div className="mt-2 text-sm text-white">
-                  Balance score: {balanceScore === null ? "—" : `${Math.round(balanceScore)}/100`}
+                  Distribution index: {balanceScore === null ? "—" : `${Math.round(balanceScore)}/100`}
                 </div>
 
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
@@ -400,7 +400,7 @@ export default function V2MetricsGrid(props: {
                 </div>
 
                 <div className="mt-2 text-sm text-white">
-                  Density score: {densityScore !== null ? `${Math.round(densityScore)} / 100` : "—"}
+                  Structural density: {densityScore !== null ? `${Math.round(densityScore)} / 100` : "—"}
                 </div>
 
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-white/10">
@@ -411,8 +411,24 @@ export default function V2MetricsGrid(props: {
                 </div>
 
                 <div className="mt-2 text-[12px] text-white/50">
-                  Indicates whether the arrangement feels structurally dense, sparse, or balanced.
+                  Indicates the measured structural density distribution over time.
                 </div>
+
+                {Array.isArray(payload?.metrics?.structure?.arrangement_density?.highlights) &&
+                  payload.metrics.structure.arrangement_density.highlights.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {payload.metrics.structure.arrangement_density.highlights.map(
+                      (h: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="text-xs text-white/60 leading-relaxed"
+                        >
+                          • {h}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
               </div>
             ) : null}
             {hook ? (

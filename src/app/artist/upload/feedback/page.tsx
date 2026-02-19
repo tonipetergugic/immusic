@@ -30,7 +30,7 @@ function renderAnalysisStatusBanner(payload: any) {
     return {
       badge: "APPROVED",
       badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200",
-      text: "Approved — but technical risk factors detected.",
+      text: "Approved — streaming/encoding risk indicators present.",
     };
   }
 
