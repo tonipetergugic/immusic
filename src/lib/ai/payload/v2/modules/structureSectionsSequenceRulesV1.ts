@@ -87,7 +87,44 @@ export function applyStructureSequenceRulesV1(params: {
   const energy = Array.isArray(params.energy_curve) ? params.energy_curve : [];
   const sectionsIn = Array.isArray(params.sections) ? params.sections : [];
 
-  const drops: DropSection[] = sectionsIn.filter(isDrop);
+  const DROP_NMS_WINDOW_S = 10;
+
+  const dropsRaw: DropSection[] = sectionsIn.filter(isDrop);
+
+  // Non-maximum suppression for drops: within a short window, keep only the strongest drop.
+  // This is genre-agnostic: it prevents multiple "drop" events being emitted inside one continuous drop block.
+  const drops: DropSection[] = (() => {
+    const sorted = [...dropsRaw].sort((a, b) => a.t - b.t);
+
+    const getImpact = (d: any) =>
+      typeof d.impact_score === "number" && Number.isFinite(d.impact_score) ? d.impact_score : 0;
+
+    const out: DropSection[] = [];
+    let i = 0;
+
+    while (i < sorted.length) {
+      const startT = sorted[i].t;
+
+      // collect all drops within window [startT, startT + WINDOW)
+      let j = i;
+      let best = sorted[i];
+      let bestImpact = getImpact(best);
+
+      while (j < sorted.length && sorted[j].t < startT + DROP_NMS_WINDOW_S) {
+        const imp = getImpact(sorted[j]);
+        if (imp > bestImpact) {
+          best = sorted[j];
+          bestImpact = imp;
+        }
+        j++;
+      }
+
+      out.push(best);
+      i = j;
+    }
+
+    return out;
+  })();
 
   let ranges: RangeSection[] = sectionsIn
     .filter(isRange)

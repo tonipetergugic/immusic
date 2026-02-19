@@ -118,6 +118,9 @@ export default function V2MetricsGrid(props: {
       ? stabilization.merges_estimated
       : null;
 
+  const structureSections =
+    structure && Array.isArray((structure as any).sections) ? ((structure as any).sections as any[]) : null;
+
   const arrangementDensity =
     structure && typeof structure.arrangement_density === "object"
       ? structure.arrangement_density
@@ -285,6 +288,38 @@ export default function V2MetricsGrid(props: {
               <span className="text-[10px] text-white/40">Pattern-based • No taste • No gate</span>
             </div>
           </div>
+
+          {structureSections && structureSections.length > 0 ? (
+            <div className="mb-2 rounded-md border border-white/10 bg-white/5 p-3">
+              <div className="text-xs text-white/70">Sections (debug)</div>
+              <div className="mt-2 space-y-1 font-mono text-[11px] text-white/60">
+                {structureSections.map((s, idx) => {
+                  const t = typeof (s as any).t === "number" ? (s as any).t : null;
+                  const start = typeof (s as any).start === "number" ? (s as any).start : null;
+                  const end = typeof (s as any).end === "number" ? (s as any).end : null;
+                  const type = typeof (s as any).type === "string" ? String((s as any).type) : "unknown";
+                  const impact =
+                    typeof (s as any).impact_score === "number" && Number.isFinite((s as any).impact_score)
+                      ? Math.round((s as any).impact_score)
+                      : null;
+
+                  if (type === "drop") {
+                    return (
+                      <div key={idx} className="tabular-nums">
+                        {fmtTime(t)} drop{impact === null ? "" : ` (impact ${impact}/100)`}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={idx} className="tabular-nums">
+                      {type} {fmtTime(start)}–{fmtTime(end)}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-md border border-white/10 bg-white/5 p-3">

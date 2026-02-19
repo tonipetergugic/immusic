@@ -205,9 +205,23 @@ export function buildStructureAnalysisV1(input: {
   }> = [];
 
   // Drops from peaks list (already local maxima)
-  for (const pk of peaks) {
+  // IMPORTANT: Process peaks in time order and apply a drop-block guard to avoid "drop spam".
+  const peaksByTime = [...peaks].sort((a, b) => a.t - b.t);
+
+  // Drop-block guard: after accepting a drop, suppress further drop peaks until energy exits the drop state.
+  // Genre-agnostic: based only on normalized energy.
+  const DROP_EXIT_E = 0.50;     // exit drop when energy falls below this
+  const DROP_GUARD_MAX_S = 90;  // max lookahead to find exit (safety cap)
+  let dropGuardUntilT: number | null = null;
+
+  for (const pk of peaksByTime) {
     const i = t.findIndex((x) => x === pk.t);
     if (i < 0) continue;
+
+    // If we're still inside an active drop block, ignore additional drop peaks.
+    if (dropGuardUntilT != null && pk.t <= dropGuardUntilT) {
+      continue;
+    }
 
     // Build-up: preceding ~6s with positive mean gradient
     const pre6 = windowIndicesBySeconds(t, i, 6, 0);
@@ -231,6 +245,18 @@ export function buildStructureAnalysisV1(input: {
       impact: clamp01(impact),
       impact_score,
     });
+
+    // Enter drop block: keep suppressing subsequent drop peaks until energy exits the drop state.
+    // Find first point within the next DROP_GUARD_MAX_S where energy falls below DROP_EXIT_E.
+    const post = windowIndicesBySeconds(t, i, 0, DROP_GUARD_MAX_S);
+    let exitT: number | null = null;
+    for (let k = i + 1; k <= post.i1; k++) {
+      if (eArr[k]! < DROP_EXIT_E) {
+        exitT = t[k]!;
+        break;
+      }
+    }
+    dropGuardUntilT = exitT;
 
     if (primary_peak && primary_peak.t === pk.t) {
       primary_peak.is_drop_peak = true;

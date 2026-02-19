@@ -16,7 +16,9 @@ const MIN_SECTION_DURATION_S: Record<RangeSection["type"], number> = {
 const MIN_SECTION_START_GAP_S = 3;
 
 // Collapse very short middle segments by energy similarity (reduces rapid alternation noise)
-const MAX_MIDDLE_SEGMENT_S = 3;
+const MAX_MIDDLE_SEGMENT_S = 5;
+
+const MAX_BUILD_DURATION_S = 40;
 
 function isDrop(s: Section): s is DropSection {
   return (s as any).type === "drop" && typeof (s as any).t === "number";
@@ -32,6 +34,13 @@ function clampTime(x: number): number {
 
 function durationOf(r: RangeSection): number {
   return Math.max(0, clampTime(r.end) - clampTime(r.start));
+}
+
+function capBuildDuration(r: RangeSection): RangeSection {
+  if (r.type !== "build") return r;
+  const dur = durationOf(r);
+  if (!Number.isFinite(dur) || dur <= MAX_BUILD_DURATION_S) return r;
+  return { ...r, end: r.start + MAX_BUILD_DURATION_S };
 }
 
 function meanEnergyInRange(energy: Array<{ t: number; e: number }>, start: number, end: number): number {
@@ -162,7 +171,7 @@ export function stabilizeStructureSectionsV1(params: {
       }
 
       if (mergeIntoPrev && prev) {
-        const merged = mergeTwoRanges(prev, r);
+        const merged = capBuildDuration(mergeTwoRanges(prev, r));
         ranges[i - 1] = merged;
         ranges.splice(i, 1);
         i = Math.max(-1, i - 2); // rewind a bit
@@ -171,7 +180,7 @@ export function stabilizeStructureSectionsV1(params: {
       }
 
       if (!mergeIntoPrev && next) {
-        const merged = mergeTwoRanges(r, next);
+        const merged = capBuildDuration(mergeTwoRanges(r, next));
         ranges[i] = merged;
         ranges.splice(i + 1, 1);
         i = Math.max(-1, i - 1);
@@ -194,7 +203,7 @@ export function stabilizeStructureSectionsV1(params: {
       const startGap = clampTime(b.start) - clampTime(a.start);
 
       if (startGap > 0 && startGap < MIN_SECTION_START_GAP_S) {
-        ranges[i] = mergeTwoRanges(a, b);
+        ranges[i] = capBuildDuration(mergeTwoRanges(a, b));
         ranges.splice(i + 1, 1);
         changed = true;
         break;
