@@ -1,4 +1,5 @@
 import BackLink from "@/components/BackLink";
+import JourneyWaveformWithTooltip from "../_components/JourneyWaveformWithTooltip";
 import UnlockPanel from "../_components/UnlockPanel";
 import { unlockPaidFeedbackAction } from "../actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -979,12 +980,13 @@ export default async function UploadFeedbackV3Page({
             <div className="mt-6 space-y-10">
               {/* Journey */}
               <section>
-                <div className="flex items-end justify-between gap-4">
-                  <h2 className="text-lg font-semibold">Song Journey</h2>
-                  <span className="text-xs text-white/40">
-                    {isReady ? "Ready" : "Pending"}
-                  </span>
-                </div>
+                <h2 className="text-3xl font-semibold tracking-tight text-white">
+                  Song Journey
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-white/50 leading-relaxed">
+                  Continuous energy flow based on short-term loudness.
+                  This view highlights dynamic movement, intensity shifts, and structural momentum across the entire track.
+                </p>
                 {(() => {
                   const series = deriveWaveformSeriesFromShortTermLufs(payload, isReady);
                   const hasSeries = Array.isArray(series) && series.length > 10;
@@ -1003,19 +1005,8 @@ export default async function UploadFeedbackV3Page({
                   const svgH = 160;
 
                   return (
-                    <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
+                    <div className="mt-6">
                       <V3JourneyStyles />
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-base font-semibold text-white/90">Song Journey</div>
-                          <div className="mt-1 text-xs text-white/45">
-                            Loudness waveform + estimated structure boundaries • Reference, not a rule
-                          </div>
-                        </div>
-                        <div className="text-xs text-white/45 tabular-nums">
-                          {dur ? `Duration ${Math.floor(dur / 60)}:${String(Math.round(dur % 60)).padStart(2, "0")}` : ""}
-                        </div>
-                      </div>
 
                       {/* Cinematic Curve Area */}
                       <div className="mt-6 rounded-3xl border border-white/10 bg-black/30 p-5">
@@ -1027,13 +1018,27 @@ export default async function UploadFeedbackV3Page({
                           <div className="relative">
                             <div className="h-[180px] md:h-[220px]">
                               {hasSeries ? (
-                                <svg viewBox={`0 0 ${svgW} ${svgH}`} className="h-full w-full">
+                                <JourneyWaveformWithTooltip
+                                  series={series}
+                                  durationS={journey.durationS}
+                                  svgW={svgW}
+                                  svgH={svgH}
+                                >
                                   <defs>
                                     <linearGradient id="v3WaveGrad" x1="0" y1="0" x2="1" y2="0">
-                                      <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
-                                      <stop offset="45%" stopColor="rgba(0,255,198,0.85)" />
-                                      <stop offset="100%" stopColor="rgba(255,255,255,0.14)" />
+                                      <stop offset="0%" stopColor="rgba(240,244,248,0.12)" />
+                                      <stop offset="45%" stopColor="rgba(240,244,248,0.65)" />
+                                      <stop offset="100%" stopColor="rgba(240,244,248,0.14)" />
                                     </linearGradient>
+                                    <linearGradient id="v3EnergyGrad" x1="0" y1="0" x2="1" y2="0">
+                                      <stop offset="0%" stopColor="#2C3E73" />
+                                      <stop offset="45%" stopColor="#4C6FFF" />
+                                      <stop offset="75%" stopColor="#FF9F43" />
+                                      <stop offset="100%" stopColor="#FFD166" />
+                                    </linearGradient>
+                                    <filter id="v3WaveGlow" x="-20%" y="-20%" width="140%" height="140%">
+                                      <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="rgb(0,255,198)" floodOpacity="0.15" />
+                                    </filter>
                                   </defs>
 
                                   {(() => {
@@ -1053,8 +1058,158 @@ export default async function UploadFeedbackV3Page({
 
                                     return (
                                       <>
+                                        {/* Energy Curve (Short-term LUFS-derived, structure-free) */}
+                                        {(() => {
+                                          // Use the same resampled wave as loudness proxy, then smooth visually.
+                                          const curve = resampleLinear(series!, 240);
+                                          const nC = curve.length;
+
+                                          const padC = 10;
+                                          const wC = Math.max(1, svgW - padC * 2);
+                                          const hC = Math.max(1, svgH - padC * 2);
+
+                                          // Curve area sits in the upper half for clarity (like Insight/Youlean)
+                                          const topY = padC + 22;
+                                          const bottomY = padC + hC * 0.55;
+
+                                          const pts: string[] = [];
+                                          for (let i = 0; i < nC; i++) {
+                                            const x = padC + (i / (nC - 1)) * wC;
+
+                                            // a in [0..1] (proxy energy). Map to Y (high energy = higher line).
+                                            const a = Math.max(0, Math.min(1, curve[i] ?? 0));
+                                            const y = bottomY - a * (bottomY - topY);
+
+                                            pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+                                          }
+
+                                          // Soft baseline reference (purely visual)
+                                          const refY = padC + hC * 0.50;
+
+                                          return (
+                                            <>
+                                              <line
+                                                x1={padC}
+                                                x2={padC + wC}
+                                                y1={refY}
+                                                y2={refY}
+                                                stroke="rgba(255,255,255,0.10)"
+                                                strokeWidth={1}
+                                              />
+
+                                              {(() => {
+                                                const hexToRgb = (hex: string) => {
+                                                  const h = hex.replace("#", "").trim();
+                                                  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+                                                  const n = parseInt(full, 16);
+                                                  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+                                                };
+
+                                                const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+                                                const mixHex = (c1: string, c2: string, t: number) => {
+                                                  const A = hexToRgb(c1);
+                                                  const B = hexToRgb(c2);
+                                                  const r = Math.round(lerp(A.r, B.r, t));
+                                                  const g = Math.round(lerp(A.g, B.g, t));
+                                                  const b = Math.round(lerp(A.b, B.b, t));
+                                                  return `rgb(${r},${g},${b})`;
+                                                };
+
+                                                // Smooth, continuous energy color mapping (no abrupt jumps)
+                                                const energyColor = (aRaw: number) => {
+                                                  const a = Math.max(0, Math.min(1, aRaw));
+
+                                                  // Anchor colors (low -> mid -> high -> very high)
+                                                  const C0 = "#2C3E73";
+                                                  const C1 = "#4C6FFF";
+                                                  const C2 = "#FF9F43"; // warm orange
+                                                  const C3 = "#FF6A2A"; // hot orange (highest energy)
+
+                                                  // Piecewise interpolation across 3 ranges
+                                                  if (a <= 0.35) {
+                                                    const t = a / 0.35;
+                                                    return mixHex(C0, C1, t);
+                                                  }
+                                                  if (a <= 0.65) {
+                                                    const t = (a - 0.35) / (0.65 - 0.35);
+                                                    return mixHex(C1, C2, t);
+                                                  }
+                                                  if (a <= 0.85) {
+                                                    const t = (a - 0.65) / (0.85 - 0.65);
+                                                    return mixHex(C2, C3, t);
+                                                  }
+                                                  // top range: slight stay at gold (or clamp)
+                                                  return mixHex(C3, C3, 0);
+                                                };
+
+                                                // Build point objects so we can color segments by energy
+                                                const pObjs = pts.map((p, i) => {
+                                                  const [xs, ys] = p.split(",");
+                                                  const x = Number(xs);
+                                                  const y = Number(ys);
+                                                  const a = Math.max(0, Math.min(1, curve[i] ?? 0));
+                                                  return { x, y, a };
+                                                });
+
+                                                return (
+                                                  <>
+                                                    {/* Glow only for high energy segments */}
+                                                    {pObjs.slice(0, -1).map((p1, i) => {
+                                                      const p2 = pObjs[i + 1]!;
+                                                      const aAvg = (p1.a + p2.a) * 0.5;
+
+                                                      if (aAvg < 0.70) return null;
+
+                                                      const glow =
+                                                        aAvg >= 0.85
+                                                          ? "rgba(255,106,42,0.24)"
+                                                          : "rgba(255,159,67,0.20)";
+
+                                                      return (
+                                                        <path
+                                                          key={`eglow-${i}`}
+                                                          d={`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`}
+                                                          fill="none"
+                                                          stroke={glow}
+                                                          strokeWidth={8}
+                                                          strokeLinecap="round"
+                                                          strokeLinejoin="round"
+                                                          opacity={0.24}
+                                                        />
+                                                      );
+                                                    })}
+
+                                                    {/* Main colored curve (energy-based) */}
+                                                    {pObjs.slice(0, -1).map((p1, i) => {
+                                                      const p2 = pObjs[i + 1]!;
+                                                      const aAvg = (p1.a + p2.a) * 0.5;
+
+                                                      return (
+                                                        <path
+                                                          key={`ecurve-${i}`}
+                                                          d={`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`}
+                                                          fill="none"
+                                                          stroke={energyColor(aAvg)}
+                                                          strokeWidth={3.2}
+                                                          strokeLinecap="round"
+                                                          strokeLinejoin="round"
+                                                          opacity={0.95}
+                                                          style={{
+                                                            filter: "drop-shadow(0 0 6px rgba(255,140,80,0.25))",
+                                                          }}
+                                                        />
+                                                      );
+                                                    })}
+                                                  </>
+                                                );
+                                              })()}
+                                            </>
+                                          );
+                                        })()}
+
                                         {/* Crisp rendering */}
-                                        <g shapeRendering="crispEdges">
+                                        <g shapeRendering="crispEdges" filter="url(#v3WaveGlow)">
                                           {/* Underlay (tight glow, not fat) */}
                                           {wave.map((a, i) => {
                                             const x = pad + (i / (n - 1)) * w;
@@ -1073,7 +1228,7 @@ export default async function UploadFeedbackV3Page({
                                                 y={yTop}
                                                 width={barW}
                                                 height={height}
-                                                fill="rgba(0,255,198,0.22)"
+                                                fill="rgba(240,244,248,0.14)"
                                                 opacity={op}
                                               />
                                             );
@@ -1105,7 +1260,7 @@ export default async function UploadFeedbackV3Page({
                                       </>
                                     );
                                   })()}
-                                </svg>
+                                </JourneyWaveformWithTooltip>
                               ) : (
                                 <div className="relative flex h-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-black/20 px-6 text-center">
                                   <div className="text-sm font-semibold text-white/70">Journey data not available yet</div>
@@ -1123,131 +1278,107 @@ export default async function UploadFeedbackV3Page({
                               )}
                             </div>
 
-                            {/* Sections overlay bar + legend */}
+                            {/* Energy Flow (structure-free) */}
                             <div className="mt-4">
                               {(() => {
                                 const dur = journey.durationS;
 
-                                // collect real ranged sections (intro/outro/etc.)
-                                const ranged = journey.sections
-                                  .filter((s) => s.start !== null && s.end !== null && s.end! > s.start!)
-                                  .map((s) => ({ type: s.type, start: s.start!, end: s.end! }));
-
-                                // derive a neutral "Body" range (purely geometric), so artists can orient themselves
-                                let body: { type: string; start: number; end: number } | null = null;
-                                const introEnd = Math.max(...ranged.filter((s) => s.type === "intro").map((s) => s.end), -Infinity);
-                                const outroStart = Math.min(...ranged.filter((s) => s.type === "outro").map((s) => s.start), Infinity);
-
-                                if (Number.isFinite(introEnd) && Number.isFinite(outroStart) && outroStart > introEnd) {
-                                  body = { type: "main", start: introEnd, end: outroStart };
-                                }
-
-                                const displayRanges = (body ? [...ranged, body] : ranged).map((s) => ({
-                                  ...s,
-                                  type: mapStructureTypeToImusic(s.type),
-                                }));
-
-                                const presentTypes = new Set(displayRanges.map((s) => s.type));
-                                // also show drop in legend if we have a drop marker
-                                const hasDropMarker = journey.sections.some((s) => s.type === "drop" && s.t !== null);
-
-                                const legendItems = [
-                                  { k: "Intro", t: "intro", show: presentTypes.has("intro") },
-                                  { k: "Main Section", t: "main", show: presentTypes.has("main") },
-                                  { k: "Outro", t: "outro", show: presentTypes.has("outro") },
-                                  { k: "High Energy", t: "high_energy", show: hasDropMarker },
-                                ].filter((x) => x.show);
-
                                 return (
-                                  <>
-                                    <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-white/45">
-                                      {legendItems.map((x) => (
-                                        <div
-                                          key={x.k}
-                                          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1"
-                                        >
-                                          <span className={"h-2 w-2 rounded-full " + clsForSectionType(x.t)} />
-                                          <span>{x.k}</span>
-                                        </div>
-                                      ))}
-                                      <span className="ml-1 text-white/35">• Reference, not a rule</span>
-                                    </div>
-
-                                    <div className="relative h-8 w-full overflow-hidden rounded-full border border-white/10 bg-black/45">
-                                      {dur && displayRanges.length > 0
-                                        ? displayRanges.map((s, idx) => {
-                                            const leftPct = Math.max(0, Math.min(100, (s.start / dur) * 100));
-                                            const widthPct = Math.max(0, Math.min(100 - leftPct, ((s.end - s.start) / dur) * 100));
-                                            return (
-                                              <div
-                                                key={`${s.type}-${idx}-${s.start}-${s.end}`}
-                                                className={"absolute top-0 h-full " + clsForSectionType(s.type)}
-                                                style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                                                title={labelForSectionType(s.type)}
-                                              />
-                                            );
-                                          })
-                                        : null}
-
-                                      {/* Drop marker */}
-                                      {(() => {
-                                        const firstDropT = journey.sections.find((s) => s.type === "drop" && s.t !== null)?.t ?? null;
-                                        const dropLeftPct =
-                                          dur && firstDropT !== null ? Math.max(0, Math.min(100, (firstDropT / dur) * 100)) : null;
-
-                                        if (dropLeftPct === null) return null;
-
-                                        const mm = Math.floor(firstDropT! / 60);
-                                        const ss = String(Math.round(firstDropT! % 60)).padStart(2, "0");
-
-                                        return (
-                                          <div
-                                            className="absolute top-0 h-full w-[3px] bg-[rgba(0,255,198,0.95)] shadow-[0_0_18px_rgba(0,255,198,0.35)]"
-                                            style={{ left: `${dropLeftPct}%` }}
-                                          >
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/70 px-2.5 py-0.5 text-[10px] font-semibold text-white/80">
-                                              DROP {mm}:{ss}
-                                            </div>
-                                            <div className="absolute -top-4 left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-white/25 blur-md" />
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-
-                                    <div className="mt-2 flex items-center justify-between text-[10px] text-white/40 tabular-nums">
+                                  <div className="mt-3 px-2 py-2">
+                                    <div className="flex items-center justify-between text-[11px] text-white/45 tabular-nums">
                                       <span>0:00</span>
-                                      <span>{dur ? `${Math.floor(dur / 60)}:${String(Math.round(dur % 60)).padStart(2, "0")}` : "—"}</span>
+                                      <span className="text-white/35">Energy Flow</span>
+                                      <span>
+                                        {dur
+                                          ? `${Math.floor(dur / 60)}:${String(Math.round(dur % 60)).padStart(2, "0")}`
+                                          : "—"}
+                                      </span>
                                     </div>
-                                  </>
+
+                                    <div className="mt-2 h-[2px] w-full rounded-full bg-white/10" />
+                                  </div>
                                 );
                               })()}
                             </div>
 
-                            {/* Inline Labels (minimal) */}
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              {journey.sections.length > 0 ? (
-                                journey.sections
-                                  .filter((s) => s.start !== null && s.end !== null)
-                                  .slice(0, 8)
-                                  .map((s, idx) => (
-                                    <span
-                                      key={`${s.type}-${idx}`}
-                                      className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] text-white/55"
-                                    >
-                                      {labelForSectionType(s.type)}
-                                    </span>
-                                  ))
-                              ) : (
-                                <span className="text-[11px] text-white/40">
-                                  No stable sections detected yet.
-                                </span>
-                              )}
+                            {/* Energy Metrics (compact row) */}
+                            <div className="mt-10 px-2">
+                              {(() => {
+                                const raw = series ?? [];
+                                if (raw.length < 10) return null;
 
-                              {dropLeftPct !== null ? (
-                                <span className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold text-white/65">
-                                  Drop marker
-                                </span>
-                              ) : null}
+                                const n = raw.length;
+
+                                // High energy threshold (top 30%)
+                                const sorted = [...raw].sort((a, b) => a - b);
+                                const threshold = sorted[Math.floor(n * 0.7)];
+
+                                const highCount = raw.filter((v) => v >= threshold).length;
+                                const highCoverage = Math.round((highCount / n) * 100);
+
+                                // Variability (std dev proxy)
+                                const mean = raw.reduce((a, b) => a + b, 0) / n;
+                                const variance =
+                                  raw.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / n;
+                                const std = Math.sqrt(variance);
+
+                                const variability =
+                                  std > 0.18 ? "High" : std > 0.10 ? "Medium" : "Low";
+
+                                // Biggest build (max positive delta over 10 steps)
+                                let maxBuild = 0;
+                                for (let i = 0; i < n - 10; i++) {
+                                  const delta = raw[i + 10] - raw[i];
+                                  if (delta > maxBuild) maxBuild = delta;
+                                }
+
+                                const buildVal = (maxBuild * 10).toFixed(1);
+
+                                // Longest plateau (within small range)
+                                let longest = 0;
+                                let current = 1;
+                                for (let i = 1; i < n; i++) {
+                                  if (Math.abs(raw[i] - raw[i - 1]) < 0.02) {
+                                    current++;
+                                  } else {
+                                    longest = Math.max(longest, current);
+                                    current = 1;
+                                  }
+                                }
+                                longest = Math.max(longest, current);
+
+                                const plateauSec = journey.durationS
+                                  ? Math.round((longest / n) * journey.durationS)
+                                  : 0;
+
+                                return (
+                                  <div className="grid grid-cols-2 gap-y-4 md:grid-cols-4 md:gap-y-0">
+                                    <div className="pr-4">
+                                      <div className="text-[10px] tracking-widest text-white/35">High Energy</div>
+                                      <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{highCoverage}%</div>
+                                      <div className="mt-0.5 text-[11px] text-white/35">Above upper range</div>
+                                    </div>
+
+                                    <div className="pl-0 pr-4 md:pl-4">
+                                      <div className="text-[10px] tracking-widest text-white/35">Variability</div>
+                                      <div className="mt-1 text-2xl font-semibold text-white">{variability}</div>
+                                      <div className="mt-0.5 text-[11px] text-white/35">Overall movement</div>
+                                    </div>
+
+                                    <div className="pr-4 md:pl-4">
+                                      <div className="text-[10px] tracking-widest text-white/35">Biggest Build</div>
+                                      <div className="mt-1 text-2xl font-semibold text-white tabular-nums">+{buildVal}</div>
+                                      <div className="mt-0.5 text-[11px] text-white/35">Short-term rise</div>
+                                    </div>
+
+                                    <div className="md:pl-4">
+                                      <div className="text-[10px] tracking-widest text-white/35">Plateau</div>
+                                      <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{plateauSec}s</div>
+                                      <div className="mt-0.5 text-[11px] text-white/35">Stable segment</div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
