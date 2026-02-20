@@ -171,9 +171,8 @@ function deriveJourney(payload: any, isReady: boolean) {
     return typeof d === "number" && Number.isFinite(d) && d > 0 ? d : null;
   })();
 
-  const rawSections = isReady
-    ? findFirst<any[]>(payload, ["structure.sections", "structureSections", "sections", "structure.sections_v1"])
-    : null;
+  // V2 payload (verified): metrics.structure.sections
+  const rawSections = isReady ? findFirst<any[]>(payload, ["metrics.structure.sections"]) : null;
 
   const sections = Array.isArray(rawSections)
     ? rawSections
@@ -183,7 +182,7 @@ function deriveJourney(payload: any, isReady: boolean) {
           const start = typeof s?.start === "number" && Number.isFinite(s.start) ? s.start : null;
           const end = typeof s?.end === "number" && Number.isFinite(s.end) ? s.end : null;
 
-          // some drops come as point-in-time `t`
+          // point marker (drop)
           const t = typeof s?.t === "number" && Number.isFinite(s.t) ? s.t : null;
 
           return { type, start, end, t };
@@ -197,63 +196,116 @@ function deriveJourney(payload: any, isReady: boolean) {
 function deriveEnergySeries(payload: any, isReady: boolean) {
   if (!isReady || !payload) return null as null | number[];
 
-  // Prefer a real energy curve if present
-  const curve =
-    findFirst<number[]>(payload, [
-      "structure.energy.curve",
-      "structure.energyCurve",
-      "energy.curve",
-      "energyCurve",
+  // V2 payload (verified): metrics.structure.energy_curve = [{t,e}, ...] where e is already 0..1-ish
+  const energyCurve =
+    findFirst<Array<{ t: number; e: number }>>(payload, ["metrics.structure.energy_curve"]) ?? null;
+
+  if (!Array.isArray(energyCurve) || energyCurve.length < 20) return null;
+
+  const pts = energyCurve
+    .filter(
+      (p) =>
+        p &&
+        typeof p.t === "number" &&
+        Number.isFinite(p.t) &&
+        typeof p.e === "number" &&
+        Number.isFinite(p.e)
+    )
+    .sort((a, b) => a.t - b.t);
+
+  if (pts.length < 20) return null;
+
+  const t0 = pts[0]!.t;
+  const tLast = pts[pts.length - 1]!.t;
+
+  const durationS = (() => {
+    const d = findFirst<number>(payload, ["track.duration_s", "track.durationS", "track.duration"]);
+    if (typeof d === "number" && Number.isFinite(d) && d > 0) return d;
+    const span = tLast - t0;
+    return span > 0 ? span : null;
+  })();
+
+  if (!durationS || durationS <= 0) return null;
+
+  // Stable render resolution for SVG
+  const N = 220;
+  const out = new Array(N).fill(0);
+
+  let j = 0;
+  for (let i = 0; i < N; i++) {
+    const targetT = t0 + (i / (N - 1)) * durationS;
+
+    while (j < pts.length - 2 && pts[j + 1]!.t < targetT) j++;
+
+    const a = pts[j]!;
+    const b = pts[Math.min(pts.length - 1, j + 1)]!;
+
+    if (b.t <= a.t) {
+      out[i] = clamp01(a.e);
+      continue;
+    }
+
+    const alpha = clamp01((targetT - a.t) / (b.t - a.t));
+    const e = a.e + (b.e - a.e) * alpha;
+
+    // IMPORTANT: no section-step fallback, no renormalization guess — render engine energy as-is (clamped)
+    out[i] = clamp01(e);
+  }
+
+  return out;
+}
+
+function deriveWaveformSeriesFromShortTermLufs(payload: any, isReady: boolean): number[] | null {
+  if (!isReady || !payload) return null;
+
+  // Try multiple shapes (null-safe forever)
+  const tl =
+    findFirst<Array<{ t: number; lufs: number }>>(payload, [
+      "metrics.loudness.short_term_lufs_timeline",
+      "metrics.short_term_lufs_timeline",
+      "track.private_metrics.short_term_lufs_timeline",
+      "short_term_lufs_timeline",
     ]) ?? null;
 
-  if (Array.isArray(curve) && curve.length >= 20 && curve.every((x) => typeof x === "number" && Number.isFinite(x))) {
-    // normalize to 0..1
-    const min = Math.min(...curve);
-    const max = Math.max(...curve);
-    const span = max - min;
-    if (span > 1e-9) return curve.map((x) => clamp01((x - min) / span));
-    return curve.map(() => 0.5);
-  }
+  if (!Array.isArray(tl) || tl.length < 8) return null;
 
-  // Fallback: build a simple stepped curve from sections (drop higher, build mid, break lower)
-  const j = deriveJourney(payload, isReady);
-  if (!j.durationS || j.sections.length === 0) return null;
+  const lufs = tl.map((p) => p?.lufs).filter((x) => typeof x === "number" && Number.isFinite(x)) as number[];
+  if (lufs.length < 8) return null;
 
-  const N = 120;
-  const base = new Array(N).fill(0.35);
-
-  const sectionEnergy = (t: string) => {
-    if (t === "drop") return 0.9;
-    if (t === "build") return 0.6;
-    if (t === "break") return 0.25;
-    if (t === "intro" || t === "outro") return 0.4;
-    return 0.45;
+  // Robust normalization: use 10th..90th percentile to avoid outliers
+  const sorted = [...lufs].sort((a, b) => a - b);
+  const p = (q: number) => {
+    const idx = Math.max(0, Math.min(sorted.length - 1, Math.round(q * (sorted.length - 1))));
+    return sorted[idx]!;
   };
 
-  for (const s of j.sections) {
-    if (s.start !== null && s.end !== null && s.end > s.start) {
-      const a = Math.floor((s.start / j.durationS) * (N - 1));
-      const b = Math.floor((s.end / j.durationS) * (N - 1));
-      for (let i = Math.max(0, a); i <= Math.min(N - 1, b); i++) {
-        base[i] = Math.max(base[i], sectionEnergy(s.type));
-      }
-    }
-    if (s.type === "drop" && s.t !== null) {
-      const i = Math.floor((s.t / j.durationS) * (N - 1));
-      if (i >= 0 && i < N) base[i] = 1.0;
-    }
-  }
+  const lo = p(0.10);
+  const hi = p(0.90);
+  const denom = Math.max(1e-6, hi - lo);
 
-  // light smoothing
-  const out = new Array(N).fill(0);
-  for (let i = 0; i < N; i++) {
-    const p = base[Math.max(0, i - 1)]!;
-    const c = base[i]!;
-    const n = base[Math.min(N - 1, i + 1)]!;
-    out[i] = (p + c * 2 + n) / 4;
-  }
+  // Convert LUFS to 0..1 amplitude (higher LUFS => taller bar)
+  const raw = tl.map((pt) => {
+    const v = typeof pt?.lufs === "number" && Number.isFinite(pt.lufs) ? (pt.lufs - lo) / denom : 0;
+    return clamp01(v);
+  });
 
-  return out.map((x) => clamp01(x));
+  // Downsample to keep SVG light (max ~700 bars)
+  const MAX_BARS = 700;
+  if (raw.length <= MAX_BARS) return raw;
+
+  const out: number[] = [];
+  for (let i = 0; i < MAX_BARS; i++) {
+    const a = Math.floor((i / MAX_BARS) * raw.length);
+    const b = Math.floor(((i + 1) / MAX_BARS) * raw.length);
+    let m = 0;
+    let n = 0;
+    for (let j = a; j < Math.max(a + 1, b); j++) {
+      m = Math.max(m, raw[j] ?? 0);
+      n++;
+    }
+    out.push(n > 0 ? m : 0);
+  }
+  return out;
 }
 
 function buildSvgPath(series: number[], width: number, height: number) {
@@ -272,6 +324,27 @@ function buildSvgPath(series: number[], width: number, height: number) {
   return d;
 }
 
+function mapStructureTypeToImusic(type: string | null | undefined): string {
+  switch (type) {
+    case "intro":
+      return "intro";
+    case "outro":
+      return "outro";
+    case "drop":
+      return "high_energy";
+    case "break":
+      return "low_energy";
+    case "build":
+      return "main";
+    case "body":
+      return "main";
+    case "bridge":
+      return "main";
+    default:
+      return "main";
+  }
+}
+
 function labelForSectionType(type: string) {
   const t = String(type || "unknown");
   if (t === "drop") return "Drop";
@@ -279,24 +352,57 @@ function labelForSectionType(type: string) {
   if (t === "break") return "Break";
   if (t === "intro") return "Intro";
   if (t === "outro") return "Outro";
+  if (t === "body") return "Body";
+
+  // IMUSIC mapped types
+  if (t === "main") return "Main Section";
+  if (t === "high_energy") return "High Energy";
+  if (t === "low_energy") return "Low Energy";
+
   if (t === "bridge") return "Bridge";
   return t.replaceAll("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
 function clsForSectionType(type: string) {
-  // IMUSIC: subtle, readable, non-judgmental. Uses tinting, not loud colors.
-  // (Tailwind arbitrary values OK)
-  if (type === "drop") return "bg-[rgba(0,255,198,0.22)]";         // accent turquoise
-  if (type === "build") return "bg-[rgba(255,255,255,0.10)]";      // soft white
-  if (type === "break") return "bg-[rgba(120,120,160,0.14)]";      // cool grey-violet
-  if (type === "intro") return "bg-[rgba(255,255,255,0.06)]";
-  if (type === "outro") return "bg-[rgba(255,255,255,0.06)]";
-  return "bg-[rgba(255,255,255,0.05)]";
+  // IMUSIC: readable segmentation colors (no judgement, just orientation)
+  if (type === "high_energy" || type === "drop") return "bg-[rgba(0,255,198,0.28)]"; // turquoise
+  if (type === "main" || type === "build" || type === "body") return "bg-[rgba(255,255,255,0.12)]"; // brighter grey
+  if (type === "low_energy" || type === "break") return "bg-[rgba(120,120,160,0.22)]"; // grey-violet
+  if (type === "intro") return "bg-[rgba(120,180,255,0.18)]"; // subtle blue
+  if (type === "outro") return "bg-[rgba(200,140,255,0.16)]"; // subtle purple
+
+  return "bg-[rgba(255,255,255,0.08)]";
 }
 
 function clamp01(x: number) {
   if (!Number.isFinite(x)) return 0;
   return Math.max(0, Math.min(1, x));
+}
+
+function resampleLinear(series: number[], targetN: number): number[] {
+  const src = Array.isArray(series) ? series : [];
+  if (src.length === 0) return [];
+  const n = Math.max(2, Math.floor(targetN));
+  if (src.length === n) return src.slice();
+
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = (i / (n - 1)) * (src.length - 1);
+    const i0 = Math.floor(t);
+    const i1 = Math.min(src.length - 1, i0 + 1);
+    const frac = t - i0;
+    const a = src[i0] ?? 0;
+    const b = src[i1] ?? a;
+    out[i] = a + (b - a) * frac;
+  }
+  return out;
+}
+
+// Non-linear shaping to reveal low-level detail (more "sharp" visual micro-dynamics)
+function shapeWaveAmp(a: number): number {
+  const x = clamp01(a);
+  // gamma < 1 boosts quieter parts -> more detail, less "blob"
+  return clamp01(Math.pow(x, 0.62));
 }
 
 function deriveDropImpactCard(payload: any, isReady: boolean) {
@@ -880,7 +986,7 @@ export default async function UploadFeedbackV3Page({
                   </span>
                 </div>
                 {(() => {
-                  const series = deriveEnergySeries(payload, isReady);
+                  const series = deriveWaveformSeriesFromShortTermLufs(payload, isReady);
                   const hasSeries = Array.isArray(series) && series.length > 10;
 
                   // pick a primary drop marker (first drop t)
@@ -895,7 +1001,6 @@ export default async function UploadFeedbackV3Page({
 
                   const svgW = 1100;
                   const svgH = 160;
-                  const path = hasSeries ? buildSvgPath(series!, svgW, svgH) : "";
 
                   return (
                     <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
@@ -904,7 +1009,7 @@ export default async function UploadFeedbackV3Page({
                         <div>
                           <div className="text-base font-semibold text-white/90">Song Journey</div>
                           <div className="mt-1 text-xs text-white/45">
-                            Energy flow + estimated structure boundaries • Reference, not a rule
+                            Loudness waveform + estimated structure boundaries • Reference, not a rule
                           </div>
                         </div>
                         <div className="text-xs text-white/45 tabular-nums">
@@ -924,44 +1029,82 @@ export default async function UploadFeedbackV3Page({
                               {hasSeries ? (
                                 <svg viewBox={`0 0 ${svgW} ${svgH}`} className="h-full w-full">
                                   <defs>
-                                    <linearGradient id="v3CurveGrad" x1="0" y1="0" x2="1" y2="0">
-                                      <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
-                                      <stop offset="45%" stopColor="rgba(0,255,198,0.28)" />
-                                      <stop offset="100%" stopColor="rgba(255,255,255,0.22)" />
-                                    </linearGradient>
-
-                                    <linearGradient id="v3AreaGrad" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor="rgba(0,255,198,0.16)" />
-                                      <stop offset="60%" stopColor="rgba(255,255,255,0.04)" />
-                                      <stop offset="100%" stopColor="rgba(0,0,0,0.0)" />
+                                    <linearGradient id="v3WaveGrad" x1="0" y1="0" x2="1" y2="0">
+                                      <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
+                                      <stop offset="45%" stopColor="rgba(0,255,198,0.85)" />
+                                      <stop offset="100%" stopColor="rgba(255,255,255,0.14)" />
                                     </linearGradient>
                                   </defs>
 
-                                  {/* area fill */}
-                                  <path
-                                    d={`${path} L ${svgW - 6} ${svgH - 6} L 6 ${svgH - 6} Z`}
-                                    fill="url(#v3AreaGrad)"
-                                    opacity="0.9"
-                                  />
+                                  {(() => {
+                                    // Increase visual resolution (more bars across 1100px)
+                                    const wave = resampleLinear(series!, 900);
+                                    const n = wave.length;
 
-                                  {/* glow underlay */}
-                                  <path
-                                    d={path}
-                                    fill="none"
-                                    stroke="rgba(0,255,198,0.10)"
-                                    strokeWidth="18"
-                                    strokeLinecap="round"
-                                    className="v3-curve-pulse"
-                                  />
+                                    const pad = 6;
+                                    const w = Math.max(1, svgW - pad * 2);
+                                    const h = Math.max(1, svgH - pad * 2);
+                                    const midY = pad + h / 2;
+                                    const half = h / 2;
 
-                                  {/* main curve */}
-                                  <path
-                                    d={path}
-                                    fill="none"
-                                    stroke="url(#v3CurveGrad)"
-                                    strokeWidth="4"
-                                    strokeLinecap="round"
-                                  />
+                                    // bar width: slightly >1px but crisp (avoid "blob" feeling)
+                                    const step = w / Math.max(1, n - 1);
+                                    const barW = Math.max(1.0, Math.min(2.2, step * 0.9));
+
+                                    return (
+                                      <>
+                                        {/* Crisp rendering */}
+                                        <g shapeRendering="crispEdges">
+                                          {/* Underlay (tight glow, not fat) */}
+                                          {wave.map((a, i) => {
+                                            const x = pad + (i / (n - 1)) * w;
+                                            const amp = shapeWaveAmp(a);
+                                            const yTop = midY - amp * (half - 2);
+                                            const yBot = midY + amp * (half - 2);
+                                            const height = Math.max(1, yBot - yTop);
+
+                                            // opacity follows amplitude -> sharper perceived dynamics
+                                            const op = 0.10 + 0.20 * amp;
+
+                                            return (
+                                              <rect
+                                                key={`g-${i}`}
+                                                x={x - barW / 2}
+                                                y={yTop}
+                                                width={barW}
+                                                height={height}
+                                                fill="rgba(0,255,198,0.22)"
+                                                opacity={op}
+                                              />
+                                            );
+                                          })}
+
+                                          {/* Main bars (sharp) */}
+                                          {wave.map((a, i) => {
+                                            const x = pad + (i / (n - 1)) * w;
+                                            const amp = shapeWaveAmp(a);
+                                            const yTop = midY - amp * (half - 2);
+                                            const yBot = midY + amp * (half - 2);
+                                            const height = Math.max(1, yBot - yTop);
+
+                                            const op = 0.55 + 0.45 * amp;
+
+                                            return (
+                                              <rect
+                                                key={`b-${i}`}
+                                                x={x - barW / 2}
+                                                y={yTop}
+                                                width={barW}
+                                                height={height}
+                                                fill="url(#v3WaveGrad)"
+                                                opacity={op}
+                                              />
+                                            );
+                                          })}
+                                        </g>
+                                      </>
+                                    );
+                                  })()}
                                 </svg>
                               ) : (
                                 <div className="relative flex h-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-black/20 px-6 text-center">
@@ -982,54 +1125,102 @@ export default async function UploadFeedbackV3Page({
 
                             {/* Sections overlay bar + legend */}
                             <div className="mt-4">
-                              <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-white/45">
-                                {[
-                                  { k: "Intro/Outro", t: "intro", c: clsForSectionType("intro") },
-                                  { k: "Build", t: "build", c: clsForSectionType("build") },
-                                  { k: "Break", t: "break", c: clsForSectionType("break") },
-                                  { k: "Drop", t: "drop", c: clsForSectionType("drop") },
-                                ].map((x) => (
-                                  <div key={x.k} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
-                                    <span className={"h-2 w-2 rounded-full " + x.c} />
-                                    <span>{x.k}</span>
-                                  </div>
-                                ))}
-                                <span className="ml-1 text-white/35">• Reference, not a rule</span>
-                              </div>
+                              {(() => {
+                                const dur = journey.durationS;
 
-                              <div className="relative h-5 w-full overflow-hidden rounded-full border border-white/10 bg-black/40">
-                                {dur && journey.sections.length > 0
-                                  ? journey.sections
-                                      .map((s, idx) => {
-                                        if (s.start !== null && s.end !== null && s.end > s.start) {
-                                          const leftPct = Math.max(0, Math.min(100, (s.start / dur) * 100));
-                                          const widthPct = Math.max(0, Math.min(100 - leftPct, ((s.end - s.start) / dur) * 100));
-                                          return (
-                                            <div
-                                              key={`${s.type}-${idx}-${s.start}-${s.end}`}
-                                              className={"absolute top-0 h-full " + clsForSectionType(s.type)}
-                                              style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                                              title={labelForSectionType(s.type)}
-                                            />
-                                          );
-                                        }
-                                        return null;
-                                      })
-                                      .filter(Boolean)
-                                  : null}
+                                // collect real ranged sections (intro/outro/etc.)
+                                const ranged = journey.sections
+                                  .filter((s) => s.start !== null && s.end !== null && s.end! > s.start!)
+                                  .map((s) => ({ type: s.type, start: s.start!, end: s.end! }));
 
-                                {/* Drop marker */}
-                                {dropLeftPct !== null ? (
-                                  <div className="absolute top-0 h-full w-[2px] bg-white/80" style={{ left: `${dropLeftPct}%` }}>
-                                    <div className="absolute -top-4 left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-white/25 blur-md" />
-                                  </div>
-                                ) : null}
-                              </div>
+                                // derive a neutral "Body" range (purely geometric), so artists can orient themselves
+                                let body: { type: string; start: number; end: number } | null = null;
+                                const introEnd = Math.max(...ranged.filter((s) => s.type === "intro").map((s) => s.end), -Infinity);
+                                const outroStart = Math.min(...ranged.filter((s) => s.type === "outro").map((s) => s.start), Infinity);
 
-                              <div className="mt-2 flex items-center justify-between text-[10px] text-white/40 tabular-nums">
-                                <span>0:00</span>
-                                <span>{dur ? `${Math.floor(dur / 60)}:${String(Math.round(dur % 60)).padStart(2, "0")}` : "—"}</span>
-                              </div>
+                                if (Number.isFinite(introEnd) && Number.isFinite(outroStart) && outroStart > introEnd) {
+                                  body = { type: "main", start: introEnd, end: outroStart };
+                                }
+
+                                const displayRanges = (body ? [...ranged, body] : ranged).map((s) => ({
+                                  ...s,
+                                  type: mapStructureTypeToImusic(s.type),
+                                }));
+
+                                const presentTypes = new Set(displayRanges.map((s) => s.type));
+                                // also show drop in legend if we have a drop marker
+                                const hasDropMarker = journey.sections.some((s) => s.type === "drop" && s.t !== null);
+
+                                const legendItems = [
+                                  { k: "Intro", t: "intro", show: presentTypes.has("intro") },
+                                  { k: "Main Section", t: "main", show: presentTypes.has("main") },
+                                  { k: "Outro", t: "outro", show: presentTypes.has("outro") },
+                                  { k: "High Energy", t: "high_energy", show: hasDropMarker },
+                                ].filter((x) => x.show);
+
+                                return (
+                                  <>
+                                    <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-white/45">
+                                      {legendItems.map((x) => (
+                                        <div
+                                          key={x.k}
+                                          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1"
+                                        >
+                                          <span className={"h-2 w-2 rounded-full " + clsForSectionType(x.t)} />
+                                          <span>{x.k}</span>
+                                        </div>
+                                      ))}
+                                      <span className="ml-1 text-white/35">• Reference, not a rule</span>
+                                    </div>
+
+                                    <div className="relative h-8 w-full overflow-hidden rounded-full border border-white/10 bg-black/45">
+                                      {dur && displayRanges.length > 0
+                                        ? displayRanges.map((s, idx) => {
+                                            const leftPct = Math.max(0, Math.min(100, (s.start / dur) * 100));
+                                            const widthPct = Math.max(0, Math.min(100 - leftPct, ((s.end - s.start) / dur) * 100));
+                                            return (
+                                              <div
+                                                key={`${s.type}-${idx}-${s.start}-${s.end}`}
+                                                className={"absolute top-0 h-full " + clsForSectionType(s.type)}
+                                                style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                                                title={labelForSectionType(s.type)}
+                                              />
+                                            );
+                                          })
+                                        : null}
+
+                                      {/* Drop marker */}
+                                      {(() => {
+                                        const firstDropT = journey.sections.find((s) => s.type === "drop" && s.t !== null)?.t ?? null;
+                                        const dropLeftPct =
+                                          dur && firstDropT !== null ? Math.max(0, Math.min(100, (firstDropT / dur) * 100)) : null;
+
+                                        if (dropLeftPct === null) return null;
+
+                                        const mm = Math.floor(firstDropT! / 60);
+                                        const ss = String(Math.round(firstDropT! % 60)).padStart(2, "0");
+
+                                        return (
+                                          <div
+                                            className="absolute top-0 h-full w-[3px] bg-[rgba(0,255,198,0.95)] shadow-[0_0_18px_rgba(0,255,198,0.35)]"
+                                            style={{ left: `${dropLeftPct}%` }}
+                                          >
+                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/70 px-2.5 py-0.5 text-[10px] font-semibold text-white/80">
+                                              DROP {mm}:{ss}
+                                            </div>
+                                            <div className="absolute -top-4 left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-white/25 blur-md" />
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    <div className="mt-2 flex items-center justify-between text-[10px] text-white/40 tabular-nums">
+                                      <span>0:00</span>
+                                      <span>{dur ? `${Math.floor(dur / 60)}:${String(Math.round(dur % 60)).padStart(2, "0")}` : "—"}</span>
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
 
                             {/* Inline Labels (minimal) */}

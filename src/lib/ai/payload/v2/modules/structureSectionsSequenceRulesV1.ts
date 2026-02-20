@@ -185,6 +185,19 @@ export function applyStructureSequenceRulesV1(params: {
     }
   }
 
+  // Rule D2 (conservative guard): "outro" must not be excessively long.
+  // If the last range is labeled outro but spans a large portion of the track,
+  // it's almost certainly a stabilizer artifact. Relabel by energy (break vs build).
+  {
+    const lastIdx = ranges.length - 1;
+    const last = ranges[lastIdx]!;
+    const MAX_OUTRO_DURATION_S = 32;
+
+    if (last.type === "outro" && durationOf(last) > MAX_OUTRO_DURATION_S) {
+      ranges[lastIdx] = relabelIntroOrOutro(last);
+    }
+  }
+
   // Rule F (conservative): "build" must not start after the first drop.
   // If a build starts after we already observed a drop, relabel it by energy:
   // - low energy -> break
