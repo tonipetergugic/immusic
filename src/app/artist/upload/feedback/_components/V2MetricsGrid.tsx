@@ -291,29 +291,122 @@ export default function V2MetricsGrid(props: {
 
           {structureSections && structureSections.length > 0 ? (
             <div className="mb-2 rounded-md border border-white/10 bg-white/5 p-3">
-              <div className="text-xs text-white/70">Sections (debug)</div>
-              <div className="mt-2 space-y-1 font-mono text-[11px] text-white/60">
-                {structureSections.map((s, idx) => {
-                  const t = typeof (s as any).t === "number" ? (s as any).t : null;
-                  const start = typeof (s as any).start === "number" ? (s as any).start : null;
-                  const end = typeof (s as any).end === "number" ? (s as any).end : null;
-                  const type = typeof (s as any).type === "string" ? String((s as any).type) : "unknown";
-                  const impact =
-                    typeof (s as any).impact_score === "number" && Number.isFinite((s as any).impact_score)
-                      ? Math.round((s as any).impact_score)
-                      : null;
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col">
+                  <div className="text-xs text-white/70">Sections</div>
+                  <div className="text-[10px] text-white/40">
+                    Estimated structure boundaries • Reference, not a rule
+                  </div>
+                </div>
 
-                  if (type === "drop") {
-                    return (
-                      <div key={idx} className="tabular-nums">
-                        {fmtTime(t)} drop{impact === null ? "" : ` (impact ${impact}/100)`}
-                      </div>
-                    );
-                  }
+                <div className="text-[10px] text-white/40 tabular-nums">
+                  {Number.isFinite(v2DurationS as any) && (v2DurationS as number) > 0 ? `Duration ${fmtTime(v2DurationS as number)}` : ""}
+                </div>
+              </div>
+
+              {/* Timeline */}
+              {Number.isFinite(v2DurationS as any) && (v2DurationS as number) > 0 ? (
+                <div className="mt-3">
+                  <div className="relative h-3 w-full overflow-hidden rounded bg-black/30 border border-white/10">
+                    {structureSections
+                      .map((s: any) => {
+                        const type = typeof s?.type === "string" ? String(s.type) : "unknown";
+                        const start = typeof s?.start === "number" && Number.isFinite(s.start) ? s.start : null;
+                        const end = typeof s?.end === "number" && Number.isFinite(s.end) ? s.end : null;
+                        const t = typeof s?.t === "number" && Number.isFinite(s.t) ? s.t : null;
+
+                        const dur = v2DurationS as number;
+
+                        // Range segment
+                        if (start !== null && end !== null && end > start) {
+                          const leftPct = Math.max(0, Math.min(100, (start / dur) * 100));
+                          const widthPct = Math.max(0, Math.min(100 - leftPct, ((end - start) / dur) * 100));
+
+                          const cls =
+                            type === "drop"
+                              ? "bg-white/20"
+                              : type === "build"
+                                ? "bg-white/10"
+                                : type === "break"
+                                  ? "bg-black/40"
+                                  : "bg-white/5";
+
+                          return { kind: "range" as const, key: `${type}-${start}-${end}`, leftPct, widthPct, cls };
+                        }
+
+                        // Point marker (drop t)
+                        if (type === "drop" && t !== null) {
+                          const leftPct = Math.max(0, Math.min(100, (t / dur) * 100));
+                          return { kind: "point" as const, key: `${type}-${t}`, leftPct };
+                        }
+
+                        return null;
+                      })
+                      .filter(Boolean)
+                      .map((item: any) => {
+                        if (item.kind === "range") {
+                          return (
+                            <div
+                              key={item.key}
+                              className={"absolute top-0 h-full " + item.cls}
+                              style={{ left: `${item.leftPct}%`, width: `${item.widthPct}%` }}
+                              title="Section"
+                            />
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={item.key}
+                            className="absolute top-0 h-full w-[2px] bg-white/60"
+                            style={{ left: `${item.leftPct}%` }}
+                            title="Drop"
+                          />
+                        );
+                      })}
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-white/40 tabular-nums">
+                    <span>0:00</span>
+                    <span>{fmtTime(v2DurationS as number)}</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* List */}
+              <div className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                {structureSections.map((s: any, idx: number) => {
+                  const type = typeof s?.type === "string" ? String(s.type) : "unknown";
+                  const start = typeof s?.start === "number" && Number.isFinite(s.start) ? s.start : null;
+                  const end = typeof s?.end === "number" && Number.isFinite(s.end) ? s.end : null;
+                  const t = typeof s?.t === "number" && Number.isFinite(s.t) ? s.t : null;
+
+                  const label =
+                    type === "drop"
+                      ? "Drop"
+                      : type === "build"
+                        ? "Build"
+                        : type === "break"
+                          ? "Break"
+                          : type === "intro"
+                            ? "Intro"
+                            : type === "outro"
+                              ? "Outro"
+                              : type === "bridge"
+                                ? "Bridge"
+                                : type.replaceAll("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+                  const timeText =
+                    type === "drop" && t !== null
+                      ? fmtTime(t)
+                      : start !== null && end !== null
+                        ? `${fmtTime(start)}–${fmtTime(end)}`
+                        : "—";
 
                   return (
-                    <div key={idx} className="tabular-nums">
-                      {type} {fmtTime(start)}–{fmtTime(end)}
+                    <div key={idx} className="flex items-center justify-between rounded border border-white/10 bg-black/20 px-2 py-1">
+                      <span className="text-[11px] text-white/70">{label}</span>
+                      <span className="text-[11px] text-white/50 tabular-nums">{timeText}</span>
                     </div>
                   );
                 })}
