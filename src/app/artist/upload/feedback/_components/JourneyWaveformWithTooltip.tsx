@@ -8,14 +8,16 @@ export default function JourneyWaveformWithTooltip(props: {
   svgW: number;
   svgH: number;
   children: React.ReactNode;
+  lufsTimeline?: Array<{ t: number; lufs: number }> | null;
 }) {
-  const { series, durationS, svgW, svgH, children } = props;
+  const { series, durationS, svgW, svgH, children, lufsTimeline } = props;
 
   const [hoverPoint, setHoverPoint] = React.useState<{
     x: number;
     y: number;
     time: number;
     value: number;
+    lufs: number | null;
   } | null>(null);
 
   const [hoverXPct, setHoverXPct] = React.useState<number | null>(null);
@@ -58,7 +60,35 @@ export default function JourneyWaveformWithTooltip(props: {
           const val = series[idx] ?? 0;
           const time = snapped * durationS;
 
-          // only update if index changed (reduces flicker)
+          // LUFS lookup (linear interpolation on timeline)
+          const lufsNow = (() => {
+            if (!lufsTimeline || lufsTimeline.length < 2) return null;
+
+            // ensure sorted by time (cheap & safe)
+            const tl = lufsTimeline
+              .filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.lufs))
+              .slice()
+              .sort((a, b) => a.t - b.t);
+
+            if (tl.length < 2) return null;
+
+            // clamp time
+            const t = Math.max(tl[0]!.t, Math.min(tl[tl.length - 1]!.t, time));
+
+            // find segment
+            let j = 0;
+            while (j < tl.length - 2 && tl[j + 1]!.t < t) j++;
+
+            const a = tl[j]!;
+            const b = tl[Math.min(tl.length - 1, j + 1)]!;
+
+            if (b.t <= a.t) return a.lufs;
+
+            const alpha = (t - a.t) / (b.t - a.t);
+            return a.lufs + (b.lufs - a.lufs) * alpha;
+          })();
+
+          // only update if snapped index changed (reduces flicker)
           setHoverPoint((prev) => {
             if (prev && Math.round((prev.time / durationS) * (SNAP_POINTS - 1)) === Math.round(snapped * (SNAP_POINTS - 1))) {
               return prev;
@@ -68,6 +98,7 @@ export default function JourneyWaveformWithTooltip(props: {
               y: 0,
               time,
               value: val,
+              lufs: lufsNow,
             };
           });
         }}
@@ -138,6 +169,13 @@ export default function JourneyWaveformWithTooltip(props: {
 
             <div className="mt-1 text-sm font-semibold text-white/90">
               {level}
+            </div>
+
+            <div className="text-white/60">
+              Energy: {(hoverPoint.value * 10).toFixed(1)}
+            </div>
+            <div className="text-white/60">
+              Short-term: {hoverPoint.lufs === null ? "—" : `${hoverPoint.lufs.toFixed(1)} LUFS`}
             </div>
 
             <div className="mt-1 text-[11px] leading-snug text-white/55 max-w-[200px]">

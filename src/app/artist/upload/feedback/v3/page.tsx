@@ -1004,6 +1004,14 @@ export default async function UploadFeedbackV3Page({
                   const svgW = 1100;
                   const svgH = 160;
 
+                  const shortTermLufsTimeline =
+                    findFirst<Array<{ t: number; lufs: number }>>(payload, [
+                      "metrics.loudness.short_term_lufs_timeline",
+                      "metrics.short_term_lufs_timeline",
+                      "track.private_metrics.short_term_lufs_timeline",
+                      "short_term_lufs_timeline",
+                    ]) ?? null;
+
                   return (
                     <div className="mt-6">
                       <V3JourneyStyles />
@@ -1023,6 +1031,7 @@ export default async function UploadFeedbackV3Page({
                                   durationS={journey.durationS}
                                   svgW={svgW}
                                   svgH={svgH}
+                                  lufsTimeline={shortTermLufsTimeline}
                                 >
                                   <defs>
                                     <linearGradient id="v3WaveGrad" x1="0" y1="0" x2="1" y2="0">
