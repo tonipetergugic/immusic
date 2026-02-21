@@ -62,7 +62,7 @@ export function computeStructuralBalanceIndexV1(structure: StructureAnalysisV1 |
       evenness_0_1: 0,
       drop_share_pct: 0,
     },
-    highlights: ["Insufficient section data for balance analysis."],
+    highlights: ["Insufficient segment data for balance analysis."],
   };
 
   if (!structure || !Array.isArray(structure.sections) || structure.sections.length === 0) return empty;
@@ -73,86 +73,74 @@ export function computeStructuralBalanceIndexV1(structure: StructureAnalysisV1 |
   const duration_s = Number.isFinite(t1 - t0) && t1 > t0 ? t1 - t0 : null;
   if (duration_s == null || duration_s <= 0) return empty;
 
-  // accumulate durations by type from sections
-  const durBy: Record<BalanceSectionTypeV1, number> = { intro: 0, build: 0, drop: 0, break: 0, outro: 0 };
-
+  // 1) Collect segment durations (ignore type entirely)
+  const segDur: number[] = [];
   for (const s of structure.sections) {
     if (!s || typeof s !== "object") continue;
+    if (!("start" in (s as any)) || !("end" in (s as any))) continue;
 
-    // timeline sections
-    if ("start" in (s as any) && "end" in (s as any) && "type" in (s as any)) {
-      const type = toSectionType((s as any).type);
-      const start = (s as any).start;
-      const end = (s as any).end;
-      if (!type) continue;
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-      durBy[type] += Math.max(0, end - start);
-      continue;
-    }
+    const start = (s as any).start;
+    const end = (s as any).end;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
 
-    // drop markers: count as 0s here (V1 is proportion-based on explicit spans only)
-    // We keep drop share driven by actual drop spans if present (future: convert drops to windows).
+    const d = Math.max(0, end - start);
+    if (d > 0) segDur.push(d);
   }
 
-  const covered_s = Object.values(durBy).reduce((a, b) => a + b, 0);
+  if (segDur.length < 2) return empty;
+
+  const covered_s = segDur.reduce((a, b) => a + b, 0);
   const unclassified_s = Math.max(0, duration_s - covered_s);
 
-  // shares
-  const shares: Record<BalanceSectionTypeV1, number> = { intro: 0, build: 0, drop: 0, break: 0, outro: 0 };
-  for (const k of Object.keys(shares) as BalanceSectionTypeV1[]) {
-    shares[k] = clamp01(durBy[k] / duration_s);
-  }
+  // 2) Shares (segment-length share of total duration)
+  const sharesSeg = segDur.map((d) => clamp01(d / duration_s));
 
-  // dominance & dominant section
-  let dominant_section: BalanceSectionTypeV1 | null = null;
+  // 3) Dominance
+  let domIdx = 0;
   let dom = -Infinity;
-  for (const k of Object.keys(shares) as BalanceSectionTypeV1[]) {
-    if (shares[k] > dom) {
-      dom = shares[k];
-      dominant_section = k;
+  for (let i = 0; i < sharesSeg.length; i++) {
+    const p = sharesSeg[i]!;
+    if (p > dom) {
+      dom = p;
+      domIdx = i;
     }
   }
+  const dominance_pct = round1(dom * 100);
 
-  // Evenness (Simpson): E = (1 - sum(p_i^2)) / (1 - 1/n) where n=5
-  const ps = (Object.keys(shares) as BalanceSectionTypeV1[]).map((k) => shares[k]);
-  const sumSq = ps.reduce((a, p) => a + p * p, 0);
-  const n = 5;
-  const simpson = 1 - sumSq; // 0..(1-1/n) ideally when perfectly even
+  // 4) Evenness (Simpson): E = (1 - sum(p_i^2)) / (1 - 1/n)
+  const sumSq = sharesSeg.reduce((a, p) => a + p * p, 0);
+  const n = sharesSeg.length;
+  const simpson = 1 - sumSq;
   const denom = 1 - 1 / n;
   const evenness_0_1 = denom > 0 ? clamp01(simpson / denom) : 0;
 
   const score_0_100 = clamp100(evenness_0_1 * 100);
 
-  const shares_pct: Record<BalanceSectionTypeV1, number> = {
-    intro: round1(shares.intro * 100),
-    build: round1(shares.build * 100),
-    drop: round1(shares.drop * 100),
-    break: round1(shares.break * 100),
-    outro: round1(shares.outro * 100),
-  };
-
-  const dominance_pct = round1(dom * 100);
-  const drop_share_pct = shares_pct.drop;
-
+  // 5) We keep the old shape for compatibility:
+  //    - dominant_section becomes neutral label stored in the existing field (type-cast),
+  //      but we must remain type-safe -> keep null and move label into highlights.
+  //    - shares_pct stays zeroed (we no longer compute intro/build/etc).
+  //    - drop_share_pct becomes 0.
   const highlights: string[] = [];
-  highlights.push(`Dominant section: ${dominant_section ?? "—"} (${dominance_pct.toFixed(1)}%).`);
+  highlights.push(`Dominant segment: SEGMENT #${domIdx + 1} (${dominance_pct.toFixed(1)}%).`);
+  const coveragePct = round1((covered_s / duration_s) * 100);
   if (unclassified_s / duration_s >= 0.15) {
-    highlights.push(`Large unclassified timeline: ${round1((unclassified_s / duration_s) * 100)}% (sections do not cover full track).`);
+    highlights.push(`Large unclassified timeline: ${round1((unclassified_s / duration_s) * 100)}% (segments do not cover full track).`);
   } else {
-    highlights.push(`Section coverage: ${round1((covered_s / duration_s) * 100)}%.`);
+    highlights.push(`Segment coverage: ${coveragePct}%.`);
   }
 
   return {
     score_0_100,
-    dominant_section,
-    shares_pct,
+    dominant_section: null,
+    shares_pct: { intro: 0, build: 0, drop: 0, break: 0, outro: 0 },
     features: {
       duration_s,
       covered_s,
       unclassified_s,
       dominance_pct,
       evenness_0_1,
-      drop_share_pct,
+      drop_share_pct: 0,
     },
     highlights,
   };

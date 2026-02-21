@@ -1087,6 +1087,17 @@ export function buildFeedbackPayloadV2Mvp(params: {
         ? {
             structure: {
               ...structureAnalysis,
+              // expose neutral segment spans for UI (type ignored)
+              segments: Array.isArray((structureAnalysis as any)?.sections)
+                ? (structureAnalysis as any).sections
+                    .filter((s: any) => s && Number.isFinite(s.start) && Number.isFinite(s.end) && s.end > s.start)
+                    .map((s: any) => ({ start: s.start, end: s.end }))
+                : [],
+              segment_count_spans: Array.isArray((structureAnalysis as any)?.sections)
+                ? (structureAnalysis as any).sections.filter(
+                    (s: any) => s && Number.isFinite(s.start) && Number.isFinite(s.end) && s.end > s.start
+                  ).length
+                : 0,
               arc: structureArc,
               drop_confidence: dropConfidence ?? undefined,
               hook: structureHook,

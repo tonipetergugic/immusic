@@ -518,42 +518,53 @@ export function sampleEnergyWindow(payload: any, t0: number, t1: number, n: numb
 
 export function deriveStructureBalanceCard(payload: any, isReady: boolean) {
   if (!isReady || !payload) {
-    return { label: "Pending", valuePct: null as number | null, explanation: "Analysis is still processing." };
+    return {
+      score: null as number | null,
+      dominant: null as string | null,
+      coverage: null as number | null,
+      explanation: "Analysis is still processing.",
+    };
   }
 
-  // Try multiple likely keys (null-safe forever)
   const score =
     findFirst<number>(payload, [
-      "structure.balance.index",
-      "structure.balance.score",
-      "structure.structureBalance.index",
-      "structureBalance.index",
-      "structureBalance.score",
-      "structure_balance.index",
-      "structure_balance.score",
+      "metrics.structure.balance.score_0_100",
     ]) ?? null;
 
-  const valuePct = typeof score === "number" && Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
+  const dominancePct =
+    findFirst<number>(payload, [
+      "metrics.structure.balance.features.dominance_pct",
+    ]) ?? null;
 
-  const inferredLabel =
-    valuePct === null
-      ? "—"
-      : valuePct >= 75
-        ? "Well balanced"
-        : valuePct >= 45
-          ? "Mostly balanced"
-          : "Unbalanced";
+  const coverage =
+    findFirst<number>(payload, [
+      "metrics.structure.balance.features.covered_s",
+    ]) ?? null;
 
-  const labelRaw = findFirst<string>(payload, ["structure.balance.label", "structureBalance.label", "structure_balance.label"]) ?? null;
+  const duration =
+    findFirst<number>(payload, [
+      "metrics.structure.balance.features.duration_s",
+    ]) ?? null;
 
-  const label = labelRaw && labelRaw.trim() ? labelRaw.trim() : inferredLabel;
+  const dominantHighlight =
+    findFirst<string>(payload, [
+      "metrics.structure.balance.highlights.0",
+    ]) ?? null;
 
-  const explanation =
-    valuePct === null
-      ? "No structure balance data available."
-      : "Checks whether section lengths feel proportioned and readable — reference, not a rule.";
+  const coveragePct =
+    typeof coverage === "number" && typeof duration === "number" && duration > 0
+      ? Math.round((coverage / duration) * 100)
+      : null;
 
-  return { label, valuePct, explanation };
+  return {
+    score: typeof score === "number" ? Math.round(score) : null,
+    dominant: dominantHighlight ?? null,
+    coverage: coveragePct,
+    explanation:
+      score === null
+        ? "No structure data available."
+        : "Shows how evenly segments are distributed over the timeline.",
+  };
 }
 
 export function deriveArrangementDensityCard(payload: any, isReady: boolean) {

@@ -46,6 +46,11 @@ export default async function UploadFeedbackV3Page({
     apiStatus: data.feedback_state,
   });
 
+  // DEV ONLY: expose payload in browser console
+  if (typeof window !== "undefined") {
+    (window as any).__fbPayload = payload;
+  }
+
   return (
     <div className="min-h-screen bg-[#0E0E10] text-white">
       {/* Fullscreen V3 skeleton — no max-width container on purpose */}

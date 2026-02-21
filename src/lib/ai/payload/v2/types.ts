@@ -60,6 +60,9 @@ export type StructureAnalysisV1 = {
     | { type: "outro"; start: number; end: number }
     | { type: "drop"; t: number; impact: number; impact_score: number }
   >;
+  // UI-only: neutral segment spans (derived from sections with start/end)
+  segments?: Array<{ start: number; end: number }>;
+  segment_count_spans?: number;
   stabilization?: {
     ranges_before: number;
     ranges_after_stabilize: number;
