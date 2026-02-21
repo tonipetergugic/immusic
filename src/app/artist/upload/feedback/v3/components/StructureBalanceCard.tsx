@@ -1,19 +1,13 @@
 import React from "react";
-
-type StructureBalanceCardModel = {
-  valuePct: number | null;
-  label: string;
-  explanation: string;
-};
+import { deriveStructureBalanceCard } from "../utils/feedbackDerivations";
 
 type Props = {
   payload: any;
   isReady: boolean;
-  deriveStructureBalanceCard: (payload: any, isReady: boolean) => StructureBalanceCardModel;
 };
 
-export default function StructureBalanceCard({ payload, isReady, deriveStructureBalanceCard }: Props) {
-  const sb = deriveStructureBalanceCard(payload, isReady);
+export default function StructureBalanceCard({ payload, isReady }: Props) {
+  const sb = deriveStructureBalanceCard(payload, isReady) as any;
   const fill = sb.valuePct === null ? 0 : Math.max(0, Math.min(100, sb.valuePct));
 
   return (

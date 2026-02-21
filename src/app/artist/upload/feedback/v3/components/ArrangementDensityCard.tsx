@@ -1,25 +1,13 @@
 import React from "react";
-
-type ArrangementDensityCardModel = {
-  valuePct: number | null;
-  label: string;
-  explanation: string;
-  stability?: string | null;
-  details?: {
-    density?: number | null;
-    std?: number | null;
-    cv?: number | null;
-  } | null;
-};
+import { deriveArrangementDensityCard } from "../utils/feedbackDerivations";
 
 type Props = {
   payload: any;
   isReady: boolean;
-  deriveArrangementDensityCard: (payload: any, isReady: boolean) => ArrangementDensityCardModel;
 };
 
-export default function ArrangementDensityCard({ payload, isReady, deriveArrangementDensityCard }: Props) {
-  const ad = deriveArrangementDensityCard(payload, isReady);
+export default function ArrangementDensityCard({ payload, isReady }: Props) {
+  const ad = deriveArrangementDensityCard(payload, isReady) as any;
   const fill = ad.valuePct === null ? 0 : Math.max(0, Math.min(100, ad.valuePct));
 
   return (

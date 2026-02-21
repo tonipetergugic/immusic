@@ -2,37 +2,21 @@ import React from "react";
 import AnalyzerBars from "./AnalyzerBars";
 import { useImpactStrength } from "../hooks/useImpactStrength";
 
-type DropImpactCard = {
-  valuePct: number | null;
-  confidencePct: number | null;
-  explanation: string;
-  label?: string | null;
-};
+import {
+  clamp01,
+  deriveDropImpactCard,
+  findFirst,
+  sampleEnergyWindow,
+  shapeWaveAmp,
+} from "../utils/feedbackDerivations";
 
 type Props = {
   payload: any;
   isReady: boolean;
-
-  // Injected helpers from page.tsx (no logic move / no duplication)
-  deriveDropImpactCard: (payload: any, isReady: boolean) => DropImpactCard;
-  findFirst: <T = any>(obj: any, paths: string[]) => T | null;
-  sampleEnergyWindow: (payload: any, t0: number, t1: number, n: number) => number[] | null;
-  confidenceLabel: (confPct: number | null) => { short: string; tone: string };
-  clamp01: (x: number) => number;
-  shapeWaveAmp: (a: number) => number;
 };
 
-export default function ImpactStrengthCard({
-  payload,
-  isReady,
-  deriveDropImpactCard,
-  findFirst,
-  sampleEnergyWindow,
-  confidenceLabel,
-  clamp01,
-  shapeWaveAmp,
-}: Props) {
-  const di = deriveDropImpactCard(payload, isReady);
+export default function ImpactStrengthCard({ payload, isReady }: Props) {
+  const di = deriveDropImpactCard(payload, isReady) as any;
   const conf = di.confidencePct === null ? null : Math.max(0, Math.min(100, di.confidencePct));
 
   const impact01 =

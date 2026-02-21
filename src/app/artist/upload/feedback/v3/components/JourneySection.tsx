@@ -2,6 +2,13 @@ import React from "react";
 import JourneyWaveformWithTooltip from "../../_components/JourneyWaveformWithTooltip";
 import { V3JourneyStyles } from "./V3Styles";
 
+import {
+  deriveWaveformSeriesFromShortTermLufs,
+  resampleLinear,
+  shapeWaveAmp,
+  findFirst,
+} from "../utils/feedbackDerivations";
+
 type Journey = {
   durationS: number | null;
   sections: Array<{ type: string; start: number | null; end: number | null; t: number | null }>;
@@ -11,22 +18,9 @@ type Props = {
   payload: any;
   isReady: boolean;
   journey: Journey;
-
-  deriveWaveformSeriesFromShortTermLufs: (payload: any, isReady: boolean) => number[] | null;
-  resampleLinear: (series: number[], targetN: number) => number[];
-  shapeWaveAmp: (a: number) => number;
-  findFirst: <T = any>(obj: any, paths: string[]) => T | null;
 };
 
-export default function JourneySection({
-  payload,
-  isReady,
-  journey,
-  deriveWaveformSeriesFromShortTermLufs,
-  resampleLinear,
-  shapeWaveAmp,
-  findFirst,
-}: Props) {
+export default function JourneySection({ payload, isReady, journey }: Props) {
   return (
     <section>
       <h2 className="text-3xl font-semibold tracking-tight text-white">Song Journey</h2>
