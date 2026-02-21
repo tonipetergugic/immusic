@@ -919,6 +919,76 @@ export function buildFeedbackPayloadV2Mvp(params: {
     structure: structureAnalysis,
   });
 
+  const clamp100Local = (x: number) => Math.max(0, Math.min(100, x));
+
+  const median = (xs: number[]) => {
+    const a = xs.filter((v) => Number.isFinite(v)).slice().sort((p, q) => p - q);
+    if (a.length === 0) return null;
+    const m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m]! : (a[m - 1]! + a[m]!) / 2;
+  };
+
+  const sampleEnergyWindow = (curve: any[], t0: number, t1: number, n: number) => {
+    if (!Array.isArray(curve) || curve.length < 2 || !(t1 > t0)) return null;
+
+    const pts = curve
+      .map((p) => ({ t: Number(p?.t), e: Number(p?.e) }))
+      .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.e))
+      .sort((a, b) => a.t - b.t);
+
+    if (pts.length < 2) return null;
+
+    const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
+
+    const valueAt = (t: number) => {
+      if (t <= pts[0]!.t) return pts[0]!.e;
+      if (t >= pts[pts.length - 1]!.t) return pts[pts.length - 1]!.e;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i]!;
+        const b = pts[i + 1]!;
+        if (t >= a.t && t <= b.t) {
+          const u = (t - a.t) / Math.max(1e-9, b.t - a.t);
+          return lerp(a.e, b.e, u);
+        }
+      }
+      return pts[pts.length - 1]!.e;
+    };
+
+    const out: number[] = [];
+    const steps = Math.max(16, Math.min(64, n));
+    for (let i = 0; i < steps; i++) {
+      const t = lerp(t0, t1, i / (steps - 1));
+      out.push(valueAt(t));
+    }
+    return out;
+  };
+
+  const computeImpactScore0_100 = (energyCurve: any[] | null, peakT: number | null) => {
+    if (!energyCurve || peakT === null || !Number.isFinite(peakT)) return null;
+
+    const windowS = 6;
+    const before = sampleEnergyWindow(energyCurve, Math.max(0, peakT - windowS), peakT, 48);
+    const after = sampleEnergyWindow(energyCurve, peakT, peakT + windowS, 48);
+    if (!before || !after) return null;
+
+    const b = median(before);
+    const a = median(after);
+    if (b === null || a === null) return null;
+
+    const ratio = (a - b) / Math.max(1e-6, Math.abs(b));
+    return clamp100Local(ratio * 100);
+  };
+
+  const energyCurve =
+    (structureAnalysis?.energy_curve != null && Array.isArray(structureAnalysis.energy_curve))
+      ? structureAnalysis.energy_curve
+      : null;
+
+  const peakT =
+    structureAnalysis?.primary_peak?.t ?? dropConfidence?.items?.[0]?.t ?? null;
+
+  const dropImpactScore = computeImpactScore0_100(energyCurve, peakT);
+
   return {
     schema_version: 2,
     generated_at: new Date().toISOString(),
@@ -1018,7 +1088,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
             structure: {
               ...structureAnalysis,
               arc: structureArc,
-              drop_confidence: dropConfidence,
+              drop_confidence: dropConfidence ?? undefined,
               hook: structureHook,
               balance: structureBalance,
               arrangement_density: arrangementDensity,

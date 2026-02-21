@@ -408,12 +408,22 @@ function shapeWaveAmp(a: number): number {
 
 function deriveDropImpactCard(payload: any, isReady: boolean) {
   if (!isReady || !payload) {
-    return { label: "Pending", valuePct: null as number | null, confidencePct: null as number | null, explanation: "Analysis is still processing." };
+    return {
+      label: "Pending",
+      valuePct: null as number | null,
+      confidencePct: null as number | null,
+      explanation: "Analysis is still processing.",
+    };
   }
 
-  // Try multiple possible shapes — keep null-safe forever
   const score =
     findFirst<number>(payload, [
+      // v2 real source (preferred)
+      "metrics.structure.drop_confidence.items.0.features.impact_score_0_100",
+
+      // legacy / fallback
+      "metrics.structure.drop_confidence.impact_score",
+      "metrics.structure.dropImpact.impact_score",
       "structure.drop.impact_score",
       "structure.dropImpact.score",
       "structure.dropImpact.impact_score",
@@ -423,7 +433,6 @@ function deriveDropImpactCard(payload: any, isReady: boolean) {
       "dropImpact.score",
     ]) ?? null;
 
-  // Some modules produce label strings
   const labelRaw =
     findFirst<string>(payload, [
       "structure.drop.label",
@@ -431,6 +440,7 @@ function deriveDropImpactCard(payload: any, isReady: boolean) {
       "structure.drop_confidence.label",
       "drop.label",
       "dropImpact.label",
+      "metrics.structure.drop_confidence.items.0.label",
     ]) ?? null;
 
   const confidence =
@@ -440,29 +450,98 @@ function deriveDropImpactCard(payload: any, isReady: boolean) {
       "structure.drop_confidence.confidence",
       "drop.confidence",
       "dropImpact.confidence",
+      "metrics.structure.drop_confidence.items.0.confidence_0_100",
     ]) ?? null;
 
   const valuePct = typeof score === "number" && Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
   const confidencePct = typeof confidence === "number" && Number.isFinite(confidence) ? Math.max(0, Math.min(100, confidence)) : null;
 
-  // Neutral wording (no genre bias). If label exists, we use it, otherwise infer from score.
   const inferredLabel =
     valuePct === null
-      ? "—"
+      ? "Not available"
       : valuePct >= 75
-        ? "High separation"
+        ? "High contrast"
         : valuePct >= 45
-          ? "Moderate separation"
-          : "Low separation";
+          ? "Moderate contrast"
+          : "Low contrast";
 
-  const label = (labelRaw && labelRaw.trim()) ? labelRaw.trim() : inferredLabel;
+  const mapLabel = (raw: string | null) => {
+    const v = (raw ?? "").trim();
+    if (!v) return null;
+    const m: Record<string, string> = {
+      weak_drop: "Low contrast",
+      solid_drop: "Moderate contrast",
+      high_impact_drop: "High contrast",
+    };
+    return m[v] ?? v;
+  };
+
+  const label = mapLabel(labelRaw) ?? inferredLabel;
 
   const explanation =
     valuePct === null
-      ? "No drop impact data available."
-      : "Measures how clearly the drop separates from the preceding build — reference, not a rule.";
+      ? "No impact data available."
+      : "How much the high point stands out compared to what comes right before it.";
 
   return { label, valuePct, confidencePct, explanation };
+}
+
+function confidenceLabel(confPct: number | null) {
+  if (confPct === null) return { short: "—", tone: "text-white/60" };
+  if (confPct >= 75) return { short: "High", tone: "text-white/80" };
+  if (confPct >= 45) return { short: "Med", tone: "text-white/70" };
+  return { short: "Low", tone: "text-white/60" };
+}
+
+function toSparkPoints(values01: number[], w: number, h: number) {
+  const n = Math.max(2, values01.length);
+  return values01.map((v, i) => {
+    const x = (i / (n - 1)) * w;
+    const y = h - Math.max(0, Math.min(1, v)) * h;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+}
+
+function sampleEnergyWindow(payload: any, t0: number, t1: number, n: number) {
+  const curve =
+    (findFirst<any[]>(payload, ["metrics.structure.energy_curve", "structure.energy_curve"]) ?? null);
+
+  if (!Array.isArray(curve) || curve.length < 2 || !(t1 > t0)) return null;
+
+  // curve items: { t: number, e: number }
+  const pts = curve
+    .map((p) => ({ t: Number(p?.t), e: Number(p?.e) }))
+    .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.e))
+    .sort((a, b) => a.t - b.t);
+
+  if (pts.length < 2) return null;
+
+  const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
+
+  const valueAt = (t: number) => {
+    // clamp
+    if (t <= pts[0]!.t) return pts[0]!.e;
+    if (t >= pts[pts.length - 1]!.t) return pts[pts.length - 1]!.e;
+
+    // find segment (linear scan is ok at this scale)
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i]!;
+      const b = pts[i + 1]!;
+      if (t >= a.t && t <= b.t) {
+        const u = (t - a.t) / Math.max(1e-9, b.t - a.t);
+        return lerp(a.e, b.e, u);
+      }
+    }
+    return pts[pts.length - 1]!.e;
+  };
+
+  const out: number[] = [];
+  const steps = Math.max(8, Math.min(64, n));
+  for (let i = 0; i < steps; i++) {
+    const t = lerp(t0, t1, i / (steps - 1));
+    out.push(valueAt(t));
+  }
+  return out;
 }
 
 function deriveStructureBalanceCard(payload: any, isReady: boolean) {
@@ -1412,53 +1491,308 @@ export default async function UploadFeedbackV3Page({
                     const conf = di.confidencePct === null ? null : Math.max(0, Math.min(100, di.confidencePct));
 
                     return (
-                      <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                      <div className="rounded-3xl border border-white/10 bg-black/20 p-6 lg:p-7">
+                        {/* Header */}
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <div className="text-sm font-semibold">Drop Impact</div>
-                            <div className="mt-1 text-xs text-white/50">{di.explanation}</div>
-                          </div>
-
-                          <div className="rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-semibold text-white/80">
-                            {di.label}
-                          </div>
-                        </div>
-
-                        {/* Visual meter */}
-                        <div className="mt-4">
-                          <div className="h-3 w-full overflow-hidden rounded-full border border-white/10 bg-black/30">
-                            <div
-                              className="h-full bg-white/35"
-                              style={{ width: `${fill}%` }}
-                              aria-label="Drop impact meter"
-                            />
-                          </div>
-
-                          <div className="mt-2 flex items-center justify-between text-[11px] text-white/40 tabular-nums">
-                            <span>Low</span>
-                            <span>
-                              {di.valuePct === null ? "—" : `${Math.round(di.valuePct)}/100`}
-                            </span>
-                            <span>High</span>
-                          </div>
-                        </div>
-
-                        {/* Confidence (optional) */}
-                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-white/60">Confidence</div>
-                            <div className="text-xs text-white/45 tabular-nums">
-                              {conf === null ? "—" : `${Math.round(conf)}%`}
+                            <div className="text-sm font-semibold text-white">Impact Strength</div>
+                            <div className="mt-1 text-xs text-white/45">
+                              How much the strongest moment stands out from the section before it.
                             </div>
                           </div>
+                        </div>
 
-                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                            <div
-                              className="h-full bg-white/25"
-                              style={{ width: `${conf ?? 0}%` }}
-                              aria-label="Confidence meter"
-                            />
+                        {/* Hero row */}
+                        <div className="mt-5 flex items-end justify-between gap-4">
+                          <div className="leading-none">
+                            <div className="text-[11px] tracking-widest text-white/35">CONTRAST</div>
+                            <div className="mt-2 text-3xl font-semibold text-white tabular-nums tracking-tight">
+                              {di.valuePct === null ? "—" : `${Math.round(di.valuePct)}%`}
+                            </div>
                           </div>
+                        </div>
+
+                        {/* Mini-wave visual (single premium graphic) */}
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                          {(() => {
+                            // --- Clean relative scaling (no tricks) ---
+                            const impact01 =
+                              typeof di.valuePct === "number" && Number.isFinite(di.valuePct)
+                                ? Math.max(0, Math.min(1, di.valuePct / 100))
+                                : 0;
+
+                            const BASE_HEIGHT = 80; // adjust visually if needed
+
+                            const buildHeight = BASE_HEIGHT;
+                            const dropHeight = BASE_HEIGHT * (1 + impact01);
+
+                            const peakT =
+                              findFirst<number>(payload, [
+                                "metrics.structure.drop_confidence.items.0.t",
+                                "metrics.structure.tension_release.drops.0.t",
+                                "metrics.structure.primary_peak.t",
+                                "structure.primary_peak.t",
+                              ]) ?? null;
+
+                            const w = 320;
+                            const h = 54;
+                            const windowS = 6;
+
+                            const before = peakT === null ? null : sampleEnergyWindow(payload, Math.max(0, peakT - windowS), peakT, 34);
+                            const after = peakT === null ? null : sampleEnergyWindow(payload, peakT, peakT + windowS, 34);
+
+                            const confMeta = confidenceLabel(conf);
+
+                            return (
+                              <div>
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[11px] text-white/45">
+                                    Before <span className="text-white/25">→</span> High point
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                                  {(() => {
+                                    const smoothstep = (a: number, b: number, x: number) => {
+                                      const t = clamp01((x - a) / Math.max(1e-9, b - a));
+                                      return t * t * (3 - 2 * t);
+                                    };
+
+                                    const getSharedMinMax = (a: number[] | null, b: number[] | null) => {
+                                      const xs: number[] = [];
+                                      if (Array.isArray(a)) for (const v of a) if (Number.isFinite(v)) xs.push(v);
+                                      if (Array.isArray(b)) for (const v of b) if (Number.isFinite(v)) xs.push(v);
+
+                                      if (xs.length < 2) return { ok: false as const, mn: 0, mx: 1 };
+
+                                      let mn = Infinity;
+                                      let mx = -Infinity;
+                                      for (const v of xs) {
+                                        mn = Math.min(mn, v);
+                                        mx = Math.max(mx, v);
+                                      }
+
+                                      const span = mx - mn;
+                                      if (!Number.isFinite(mn) || !Number.isFinite(mx) || span < 1e-9) return { ok: false as const, mn: 0, mx: 1 };
+                                      return { ok: true as const, mn, mx };
+                                    };
+
+                                    const normalizeShared01 = (arr: number[] | null, shared: { ok: boolean; mn: number; mx: number }) => {
+                                      if (!arr || arr.length < 2) return null;
+
+                                      // If shared is not valid, keep a subtle but stable "alive" baseline.
+                                      if (!shared.ok) return arr.map(() => 0.22);
+
+                                      const span = shared.mx - shared.mn;
+                                      return arr.map((v) => {
+                                        const x = Number.isFinite(v) ? v : shared.mn;
+                                        return clamp01((x - shared.mn) / Math.max(1e-9, span));
+                                      });
+                                    };
+
+                                    const shapeSeries = (arr: number[] | null, mode: "before" | "after") => {
+                                      const shared = getSharedMinMax(before, after);
+                                      const norm = normalizeShared01(arr, shared);
+                                      if (!norm) return null;
+
+                                      // reveal micro-dynamics
+                                      let out = norm.map((v) => shapeWaveAmp(v));
+
+                                      // impact-driven amplitude (keeps BEFORE calmer, HIGH POINT more present)
+                                      if (impact01 !== null) {
+                                        // Perceptual boost: keep BEFORE calm, make HIGH POINT feel proportional to impact.
+                                        // - 40–60%: subtle lift
+                                        // - 60–75%: clear lift
+                                        // - 75%+: strong lift + optional micro-attacks (handled below)
+                                        const t = smoothstep(0.25, 0.85, impact01);
+
+                                        if (mode === "before") {
+                                          // Calm reference: stable, not too "busy"
+                                          const beforeScale = 0.58 + 0.08 * t; // ~0.58..0.66
+                                          out = out.map((v) => clamp01(v * beforeScale));
+                                        } else {
+                                          let afterScale = 1.0;
+
+                                          // Step-based visual amplification
+                                          if (impact01 !== null) {
+                                            if (impact01 >= 0.70) {
+                                              afterScale = 1.6;     // strong impact
+                                            } else if (impact01 >= 0.50) {
+                                              afterScale = 1.35;    // clear impact
+                                            } else if (impact01 >= 0.30) {
+                                              afterScale = 1.15;    // moderate lift
+                                            } else {
+                                              afterScale = 1.0;     // minimal impact
+                                            }
+                                          }
+
+                                          out = out.map((v) => clamp01(v * afterScale));
+                                        }
+                                      }
+
+                                      // optional micro-attack peaks only when impact is really high
+                                      if (mode === "after" && impact01 !== null && impact01 >= 0.70) {
+                                        out = out.map((v) => (v >= 0.72 ? clamp01(v * 1.10) : v));
+                                      }
+
+                                      return out;
+                                    };
+
+                                    const renderAnalyzer = (vals01: number[] | null, mode: "before" | "after", barMaxScale: number) => {
+                                      const W = 240;
+                                      const H = 40;
+                                      const baselineY = 32;
+                                      const barMax = 22 * Math.max(0.8, Math.min(2.2, barMaxScale));
+
+                                      const n = vals01?.length ?? 34;
+                                      const gap = 2;
+                                      const barW = (W - (n - 1) * gap) / n;
+
+                                      const isAfter = mode === "after";
+                                      const glowOn = isAfter && impact01 !== null && impact01 >= 0.55;
+
+                                      return (
+                                        <svg
+                                          width="100%"
+                                          height="100%"
+                                          viewBox={`0 0 ${W} ${H}`}
+                                          preserveAspectRatio="none"
+                                          className="block"
+                                          shapeRendering="crispEdges"
+                                        >
+                                          <defs>
+                                            <linearGradient id="diBeforeFill" x1="0" x2="1">
+                                              <stop offset="0%" stopColor="#6B9EFF" stopOpacity="0.55" />
+                                              <stop offset="100%" stopColor="#6B9EFF" stopOpacity="0.25" />
+                                            </linearGradient>
+
+                                            <linearGradient id="diAfterFill" x1="0" x2="1">
+                                              <stop offset="0%" stopColor="#FF9500" stopOpacity="0.85" />
+                                              <stop offset="100%" stopColor="#FFB347" stopOpacity="0.70" />
+                                            </linearGradient>
+
+                                            <filter id="diGlow" x="-40%" y="-40%" width="180%" height="180%">
+                                              <feGaussianBlur stdDeviation="3" result="b" />
+                                              <feColorMatrix
+                                                in="b"
+                                                type="matrix"
+                                                values="
+                                                  1 0 0 0 0
+                                                  0 0.75 0 0 0
+                                                  0 0 0.15 0 0
+                                                  0 0 0 0.35 0"
+                                                result="c"
+                                              />
+                                              <feMerge>
+                                                <feMergeNode in="c" />
+                                                <feMergeNode in="SourceGraphic" />
+                                              </feMerge>
+                                            </filter>
+                                          </defs>
+
+                                          {/* baseline */}
+                                          <rect x="0" y={baselineY} width={W} height="1" fill="rgba(255,255,255,0.08)" />
+
+                                          {/* bars */}
+                                          {Array.from({ length: n }).map((_, i) => {
+                                            let v = vals01 ? (vals01[i] ?? 0) : 0;
+
+                                            // No perceptual overdraw — height scaling handles contrast now.
+
+                                            const hh = Math.max(1, Math.round(v * barMax));
+                                            const x = i * (barW + gap);
+
+                                            // subtle inner floor so low values still read (pro-tool look)
+                                            const minRead = 2;
+                                            const h2 = Math.max(minRead, hh);
+
+                                            return (
+                                              <rect
+                                                key={i}
+                                                x={x.toFixed(2)}
+                                                y={(baselineY - h2).toFixed(2)}
+                                                width={barW.toFixed(2)}
+                                                height={h2.toFixed(2)}
+                                                rx="0.6"
+                                                fill={isAfter ? "url(#diAfterFill)" : "url(#diBeforeFill)"}
+                                                opacity={isAfter ? 1 : 0.9}
+                                                filter={glowOn ? "url(#diGlow)" : undefined}
+                                              />
+                                            );
+                                          })}
+                                        </svg>
+                                      );
+                                    };
+
+                                    const before01 = shapeSeries(before, "before");
+                                    const after01 = shapeSeries(after, "after");
+                                    const impact01Scaled =
+                                      impact01 === null ? null : Math.max(0, Math.min(1, impact01));
+
+                                    const avg01 = (xs: number[] | null) => {
+                                      if (!xs || xs.length < 2) return null;
+                                      let s = 0;
+                                      let c = 0;
+                                      for (const v of xs) {
+                                        if (!Number.isFinite(v)) continue;
+                                        s += v;
+                                        c += 1;
+                                      }
+                                      if (c === 0) return null;
+                                      return clamp01(s / c);
+                                    };
+
+                                    const avgBefore01 = avg01(before01);
+                                    const avgAfter01 = avg01(after01);
+
+                                    return (
+                                      <>
+                                        {/* LEFT: Before */}
+                                        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/0">
+                                          <div className="relative w-full" style={{ height: `${buildHeight}px` }}>
+                                            {renderAnalyzer(before01, "before", 1.0)}
+                                          </div>
+                                          <div className="px-2 pb-2 text-[10px] tracking-widest text-white/35">BEFORE</div>
+                                        </div>
+
+                                        {/* Divider */}
+                                        <div className="h-[54px] w-[1px] rounded-full bg-white/10" />
+
+                                        {/* RIGHT: High point */}
+                                        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/0 shadow-[0_0_35px_rgba(255,149,0,0.10)]">
+                                          <div className="relative w-full" style={{ height: `${buildHeight}px` }}>
+                                            {renderAnalyzer(
+                                              after01,
+                                              "after",
+                                              (() => {
+                                                const impact01 =
+                                                  typeof di.valuePct === "number" && Number.isFinite(di.valuePct)
+                                                    ? Math.max(0, Math.min(1, di.valuePct / 100))
+                                                    : 0;
+
+                                                // Impact 0 => identical. Impact > 0 => right always higher.
+                                                return 1 + impact01 * 0.10;
+                                              })()
+                                            )}
+                                          </div>
+                                          <div className="px-2 pb-2 text-[10px] tracking-widest text-white/35">HIGH POINT</div>
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-between">
+                                  <div className="text-[11px] text-white/45">{di.explanation}</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Footer micro-hint (only if data exists) */}
+                        <div className="mt-4 text-[11px] text-white/35">
+                          {di.valuePct === null ? "" : "Bigger contrast usually feels more impactful."}
                         </div>
                       </div>
                     );
