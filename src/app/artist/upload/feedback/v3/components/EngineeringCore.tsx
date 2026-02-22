@@ -192,117 +192,112 @@ export default function EngineeringCore({
           </div>
         </div>
 
-        {/* Streaming Safety (details) */}
-        <div
-          className={
-            "mt-6 rounded-3xl border p-6 md:p-8 bg-white/[0.02] " +
-            (encodingRiskTone === "critical"
-              ? "border-red-500/40"
-              : encodingRiskTone === "warn"
-                ? "border-yellow-500/40"
-                : encodingRiskTone === "good"
-                  ? "border-emerald-500/40"
-                  : "border-white/10")
-          }
-        >
-          <div className="flex items-start justify-between gap-4">
+        {/* Streaming Safety + Codec Simulation */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* Streaming Safety */}
+          <div
+            className={
+              "rounded-3xl border p-6 md:p-8 bg-white/[0.02] h-full flex flex-col " +
+              (encodingRiskTone === "critical"
+                ? "border-red-500/40"
+                : encodingRiskTone === "warn"
+                  ? "border-yellow-500/40"
+                  : encodingRiskTone === "good"
+                    ? "border-emerald-500/40"
+                    : "border-white/10")
+            }
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">Streaming Safety</h3>
+                <p className="mt-1 text-sm text-white/60">
+                  Risk of audible distortion after MP3/AAC conversion.
+                </p>
+              </div>
+
+              <div className="text-sm font-semibold text-white/85 tabular-nums">
+                {encodingRiskTone === "good" && "Streaming-safe"}
+                {encodingRiskTone === "warn" && "Minor distortion risk"}
+                {encodingRiskTone === "critical" && "High distortion risk"}
+                {encodingRiskTone === "neutral" && "—"}
+              </div>
+            </div>
+
+            <div className="mt-4 text-sm text-white/70 leading-snug line-clamp-2 min-h-[2.6em]">
+              {encodingRiskTone === "good" &&
+                "No digital clipping detected after MP3/AAC conversion."}
+              {encodingRiskTone === "warn" &&
+                "Some clipping may occur after streaming compression. Consider lowering your limiter ceiling slightly (e.g. −1.0 dBTP)."}
+              {encodingRiskTone === "critical" &&
+                "Your track clips after streaming conversion. Lower your limiter ceiling (e.g. −1.0 to −1.2 dBTP) or reduce overall master gain."}
+            </div>
+
+            <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className={METRIC_TITLE}>AAC overs</div>
+                <div className={METRIC_VALUE}>
+                  {typeof aacOvers === "number" ? aacOvers : "—"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className={METRIC_TITLE}>MP3 overs</div>
+                <div className={METRIC_VALUE}>
+                  {typeof mp3Overs === "number" ? mp3Overs : "—"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className={METRIC_TITLE}>Post-encode headroom</div>
+                <div className={METRIC_VALUE}>
+                  {typeof postHeadroom === "number"
+                    ? `${postHeadroom.toFixed(2)} dB`
+                    : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Codec Simulation */}
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 h-full flex flex-col">
             <div>
-              <h3 className="text-lg font-semibold">Streaming Safety</h3>
-              <p className="mt-1 text-sm text-white/60">
-                Risk of audible distortion after MP3/AAC conversion.
-              </p>
-            </div>
-
-            <div className="text-sm font-semibold text-white/85 tabular-nums">
-              {encodingRiskTone === "good" && "Streaming-safe"}
-              {encodingRiskTone === "warn" && "Minor distortion risk"}
-              {encodingRiskTone === "critical" && "High distortion risk"}
-              {encodingRiskTone === "neutral" && "—"}
-            </div>
-          </div>
-
-          <div className="mt-4 text-sm text-white/70 leading-snug max-w-3xl">
-            {encodingRiskTone === "good" &&
-              "No digital clipping detected after MP3/AAC conversion."}
-
-            {encodingRiskTone === "warn" &&
-              "Some clipping may occur after streaming compression. Consider lowering your limiter ceiling slightly (e.g. −1.0 dBTP)."}
-
-            {encodingRiskTone === "critical" &&
-              "Your track clips after streaming conversion. Lower your limiter ceiling (e.g. −1.0 to −1.2 dBTP) or reduce overall master gain."}
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div className={METRIC_TITLE}>AAC overs</div>
-              <div className={METRIC_VALUE}>
-                {typeof aacOvers === "number" ? aacOvers : "—"}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div className={METRIC_TITLE}>MP3 overs</div>
-              <div className={METRIC_VALUE}>
-                {typeof mp3Overs === "number" ? mp3Overs : "—"}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div className={METRIC_TITLE}>Post-encode headroom</div>
-              <div className={METRIC_VALUE}>
-                {typeof postHeadroom === "number"
-                  ? `${postHeadroom.toFixed(2)} dB`
-                  : "—"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Codec Simulation */}
-        <div className="mt-6 rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold">Codec Simulation</h3>
+              <h3 className="text-lg font-semibold leading-tight">Codec Simulation</h3>
               <p className="mt-1 text-sm text-white/60">
                 Lossy encode → decode check (AAC 128 / MP3 128).
-                Simulates post-streaming behavior.
               </p>
             </div>
-          </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {/* AAC */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-              <div className="text-[10px] uppercase tracking-wider text-white/40">
-                AAC 128
-              </div>
-
-              <div className="mt-3 grid gap-2 text-sm text-white/80">
-                <div className="flex justify-between">
+            <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  AAC 128
+                </div>
+                <div className="mt-2 flex justify-between">
                   <span>Headroom lost</span>
-                  <span className="tabular-nums">
-                    {typeof headroomLost === "number" ? `${headroomLost.toFixed(2)} dB` : "—"}
+                  <span className={METRIC_VALUE}>
+                    {typeof headroomLost === "number"
+                      ? `${headroomLost.toFixed(2)} dB`
+                      : "—"}
                   </span>
                 </div>
               </div>
-            </div>
 
-            {/* MP3 */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-              <div className="text-[10px] uppercase tracking-wider text-white/40">
-                MP3 128
-              </div>
-
-              <div className="mt-3 grid gap-2 text-sm text-white/80">
-                <div className="flex justify-between">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  MP3 128
+                </div>
+                <div className="mt-2 flex justify-between">
                   <span>Headroom lost</span>
-                  <span className="tabular-nums">
-                    {typeof headroomLost === "number" ? `${headroomLost.toFixed(2)} dB` : "—"}
+                  <span className={METRIC_VALUE}>
+                    {typeof headroomLost === "number"
+                      ? `${headroomLost.toFixed(2)} dB`
+                      : "—"}
                   </span>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </section>

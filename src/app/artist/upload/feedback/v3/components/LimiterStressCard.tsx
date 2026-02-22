@@ -1,9 +1,18 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 type Props = {
   durationS: number | null;
   truePeakOvers: any[] | null;
 };
+
+function fmtTime(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+}
 
 export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
   const overs = Array.isArray(truePeakOvers) ? truePeakOvers : null;
@@ -71,6 +80,31 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
 
   const maxBin =
     heatmapBins && heatmapBins.length > 0 ? Math.max(...heatmapBins) : null;
+
+  const [hoverBin, setHoverBin] = useState<number | null>(null);
+
+  const hoverInfo = useMemo(() => {
+    if (
+      hoverBin === null ||
+      !heatmapBins ||
+      !durationSec ||
+      !Number.isFinite(durationSec)
+    )
+      return null;
+
+    const binSize = durationSec / BIN_COUNT;
+    const start = hoverBin * binSize;
+    const end = Math.min(durationSec, (hoverBin + 1) * binSize);
+    const v = heatmapBins[hoverBin] ?? 0;
+
+    let severity: "low" | "mid" | "high" = "low";
+    if (maxBin && maxBin > 0) {
+      const r = v / maxBin;
+      severity = r > 0.66 ? "high" : r > 0.33 ? "mid" : "low";
+    }
+
+    return { start, end, v, severity };
+  }, [hoverBin, heatmapBins, durationSec, maxBin]);
 
   // Label thresholds (agreed)
   let tone: "good" | "warn" | "critical" | "neutral" = "neutral";
@@ -154,8 +188,19 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
 
       {heatmapBins && maxBin !== null && maxBin > 0 && (
         <div className="mt-6">
-          <div className="text-[10px] uppercase tracking-wider text-white/40 mb-3">
-            Stress distribution over time
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="text-[10px] uppercase tracking-wider text-white/40">
+              Stress distribution over time
+            </div>
+
+            {hoverInfo ? (
+              <div className="text-xs text-white/70 tabular-nums">
+                {fmtTime(hoverInfo.start)}–{fmtTime(hoverInfo.end)} · {hoverInfo.v} ev ·{" "}
+                {hoverInfo.severity.toUpperCase()}
+              </div>
+            ) : (
+              <div className="text-xs text-white/40">Hover a bar</div>
+            )}
           </div>
 
           <div className="flex items-end w-full h-24 gap-[2px]">
@@ -176,6 +221,8 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
                   key={i}
                   className={`flex-1 ${colorClass} rounded-sm`}
                   style={{ opacity, height: `${heightPct}%` }}
+                  onMouseEnter={() => setHoverBin(i)}
+                  onMouseLeave={() => setHoverBin(null)}
                 />
               );
             })}
