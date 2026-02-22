@@ -1,4 +1,6 @@
-import EngineeringPanel from "./components/EngineeringPanel";
+import DevExposePayload from "./components/DevExposePayload";
+import EngineeringCore from "./components/EngineeringCore";
+import EngineeringDynamics from "./components/EngineeringDynamics";
 import HeroSection from "./components/HeroSection";
 import JourneySection from "./components/JourneySection";
 import LockedFeedbackSection from "./components/LockedFeedbackSection";
@@ -45,11 +47,6 @@ export default async function UploadFeedbackV3Page({
     apiStatus: data.feedback_state,
   });
 
-  // DEV ONLY: expose payload in browser console
-  if (typeof window !== "undefined") {
-    (window as any).__fbPayload = payload;
-  }
-
   return (
     <div className="min-h-screen bg-[#0E0E10] text-white">
       {/* Fullscreen V3 skeleton — no max-width container on purpose */}
@@ -72,12 +69,25 @@ export default async function UploadFeedbackV3Page({
             />
           ) : (
             <div className="mt-6 space-y-10">
+              <DevExposePayload payload={payload} />
               <JourneySection payload={payload} isReady={isReady} journey={journey} />
 
-              <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
+              <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+                <EngineeringCore
+                  isReady={isReady}
+                  payload={payload}
+                  lufsI={payload?.metrics?.loudness?.lufs_i ?? null}
+                  truePeak={payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
+                  durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
+                />
 
-              {/* Engineering (always visible) */}
-              <EngineeringPanel {...deriveEngineeringPanelProps({ payload, isReady })} />
+                <EngineeringDynamics
+                  payload={payload}
+                  isReady={isReady}
+                />
+              </div>
+
+              <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
 
               {/* Unlock panel (still shown for errors/balance; unlocked=true) */}
               <UnlockFooterSection
