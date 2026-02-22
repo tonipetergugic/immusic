@@ -7,6 +7,7 @@ import LimiterStressCard from "./components/LimiterStressCard";
 import LockedFeedbackSection from "./components/LockedFeedbackSection";
 import MidSideCard from "./components/MidSideCard";
 import PhaseCorrelationCard from "./components/PhaseCorrelationCard";
+import SpectralRmsCard from "./components/SpectralRmsCard";
 import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
@@ -103,6 +104,8 @@ export default async function UploadFeedbackV3Page({
                   sideRmsDbfs={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
                   ratio={payload?.metrics?.stereo?.mid_side_energy_ratio ?? null}
                 />
+
+                <SpectralRmsCard spectral={payload?.metrics?.spectral ?? null} />
 
                 <LimiterStressCard
                   durationS={payload?.track?.duration_s ?? null}
