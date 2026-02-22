@@ -38,6 +38,39 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
       ? (dynamicsFactors as any).crest
       : undefined;
 
+  // --------------------
+  // Dynamics color logic (deterministic)
+  // --------------------
+  type Tone = "good" | "warn" | "critical";
+
+  function toneClass(t: Tone) {
+    // Match Engineering look: subtle tinted panel, neutral white value text
+    if (t === "critical") return "border-red-500/30 bg-red-500/5";
+    if (t === "warn") return "border-yellow-500/30 bg-yellow-500/5";
+    return "border-emerald-500/30 bg-emerald-500/5";
+  }
+
+  function toneForLufs(x: number): Tone {
+    // Good: -16..-9 | Warn: -20..-16 or -9..-7 | Critical: < -20 or > -7
+    if (x > -7 || x < -20) return "critical";
+    if ((x >= -20 && x < -16) || (x > -9 && x <= -7)) return "warn";
+    return "good";
+  }
+
+  function toneForLra(x: number): Tone {
+    // Good: 5..12 | Warn: 3..5 or 12..14 | Critical: <3 or >14
+    if (x < 3 || x > 14) return "critical";
+    if ((x >= 3 && x < 5) || (x > 12 && x <= 14)) return "warn";
+    return "good";
+  }
+
+  function toneForCrest(x: number): Tone {
+    // Good: 7..12 | Warn: 5..7 or 12..14 | Critical: <5 or >14
+    if (x < 5 || x > 14) return "critical";
+    if ((x >= 5 && x < 7) || (x > 12 && x <= 14)) return "warn";
+    return "good";
+  }
+
   return (
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8 flex flex-col">
@@ -61,24 +94,42 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
           )}
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 flex-grow">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 flex-grow">
           {[
-            { k: "Integrated LUFS", v: lufs, fmt: (x: number) => x.toFixed(1) },
-            { k: "Loudness Range (LRA)", v: lra, fmt: (x: number) => x.toFixed(1) },
-            { k: "Crest Factor (dB)", v: crest, fmt: (x: number) => x.toFixed(2) },
+            {
+              k: "Integrated LUFS",
+              v: lufs,
+              fmt: (x: number) => x.toFixed(1),
+              tone: (x: number) => toneForLufs(x),
+            },
+            {
+              k: "Loudness Range (LRA)",
+              v: lra,
+              fmt: (x: number) => x.toFixed(1),
+              tone: (x: number) => toneForLra(x),
+            },
+            {
+              k: "Crest Factor (dB)",
+              v: crest,
+              fmt: (x: number) => x.toFixed(2),
+              tone: (x: number) => toneForCrest(x),
+            },
           ].map((m) => (
             <div
               key={m.k}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
+              className={
+                "rounded-2xl border px-4 py-4 " +
+                (typeof m.v === "number" && Number.isFinite(m.v)
+                  ? toneClass(m.tone(m.v))
+                  : "border-white/10 bg-white/[0.03]")
+              }
             >
               <div className="text-[10px] uppercase tracking-wider text-white/40">
                 {m.k}
               </div>
 
-              <div className="mt-2 text-lg font-semibold text-white/85 tabular-nums">
-                {typeof m.v === "number" && Number.isFinite(m.v)
-                  ? m.fmt(m.v)
-                  : "—"}
+              <div className="mt-2 text-xl font-semibold text-white tabular-nums">
+                {typeof m.v === "number" && Number.isFinite(m.v) ? m.fmt(m.v) : "—"}
               </div>
             </div>
           ))}

@@ -60,12 +60,37 @@ export default function EngineeringCore({
   const aac = codec?.aac128 ?? null;
   const mp3 = codec?.mp3128 ?? null;
 
-  const aacOvers = typeof aac?.overs === "number" ? aac.overs : null;
-  const mp3Overs = typeof mp3?.overs === "number" ? mp3.overs : null;
+  const aacOvers =
+    payload?.codec_simulation?.aac128?.overs ??
+    payload?.codec_simulation?.aac128?.overs_count ??
+    payload?.codec_simulation?.overs_aac ??
+    payload?.codec_simulation?.aac_overs ??
+    null;
+
+  const mp3Overs =
+    payload?.codec_simulation?.mp3128?.overs ??
+    payload?.codec_simulation?.mp3128?.overs_count ??
+    payload?.codec_simulation?.overs_mp3 ??
+    payload?.codec_simulation?.mp3_overs ??
+    null;
 
   const headEng = payload?.metrics?.loudness?.headroom_engineering ?? null;
   const postEncodeHeadroom =
     typeof headEng?.post_encode_headroom_dbtp === "number" ? headEng.post_encode_headroom_dbtp : null;
+
+  const sourceHeadroom =
+    typeof headroomDb === "number" && Number.isFinite(headroomDb) ? headroomDb : null;
+
+  const postHeadroom =
+    typeof postEncodeHeadroom === "number" && Number.isFinite(postEncodeHeadroom)
+      ? Math.max(0, postEncodeHeadroom)
+      : null;
+
+  const headroomLost =
+    typeof sourceHeadroom === "number" &&
+    typeof postHeadroom === "number"
+      ? postHeadroom - sourceHeadroom
+      : null;
 
   // Risk score (simple + deterministic)
   const oversMax =
@@ -94,6 +119,9 @@ export default function EngineeringCore({
   const encodingRiskLabel =
     encodingRiskTone === "critical" ? "CRITICAL" : encodingRiskTone === "warn" ? "MODERATE" : encodingRiskTone === "good" ? "OK" : "—";
 
+  const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
+  const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
+
   return (
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8 flex flex-col">
@@ -109,20 +137,16 @@ export default function EngineeringCore({
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 flex-grow">
           {/* Integrated LUFS */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
-              Integrated LUFS
-            </div>
-            <div className="mt-2 text-xl font-semibold text-white tabular-nums">
+            <div className={METRIC_TITLE}>Integrated LUFS</div>
+            <div className={METRIC_VALUE}>
               {typeof lufsI === "number" ? lufsI.toFixed(1) : "—"}
             </div>
           </div>
 
           {/* True Peak */}
           <div className={"rounded-2xl border px-4 py-4 " + toneClass}>
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
-              True Peak (dBTP)
-            </div>
-            <div className="mt-2 text-xl font-semibold text-white tabular-nums">
+            <div className={METRIC_TITLE}>True Peak (dBTP)</div>
+            <div className={METRIC_VALUE}>
               {typeof truePeak === "number"
                 ? truePeak.toFixed(2)
                 : "—"}
@@ -131,10 +155,8 @@ export default function EngineeringCore({
 
           {/* Duration */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
-              Duration (min)
-            </div>
-            <div className="mt-2 text-xl font-semibold text-white tabular-nums">
+            <div className={METRIC_TITLE}>Duration (min)</div>
+            <div className={METRIC_VALUE}>
               {typeof durationS === "number"
                 ? `${Math.floor(durationS / 60)}:${String(
                     Math.round(durationS % 60)
@@ -145,21 +167,20 @@ export default function EngineeringCore({
 
           {/* Headroom */}
           <div className={"rounded-2xl border px-4 py-4 " + headroomClass}>
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
-              Headroom (dB)
-            </div>
-            <div className="mt-2 text-xl font-semibold text-white tabular-nums">
+            <div className={METRIC_TITLE}>Headroom (dB)</div>
+            <div className={METRIC_VALUE}>
               {typeof headroomDb === "number" ? headroomDb.toFixed(2) : "—"}
             </div>
           </div>
 
-          {/* Encoding Risk */}
+          {/* Streaming Safety (status) */}
           <div className={"rounded-2xl border px-4 py-4 " + encodingRiskClass}>
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
-              Encoding Risk
-            </div>
-            <div className="mt-2 text-lg font-semibold text-white/85 tabular-nums">
-              {encodingRiskLabel}
+            <div className={METRIC_TITLE}>Streaming Safety</div>
+            <div className={METRIC_VALUE}>
+              {encodingRiskTone === "good" && "OK"}
+              {encodingRiskTone === "warn" && "MODERATE"}
+              {encodingRiskTone === "critical" && "CRITICAL"}
+              {encodingRiskTone === "neutral" && "—"}
             </div>
             <div className="mt-1 text-[11px] text-white/45 tabular-nums">
               {typeof oversMax === "number"
@@ -167,6 +188,119 @@ export default function EngineeringCore({
                 : typeof postEncodeHeadroom === "number"
                   ? `Post headroom: ${postEncodeHeadroom.toFixed(2)} dB`
                   : "—"}
+            </div>
+          </div>
+        </div>
+
+        {/* Streaming Safety (details) */}
+        <div
+          className={
+            "mt-6 rounded-3xl border p-6 md:p-8 bg-white/[0.02] " +
+            (encodingRiskTone === "critical"
+              ? "border-red-500/40"
+              : encodingRiskTone === "warn"
+                ? "border-yellow-500/40"
+                : encodingRiskTone === "good"
+                  ? "border-emerald-500/40"
+                  : "border-white/10")
+          }
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Streaming Safety</h3>
+              <p className="mt-1 text-sm text-white/60">
+                Risk of audible distortion after MP3/AAC conversion.
+              </p>
+            </div>
+
+            <div className="text-sm font-semibold text-white/85 tabular-nums">
+              {encodingRiskTone === "good" && "Streaming-safe"}
+              {encodingRiskTone === "warn" && "Minor distortion risk"}
+              {encodingRiskTone === "critical" && "High distortion risk"}
+              {encodingRiskTone === "neutral" && "—"}
+            </div>
+          </div>
+
+          <div className="mt-4 text-sm text-white/70 leading-snug max-w-3xl">
+            {encodingRiskTone === "good" &&
+              "No digital clipping detected after MP3/AAC conversion."}
+
+            {encodingRiskTone === "warn" &&
+              "Some clipping may occur after streaming compression. Consider lowering your limiter ceiling slightly (e.g. −1.0 dBTP)."}
+
+            {encodingRiskTone === "critical" &&
+              "Your track clips after streaming conversion. Lower your limiter ceiling (e.g. −1.0 to −1.2 dBTP) or reduce overall master gain."}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div className={METRIC_TITLE}>AAC overs</div>
+              <div className={METRIC_VALUE}>
+                {typeof aacOvers === "number" ? aacOvers : "—"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div className={METRIC_TITLE}>MP3 overs</div>
+              <div className={METRIC_VALUE}>
+                {typeof mp3Overs === "number" ? mp3Overs : "—"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div className={METRIC_TITLE}>Post-encode headroom</div>
+              <div className={METRIC_VALUE}>
+                {typeof postHeadroom === "number"
+                  ? `${postHeadroom.toFixed(2)} dB`
+                  : "—"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Codec Simulation */}
+        <div className="mt-6 rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Codec Simulation</h3>
+              <p className="mt-1 text-sm text-white/60">
+                Lossy encode → decode check (AAC 128 / MP3 128).
+                Simulates post-streaming behavior.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {/* AAC */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+              <div className="text-[10px] uppercase tracking-wider text-white/40">
+                AAC 128
+              </div>
+
+              <div className="mt-3 grid gap-2 text-sm text-white/80">
+                <div className="flex justify-between">
+                  <span>Headroom lost</span>
+                  <span className="tabular-nums">
+                    {typeof headroomLost === "number" ? `${headroomLost.toFixed(2)} dB` : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* MP3 */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+              <div className="text-[10px] uppercase tracking-wider text-white/40">
+                MP3 128
+              </div>
+
+              <div className="mt-3 grid gap-2 text-sm text-white/80">
+                <div className="flex justify-between">
+                  <span>Headroom lost</span>
+                  <span className="tabular-nums">
+                    {typeof headroomLost === "number" ? `${headroomLost.toFixed(2)} dB` : "—"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

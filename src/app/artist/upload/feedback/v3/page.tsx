@@ -4,6 +4,7 @@ import EngineeringDynamics from "./components/EngineeringDynamics";
 import HeroSection from "./components/HeroSection";
 import JourneySection from "./components/JourneySection";
 import LockedFeedbackSection from "./components/LockedFeedbackSection";
+import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import UnlockFooterSection from "./components/UnlockFooterSection";
 
@@ -72,7 +73,8 @@ export default async function UploadFeedbackV3Page({
               <DevExposePayload payload={payload} />
               <JourneySection payload={payload} isReady={isReady} journey={journey} />
 
-              <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+              <div className="space-y-6">
+                {/* Engineering full width */}
                 <EngineeringCore
                   isReady={isReady}
                   payload={payload}
@@ -81,10 +83,11 @@ export default async function UploadFeedbackV3Page({
                   durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
                 />
 
-                <EngineeringDynamics
-                  payload={payload}
-                  isReady={isReady}
-                />
+                {/* Dynamics + Streaming side by side */}
+                <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+                  <EngineeringDynamics payload={payload} isReady={isReady} />
+                  <StreamingNormalization payload={payload} isReady={isReady} />
+                </div>
               </div>
 
               <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
