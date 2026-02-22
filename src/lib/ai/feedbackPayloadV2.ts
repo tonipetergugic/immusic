@@ -42,6 +42,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
   phaseCorrelation?: number | null;
   lowEndPhaseCorrelation20_120?: number | null;
   lowEndMonoEnergyLossPct20_120?: number | null;
+  lowEndPhaseCorrelation20_60?: number | null;
+  lowEndPhaseCorrelation60_120?: number | null;
   midRmsDbfs?: number | null;
   sideRmsDbfs?: number | null;
   midSideEnergyRatio?: number | null;
@@ -83,6 +85,8 @@ export function buildFeedbackPayloadV2Mvp(params: {
     phaseCorrelation = null,
     lowEndPhaseCorrelation20_120 = null,
     lowEndMonoEnergyLossPct20_120 = null,
+    lowEndPhaseCorrelation20_60 = null,
+    lowEndPhaseCorrelation60_120 = null,
     midRmsDbfs = null,
     sideRmsDbfs = null,
     midSideEnergyRatio = null,
@@ -1072,6 +1076,14 @@ export function buildFeedbackPayloadV2Mvp(params: {
         mono_energy_loss_pct_20_120:
           typeof lowEndMonoEnergyLossPct20_120 === "number" && Number.isFinite(lowEndMonoEnergyLossPct20_120)
             ? lowEndMonoEnergyLossPct20_120
+            : null,
+        phase_correlation_20_60:
+          typeof lowEndPhaseCorrelation20_60 === "number" && Number.isFinite(lowEndPhaseCorrelation20_60)
+            ? lowEndPhaseCorrelation20_60
+            : null,
+        phase_correlation_60_120:
+          typeof lowEndPhaseCorrelation60_120 === "number" && Number.isFinite(lowEndPhaseCorrelation60_120)
+            ? lowEndPhaseCorrelation60_120
             : null,
       },
       clipping: {

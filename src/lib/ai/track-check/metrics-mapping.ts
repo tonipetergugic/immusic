@@ -10,6 +10,8 @@ export type PrivateMetricsMapped = {
   midSideEnergyRatio: number;
   stereoWidthIndex: number;
   lowEndPhaseCorrelation20_120: number;
+  lowEndPhaseCorrelation20_60: number;
+  lowEndPhaseCorrelation60_120: number;
   lowEndMonoEnergyLossPct20_120: number;
   spectralSubRmsDbfs: number;
   spectralLowRmsDbfs: number;
@@ -50,6 +52,8 @@ export function mapExtractToPrivateMetrics(extract: {
   midSideEnergyRatio: number;
   stereoWidthIndex: number;
   lowEndPhaseCorrelation20_120: number;
+  lowEndPhaseCorrelation20_60: number;
+  lowEndPhaseCorrelation60_120: number;
   lowEndMonoEnergyLossPct20_120: number;
   spectralSubRmsDbfs: number;
   spectralLowRmsDbfs: number;
@@ -77,6 +81,8 @@ export function mapExtractToPrivateMetrics(extract: {
     midSideEnergyRatio: extract.midSideEnergyRatio,
     stereoWidthIndex: extract.stereoWidthIndex,
     lowEndPhaseCorrelation20_120: extract.lowEndPhaseCorrelation20_120,
+    lowEndPhaseCorrelation20_60: extract.lowEndPhaseCorrelation20_60,
+    lowEndPhaseCorrelation60_120: extract.lowEndPhaseCorrelation60_120,
     lowEndMonoEnergyLossPct20_120: extract.lowEndMonoEnergyLossPct20_120,
     spectralSubRmsDbfs: extract.spectralSubRmsDbfs,
     spectralLowRmsDbfs: extract.spectralLowRmsDbfs,

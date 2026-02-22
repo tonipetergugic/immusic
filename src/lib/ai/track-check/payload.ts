@@ -66,6 +66,8 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
         "stereo_width_index",
         "low_end_phase_corr_20_120",
         "low_end_mono_loss_pct_20_120",
+        "low_end_phase_corr_20_60",
+        "low_end_phase_corr_60_120",
         "spectral_sub_rms_dbfs",
         "spectral_low_rms_dbfs",
         "spectral_lowmid_rms_dbfs",
@@ -310,6 +312,9 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
       typeof m.low_end_mono_loss_pct_20_120 === "number" && Number.isFinite(m.low_end_mono_loss_pct_20_120)
         ? m.low_end_mono_loss_pct_20_120
         : null,
+
+    lowEndPhaseCorrelation20_60: m?.low_end_phase_corr_20_60 ?? null,
+    lowEndPhaseCorrelation60_120: m?.low_end_phase_corr_60_120 ?? null,
 
     spectralSubRmsDbfs: typeof m.spectral_sub_rms_dbfs === "number" && Number.isFinite(m.spectral_sub_rms_dbfs) ? m.spectral_sub_rms_dbfs : null,
     spectralLowRmsDbfs: typeof m.spectral_low_rms_dbfs === "number" && Number.isFinite(m.spectral_low_rms_dbfs) ? m.spectral_low_rms_dbfs : null,

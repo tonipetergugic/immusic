@@ -5,6 +5,7 @@ import HeroSection from "./components/HeroSection";
 import JourneySection from "./components/JourneySection";
 import LimiterStressCard from "./components/LimiterStressCard";
 import LockedFeedbackSection from "./components/LockedFeedbackSection";
+import LowEndMonoStabilityCard from "./components/LowEndMonoStabilityCard";
 import MidSideCard from "./components/MidSideCard";
 import PhaseCorrelationCard from "./components/PhaseCorrelationCard";
 import SpectralRmsCard from "./components/SpectralRmsCard";
@@ -104,6 +105,13 @@ export default async function UploadFeedbackV3Page({
                   sideRmsDbfs={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
                   ratio={payload?.metrics?.stereo?.mid_side_energy_ratio ?? null}
                 />
+
+<LowEndMonoStabilityCard
+  phaseCorr20_120={payload?.metrics?.low_end?.phase_correlation_20_120 ?? null}
+  monoLossPct20_120={payload?.metrics?.low_end?.mono_energy_loss_pct_20_120 ?? null}
+  phaseCorr20_60={payload?.metrics?.low_end?.phase_correlation_20_60 ?? null}
+  phaseCorr60_120={payload?.metrics?.low_end?.phase_correlation_60_120 ?? null}
+/>
 
                 <SpectralRmsCard spectral={payload?.metrics?.spectral ?? null} />
 

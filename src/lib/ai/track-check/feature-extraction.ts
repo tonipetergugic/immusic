@@ -26,6 +26,8 @@ type ExtractOk = {
   crestFactorDb: number;
   phaseCorrelation: number;
   lowEndPhaseCorrelation20_120: number;
+  lowEndPhaseCorrelation20_60: number;
+  lowEndPhaseCorrelation60_120: number;
   lowEndMonoEnergyLossPct20_120: number;
   midRmsDbfs: number;
   sideRmsDbfs: number;
@@ -65,6 +67,8 @@ export async function extractPrivateMetricsFromTmpWav(params: {
   let crestFactorDb: number = NaN;
   let phaseCorrelation: number;
   let lowEndPhaseCorrelation20_120: number = NaN;
+  let lowEndPhaseCorrelation20_60: number = NaN;
+  let lowEndPhaseCorrelation60_120: number = NaN;
   let lowEndMonoEnergyLossPct20_120: number = NaN;
   let midRmsDbfs: number = NaN;
   let sideRmsDbfs: number = NaN;
@@ -134,6 +138,28 @@ export async function extractPrivateMetricsFromTmpWav(params: {
       fHighHz: 120,
     });
     params.logStage("detect_phase_corr_20_120", params.elapsedMs(tLowPhase));
+
+    {
+      const t0 = performance.now();
+      lowEndPhaseCorrelation20_60 = await ffmpegDetectPhaseCorrelationBand({
+        inPath: params.tmpWavPath,
+        fLowHz: 20,
+        fHighHz: 60,
+      });
+      const ms = performance.now() - t0;
+      params.logStage("detect_phase_corr_20_60", ms);
+    }
+
+    {
+      const t0 = performance.now();
+      lowEndPhaseCorrelation60_120 = await ffmpegDetectPhaseCorrelationBand({
+        inPath: params.tmpWavPath,
+        fLowHz: 60,
+        fHighHz: 120,
+      });
+      const ms = performance.now() - t0;
+      params.logStage("detect_phase_corr_60_120", ms);
+    }
 
     const lowMidDbfs_20_120 = await ffmpegDetectBandRmsDbfsWithPan({
       inPath: params.tmpWavPath,
@@ -261,6 +287,8 @@ export async function extractPrivateMetricsFromTmpWav(params: {
       crestFactorDb,
       phaseCorrelation,
       lowEndPhaseCorrelation20_120,
+      lowEndPhaseCorrelation20_60,
+      lowEndPhaseCorrelation60_120,
       lowEndMonoEnergyLossPct20_120,
       midRmsDbfs,
       sideRmsDbfs,

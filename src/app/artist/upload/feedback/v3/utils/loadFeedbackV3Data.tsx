@@ -95,7 +95,28 @@ export async function loadFeedbackV3Data(params: {
     { cache: "no-store", headers: { cookie: cookieHeader } }
   );
 
-  if (!res.ok) throw new Error(`Feedback API request failed: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 404) {
+      return {
+        kind: "render",
+        element: (
+          <div className="min-h-screen bg-[#0E0E10] text-white">
+            <div className="w-full px-6 py-10">
+              <BackLink href={`/artist/upload/processing?queue_id=${encodeURIComponent(queueId)}`} label="Back" />
+              <h1 className="mt-6 text-2xl font-bold">Feedback</h1>
+              <p className="mt-2 text-white/70">
+                Feedback is not ready (or not found) for this queue yet.
+              </p>
+              <p className="mt-2 text-xs text-white/40 break-all">
+                queue_id: {queueId}
+              </p>
+            </div>
+          </div>
+        ),
+      };
+    }
+    throw new Error(`Feedback API request failed: ${res.status}`);
+  }
 
   const data = (await res.json()) as FeedbackApiOk | FeedbackApiErr;
 
