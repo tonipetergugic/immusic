@@ -2,7 +2,6 @@ import EngineeringPanel from "./components/EngineeringPanel";
 import HeroSection from "./components/HeroSection";
 import JourneySection from "./components/JourneySection";
 import LockedFeedbackSection from "./components/LockedFeedbackSection";
-import PerformanceSection from "./components/PerformanceSection";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import UnlockFooterSection from "./components/UnlockFooterSection";
 
@@ -74,8 +73,6 @@ export default async function UploadFeedbackV3Page({
           ) : (
             <div className="mt-6 space-y-10">
               <JourneySection payload={payload} isReady={isReady} journey={journey} />
-
-              <PerformanceSection payload={payload} isReady={isReady} />
 
               <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
 
