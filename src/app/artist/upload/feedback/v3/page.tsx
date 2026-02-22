@@ -3,9 +3,12 @@ import EngineeringCore from "./components/EngineeringCore";
 import EngineeringDynamics from "./components/EngineeringDynamics";
 import HeroSection from "./components/HeroSection";
 import JourneySection from "./components/JourneySection";
+import LimiterStressCard from "./components/LimiterStressCard";
 import LockedFeedbackSection from "./components/LockedFeedbackSection";
+import PhaseCorrelationCard from "./components/PhaseCorrelationCard";
 import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
+import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
 
 import { unlockPaidFeedbackAction } from "../actions";
@@ -81,6 +84,22 @@ export default async function UploadFeedbackV3Page({
                   lufsI={payload?.metrics?.loudness?.lufs_i ?? null}
                   truePeak={payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
                   durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
+                />
+
+                <TransientsPanel
+                  attackStrength={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
+                  transientDensity={payload?.metrics?.transients?.transient_density ?? null}
+                  crestFactorDb={payload?.metrics?.dynamics?.crest_factor_db ?? null}
+                  p95ShortCrestDb={payload?.metrics?.transients?.p95_short_crest_db ?? null}
+                  meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
+                  transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
+                />
+
+                <PhaseCorrelationCard value={payload?.metrics?.stereo?.phase_correlation ?? null} />
+
+                <LimiterStressCard
+                  durationS={payload?.track?.duration_s ?? null}
+                  truePeakOvers={payload?.events?.loudness?.true_peak_overs ?? null}
                 />
 
                 {/* Dynamics + Streaming side by side */}

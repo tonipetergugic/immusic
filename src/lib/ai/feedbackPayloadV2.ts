@@ -118,6 +118,21 @@ export function buildFeedbackPayloadV2Mvp(params: {
   const transientDensityStdNum = n(transientDensityStd);
   const transientDensityCvNum = n(transientDensityCv);
 
+  // --- Attack Strength (0–100) based on p95ShortCrestDb ---
+  let attackStrengthScore: number | null = null;
+
+  if (typeof p95ShortCrestDb === "number") {
+    const minDb = 4;
+    const maxDb = 14;
+
+    const normalized =
+      (p95ShortCrestDb - minDb) / (maxDb - minDb);
+
+    const clamped = Math.max(0, Math.min(1, normalized));
+
+    attackStrengthScore = Math.round(clamped * 100);
+  }
+
   const highlights: string[] = [];
   const recommendations: FeedbackRecommendationV2[] = [];
 
@@ -1082,6 +1097,7 @@ export function buildFeedbackPayloadV2Mvp(params: {
         transient_density_cv: transientDensityCvNum,
         punch_index:
           typeof punchIndex === "number" && Number.isFinite(punchIndex) ? punchIndex : null,
+        attack_strength_0_100: attackStrengthScore,
       },
       ...(structureAnalysis != null
         ? {
