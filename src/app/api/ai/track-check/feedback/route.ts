@@ -6,6 +6,13 @@ import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 
 export const dynamic = "force-dynamic";
 
+type Access = {
+  unlocked: boolean;
+  has_paid: boolean;
+  credit_balance: number;
+  analysis_status: string | null;
+};
+
 type OkLocked = {
   ok: true;
   queue_id: string;
@@ -13,6 +20,7 @@ type OkLocked = {
   feedback_state: "locked";
   status: "locked";
   unlocked: false;
+  access: Access;
   payload: null;
 };
 
@@ -23,6 +31,7 @@ type OkUnlockedPending = {
   feedback_state: "unlocked_pending";
   status: "unlocked_no_data";
   unlocked: true;
+  access: Access;
   payload: null;
 };
 
@@ -33,6 +42,7 @@ type OkUnlockedReady = {
   feedback_state: "unlocked_ready";
   status: "unlocked_ready";
   unlocked: true;
+  access: Access;
   payload_version: number;
   payload: any; // jsonb payload aus DB (später typisieren)
 };
@@ -97,6 +107,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "not_found" } satisfies Err, { status: 404 });
   }
 
+  const analysisStatus = (queueRow as QueueRow).status ?? null;
+
+  const { data: creditRow, error: creditErr } = await supabase
+    .from("artist_credits")
+    .select("balance")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  if (creditErr) {
+    return NextResponse.json({ ok: false, error: "credits_fetch_failed" } satisfies Err, { status: 500 });
+  }
+
+  const creditBalance = typeof (creditRow as any)?.balance === "number" ? (creditRow as any).balance : 0;
+
   // 2) Unlock check: darf nur bei vorhandenem Unlock "unlocked" sein
   const { data: unlockRow, error: unlockErr } = await supabase
     .from("track_ai_feedback_unlocks")
@@ -124,6 +148,12 @@ export async function GET(request: Request) {
         feedback_state: "locked",
         status: "locked",
         unlocked: false,
+        access: {
+          unlocked: false,
+          has_paid: false,
+          credit_balance: creditBalance,
+          analysis_status: analysisStatus,
+        },
         payload: null,
       } satisfies OkLocked,
       { status: 200 }
@@ -234,6 +264,12 @@ export async function GET(request: Request) {
           feedback_state: "unlocked_ready",
           status: "unlocked_ready",
           unlocked: true,
+          access: {
+            unlocked: true,
+            has_paid: true,
+            credit_balance: creditBalance,
+            analysis_status: analysisStatus,
+          },
           payload_version: Number((payloadRow as FeedbackPayloadRow).payload_version ?? 1),
           payload: (payloadRow as FeedbackPayloadRow).payload ?? null,
         } satisfies OkUnlockedReady);
@@ -249,6 +285,12 @@ export async function GET(request: Request) {
       feedback_state: "unlocked_pending",
       status: "unlocked_no_data",
       unlocked: true,
+      access: {
+        unlocked: true,
+        has_paid: true,
+        credit_balance: creditBalance,
+        analysis_status: analysisStatus,
+      },
       payload: null,
     } satisfies OkUnlockedPending,
     { status: 200 }

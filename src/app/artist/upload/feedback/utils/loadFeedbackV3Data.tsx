@@ -10,6 +10,12 @@ export type FeedbackApiOk = {
   feedback_state: "locked" | "unlocked_pending" | "unlocked_ready";
   status: "locked" | "unlocked_no_data" | "unlocked_ready";
   unlocked: boolean;
+  access: {
+    unlocked: boolean;
+    has_paid: boolean;
+    credit_balance: number;
+    analysis_status: string | null;
+  };
   payload: null | {
     schema_version?: number;
     summary?: { highlights?: string[]; severity?: "info" | "warn" | "critical" };
@@ -55,16 +61,6 @@ export async function loadFeedbackV3Data(params: {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
-
-  const { data: creditRow, error: creditErr } = await supabase
-    .from("artist_credits")
-    .select("balance")
-    .eq("profile_id", user.id)
-    .maybeSingle();
-
-  if (creditErr) throw new Error(`Failed to load credit balance: ${creditErr.message}`);
-
-  const creditBalance = typeof creditRow?.balance === "number" ? creditRow.balance : 0;
 
   if (!queueId) {
     return {
@@ -139,7 +135,8 @@ export async function loadFeedbackV3Data(params: {
   }
 
   const okData = data as FeedbackApiOk;
-  const unlocked = okData.feedback_state !== "locked";
+  const unlocked = !!okData.access?.unlocked;
+  const creditBalance = typeof okData.access?.credit_balance === "number" ? okData.access.credit_balance : 0;
   const queueTitle = okData.queue_title ?? "Untitled";
   const isReady = okData.feedback_state === "unlocked_ready" && !!okData.payload;
   const payload = okData.payload ?? null;

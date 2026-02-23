@@ -57,7 +57,7 @@ export default function UnlockPanel(props: {
                 type="submit"
                 className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
               >
-                Start detailed AI analysis
+                Start detailed AI analysis (1 Credit)
               </button>
             </form>
           </div>

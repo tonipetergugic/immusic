@@ -1,5 +1,5 @@
 import React from "react";
-import JourneyWaveformWithTooltip from "../../_components/JourneyWaveformWithTooltip";
+import JourneyWaveformWithTooltip from "./JourneyWaveformWithTooltip";
 import { V3JourneyStyles } from "./V3Styles";
 
 import {
