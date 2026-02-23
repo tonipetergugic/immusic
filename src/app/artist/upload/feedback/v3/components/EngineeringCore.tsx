@@ -147,6 +147,30 @@ export default function EngineeringCore({
   const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
   const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
 
+  const clippedSamples =
+    typeof payload?.metrics?.clipping?.clipped_sample_count === "number" &&
+    Number.isFinite(payload.metrics.clipping.clipped_sample_count)
+      ? payload.metrics.clipping.clipped_sample_count
+      : null;
+
+  const clippingTone: "good" | "warn" | "critical" | "neutral" =
+    typeof clippedSamples === "number"
+      ? clippedSamples === 0
+        ? "good"
+        : clippedSamples < 200
+          ? "warn"
+          : "critical"
+      : "neutral";
+
+  const clippingClass =
+    clippingTone === "critical"
+      ? "border-red-500/30 bg-red-500/5"
+      : clippingTone === "warn"
+        ? "border-yellow-500/30 bg-yellow-500/5"
+        : clippingTone === "good"
+          ? "border-emerald-500/30 bg-emerald-500/5"
+          : "border-white/10 bg-white/[0.03]";
+
   return (
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8 flex flex-col">
@@ -159,7 +183,7 @@ export default function EngineeringCore({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 flex-grow">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 flex-grow">
           {/* Integrated LUFS */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
             <div className={METRIC_TITLE}>Integrated LUFS</div>
@@ -175,6 +199,20 @@ export default function EngineeringCore({
               {typeof truePeak === "number"
                 ? truePeak.toFixed(2)
                 : "—"}
+            </div>
+          </div>
+
+          {/* Clipping */}
+          <div className={"rounded-2xl border px-4 py-4 " + clippingClass}>
+            <div className={METRIC_TITLE}>Clipped Samples</div>
+            <div className={METRIC_VALUE}>
+              {typeof clippedSamples === "number" ? String(Math.trunc(clippedSamples)) : "—"}
+            </div>
+            <div className="mt-1 text-[11px] text-white/45 tabular-nums">
+              {clippingTone === "good" && "OK • No hard digital clipping"}
+              {clippingTone === "warn" && "WARN • Some hard clipping detected"}
+              {clippingTone === "critical" && "CRITICAL • Audible clipping likely"}
+              {clippingTone === "neutral" && "—"}
             </div>
           </div>
 
