@@ -15,6 +15,31 @@ export default function EngineeringCore({
   truePeak,
   durationS,
 }: Props) {
+  function toneForStereoWidth(x: number): "good" | "warn" | "critical" {
+    if (!Number.isFinite(x)) return "warn";
+    if (x > 0.8) return "critical";
+    if (x > 0.6) return "warn";
+    return "good";
+  }
+
+  function labelForStereoWidthTone(t: "good" | "warn" | "critical") {
+    if (t === "good") return "OK";
+    if (t === "critical") return "TOO WIDE";
+    return "WIDE";
+  }
+
+  function hintForStereoWidthTone(t: "good" | "warn" | "critical") {
+    if (t === "good") return "Club-safe stereo";
+    if (t === "critical") return "High mono risk";
+    return "Check mono compatibility";
+  }
+
+  function toneClass(t: "good" | "warn" | "critical") {
+    if (t === "critical") return "border-red-500/30 bg-red-500/5";
+    if (t === "warn") return "border-yellow-500/30 bg-yellow-500/5";
+    return "border-emerald-500/30 bg-emerald-500/5";
+  }
+
   const headroomDb =
     typeof truePeak === "number" && Number.isFinite(truePeak)
       ? Math.max(0, 0 - truePeak)
@@ -29,7 +54,7 @@ export default function EngineeringCore({
           : "good"
       : "neutral";
 
-  const toneClass =
+  const truePeakClass =
     truePeakTone === "critical"
       ? "border-red-500/30 bg-red-500/5"
       : truePeakTone === "warn"
@@ -144,7 +169,7 @@ export default function EngineeringCore({
           </div>
 
           {/* True Peak */}
-          <div className={"rounded-2xl border px-4 py-4 " + toneClass}>
+          <div className={"rounded-2xl border px-4 py-4 " + truePeakClass}>
             <div className={METRIC_TITLE}>True Peak (dBTP)</div>
             <div className={METRIC_VALUE}>
               {typeof truePeak === "number"
@@ -190,6 +215,33 @@ export default function EngineeringCore({
                   : "—"}
             </div>
           </div>
+
+          {/* Stereo Width Index */}
+          {(() => {
+            const width = payload?.metrics?.stereo?.stereo_width_index ?? null;
+            const tone =
+              typeof width === "number" ? toneForStereoWidth(width) : null;
+
+            const cls =
+              typeof tone === "string"
+                ? toneClass(tone)
+                : "border-white/10 bg-white/[0.03]";
+
+            return (
+              <div className={"rounded-2xl border px-4 py-4 " + cls}>
+                <div className={METRIC_TITLE}>Stereo Width</div>
+
+                <div className={METRIC_VALUE}>
+                  {typeof width === "number" ? width.toFixed(2) : "—"}
+                </div>
+
+                <div className="mt-1 text-[11px] text-white/45 tabular-nums">
+                  {typeof tone === "string" ? labelForStereoWidthTone(tone) : "—"}
+                  {typeof tone === "string" ? " • " + hintForStereoWidthTone(tone) : ""}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Streaming Safety + Codec Simulation */}

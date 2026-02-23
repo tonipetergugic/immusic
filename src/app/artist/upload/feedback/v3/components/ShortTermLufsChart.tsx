@@ -1,0 +1,258 @@
+"use client";
+
+import { useRef, useState } from "react";
+
+type Point = { t: number; lufs: number };
+
+function computeStats(data: Point[]) {
+  if (!data.length) return null;
+
+  const FLOOR = -28;
+
+  const values = data
+    .map(d => d.lufs)
+    .filter(v => Number.isFinite(v) && v >= FLOOR);
+
+  if (!values.length) return null;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min;
+
+  return { min, max, range };
+}
+
+function getRangeLabel(range: number): string {
+  if (range < 3.5) return "Very Compressed";
+  if (range < 6) return "Tight Dynamics";
+  if (range < 9) return "Balanced Contrast";
+  if (range < 13) return "Lively Dynamics";
+  return "Very Wide Dynamics";
+}
+
+export default function ShortTermLufsChart({
+  timeline,
+  integratedLufs,
+}: {
+  timeline: Point[] | null;
+  integratedLufs: number | null;
+}) {
+  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  if (!timeline?.length) {
+    return (
+      <div className="rounded-2xl border border-white/8 bg-gradient-to-b from-white/[0.04] to-black/30 p-5 text-center">
+        <div className="text-sm text-white/40 font-medium tracking-tight">
+          No short-term LUFS data available
+        </div>
+      </div>
+    );
+  }
+
+  const stats = computeStats(timeline);
+  if (!stats) return null;
+
+  const { min, max, range } = stats;
+  const VISUAL_TOP = 0;      // always 0 LUFS
+  const VISUAL_BOTTOM = min; // still use clipped min (-28 floor)
+  const n = timeline.length;
+  const denom = Math.max(1, n - 1);
+
+  const points = timeline.map((p, i) => {
+    const x = (i / denom) * 100;
+    const norm = (p.lufs - VISUAL_BOTTOM) / (VISUAL_TOP - VISUAL_BOTTOM || 1);
+    const y = 100 - norm * 100;
+    return { x, y, lufs: p.lufs, t: p.t };
+  });
+
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(" ");
+  const areaPath = `M 0,100 L ${points.map(p => `${p.x},${p.y}`).join(" L ")} L 100,100 Z`;
+
+  const avgY =
+    typeof integratedLufs === "number" &&
+    Number.isFinite(integratedLufs) &&
+    max > min
+      ? 100 - ((integratedLufs - VISUAL_BOTTOM) / (VISUAL_TOP - VISUAL_BOTTOM)) * 100
+      : null;
+
+  return (
+    <div className="rounded-3xl border border-white/9 bg-black/60 p-6 md:p-8 shadow-xl shadow-black/40">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold text-white tracking-tight">
+            Short-Term LUFS
+          </h3>
+          <p className="mt-1 text-xs text-white/60">
+            3-second loudness window • hover to inspect
+          </p>
+        </div>
+
+        <div className="inline-flex items-center gap-3 rounded-full border border-white/8 bg-white/4 px-4 py-1.5 text-xs font-medium text-zinc-300 backdrop-blur-sm">
+          <span className="text-emerald-400/90 font-semibold">
+            {getRangeLabel(range)}
+          </span>
+          <span className="text-white/30">•</span>
+          <span>{range.toFixed(1)} LU</span>
+          {avgY !== null && (
+            <>
+              <span className="text-white/30">•</span>
+              <span className="tabular-nums">
+                ∫ {integratedLufs!.toFixed(1)}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="relative mt-6 h-56 md:h-64 w-full">
+        <div className="absolute inset-0 rounded-2xl border border-white/7 bg-black/40 overflow-hidden">
+          <div
+            ref={wrapperRef}
+            className="absolute inset-0 cursor-crosshair"
+            onMouseMove={e => {
+              if (!wrapperRef.current) return;
+              const rect = wrapperRef.current.getBoundingClientRect();
+              const xPx = e.clientX - rect.left;
+              const ratio = Math.max(0, Math.min(1, xPx / rect.width));
+              const i = Math.round(ratio * (n - 1));
+
+              if (i >= 0 && i < n) {
+                const pt = points[i];
+                const yPx = pt.y * (rect.height / 100);
+                setHover({ i, x: xPx, y: yPx });
+              }
+            }}
+            onMouseLeave={() => setHover(null)}
+          >
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="lufsArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(0,255,198,0.28)" />
+                  <stop offset="70%" stopColor="rgba(0,255,198,0.10)" />
+                  <stop offset="100%" stopColor="rgba(0,255,198,0.02)" />
+                </linearGradient>
+                <linearGradient id="lufsLine" x1="0" y1="0" x2="100%" y2="0">
+                  <stop offset="0%" stopColor="#00FFC6" />
+                  <stop offset="100%" stopColor="#00E0B0" />
+                </linearGradient>
+              </defs>
+
+              <g stroke="rgba(255,255,255,0.04)" strokeWidth="0.5">
+                <line x1="0" x2="100" y1="25" y2="25" />
+                <line x1="0" x2="100" y1="50" y2="50" />
+                <line x1="0" x2="100" y1="75" y2="75" />
+              </g>
+
+              <path d={areaPath} fill="url(#lufsArea)" />
+
+              <polyline
+                points={linePoints}
+                fill="none"
+                stroke="url(#lufsLine)"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+
+              {avgY !== null && (
+                <line
+                  x1="0"
+                  x2="100"
+                  y1={avgY}
+                  y2={avgY}
+                  stroke="rgba(255,255,255,0.28)"
+                  strokeWidth="1.1"
+                  strokeDasharray="5 3"
+                />
+              )}
+
+              {hover && (
+                <>
+                  <line
+                    x1={points[hover.i].x}
+                    x2={points[hover.i].x}
+                    y1="0"
+                    y2="100"
+                    stroke="rgba(255,255,255,0.08)"
+                    strokeWidth="0.6"
+                  />
+                  <>
+                    <circle
+                      cx={points[hover.i].x}
+                      cy={points[hover.i].y}
+                      r="1.4"
+                      fill="#00FFC6"
+                    />
+                    <circle
+                      cx={points[hover.i].x}
+                      cy={points[hover.i].y}
+                      r="3"
+                      fill="none"
+                      stroke="rgba(0,255,198,0.35)"
+                      strokeWidth="0.6"
+                    />
+                  </>
+                </>
+              )}
+            </svg>
+
+            <div className="pointer-events-none absolute left-3 top-3 text-[10px] font-medium tabular-nums text-white/50">
+              {max.toFixed(1)}
+            </div>
+            <div className="pointer-events-none absolute left-3 bottom-3 text-[10px] font-medium tabular-nums text-white/50">
+              {min.toFixed(1)}
+            </div>
+
+            {hover && (() => {
+              const pt = points[hover.i];
+              const m = Math.floor(pt.t / 60);
+              const s = (pt.t % 60).toFixed(0).padStart(2, "0");
+              const tooltipWidth = 120;
+              const x = Math.max(
+                8,
+                Math.min(
+                  hover.x,
+                  wrapperRef.current!.clientWidth - tooltipWidth - 8
+                )
+              );
+
+              return (
+                <div
+                  className="pointer-events-none absolute z-20 rounded-lg bg-black/85 border border-white/10 px-3 py-2 text-xs font-medium text-white shadow-xl backdrop-blur-md"
+                  style={{
+                    left: x,
+                    top: Math.max(
+                      8,
+                      Math.min(
+                        hover.y - 52,
+                        wrapperRef.current!.clientHeight - 64
+                      )
+                    ),
+                  }}
+                >
+                  <div className="tabular-nums tracking-tight">
+                    {m}:{s} <span className="text-white/60">•</span>{" "}
+                    {pt.lufs.toFixed(1)} LUFS
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        <div className="mt-3 flex justify-between text-xs text-zinc-500">
+          <span>Short-term loudness contour</span>
+          <span className="tabular-nums">
+            {min.toFixed(1)} … {max.toFixed(1)} LUFS
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

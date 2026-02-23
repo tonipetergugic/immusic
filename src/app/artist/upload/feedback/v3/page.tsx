@@ -8,6 +8,7 @@ import LockedFeedbackSection from "./components/LockedFeedbackSection";
 import LowEndMonoStabilityCard from "./components/LowEndMonoStabilityCard";
 import MidSideCard from "./components/MidSideCard";
 import PhaseCorrelationCard from "./components/PhaseCorrelationCard";
+import ShortTermLufsChart from "./components/ShortTermLufsChart";
 import SpectralRmsCard from "./components/SpectralRmsCard";
 import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
@@ -87,6 +88,11 @@ export default async function UploadFeedbackV3Page({
                   lufsI={payload?.metrics?.loudness?.lufs_i ?? null}
                   truePeak={payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
                   durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
+                />
+
+                <ShortTermLufsChart
+                  timeline={payload?.metrics?.loudness?.short_term_lufs_timeline ?? null}
+                  integratedLufs={payload?.metrics?.loudness?.lufs_i ?? null}
                 />
 
                 <TransientsPanel
