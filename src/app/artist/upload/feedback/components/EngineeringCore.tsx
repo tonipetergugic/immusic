@@ -225,7 +225,7 @@ export default function EngineeringCore({
 
   return (
     <section className="h-full">
-      <div className="h-full rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8 flex flex-col">
+      <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Engineering</h2>

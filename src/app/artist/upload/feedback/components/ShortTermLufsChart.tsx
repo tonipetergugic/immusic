@@ -15,11 +15,30 @@ function computeStats(data: Point[]) {
 
   if (!values.length) return null;
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const sorted = [...values].sort((a, b) => a - b);
+
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+
+  const percentile = (p: number) => {
+    if (sorted.length === 1) return sorted[0];
+    const idx = (sorted.length - 1) * p;
+    const lo = Math.floor(idx);
+    const hi = Math.ceil(idx);
+    const t = idx - lo;
+    return sorted[lo] * (1 - t) + sorted[hi] * t;
+  };
+
+  const p05 = percentile(0.05);
+  const p95 = percentile(0.95);
+
+  // Robust dynamics range for labeling (resistant to outliers)
+  const rangeRobust = p95 - p05;
+
+  // Keep legacy range too (min/max), but don't use it for labels anymore
   const range = max - min;
 
-  return { min, max, range };
+  return { min, max, range, p05, p95, rangeRobust };
 }
 
 function getRangeLabel(range: number): string {
@@ -53,7 +72,7 @@ export default function ShortTermLufsChart({
   const stats = computeStats(timeline);
   if (!stats) return null;
 
-  const { min, max, range } = stats;
+  const { min, max, rangeRobust } = stats;
   const VISUAL_TOP = 0;      // always 0 LUFS
   const VISUAL_BOTTOM = min; // still use clipped min (-28 floor)
   const n = timeline.length;
@@ -61,13 +80,35 @@ export default function ShortTermLufsChart({
 
   const points = timeline.map((p, i) => {
     const x = (i / denom) * 100;
+
     const norm = (p.lufs - VISUAL_BOTTOM) / (VISUAL_TOP - VISUAL_BOTTOM || 1);
     const y = 100 - norm * 100;
     return { x, y, lufs: p.lufs, t: p.t };
   });
 
-  const linePoints = points.map(p => `${p.x},${p.y}`).join(" ");
-  const areaPath = `M 0,100 L ${points.map(p => `${p.x},${p.y}`).join(" L ")} L 100,100 Z`;
+  // Rendering: avoid "flat line at bottom" caused by SVG clipping when many points are below y=100.
+  // We render up to the last visible point (y <= 100) plus ONE extra point to show the drop.
+  const renderPoints = (() => {
+    let lastVisible = -1;
+    for (let i = 0; i < points.length; i++) {
+      if (points[i].y <= 100) lastVisible = i;
+    }
+
+    if (lastVisible === -1) return points.slice(0, 1);
+    if (lastVisible >= points.length - 1) return points;
+
+    return points.slice(0, lastVisible + 2);
+  })();
+
+  const linePoints = renderPoints.map(p => `${p.x},${p.y}`).join(" ");
+  const last = renderPoints[renderPoints.length - 1];
+
+const areaPath = `
+  M 0,100
+  L ${renderPoints.map(p => `${p.x},${p.y}`).join(" L ")}
+  L ${last.x},100
+  Z
+`.trim();
 
   const avgY =
     typeof integratedLufs === "number" &&
@@ -77,7 +118,7 @@ export default function ShortTermLufsChart({
       : null;
 
   return (
-    <div className="rounded-3xl border border-white/9 bg-black/60 p-6 md:p-8 shadow-xl shadow-black/40">
+    <div className="rounded-3xl border border-white/9 bg-black/30 p-6 md:p-8 shadow-xl shadow-black/40">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold text-white tracking-tight">
@@ -90,15 +131,15 @@ export default function ShortTermLufsChart({
 
         <div className="inline-flex items-center gap-3 rounded-full border border-white/8 bg-white/4 px-4 py-1.5 text-xs font-medium text-zinc-300 backdrop-blur-sm">
           <span className="text-emerald-400/90 font-semibold">
-            {getRangeLabel(range)}
+            {getRangeLabel(rangeRobust)}
           </span>
           <span className="text-white/30">•</span>
-          <span>{range.toFixed(1)} LU</span>
+          <span>{rangeRobust.toFixed(1)} LU</span>
           {avgY !== null && (
             <>
               <span className="text-white/30">•</span>
               <span className="tabular-nums">
-                ∫ {integratedLufs!.toFixed(1)}
+                INT {integratedLufs!.toFixed(1)}
               </span>
             </>
           )}
@@ -119,7 +160,9 @@ export default function ShortTermLufsChart({
 
               if (i >= 0 && i < n) {
                 const pt = points[i];
-                const yPx = pt.y * (rect.height / 100);
+                const VIEW_MIN_Y = -5;
+                const VIEW_H = 110;
+                const yPx = ((pt.y - VIEW_MIN_Y) / VIEW_H) * rect.height;
                 setHover({ i, x: xPx, y: yPx });
               }
             }}
@@ -127,7 +170,7 @@ export default function ShortTermLufsChart({
           >
             <svg
               className="absolute inset-0 h-full w-full"
-              viewBox="0 0 100 100"
+              viewBox="0 -5 100 110"
               preserveAspectRatio="none"
             >
               <defs>
@@ -178,35 +221,19 @@ export default function ShortTermLufsChart({
                     x1={points[hover.i].x}
                     x2={points[hover.i].x}
                     y1="0"
-                    y2="100"
+                    y2="105"
                     stroke="rgba(255,255,255,0.08)"
                     strokeWidth="0.6"
                   />
-                  <>
-                    <circle
-                      cx={points[hover.i].x}
-                      cy={points[hover.i].y}
-                      r="1.4"
-                      fill="#00FFC6"
-                    />
-                    <circle
-                      cx={points[hover.i].x}
-                      cy={points[hover.i].y}
-                      r="3"
-                      fill="none"
-                      stroke="rgba(0,255,198,0.35)"
-                      strokeWidth="0.6"
-                    />
-                  </>
                 </>
               )}
             </svg>
 
             <div className="pointer-events-none absolute left-3 top-3 text-[10px] font-medium tabular-nums text-white/50">
-              {max.toFixed(1)}
+              0 LUFS
             </div>
             <div className="pointer-events-none absolute left-3 bottom-3 text-[10px] font-medium tabular-nums text-white/50">
-              {min.toFixed(1)}
+              {min.toFixed(1)} LUFS
             </div>
 
             {hover && (() => {
@@ -244,13 +271,6 @@ export default function ShortTermLufsChart({
               );
             })()}
           </div>
-        </div>
-
-        <div className="mt-3 flex justify-between text-xs text-zinc-500">
-          <span>Short-term loudness contour</span>
-          <span className="tabular-nums">
-            {min.toFixed(1)} … {max.toFixed(1)} LUFS
-          </span>
         </div>
       </div>
     </div>
