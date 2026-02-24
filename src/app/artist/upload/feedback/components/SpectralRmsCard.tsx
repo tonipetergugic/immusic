@@ -48,25 +48,6 @@ export default function SpectralRmsCard({ spectral }: Props) {
 
   if (bands.length === 0) return null;
 
-  const mid = bands.find((b) => b.key === "mid")?.v ?? null;
-  const sub = bands.find((b) => b.key === "sub")?.v ?? null;
-  const air = bands.find((b) => b.key === "air")?.v ?? null;
-
-  let spectrumInsight: string | null = null;
-
-  if (mid !== null && sub !== null && air !== null) {
-    const airDelta = air - mid; // negative = darker
-    const subDelta = sub - mid; // positive = bass heavier
-
-    if (airDelta < -8) {
-      spectrumInsight = "Dark top end – high frequencies relatively low.";
-    } else if (subDelta > 6) {
-      spectrumInsight = "Bass dominant – strong low-end energy.";
-    } else {
-      spectrumInsight = "Balanced spectrum across bands.";
-    }
-  }
-
   const linePoints = bands
     .map((b, i) => {
       const x = (i / (bands.length - 1)) * 100; // NO PADDING (0..100)
@@ -97,12 +78,6 @@ export default function SpectralRmsCard({ spectral }: Props) {
             Shows where your track carries energy (Sub → Air). Not a quality score.
           </div>
         </div>
-
-        {spectrumInsight && (
-          <div className="ml-6 shrink-0 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-            {spectrumInsight}
-          </div>
-        )}
       </div>
 
       <div className="mt-6">
