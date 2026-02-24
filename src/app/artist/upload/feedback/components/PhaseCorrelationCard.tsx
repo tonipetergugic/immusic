@@ -18,7 +18,7 @@ export default function PhaseCorrelationCard({ value }: Props) {
   const markerLeftPct = ((clampedValue + 1) / 2) * 100;
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
+    <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-white/90">Phase Correlation</span>
