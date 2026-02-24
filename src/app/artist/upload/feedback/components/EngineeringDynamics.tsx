@@ -84,17 +84,17 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
 
           {typeof score === "number" && (
             <div className="flex items-center gap-3">
-              <span className="text-[10px] px-2 py-1 rounded-full border border-white/10 bg-white/[0.03] text-white/70 font-semibold tracking-wide">
+              <span className="text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.05] text-white/80 font-semibold tracking-wide">
                 {label ?? "—"}
               </span>
-              <div className="text-sm font-semibold text-white/80 tabular-nums">
+              <div className="text-xl font-semibold text-white tabular-nums">
                 {score}/100
               </div>
             </div>
           )}
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 flex-grow">
+        <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3 flex-grow">
           {[
             {
               k: "Integrated LUFS",
