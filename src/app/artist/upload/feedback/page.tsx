@@ -98,7 +98,6 @@ export default async function UploadFeedbackV3Page({
                 <TransientsPanel
                   attackStrength={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
                   transientDensity={payload?.metrics?.transients?.transient_density ?? null}
-                  crestFactorDb={payload?.metrics?.dynamics?.crest_factor_db ?? null}
                   p95ShortCrestDb={payload?.metrics?.transients?.p95_short_crest_db ?? null}
                   meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
                   transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
