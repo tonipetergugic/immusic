@@ -111,25 +111,80 @@ export default function EngineeringCore({
       ? Math.max(0, postEncodeHeadroom)
       : null;
 
+  const hrEffective =
+    typeof sourceHeadroom === "number" || typeof postHeadroom === "number"
+      ? Math.min(sourceHeadroom ?? Infinity, postHeadroom ?? Infinity)
+      : null;
+
   const headroomLost =
     typeof sourceHeadroom === "number" &&
     typeof postHeadroom === "number"
-      ? postHeadroom - sourceHeadroom
+      ? sourceHeadroom - postHeadroom
       : null;
 
-  // Risk score (simple + deterministic)
-  const oversMax =
+  const aacPostTp =
+    typeof aac?.post_true_peak_db === "number" && Number.isFinite(aac.post_true_peak_db)
+      ? aac.post_true_peak_db
+      : null;
+
+  const mp3PostTp =
+    typeof mp3?.post_true_peak_db === "number" && Number.isFinite(mp3.post_true_peak_db)
+      ? mp3.post_true_peak_db
+      : null;
+
+  const tpEffective =
+    typeof truePeak === "number" || typeof aacPostTp === "number" || typeof mp3PostTp === "number"
+      ? Math.max(truePeak ?? -999, aacPostTp ?? -999, mp3PostTp ?? -999)
+      : null;
+
+  const aacPostTpClamped = typeof aacPostTp === "number" ? Math.min(aacPostTp, 0.0) : null;
+  const mp3PostTpClamped = typeof mp3PostTp === "number" ? Math.min(mp3PostTp, 0.0) : null;
+
+  const aacPostHeadroom =
+    typeof aacPostTpClamped === "number" ? (0.0 - aacPostTpClamped) : null;
+
+  const mp3PostHeadroom =
+    typeof mp3PostTpClamped === "number" ? (0.0 - mp3PostTpClamped) : null;
+
+  const aacHeadroomLost =
+    typeof sourceHeadroom === "number" && typeof aacPostHeadroom === "number"
+      ? sourceHeadroom - aacPostHeadroom
+      : null;
+
+  const mp3HeadroomLost =
+    typeof sourceHeadroom === "number" && typeof mp3PostHeadroom === "number"
+      ? sourceHeadroom - mp3PostHeadroom
+      : null;
+
+  // Streaming Safety (deterministic + genre-neutral)
+  // Use worst-case overs normalized by duration + post-encode headroom (worst codec).
+  const oversWorst =
     typeof aacOvers === "number" || typeof mp3Overs === "number"
       ? Math.max(aacOvers ?? 0, mp3Overs ?? 0)
       : null;
 
+  const oversPerMin =
+    typeof oversWorst === "number" &&
+    typeof durationS === "number" &&
+    Number.isFinite(durationS) &&
+    durationS > 0
+      ? oversWorst / (durationS / 60)
+      : null;
+
+  // postHeadroom is already clamped to >= 0 above (0 means: at/beyond 0.0 dBTP after encoding)
   let encodingRiskTone: "good" | "warn" | "critical" | "neutral" = "neutral";
 
-  if (typeof oversMax === "number") {
-    encodingRiskTone = oversMax >= 50 ? "critical" : oversMax >= 1 ? "warn" : "good";
-  } else if (typeof postEncodeHeadroom === "number") {
-    // negative means overs risk
-    encodingRiskTone = postEncodeHeadroom < 0 ? "critical" : postEncodeHeadroom < 0.1 ? "warn" : "good";
+  if (typeof tpEffective === "number") {
+    if (tpEffective >= 0.0) encodingRiskTone = "critical";
+    else if (tpEffective > -0.3) encodingRiskTone = "warn";
+    else encodingRiskTone = "good";
+  }
+
+  // Overs escalation (normalized)
+  if (typeof oversPerMin === "number") {
+    if (oversPerMin >= 1) encodingRiskTone = "critical";
+    else if (oversPerMin > 0) encodingRiskTone = encodingRiskTone === "critical" ? "critical" : "warn";
+    else encodingRiskTone = encodingRiskTone === "neutral" ? "good" : encodingRiskTone;
   }
 
   const encodingRiskClass =
@@ -140,9 +195,6 @@ export default function EngineeringCore({
         : encodingRiskTone === "good"
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-white/10 bg-white/[0.03]";
-
-  const encodingRiskLabel =
-    encodingRiskTone === "critical" ? "CRITICAL" : encodingRiskTone === "warn" ? "MODERATE" : encodingRiskTone === "good" ? "OK" : "—";
 
   const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
   const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
@@ -233,24 +285,6 @@ export default function EngineeringCore({
             <div className={METRIC_TITLE}>Headroom (dB)</div>
             <div className={METRIC_VALUE}>
               {typeof headroomDb === "number" ? headroomDb.toFixed(2) : "—"}
-            </div>
-          </div>
-
-          {/* Streaming Safety (status) */}
-          <div className={"rounded-2xl border px-4 py-4 " + encodingRiskClass}>
-            <div className={METRIC_TITLE}>Streaming Safety</div>
-            <div className={METRIC_VALUE}>
-              {encodingRiskTone === "good" && "OK"}
-              {encodingRiskTone === "warn" && "MODERATE"}
-              {encodingRiskTone === "critical" && "CRITICAL"}
-              {encodingRiskTone === "neutral" && "—"}
-            </div>
-            <div className="mt-1 text-[11px] text-white/45 tabular-nums">
-              {typeof oversMax === "number"
-                ? `Overs: ${oversMax}`
-                : typeof postEncodeHeadroom === "number"
-                  ? `Post headroom: ${postEncodeHeadroom.toFixed(2)} dB`
-                  : "—"}
             </div>
           </div>
 
@@ -362,11 +396,11 @@ export default function EngineeringCore({
                 <div className="text-[10px] uppercase tracking-wider text-white/40">
                   AAC 128
                 </div>
-                <div className="mt-2 flex justify-between">
-                  <span>Headroom lost</span>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className={METRIC_VALUE}>Headroom lost</span>
                   <span className={METRIC_VALUE}>
-                    {typeof headroomLost === "number"
-                      ? `${headroomLost.toFixed(2)} dB`
+                    {typeof aacHeadroomLost === "number"
+                      ? `${aacHeadroomLost.toFixed(2)} dB`
                       : "—"}
                   </span>
                 </div>
@@ -376,11 +410,11 @@ export default function EngineeringCore({
                 <div className="text-[10px] uppercase tracking-wider text-white/40">
                   MP3 128
                 </div>
-                <div className="mt-2 flex justify-between">
-                  <span>Headroom lost</span>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className={METRIC_VALUE}>Headroom lost</span>
                   <span className={METRIC_VALUE}>
-                    {typeof headroomLost === "number"
-                      ? `${headroomLost.toFixed(2)} dB`
+                    {typeof mp3HeadroomLost === "number"
+                      ? `${mp3HeadroomLost.toFixed(2)} dB`
                       : "—"}
                   </span>
                 </div>

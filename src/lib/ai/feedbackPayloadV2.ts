@@ -839,26 +839,34 @@ export function buildFeedbackPayloadV2Mvp(params: {
           },
         };
 
-  const sourceHeadroomToZeroDbTp =
-    typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? (0.0 - truePeakDbTp) : null;
+  const headroomFromTp = (tpDbTp: number | null): number | null => {
+    if (tpDbTp === null || !Number.isFinite(tpDbTp)) return null;
+    // Headroom(dB) is always >= 0 and defined as: -max_true_peak_dBTP (clamped)
+    return Math.max(0, 0.0 - tpDbTp);
+  };
+
+  const sourceHeadroomToZeroDbTp = headroomFromTp(
+    typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null
+  );
 
   const aacPostTp =
-    typeof (codecSimulation as any)?.aac128?.post_true_peak_db === "number" && Number.isFinite((codecSimulation as any).aac128.post_true_peak_db)
+    typeof (codecSimulation as any)?.aac128?.post_true_peak_db === "number" &&
+    Number.isFinite((codecSimulation as any).aac128.post_true_peak_db)
       ? (codecSimulation as any).aac128.post_true_peak_db
       : null;
 
   const mp3PostTp =
-    typeof (codecSimulation as any)?.mp3128?.post_true_peak_db === "number" && Number.isFinite((codecSimulation as any).mp3128.post_true_peak_db)
+    typeof (codecSimulation as any)?.mp3128?.post_true_peak_db === "number" &&
+    Number.isFinite((codecSimulation as any).mp3128.post_true_peak_db)
       ? (codecSimulation as any).mp3128.post_true_peak_db
       : null;
 
   const worstPostTpDbTp =
-    aacPostTp === null && mp3PostTp === null
-      ? null
-      : Math.max(aacPostTp ?? -999, mp3PostTp ?? -999);
+    aacPostTp === null && mp3PostTp === null ? null : Math.max(aacPostTp ?? -999, mp3PostTp ?? -999);
 
-  const postHeadroomToZeroDbTp =
-    typeof worstPostTpDbTp === "number" && Number.isFinite(worstPostTpDbTp) ? (0.0 - worstPostTpDbTp) : null;
+  const postHeadroomToZeroDbTp = headroomFromTp(
+    typeof worstPostTpDbTp === "number" && Number.isFinite(worstPostTpDbTp) ? worstPostTpDbTp : null
+  );
 
   const effectiveHeadroomDbTp =
     sourceHeadroomToZeroDbTp === null && postHeadroomToZeroDbTp === null
