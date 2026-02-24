@@ -237,7 +237,6 @@ export function deriveEnergySeries(payload: any, isReady: boolean) {
 export function deriveWaveformSeriesFromShortTermLufs(payload: any, isReady: boolean): number[] | null {
   if (!isReady || !payload) return null;
 
-  // Try multiple shapes (null-safe forever)
   const tl =
     findFirst<Array<{ t: number; lufs: number }>>(payload, [
       "metrics.loudness.short_term_lufs_timeline",
@@ -248,11 +247,78 @@ export function deriveWaveformSeriesFromShortTermLufs(payload: any, isReady: boo
 
   if (!Array.isArray(tl) || tl.length < 8) return null;
 
-  const lufs = tl.map((p) => p?.lufs).filter((x) => typeof x === "number" && Number.isFinite(x)) as number[];
-  if (lufs.length < 8) return null;
+  // Keep only valid points and SORT by time
+  const pts = tl
+    .filter((p) => p && typeof p.t === "number" && Number.isFinite(p.t) && typeof p.lufs === "number" && Number.isFinite(p.lufs))
+    .slice()
+    .sort((a, b) => a.t - b.t);
 
-  // Robust normalization: use 10th..90th percentile to avoid outliers
-  const sorted = [...lufs].sort((a, b) => a - b);
+  if (pts.length < 8) return null;
+
+  // Determine duration (prefer payload duration; fallback to timeline span)
+  const durationS = (() => {
+    const d = findFirst<number>(payload, ["track.duration_s", "track.durationS", "track.duration", "duration_s", "durationS"]);
+    if (typeof d === "number" && Number.isFinite(d) && d > 0) return d;
+    const span = pts[pts.length - 1]!.t - pts[0]!.t;
+    return span > 0 ? span : null;
+  })();
+
+  if (!durationS || durationS <= 0) return null;
+
+  // Ensure coverage from ~0 to durationS (avoid left/right drift)
+  const first = pts[0]!;
+  const last = pts[pts.length - 1]!;
+
+  const normalizedPts: Array<{ t: number; lufs: number }> = [];
+
+  // If first.t > 0, prepend a point at 0 using first.lufs
+  if (first.t > 0.0001) normalizedPts.push({ t: 0, lufs: first.lufs });
+
+  // Shift times if timeline starts > 0 (keep shape but align to 0..duration)
+  const tOffset = first.t > 0.0001 ? first.t : 0;
+
+  for (const p of pts) {
+    const t = p.t - tOffset;
+    if (t < 0) continue;
+    if (t > durationS) break;
+    normalizedPts.push({ t, lufs: p.lufs });
+  }
+
+  // If last point ends before duration, append at duration using last.lufs (clamped)
+  const tail = normalizedPts[normalizedPts.length - 1]!;
+  if (tail && tail.t < durationS - 0.0001) normalizedPts.push({ t: durationS, lufs: tail.lufs });
+
+  if (normalizedPts.length < 8) return null;
+
+  // Time-based resample to a stable number of bars
+  const MAX_BARS = 700;
+  const N = MAX_BARS;
+
+  const outLufs = new Array(N).fill(0);
+
+  let j = 0;
+  for (let i = 0; i < N; i++) {
+    const targetT = (i / (N - 1)) * durationS;
+
+    while (j < normalizedPts.length - 2 && normalizedPts[j + 1]!.t < targetT) j++;
+
+    const a = normalizedPts[j]!;
+    const b = normalizedPts[Math.min(normalizedPts.length - 1, j + 1)]!;
+
+    if (b.t <= a.t) {
+      outLufs[i] = a.lufs;
+      continue;
+    }
+
+    const alpha = clamp01((targetT - a.t) / (b.t - a.t));
+    outLufs[i] = a.lufs + (b.lufs - a.lufs) * alpha;
+  }
+
+  // Robust normalization on the RESAMPLED series (10th..90th percentile)
+  const finite = outLufs.filter((x) => typeof x === "number" && Number.isFinite(x));
+  if (finite.length < 8) return null;
+
+  const sorted = [...finite].sort((a, b) => a - b);
   const p = (q: number) => {
     const idx = Math.max(0, Math.min(sorted.length - 1, Math.round(q * (sorted.length - 1))));
     return sorted[idx]!;
@@ -262,29 +328,10 @@ export function deriveWaveformSeriesFromShortTermLufs(payload: any, isReady: boo
   const hi = p(0.90);
   const denom = Math.max(1e-6, hi - lo);
 
-  // Convert LUFS to 0..1 amplitude (higher LUFS => taller bar)
-  const raw = tl.map((pt) => {
-    const v = typeof pt?.lufs === "number" && Number.isFinite(pt.lufs) ? (pt.lufs - lo) / denom : 0;
-    return clamp01(v);
-  });
+  // Convert LUFS -> 0..1 amplitude (higher LUFS => taller)
+  const series = outLufs.map((x) => clamp01((x - lo) / denom));
 
-  // Downsample to keep SVG light (max ~700 bars)
-  const MAX_BARS = 700;
-  if (raw.length <= MAX_BARS) return raw;
-
-  const out: number[] = [];
-  for (let i = 0; i < MAX_BARS; i++) {
-    const a = Math.floor((i / MAX_BARS) * raw.length);
-    const b = Math.floor(((i + 1) / MAX_BARS) * raw.length);
-    let m = 0;
-    let n = 0;
-    for (let j = a; j < Math.max(a + 1, b); j++) {
-      m = Math.max(m, raw[j] ?? 0);
-      n++;
-    }
-    out.push(n > 0 ? m : 0);
-  }
-  return out;
+  return series;
 }
 
 export function buildSvgPath(series: number[], width: number, height: number) {

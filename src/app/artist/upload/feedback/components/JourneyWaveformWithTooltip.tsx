@@ -20,20 +20,32 @@ export default function JourneyWaveformWithTooltip(props: {
     lufs: number | null;
   } | null>(null);
 
-  const [hoverXPct, setHoverXPct] = React.useState<number | null>(null);
+  const tlSorted = React.useMemo(() => {
+    if (!lufsTimeline || lufsTimeline.length < 2) return null;
+    const tl = lufsTimeline
+      .filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.lufs))
+      .slice()
+      .sort((a, b) => a.t - b.t);
+    return tl.length >= 2 ? tl : null;
+  }, [lufsTimeline]);
+
+  const rafRef = React.useRef<number | null>(null);
+  const nextHoverRef = React.useRef<{
+    x: number;
+    y: number;
+    time: number;
+    value: number;
+    lufs: number | null;
+  } | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   return (
-    <div
-      className="relative h-full w-full"
-      onMouseMove={(e) => {
-        const el = e.currentTarget;
-        const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) / Math.max(1, r.width);
-        const pct = Math.max(0, Math.min(1, x)) * 100;
-        setHoverXPct(pct);
-      }}
-      onMouseLeave={() => setHoverXPct(null)}
-    >
+    <div className="relative h-full w-full">
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         className="h-full w-full"
@@ -60,22 +72,14 @@ export default function JourneyWaveformWithTooltip(props: {
           const val = series[idx] ?? 0;
           const time = snapped * durationS;
 
-          // LUFS lookup (linear interpolation on timeline)
+          // LUFS lookup (linear interpolation on memoized timeline)
           const lufsNow = (() => {
-            if (!lufsTimeline || lufsTimeline.length < 2) return null;
+            if (!tlSorted) return null;
 
-            // ensure sorted by time (cheap & safe)
-            const tl = lufsTimeline
-              .filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.lufs))
-              .slice()
-              .sort((a, b) => a.t - b.t);
+            const tl = tlSorted;
 
-            if (tl.length < 2) return null;
-
-            // clamp time
             const t = Math.max(tl[0]!.t, Math.min(tl[tl.length - 1]!.t, time));
 
-            // find segment
             let j = 0;
             while (j < tl.length - 2 && tl[j + 1]!.t < t) j++;
 
@@ -88,29 +92,48 @@ export default function JourneyWaveformWithTooltip(props: {
             return a.lufs + (b.lufs - a.lufs) * alpha;
           })();
 
-          // only update if snapped index changed (reduces flicker)
-          setHoverPoint((prev) => {
-            if (prev && Math.round((prev.time / durationS) * (SNAP_POINTS - 1)) === Math.round(snapped * (SNAP_POINTS - 1))) {
-              return prev;
-            }
-            return {
-              x: snapped * rect.width,
-              y: 0,
-              time,
-              value: val,
-              lufs: lufsNow,
-            };
-          });
+          const next = {
+            x: snapped * rect.width,
+            y: 0,
+            time,
+            value: val,
+            lufs: lufsNow,
+          };
+
+          const prevSnap =
+            hoverPoint && durationS
+              ? Math.round((hoverPoint.time / durationS) * (SNAP_POINTS - 1))
+              : null;
+
+          const nextSnap = Math.round(snapped * (SNAP_POINTS - 1));
+
+          if (prevSnap !== null && prevSnap === nextSnap) return;
+
+          nextHoverRef.current = next;
+
+          if (rafRef.current === null) {
+            rafRef.current = requestAnimationFrame(() => {
+              rafRef.current = null;
+              if (nextHoverRef.current) setHoverPoint(nextHoverRef.current);
+            });
+          }
         }}
-        onMouseLeave={() => setHoverPoint(null)}
+        onMouseLeave={() => {
+          nextHoverRef.current = null;
+          if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+          }
+          setHoverPoint(null);
+        }}
       >
         {children}
       </svg>
-      {hoverXPct !== null ? (
+      {hoverPoint ? (
         <div
           className="pointer-events-none absolute top-0 h-full w-px"
           style={{
-            left: `${hoverXPct}%`,
+            left: `clamp(0px, ${hoverPoint.x}px, 100%)`,
             background: "rgba(255,255,255,0.55)",
             boxShadow: "0 0 0 1px rgba(0,0,0,0.35), 0 0 16px rgba(255,255,255,0.12)",
           }}
@@ -172,7 +195,7 @@ export default function JourneyWaveformWithTooltip(props: {
             </div>
 
             <div className="text-white/60">
-              Energy: {(hoverPoint.value * 10).toFixed(1)}
+              Energy: {Math.round(v * 100)}%
             </div>
             <div className="text-white/60">
               Short-term: {hoverPoint.lufs === null ? "—" : `${hoverPoint.lufs.toFixed(1)} LUFS`}
