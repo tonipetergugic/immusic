@@ -78,10 +78,17 @@ export default function TransientsPanel({
       : null;
 
   let attackBarClass = "bg-white/70";
+
   if (typeof attackStrength === "number") {
-    if (attackStrength < 40) attackBarClass = "bg-yellow-400/80";
-    else if (attackStrength < 70) attackBarClass = "bg-emerald-400/80";
-    else attackBarClass = "bg-red-400/80";
+    if (attackStrength < 40) {
+      attackBarClass = "bg-blue-400/80"; // Soft
+    } else if (attackStrength < 70) {
+      attackBarClass = "bg-emerald-400/80"; // Controlled
+    } else if (attackStrength < 85) {
+      attackBarClass = "bg-amber-400/80"; // Punchy
+    } else {
+      attackBarClass = "bg-red-400/80"; // Aggressive
+    }
   }
 
   const crestSpreadDb =
@@ -125,9 +132,9 @@ export default function TransientsPanel({
           {typeof attackStrength === "number" ? `${attackStrength} / 100` : "—"}
         </div>
 
-        <div className="mt-3 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+        <div className="mt-4 h-3 w-full rounded-full bg-white/10 overflow-hidden">
           <div
-            className={`h-full rounded-full ${attackBarClass}`}
+            className="h-full rounded-full bg-[#00FFC6] shadow-[0_0_12px_rgba(0,255,198,0.6)] transition-all duration-500"
             style={{ width: `${attackPct ?? 0}%` }}
           />
         </div>

@@ -122,19 +122,50 @@ export function buildFeedbackPayloadV2Mvp(params: {
   const transientDensityStdNum = n(transientDensityStd);
   const transientDensityCvNum = n(transientDensityCv);
 
-  // --- Attack Strength (0–100) based on p95ShortCrestDb ---
+  // --- Attack Strength (0–100) ---
+  // Deterministic, genre-neutral punch proxy based on:
+  // - p95ShortCrestDb (impact peaks)
+  // - transientDensity (events/sec)
+  // - transientDensityCv (stability; lower = more stable)
   let attackStrengthScore: number | null = null;
 
-  if (typeof p95ShortCrestDb === "number") {
-    const minDb = 4;
-    const maxDb = 14;
+  const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-    const normalized =
-      (p95ShortCrestDb - minDb) / (maxDb - minDb);
+  const crest01 =
+    typeof p95ShortCrestDb === "number" && Number.isFinite(p95ShortCrestDb)
+      ? clamp01((p95ShortCrestDb - 4) / 10) // 4..14 dB -> 0..1
+      : null;
 
-    const clamped = Math.max(0, Math.min(1, normalized));
+  const density01 =
+    typeof transientDensity === "number" && Number.isFinite(transientDensity)
+      ? clamp01((transientDensity - 0.05) / 0.10) // 0.05..0.15 -> 0..1
+      : null;
 
-    attackStrengthScore = Math.round(clamped * 100);
+  const stability01 =
+    typeof transientDensityCv === "number" && Number.isFinite(transientDensityCv)
+      ? clamp01(1 - (transientDensityCv - 0.35) / 0.40) // 0.35..0.75 -> 1..0
+      : null;
+
+  // weighted mix with renormalization for missing inputs
+  const parts: Array<{ v: number | null; w: number }> = [
+    { v: crest01, w: 0.6 },
+    { v: density01, w: 0.25 },
+    { v: stability01, w: 0.15 },
+  ];
+
+  let wSum = 0;
+  let acc = 0;
+
+  for (const p of parts) {
+    if (typeof p.v === "number") {
+      wSum += p.w;
+      acc += p.v * p.w;
+    }
+  }
+
+  if (wSum > 0) {
+    const attack01 = acc / wSum;
+    attackStrengthScore = Math.round(clamp01(attack01) * 100);
   }
 
   const highlights: string[] = [];
