@@ -141,14 +141,7 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-white">Limiter Stress</h3>
-          <p className="mt-1 text-sm text-white/60">
-            How often the signal hits near 0 dBTP over time.
-          </p>
-        </div>
-
+      <div className="flex items-start justify-end gap-4">
         <div className="text-sm font-semibold text-white/85 tabular-nums">
           {label}
         </div>

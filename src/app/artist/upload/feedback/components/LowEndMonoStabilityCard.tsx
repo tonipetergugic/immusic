@@ -64,41 +64,30 @@ export default function LowEndMonoStabilityCard({
   return (
     <div className="rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        {/* KPI Row */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-10">
+          {/* Correlation */}
           <div>
-            <div className="text-[18px] font-semibold text-white/90">
-              Low-End Mono Stability
+            <div className="text-[11px] uppercase tracking-wide text-white/30">
+              Correlation (20–120 Hz)
             </div>
-            <div className="text-[13px] text-white/40 mt-1">
-              Technical visibility (20–120 Hz). No judgement.
+
+            <div className="mt-2 text-[28px] font-semibold text-white">
+              {hasPc ? phaseCorr20_120.toFixed(2) : "—"}
+            </div>
+          </div>
+
+          {/* Mono Loss */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-white/30">
+              Mono Loss (20–120 Hz)
+            </div>
+
+            <div className="mt-2 text-[28px] font-semibold text-white">
+              {hasLoss ? `${monoLossPct20_120.toFixed(1)}%` : "—"}
             </div>
           </div>
         </div>
-
-      {/* KPI Row */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Correlation */}
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-white/30">
-            Correlation (20–120 Hz)
-          </div>
-
-          <div className="mt-2 text-[28px] font-semibold text-white">
-            {hasPc ? phaseCorr20_120.toFixed(2) : "—"}
-          </div>
-        </div>
-
-        {/* Mono Loss */}
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-white/30">
-            Mono Loss (20–120 Hz)
-          </div>
-
-          <div className="mt-2 text-[28px] font-semibold text-white">
-            {hasLoss ? `${monoLossPct20_120.toFixed(1)}%` : "—"}
-          </div>
-        </div>
-      </div>
       </div>
 
       {/* Mini Heatbar (Correlation 20–120 Hz) */}

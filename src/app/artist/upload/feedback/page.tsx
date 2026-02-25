@@ -78,10 +78,21 @@ export default async function UploadFeedbackV3Page({
           ) : (
             <div className="mt-6 space-y-10">
               <DevExposePayload payload={payload} />
-              <JourneySection payload={payload} isReady={isReady} journey={journey} />
+              <div className="mb-14">
+                <JourneySection payload={payload} isReady={isReady} journey={journey} />
+              </div>
 
               <div className="space-y-6">
                 {/* Engineering full width */}
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-white">
+                    Engineering
+                  </h2>
+                  <p className="text-sm text-white/50">
+                    Core technical metrics.
+                  </p>
+                </div>
+
                 <EngineeringCore
                   isReady={isReady}
                   payload={payload}
@@ -90,45 +101,128 @@ export default async function UploadFeedbackV3Page({
                   durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
                 />
 
-                <ShortTermLufsChart
-                  timeline={payload?.metrics?.loudness?.short_term_lufs_timeline ?? null}
-                  integratedLufs={payload?.metrics?.loudness?.lufs_i ?? null}
-                />
-
-                <TransientsPanel
-                  attackStrength={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
-                  transientDensity={payload?.metrics?.transients?.transient_density ?? null}
-                  p95ShortCrestDb={payload?.metrics?.transients?.p95_short_crest_db ?? null}
-                  meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
-                  transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
-                />
-
-                <PhaseCorrelationCard value={payload?.metrics?.stereo?.phase_correlation ?? null} />
-
-                <MidSideCard
-                  midRmsDbfs={payload?.metrics?.stereo?.mid_rms_dbfs ?? null}
-                  sideRmsDbfs={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
-                  ratio={payload?.metrics?.stereo?.mid_side_energy_ratio ?? null}
-                />
-
-<LowEndMonoStabilityCard
-  phaseCorr20_120={payload?.metrics?.low_end?.phase_correlation_20_120 ?? null}
-  monoLossPct20_120={payload?.metrics?.low_end?.mono_energy_loss_pct_20_120 ?? null}
-  phaseCorr20_60={payload?.metrics?.low_end?.phase_correlation_20_60 ?? null}
-  phaseCorr60_120={payload?.metrics?.low_end?.phase_correlation_60_120 ?? null}
-/>
-
-                <SpectralRmsCard spectral={payload?.metrics?.spectral ?? null} />
-
-                <LimiterStressCard
-                  durationS={payload?.track?.duration_s ?? null}
-                  truePeakOvers={payload?.events?.loudness?.true_peak_overs ?? null}
-                />
-
                 {/* Dynamics + Streaming side by side */}
                 <div className="grid gap-6 lg:grid-cols-2 items-stretch">
                   <EngineeringDynamics payload={payload} isReady={isReady} />
                   <StreamingNormalization payload={payload} isReady={isReady} />
+                </div>
+
+                <section className="mt-14 space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-semibold text-white">
+                      Short-Term LUFS
+                    </h2>
+                    <p className="text-sm text-white/50">
+                      3-second loudness window · dynamic behavior over time.
+                    </p>
+                  </div>
+
+                  <ShortTermLufsChart
+                    timeline={payload?.metrics?.loudness?.short_term_lufs_timeline ?? null}
+                    integratedLufs={payload?.metrics?.loudness?.lufs_i ?? null}
+                  />
+                </section>
+
+                <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Row 1 */}
+                  <div>
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-semibold text-white">
+                        Transients & Punch
+                      </h2>
+                      <p className="text-sm text-white/50">
+                        Attack behaviour and transient balance.
+                      </p>
+                    </div>
+
+                    <TransientsPanel
+                      attackStrength={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
+                      transientDensity={payload?.metrics?.transients?.transient_density ?? null}
+                      p95ShortCrestDb={payload?.metrics?.transients?.p95_short_crest_db ?? null}
+                      meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
+                      transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-semibold text-white">
+                        Low-End Mono Stability
+                      </h2>
+                      <p className="text-sm text-white/50">
+                        Technical visibility (20–120 Hz). No judgement.
+                      </p>
+                    </div>
+
+                    <LowEndMonoStabilityCard
+                      phaseCorr20_120={payload?.metrics?.low_end?.phase_correlation_20_120 ?? null}
+                      monoLossPct20_120={payload?.metrics?.low_end?.mono_energy_loss_pct_20_120 ?? null}
+                      phaseCorr20_60={payload?.metrics?.low_end?.phase_correlation_20_60 ?? null}
+                      phaseCorr60_120={payload?.metrics?.low_end?.phase_correlation_60_120 ?? null}
+                    />
+                  </div>
+
+                  {/* Row 2 */}
+                  <div>
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-semibold text-white">
+                        Phase Correlation
+                      </h2>
+                      <p className="text-sm text-white/50">
+                        Stereo phase alignment and mono compatibility.
+                      </p>
+                    </div>
+
+                    <PhaseCorrelationCard
+                      value={payload?.metrics?.stereo?.phase_correlation ?? null}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mb-4">
+                      <h2 className="text-2xl font-semibold text-white">
+                        Mid / Side Energy
+                      </h2>
+                      <p className="text-sm text-white/50">
+                        Balance between center and stereo field.
+                      </p>
+                    </div>
+
+                    <MidSideCard
+                      midRmsDbfs={payload?.metrics?.stereo?.mid_rms_dbfs ?? null}
+                      sideRmsDbfs={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
+                      ratio={payload?.metrics?.stereo?.mid_side_energy_ratio ?? null}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-14">
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-semibold text-white">
+                      Spectral (RMS by band)
+                    </h2>
+                    <p className="text-sm text-white/50">
+                      Sub → Air loudness balance.
+                    </p>
+                  </div>
+
+                  <SpectralRmsCard spectral={payload?.metrics?.spectral ?? null} />
+                </div>
+
+                <div className="mt-14">
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-semibold text-white">
+                      Limiter Stress
+                    </h2>
+                    <p className="text-sm text-white/50">
+                      How often the signal hits near 0 dBTP over time.
+                    </p>
+                  </div>
+
+                  <LimiterStressCard
+                    durationS={payload?.track?.duration_s ?? null}
+                    truePeakOvers={payload?.events?.loudness?.true_peak_overs ?? null}
+                  />
                 </div>
               </div>
 

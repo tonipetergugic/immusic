@@ -119,34 +119,7 @@ const areaPath = `
 
   return (
     <div className="rounded-3xl border border-white/9 bg-black/30 p-6 md:p-8 shadow-xl shadow-black/40">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-white tracking-tight">
-            Short-Term LUFS
-          </h3>
-          <p className="mt-1 text-xs text-white/60">
-            3-second loudness window • hover to inspect
-          </p>
-        </div>
-
-        <div className="inline-flex items-center gap-3 rounded-full border border-white/8 bg-white/4 px-4 py-1.5 text-xs font-medium text-zinc-300 backdrop-blur-sm">
-          <span className="text-emerald-400/90 font-semibold">
-            {getRangeLabel(rangeRobust)}
-          </span>
-          <span className="text-white/30">•</span>
-          <span>{rangeRobust.toFixed(1)} LU</span>
-          {avgY !== null && (
-            <>
-              <span className="text-white/30">•</span>
-              <span className="tabular-nums">
-                INT {integratedLufs!.toFixed(1)}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="relative mt-6 h-56 md:h-64 w-full">
+      <div className="relative h-56 md:h-64 w-full">
         <div className="absolute inset-0 rounded-2xl border border-white/7 bg-black/40 overflow-hidden">
           <div
             ref={wrapperRef}

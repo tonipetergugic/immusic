@@ -117,23 +117,7 @@ export default function TransientsPanel({
   else if (stabilityLabel === "Irregular") stabilityColorClass = "text-red-400";
 
   return (
-    <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
-      <div className="flex items-start justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">
-          Transients & Punch
-        </h3>
-
-        {typeof attackStrength === "number" &&
-          typeof p95ShortCrestDb === "number" &&
-          typeof transientDensity === "number" && (
-            <div className="text-xs text-white/40 tabular-nums text-right">
-              <div>Attack: {attackStrength}</div>
-              <div>P95 Crest: {p95ShortCrestDb.toFixed(2)} dB</div>
-              <div>Density: {transientDensity.toFixed(2)}</div>
-            </div>
-          )}
-      </div>
-
+    <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
       <div>
         <div className={METRIC_TITLE}>Attack Strength</div>
 

@@ -70,20 +70,9 @@ export default function SpectralRmsCard({ spectral }: Props) {
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-base font-semibold text-white/90">Spectral (RMS by band)</span>
-          <span className="mt-1 text-xs text-white/45">Sub → Air loudness balance</span>
-          <div className="mt-2 text-xs text-white/35">
-            Shows where your track carries energy (Sub → Air). Not a quality score.
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6">
+      <div className="mt-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/40">Sub → Air spectral shape</span>
-          <span className="text-xs tabular-nums text-white/35">range: -40 … -10 dBFS</span>
+          <span className="text-sm tabular-nums text-white/60">range: -40 … -10 dBFS</span>
         </div>
 
         <div className="mt-3 relative h-28 w-full rounded-2xl border border-white/10 bg-white/5 overflow-hidden">

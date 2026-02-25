@@ -226,15 +226,6 @@ export default function EngineeringCore({
   return (
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Engineering</h2>
-            <p className="mt-1 text-sm text-white/60">
-              Core technical metrics.
-            </p>
-          </div>
-        </div>
-
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 flex-grow">
           {/* Integrated LUFS */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
