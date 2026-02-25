@@ -49,7 +49,7 @@ export default function EngineeringCore({
     typeof truePeak === "number" && Number.isFinite(truePeak)
       ? truePeak >= 0
         ? "critical"
-        : truePeak > -0.3
+        : truePeak > -1.0
           ? "warn"
           : "good"
       : "neutral";
@@ -65,9 +65,9 @@ export default function EngineeringCore({
 
   const headroomTone =
     typeof headroomDb === "number"
-      ? headroomDb <= 0.1
+      ? headroomDb < 0.2
         ? "critical"
-        : headroomDb <= 0.3
+        : headroomDb < 1.0
           ? "warn"
           : "good"
       : "neutral";
@@ -137,6 +137,11 @@ export default function EngineeringCore({
       ? Math.max(truePeak ?? -999, aacPostTp ?? -999, mp3PostTp ?? -999)
       : null;
 
+  const tpEffectiveLabel =
+    typeof tpEffective === "number" && Number.isFinite(tpEffective)
+      ? `${Math.min(tpEffective, 0).toFixed(2)} dBTP`
+      : null;
+
   const aacPostTpClamped = typeof aacPostTp === "number" ? Math.min(aacPostTp, 0.0) : null;
   const mp3PostTpClamped = typeof mp3PostTp === "number" ? Math.min(mp3PostTp, 0.0) : null;
 
@@ -148,12 +153,12 @@ export default function EngineeringCore({
 
   const aacHeadroomLost =
     typeof sourceHeadroom === "number" && typeof aacPostHeadroom === "number"
-      ? sourceHeadroom - aacPostHeadroom
+      ? Math.max(0, sourceHeadroom - aacPostHeadroom)
       : null;
 
   const mp3HeadroomLost =
     typeof sourceHeadroom === "number" && typeof mp3PostHeadroom === "number"
-      ? sourceHeadroom - mp3PostHeadroom
+      ? Math.max(0, sourceHeadroom - mp3PostHeadroom)
       : null;
 
   // Streaming Safety (deterministic + genre-neutral)
@@ -171,6 +176,11 @@ export default function EngineeringCore({
       ? oversWorst / (durationS / 60)
       : null;
 
+  const fmtPerMin =
+    typeof oversPerMin === "number" && Number.isFinite(oversPerMin)
+      ? `${(Math.round(oversPerMin * 100) / 100).toFixed(2)} / min`
+      : null;
+
   // postHeadroom is already clamped to >= 0 above (0 means: at/beyond 0.0 dBTP after encoding)
   let encodingRiskTone: "good" | "warn" | "critical" | "neutral" = "neutral";
 
@@ -182,7 +192,8 @@ export default function EngineeringCore({
 
   // Overs escalation (normalized)
   if (typeof oversPerMin === "number") {
-    if (oversPerMin >= 1) encodingRiskTone = "critical";
+    if (oversPerMin >= 5) encodingRiskTone = "critical";
+    else if (oversPerMin >= 1) encodingRiskTone = encodingRiskTone === "critical" ? "critical" : "warn";
     else if (oversPerMin > 0) encodingRiskTone = encodingRiskTone === "critical" ? "critical" : "warn";
     else encodingRiskTone = encodingRiskTone === "neutral" ? "good" : encodingRiskTone;
   }
@@ -198,6 +209,15 @@ export default function EngineeringCore({
 
   const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
   const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
+
+  const lufsLabel =
+    typeof lufsI === "number" && Number.isFinite(lufsI)
+      ? lufsI > -9
+        ? "Very loud"
+        : lufsI >= -14
+          ? "Moderate"
+          : "Quiet"
+      : null;
 
   const clippedSamples =
     typeof payload?.metrics?.clipping?.clipped_sample_count === "number" &&
@@ -233,6 +253,7 @@ export default function EngineeringCore({
             <div className={METRIC_VALUE}>
               {typeof lufsI === "number" ? lufsI.toFixed(1) : "—"}
             </div>
+            {lufsLabel ? <div className="mt-1 text-[11px] text-white/45">{lufsLabel}</div> : null}
           </div>
 
           {/* True Peak */}
@@ -330,11 +351,18 @@ export default function EngineeringCore({
                 </p>
               </div>
 
-              <div className="text-sm font-semibold text-white/85 tabular-nums">
-                {encodingRiskTone === "good" && "Streaming-safe"}
-                {encodingRiskTone === "warn" && "Minor distortion risk"}
-                {encodingRiskTone === "critical" && "High distortion risk"}
-                {encodingRiskTone === "neutral" && "—"}
+              <div className="text-right">
+                <div className="text-sm font-semibold text-white/85 tabular-nums">
+                  {encodingRiskTone === "good" && "Streaming-safe"}
+                  {encodingRiskTone === "warn" && "Minor distortion risk"}
+                  {encodingRiskTone === "critical" && "High distortion risk"}
+                  {encodingRiskTone === "neutral" && "—"}
+                </div>
+                {tpEffectiveLabel ? (
+                  <div className="mt-0.5 text-[11px] text-white/45 tabular-nums">
+                    Worst-case TP: {tpEffectiveLabel}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -342,9 +370,9 @@ export default function EngineeringCore({
               {encodingRiskTone === "good" &&
                 "No digital clipping detected after MP3/AAC conversion."}
               {encodingRiskTone === "warn" &&
-                "Some clipping may occur after streaming compression. Consider lowering your limiter ceiling slightly (e.g. −1.0 dBTP)."}
+                "Some clipping may occur after streaming compression. Set your limiter ceiling to −1.0 dBTP."}
               {encodingRiskTone === "critical" &&
-                "Your track clips after streaming conversion. Lower your limiter ceiling (e.g. −1.0 to −1.2 dBTP) or reduce overall master gain."}
+                "Your track clips after streaming conversion. Set your limiter ceiling to −1.2 dBTP or reduce overall master gain."}
             </div>
 
             <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-3">
@@ -353,6 +381,9 @@ export default function EngineeringCore({
                 <div className={METRIC_VALUE}>
                   {typeof aacOvers === "number" ? aacOvers : "—"}
                 </div>
+                {fmtPerMin ? (
+                  <div className="mt-1 text-[11px] text-white/45 tabular-nums">{fmtPerMin}</div>
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
@@ -360,6 +391,9 @@ export default function EngineeringCore({
                 <div className={METRIC_VALUE}>
                   {typeof mp3Overs === "number" ? mp3Overs : "—"}
                 </div>
+                {fmtPerMin ? (
+                  <div className="mt-1 text-[11px] text-white/45 tabular-nums">{fmtPerMin}</div>
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">

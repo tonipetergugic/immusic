@@ -14,6 +14,7 @@ import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
+import { Wrench } from "lucide-react";
 
 import { unlockPaidFeedbackAction } from "./actions";
 
@@ -85,11 +86,12 @@ export default async function UploadFeedbackV3Page({
               <div className="space-y-6">
                 {/* Engineering full width */}
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold text-white">
+                  <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                    <Wrench className="h-7 w-7 text-white/80" strokeWidth={1.8} />
                     Engineering
                   </h2>
-                  <p className="text-sm text-white/50">
-                    Core technical metrics.
+                  <p className="text-sm text-white/50 leading-relaxed">
+                    Core technical metrics: loudness, peaks, headroom, stereo integrity and streaming safety.
                   </p>
                 </div>
 

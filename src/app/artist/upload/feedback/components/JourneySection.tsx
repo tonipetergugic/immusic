@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Zap } from "lucide-react";
 import JourneyWaveformWithTooltip from "./JourneyWaveformWithTooltip";
 import { V3JourneyStyles } from "./V3Styles";
 
@@ -75,7 +76,10 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
 
   return (
     <section>
-      <h2 className="text-3xl font-semibold tracking-tight text-white">Song Journey</h2>
+      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+        <Zap className="h-7 w-7 text-white/80" strokeWidth={1.8} />
+        Song Journey
+      </h2>
       <p className="mt-2 max-w-2xl text-sm text-white/50 leading-relaxed">
         Continuous energy flow based on short-term loudness. This view highlights dynamic movement, intensity shifts, and structural
         momentum across the entire track.
@@ -234,8 +238,10 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                   if (raw.length < 10) return null;
 
                   const n = raw.length;
-                  const sorted = [...raw].sort((a, b) => a - b);
-                  const threshold = sorted[Math.floor(n * 0.7)];
+
+                  // "High Energy" = Anteil der Zeit im oberen Bereich der track-intern normalisierten 0..1-Series.
+                  // Fixe Schwelle => nicht mehr mathematisch "immer ~30%".
+                  const threshold = 0.8;
 
                   const highCount = raw.filter((v) => v >= threshold).length;
                   const highCoverage = Math.round((highCount / n) * 100);
@@ -243,49 +249,78 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                   const mean = raw.reduce((a, b) => a + b, 0) / n;
                   const variance = raw.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / n;
                   const std = Math.sqrt(variance);
-                  const variability = std > 0.18 ? "High" : std > 0.1 ? "Medium" : "Low";
+                  const variability = std > 0.22 ? "High" : std > 0.14 ? "Medium" : "Low";
 
                   let maxBuild = 0;
-                  for (let i = 0; i < n - 10; i++) {
-                    const delta = raw[i + 10] - raw[i];
-                    if (delta > maxBuild) maxBuild = delta;
+
+                  // fixes Zeitfenster statt "magic steps"
+                  const BUILD_WINDOW_S = 8;
+                  const durationS = journey.durationS;
+
+                  const stepS =
+                    typeof durationS === "number" && Number.isFinite(durationS) && durationS > 0
+                      ? durationS / n
+                      : null;
+
+                  const windowSteps =
+                    typeof stepS === "number" && Number.isFinite(stepS) && stepS > 0
+                      ? Math.max(1, Math.round(BUILD_WINDOW_S / stepS))
+                      : 10; // Fallback: altes Verhalten
+
+                  for (let i = 0; i < n - windowSteps; i++) {
+                    const rise = raw[i + windowSteps] - raw[i];
+                    if (rise > maxBuild) maxBuild = rise;
                   }
+
+                  // Anzeige wie vorher, aber Messfenster ist jetzt stabil in Sekunden
                   const buildVal = (maxBuild * 10).toFixed(1);
 
                   let longest = 0;
                   let current = 1;
+
+                  // Plateau = "nahezu stabil" innerhalb eines Toleranzbands
+                  const PLATEAU_EPS = 0.03;
+
+                  // Minimum, damit es artistisch Sinn macht
+                  const MIN_PLATEAU_S = 6;
+
                   for (let i = 1; i < n; i++) {
-                    if (Math.abs(raw[i] - raw[i - 1]) < 0.02) current++;
-                    else {
-                      longest = Math.max(longest, current);
+                    if (Math.abs(raw[i] - raw[i - 1]) <= PLATEAU_EPS) {
+                      current++;
+                      if (current > longest) longest = current;
+                    } else {
                       current = 1;
                     }
                   }
-                  longest = Math.max(longest, current);
 
-                  const plateauSec = journey.durationS ? Math.round((longest / n) * journey.durationS) : 0;
+                  const plateauSecRaw =
+                    typeof durationS === "number" && Number.isFinite(durationS) && durationS > 0
+                      ? Math.round((longest / n) * durationS)
+                      : 0;
+
+                  const plateauSec = plateauSecRaw >= MIN_PLATEAU_S ? plateauSecRaw : 0;
 
                   return (
-                    <div className="grid grid-cols-2 gap-y-4 md:grid-cols-4 md:gap-y-0">
-                      <div className="pr-4">
+                    <div className="grid grid-cols-2 gap-y-8 md:flex md:justify-between md:items-start">
+                      <div>
                         <div className="text-[10px] tracking-widest text-white/35">High Energy</div>
                         <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{highCoverage}%</div>
                         <div className="mt-0.5 text-[11px] text-white/35">Above upper range</div>
                       </div>
 
-                      <div className="pl-0 pr-4 md:pl-4">
+                      <div>
                         <div className="text-[10px] tracking-widest text-white/35">Variability</div>
                         <div className="mt-1 text-2xl font-semibold text-white">{variability}</div>
                         <div className="mt-0.5 text-[11px] text-white/35">Overall movement</div>
                       </div>
 
-                      <div className="pr-4 md:pl-4">
+                      <div>
                         <div className="text-[10px] tracking-widest text-white/35">Biggest Build</div>
                         <div className="mt-1 text-2xl font-semibold text-white tabular-nums">+{buildVal}</div>
                         <div className="mt-0.5 text-[11px] text-white/35">Short-term rise</div>
                       </div>
 
-                      <div className="md:pl-4">
+                      <div className="text-right">
                         <div className="text-[10px] tracking-widest text-white/35">Plateau</div>
                         <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{plateauSec}s</div>
                         <div className="mt-0.5 text-[11px] text-white/35">Stable segment</div>
