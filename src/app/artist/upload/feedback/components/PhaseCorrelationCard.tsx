@@ -21,7 +21,7 @@ export default function PhaseCorrelationCard({ value }: Props) {
     <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-white/90">Phase Correlation</span>
+          <span className="text-3xl font-semibold tracking-tight text-white">Phase Correlation</span>
           <span className="mt-1 text-xs text-white/45">Stereo stability • mono safety</span>
         </div>
 

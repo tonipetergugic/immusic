@@ -20,9 +20,9 @@ function fmtDb(v: any) {
     : "—";
 }
 
-// Deterministic: "risk" = how aggressive the normalization delta is
-// - Big down-gain -> track is very loud (higher distortion risk in worst-case chains)
-// - Up-gain -> can be capped by headroom (Apple)
+// Deterministic indicator based on playback gain:
+// - Down-gain (negative): track is loud; can increase clipping risk in worst-case playback chains.
+// - Up-gain (positive): track is quiet; can sound weaker after normalization (and may be capped by headroom on Apple).
 function toneForGain(gainDb: any): Tone {
   if (!(typeof gainDb === "number" && Number.isFinite(gainDb))) return "neutral";
 
@@ -69,12 +69,12 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
   );
 
   const appleDesired =
-    typeof sn?.apple_music?.desired_gain_db === "number" && Number.isFinite(sn.apple_music.desired_gain_db)
+    typeof sn?.apple_music?.desired_gain_db === "number" && Number.isFinite(sn?.apple_music?.desired_gain_db)
       ? sn.apple_music.desired_gain_db
       : null;
 
   const appleMaxUp =
-    typeof sn?.apple_music?.max_up_gain_db === "number" && Number.isFinite(sn.apple_music.max_up_gain_db)
+    typeof sn?.apple_music?.max_up_gain_db === "number" && Number.isFinite(sn?.apple_music?.max_up_gain_db)
       ? sn.apple_music.max_up_gain_db
       : null;
 
@@ -85,7 +85,7 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
           <div>
             <h2 className="text-lg font-semibold">Streaming normalization</h2>
             <p className="mt-1 text-sm text-white/60">
-              Estimated playback gain on major platforms.
+              Playback gain can reveal "too loud" (clipping risk) or "too quiet" (reduced impact after normalization).
             </p>
           </div>
         </div>
@@ -99,9 +99,6 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
             <div className="mt-2 text-xl font-semibold text-white tabular-nums">
               {fmtDb(sn?.spotify?.applied_gain_db)}
             </div>
-            <div className="mt-1 text-[11px] text-white/45 tabular-nums">
-              Desired: {fmtDb(sn?.spotify?.desired_gain_db)}
-            </div>
           </div>
 
           {/* YouTube */}
@@ -113,7 +110,7 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
               {fmtDb(sn?.youtube?.applied_gain_db)}
             </div>
             <div className="mt-1 text-[11px] text-white/45">
-              Down-only
+              Turns down loud tracks only
             </div>
           </div>
 

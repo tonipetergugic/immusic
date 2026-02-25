@@ -3,7 +3,7 @@
 type Props = {
   midRmsDbfs: number | null;
   sideRmsDbfs: number | null;
-  ratio: number | null; // mid_side_energy_ratio (0..1)
+  ratio: number | null; // mid_side_energy_ratio = side_energy / mid_energy (power ratio), ~1 = balanced
 };
 
 function fmtDb(x: number) {
@@ -23,12 +23,18 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
     return null;
   }
 
+  const r = ratio;
+  const rClamped = Math.max(0.25, Math.min(4, r));
+  // log2 mapping: 0.25 -> 0%, 1 -> 50%, 4 -> 100%
+  const log2 = (x: number) => Math.log(x) / Math.log(2);
+  const markerLeftPct = ((log2(rClamped) + 2) / 4) * 100;
+
   const badge =
-    ratio < 0.1
-      ? { label: "INFO", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/60" }
-      : ratio > 0.45
-        ? { label: "WARN", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
-        : { label: "OK", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/60" };
+    r < 0.5 || r > 2
+      ? { label: "WARN", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
+      : r < 0.8 || r > 1.25
+        ? { label: "OK", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/60" }
+        : { label: "INFO", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/60" };
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8">
@@ -43,7 +49,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
             {badge.label}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xs text-white/45">Ratio</span>
+            <span className="text-xs text-white/45">Side/Mid</span>
             <span className={"text-sm tabular-nums " + badge.valueClass}>{ratio.toFixed(2)}</span>
           </div>
         </div>
@@ -69,8 +75,8 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
 
       <div className="mt-5">
         <div className="flex items-center justify-between text-[10px] text-white/40">
-          <span>Side</span>
-          <span>Mid</span>
+          <span>More Side</span>
+          <span>More Mid</span>
         </div>
 
         <div className="mt-2 relative h-3 w-full rounded-full bg-white/10 overflow-visible">
@@ -85,7 +91,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
           <div
             className="absolute -top-2 transition-all duration-500 ease-out"
             style={{
-              left: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
+              left: `${markerLeftPct}%`,
               transform: "translateX(-50%)",
             }}
           >
@@ -94,7 +100,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
         </div>
 
         <div className="mt-2 text-[10px] text-white/35">
-          Extreme ratios indicate reduced stereo balance stability.
+          Side/Mid near 1.00 is balanced. Very low or high values can indicate unstable stereo balance.
         </div>
       </div>
     </div>

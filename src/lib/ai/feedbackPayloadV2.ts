@@ -496,37 +496,14 @@ export function buildFeedbackPayloadV2Mvp(params: {
 
   // NACHHER (Mid/Side Energy Ratio v2 rule)
   if (typeof midSideEnergyRatio === "number" && Number.isFinite(midSideEnergyRatio)) {
-    // Always neutral highlight (no genre bias)
-    highlights.push("Mid/Side energy distribution is balanced.");
-
-    // Only classify extremes
-    if (midSideEnergyRatio < 0.1) {
-      highlights.push("Side energy is very low (< 0.10) — the mix is heavily center-focused.");
-      recommendations.push({
-        id: "rec_ms_ratio_low_side",
-        severity: "info",
-        title: "Consider adding controlled side content",
-        why: "Very low side energy indicates an unusually center-focused mix. This can be intentional, but may reduce spaciousness on headphones.",
-        how: [
-          "If the mix feels narrow, add controlled stereo elements in upper frequencies.",
-          "Use stereo reverbs or ambient layers instead of widening bass or low-mids.",
-          "Keep core elements centered but allow air and FX to spread.",
-        ],
-      });
-    } else if (midSideEnergyRatio > 0.45) {
-      highlights.push("Side energy is very high (> 0.45) — stereo elements may overpower the center image.");
-      recommendations.push({
-        id: "rec_ms_ratio_high_side",
-        severity: "warn",
-        title: "Rebalance mid/side energy for stable translation",
-        why: "High side energy can weaken the center image and reduce translation across different playback systems, especially mono.",
-        how: [
-          "Ensure kick, bass, and main lead remain clearly present in the mid channel.",
-          "Reduce stereo widening on important melodic or rhythmic elements.",
-          "Check mono playback for level drops or tonal imbalance.",
-          "Move extreme stereo FX to background layers.",
-        ],
-      });
+    if (midSideEnergyRatio < 0.5) {
+      highlights.push("Stereo sides are much quieter than the center (Side/Mid is very low).");
+    } else if (midSideEnergyRatio > 2) {
+      highlights.push("Stereo sides are much louder than the center (Side/Mid is very high).");
+    } else if (midSideEnergyRatio < 0.8 || midSideEnergyRatio > 1.25) {
+      highlights.push("Mid/Side balance is slightly off (Side/Mid deviates from 1.00).");
+    } else {
+      highlights.push("Mid/Side energy distribution is balanced (Side/Mid ≈ 1.00).");
     }
   }
 

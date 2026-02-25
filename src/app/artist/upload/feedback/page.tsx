@@ -14,7 +14,7 @@ import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
-import { Wrench, Omega, Activity, SlidersHorizontal } from "lucide-react";
+import { Wrench, Omega, Activity, SlidersHorizontal, AudioWaveform, Columns2 } from "lucide-react";
 
 import { unlockPaidFeedbackAction } from "./actions";
 
@@ -126,7 +126,7 @@ export default async function UploadFeedbackV3Page({
                   />
                 </section>
 
-                <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-14">
                   {/* Row 1 */}
                   <div>
                   <div className="mb-4">
@@ -170,7 +170,8 @@ export default async function UploadFeedbackV3Page({
                   {/* Row 2 */}
                   <div>
                     <div className="mb-4">
-                      <h2 className="text-2xl font-semibold text-white">
+                      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                        <AudioWaveform className="w-6 h-6 text-white/70" />
                         Phase Correlation
                       </h2>
                       <p className="text-sm text-white/50">
@@ -185,7 +186,8 @@ export default async function UploadFeedbackV3Page({
 
                   <div>
                     <div className="mb-4">
-                      <h2 className="text-2xl font-semibold text-white">
+                      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                        <Columns2 className="w-6 h-6 text-white/70" />
                         Mid / Side Energy
                       </h2>
                       <p className="text-sm text-white/50">
