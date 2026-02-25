@@ -14,7 +14,7 @@ import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
-import { Wrench, Omega, Activity, SlidersHorizontal, AudioWaveform, Columns2 } from "lucide-react";
+import { Wrench, Omega, Activity, SlidersHorizontal, AudioWaveform, Columns2, BarChart3 } from "lucide-react";
 
 import { unlockPaidFeedbackAction } from "./actions";
 
@@ -205,7 +205,8 @@ export default async function UploadFeedbackV3Page({
 
                 <div className="mt-14">
                   <div className="mb-4">
-                    <h2 className="text-2xl font-semibold text-white">
+                    <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                      <BarChart3 className="h-6 w-6 text-white/70" />
                       Spectral (RMS by band)
                     </h2>
                     <p className="text-sm text-white/50">

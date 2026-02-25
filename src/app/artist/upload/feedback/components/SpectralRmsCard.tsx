@@ -23,10 +23,11 @@ function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
 }
 
-// Display mapping only (not a judgement):
-// -40 dBFS -> 0, -10 dBFS -> 1
-function posFromDbfs(dbfs: number) {
-  return clamp01((dbfs - -40) / (-10 - -40));
+// Relative mapping (0 dB = strongest band, -24 dB floor)
+function posFromDbfs(dbfs: number, maxBand: number) {
+  const relative = dbfs - maxBand; // 0 … negative
+  const clamped = Math.max(-24, Math.min(0, relative));
+  return clamp01((clamped - -24) / (0 - -24));
 }
 
 export default function SpectralRmsCard({ spectral }: Props) {
@@ -48,10 +49,12 @@ export default function SpectralRmsCard({ spectral }: Props) {
 
   if (bands.length === 0) return null;
 
+  const maxBand = Math.max(...bands.map((b) => b.v));
+
   const linePoints = bands
     .map((b, i) => {
       const x = (i / (bands.length - 1)) * 100; // NO PADDING (0..100)
-      const y = 100 - posFromDbfs(b.v) * 100;
+      const y = 100 - posFromDbfs(b.v, maxBand) * 100;
       return `${x},${y}`;
     })
     .join(" ");
@@ -60,7 +63,7 @@ export default function SpectralRmsCard({ spectral }: Props) {
     const pts = bands
       .map((b, i) => {
         const x = (i / (bands.length - 1)) * 100; // NO PADDING (0..100)
-        const y = 100 - posFromDbfs(b.v) * 100;
+        const y = 100 - posFromDbfs(b.v, maxBand) * 100;
         return `${x},${y}`;
       })
       .join(" L ");
@@ -69,10 +72,10 @@ export default function SpectralRmsCard({ spectral }: Props) {
   })();
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
+    <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8">
       <div className="mt-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm tabular-nums text-white/60">range: -40 … -10 dBFS</span>
+          <span className="text-sm tabular-nums text-white/60">relative: 0 … -24 dB</span>
         </div>
 
         <div className="mt-3 relative h-28 w-full rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
@@ -109,8 +112,8 @@ export default function SpectralRmsCard({ spectral }: Props) {
           </svg>
 
           {/* axis labels */}
-          <div className="absolute left-3 top-2 text-[10px] text-white/35">-10</div>
-          <div className="absolute left-3 bottom-2 text-[10px] text-white/35">-40</div>
+          <div className="absolute left-3 top-2 text-[10px] text-white/35">0</div>
+          <div className="absolute left-3 bottom-2 text-[10px] text-white/35">-24</div>
         </div>
 
         {/* Labels aligned to the SAME x positions (0..100). Keep width to avoid overlap. */}
@@ -128,7 +131,7 @@ export default function SpectralRmsCard({ spectral }: Props) {
                 }}
               >
                 <div className="text-[10px] text-white/45">{b.label}</div>
-                <div className="text-[10px] tabular-nums text-white/55">{fmtDbfs(b.v)}</div>
+                <div className="text-[10px] tabular-nums text-white/55">{fmtDbfs(b.v - maxBand)}</div>
               </div>
             );
           })}
