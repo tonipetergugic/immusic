@@ -111,8 +111,9 @@ export default async function UploadFeedbackV3Page({
 
                 <section className="mt-14 space-y-6">
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold text-white">
-                      Short-Term LUFS
+                    <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                      <span className="text-white/80">Ω</span>
+                      <span>Short-Term LUFS</span>
                     </h2>
                     <p className="text-sm text-white/50">
                       3-second loudness window · dynamic behavior over time.

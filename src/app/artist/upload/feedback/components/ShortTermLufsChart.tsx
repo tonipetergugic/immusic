@@ -42,11 +42,11 @@ function computeStats(data: Point[]) {
 }
 
 function getRangeLabel(range: number): string {
-  if (range < 3.5) return "Very Compressed";
-  if (range < 6) return "Tight Dynamics";
-  if (range < 9) return "Balanced Contrast";
-  if (range < 13) return "Lively Dynamics";
-  return "Very Wide Dynamics";
+  if (range < 3) return "Very Flat";
+  if (range < 6) return "Slight Movement";
+  if (range < 9) return "Natural Movement";
+  if (range < 13) return "Strong Movement";
+  return "Very Wide Movement";
 }
 
 export default function ShortTermLufsChart({
@@ -73,6 +73,8 @@ export default function ShortTermLufsChart({
   if (!stats) return null;
 
   const { min, max, rangeRobust } = stats;
+  const dynDb = rangeRobust;
+  const dynLabel = getRangeLabel(dynDb);
   const VISUAL_TOP = 0;      // always 0 LUFS
   const VISUAL_BOTTOM = min; // still use clipped min (-28 floor)
   const n = timeline.length;
@@ -119,6 +121,19 @@ const areaPath = `
 
   return (
     <div className="rounded-3xl border border-white/9 bg-black/30 p-6 md:p-8 shadow-xl shadow-black/40">
+      <div className="mb-4">
+        <div className="text-lg font-semibold text-white">
+          Dynamic Movement: {dynDb.toFixed(1)} dB
+        </div>
+
+        <div className="mt-1 text-sm text-white/60">
+          {dynLabel === "Very Flat" && "Your track stays almost the same loudness throughout."}
+          {dynLabel === "Slight Movement" && "There are small loudness differences between sections."}
+          {dynLabel === "Natural Movement" && "Your track has natural loudness changes between sections."}
+          {dynLabel === "Strong Movement" && "There is a strong contrast between quiet and loud sections."}
+          {dynLabel === "Very Wide Movement" && "Your track moves from very quiet to very loud moments."}
+        </div>
+      </div>
       <div className="relative h-56 md:h-64 w-full">
         <div className="absolute inset-0 rounded-2xl border border-white/7 bg-black/40 overflow-hidden">
           <div
@@ -205,6 +220,11 @@ const areaPath = `
             <div className="pointer-events-none absolute left-3 top-3 text-[10px] font-medium tabular-nums text-white/50">
               0 LUFS
             </div>
+            {typeof integratedLufs === "number" && Number.isFinite(integratedLufs) && (
+              <div className="pointer-events-none absolute right-3 top-3 text-[10px] font-medium tabular-nums text-white/60">
+                Integrated: {integratedLufs.toFixed(1)} LUFS
+              </div>
+            )}
             <div className="pointer-events-none absolute left-3 bottom-3 text-[10px] font-medium tabular-nums text-white/50">
               {min.toFixed(1)} LUFS
             </div>
