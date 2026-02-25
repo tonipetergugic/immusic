@@ -69,7 +69,7 @@ export default function LowEndMonoStabilityCard({
           {/* Correlation */}
           <div>
             <div className="text-[11px] uppercase tracking-wide text-white/30">
-              Correlation (20–120 Hz)
+              Left/Right similarity (20–120 Hz)
             </div>
 
             <div className="mt-2 text-[28px] font-semibold text-white">
@@ -92,7 +92,7 @@ export default function LowEndMonoStabilityCard({
 
       {/* Mini Heatbar (Correlation 20–120 Hz) */}
       <div className="mt-5">
-        <div className="text-[11px] text-white/40">Phase correlation (20–120 Hz)</div>
+        <div className="text-[11px] text-white/40">Left/Right similarity (20–120 Hz)</div>
 
         <div className="mt-2">
         {(() => {
