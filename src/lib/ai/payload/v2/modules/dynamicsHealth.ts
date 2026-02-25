@@ -130,7 +130,7 @@ export function computeDynamicsHealthV1(input: {
           [7.4, 20.0, 95, 100],
         ]);
 
-  const shortCrestScore =
+  const shortCrestScoreRaw =
     p95ShortCrestScore === null && meanShortCrestScore === null
       ? null
       : (() => {
@@ -139,6 +139,9 @@ export function computeDynamicsHealthV1(input: {
           if (a !== null && b !== null) return Math.round(0.65 * a + 0.35 * b);
           return (a ?? b) as number;
         })();
+
+  // If micro-dynamics is missing, use a neutral default (not a free pass, not a harsh penalty).
+  const shortCrestScore = shortCrestScoreRaw === null ? 50 : shortCrestScoreRaw;
 
   // 5) Transients / Punch score (0–100)
   const punchScore =
@@ -186,11 +189,11 @@ export function computeDynamicsHealthV1(input: {
   // - Punch 16%
   // - LUFS 10% (Kontext)
   const parts: Array<{ w: number; v: number | null }> = [
-    { w: 0.24, v: crestScore },
-    { w: 0.28, v: lraScore },
-    { w: 0.24, v: shortCrestScore },
+    { w: 0.28, v: crestScore },
+    { w: 0.20, v: lraScore },
+    { w: 0.26, v: shortCrestScore },
     { w: 0.16, v: punchScore },
-    { w: 0.08, v: lufsScore },
+    { w: 0.10, v: lufsScore },
   ];
 
   const available = parts.filter((p) => typeof p.v === "number");
@@ -224,8 +227,9 @@ export function computeDynamicsHealthV1(input: {
   let label: DynamicsHealthLabelV1 =
     score >= 78 ? "healthy" : score >= 58 ? "borderline" : "over-limited";
 
-  // LRA Label Cap: bei LRA < 2.0 niemals "healthy"
-  if (lra !== null && lra < 2.0 && label === "healthy") {
+  // LRA Label Cap: bei niedriger LRA niemals "healthy"
+  // (3–4 LU ist oft schon stark limitiert; wir bleiben genre-neutral und konservativ)
+  if (lra !== null && lra < 4.0 && label === "healthy") {
     label = "borderline";
   }
 

@@ -775,9 +775,13 @@ export function buildFeedbackPayloadV2Mvp(params: {
   const tpDbTp =
     typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
 
-  // Headroom to the recommended -1.0 dBTP ceiling (positive means "can turn up", negative means already above).
+  // Max upward gain available until the recommended -1.0 dBTP ceiling (never negative).
   const maxUpGainDb =
-    tpDbTp === null ? null : Number.isFinite(-1.0 - tpDbTp) ? (-1.0 - tpDbTp) : null;
+    tpDbTp === null
+      ? null
+      : Number.isFinite(-1.0 - tpDbTp)
+        ? Math.max(0, -1.0 - tpDbTp)
+        : null;
 
   const computeDesiredGain = (target: number) =>
     lufsI === null ? null : Number.isFinite(target - lufsI) ? (target - lufsI) : null;

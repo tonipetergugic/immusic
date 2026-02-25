@@ -68,9 +68,19 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
     sn?.apple_music?.max_up_gain_db
   );
 
+  const appleDesired =
+    typeof sn?.apple_music?.desired_gain_db === "number" && Number.isFinite(sn.apple_music.desired_gain_db)
+      ? sn.apple_music.desired_gain_db
+      : null;
+
+  const appleMaxUp =
+    typeof sn?.apple_music?.max_up_gain_db === "number" && Number.isFinite(sn.apple_music.max_up_gain_db)
+      ? sn.apple_music.max_up_gain_db
+      : null;
+
   return (
     <section className="h-full">
-      <div className="h-full rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8 flex flex-col">
+      <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Streaming normalization</h2>
@@ -116,8 +126,14 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
               {fmtDb(sn?.apple_music?.applied_gain_db)}
             </div>
             <div className="mt-1 text-[11px] text-white/45 tabular-nums">
-              Up capped by headroom: {fmtDb(sn?.apple_music?.max_up_gain_db)}
+              Desired: {fmtDb(sn?.apple_music?.desired_gain_db)}
             </div>
+
+            {appleDesired !== null && appleDesired > 0 && (
+              <div className="mt-1 text-[11px] text-white/45 tabular-nums">
+                Max up gain (headroom): {fmtDb(appleMaxUp)}
+              </div>
+            )}
           </div>
         </div>
       </div>

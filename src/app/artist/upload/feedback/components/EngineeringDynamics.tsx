@@ -38,6 +38,10 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
       ? (dynamicsFactors as any).crest
       : undefined;
 
+  const lraNum = typeof lra === "number" && Number.isFinite(lra) ? lra : null;
+  const labelCappedByLra =
+    lraNum !== null && lraNum < 4.0 && label === "BORDERLINE";
+
   // --------------------
   // Dynamics color logic (deterministic)
   // --------------------
@@ -73,12 +77,12 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
 
   return (
     <section className="h-full">
-      <div className="h-full rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8 flex flex-col">
+      <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Dynamics</h2>
             <p className="mt-1 text-sm text-white/60">
-              Core technical metrics.
+              Analyzer-provided metrics.
             </p>
           </div>
 
@@ -90,11 +94,16 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
               <div className="text-xl font-semibold text-white tabular-nums">
                 {score}/100
               </div>
+              {labelCappedByLra && (
+                <div className="mt-1 text-[11px] text-white/45 tabular-nums">
+                  Label capped by LRA (&lt; 4.0)
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3 flex-grow">
+        <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 flex-grow">
           {[
             {
               k: "Integrated LUFS",
