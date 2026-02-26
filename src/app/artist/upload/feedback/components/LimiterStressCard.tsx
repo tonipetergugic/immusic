@@ -140,9 +140,20 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
           : "—";
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/20 p-6 md:p-8">
-      <div className="flex items-start justify-end gap-4">
-        <div className="text-sm font-semibold text-white/85 tabular-nums">
+    <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8">
+      <div className="flex items-start justify-end">
+        <div
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide tabular-nums
+      ${
+        tone === "critical"
+          ? "bg-red-500/15 text-red-400 border border-red-500/30"
+          : tone === "warn"
+            ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+            : tone === "good"
+              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+              : "bg-white/10 text-white/60 border border-white/10"
+      }`}
+        >
           {label}
         </div>
       </div>

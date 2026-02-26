@@ -14,11 +14,10 @@ import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
-import { Wrench, Omega, Activity, SlidersHorizontal, AudioWaveform, Columns2, BarChart3 } from "lucide-react";
+import { Wrench, Gauge, Activity, SlidersHorizontal, AudioWaveform, Columns2, BarChart3, ShieldAlert } from "lucide-react";
 
 import { unlockPaidFeedbackAction } from "./actions";
 
-import { deriveEngineeringPanelProps } from "./utils/deriveEngineeringPanelProps";
 import { deriveFeedbackV3PageState } from "./utils/deriveFeedbackV3PageState";
 import { loadFeedbackV3Data } from "./utils/loadFeedbackV3Data";
 import { logFeedbackAccessEvent } from "./utils/logFeedbackAccessEvent";
@@ -112,7 +111,7 @@ export default async function UploadFeedbackV3Page({
                 <section className="mt-14 space-y-6">
                   <div className="space-y-2">
                     <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                      <span className="text-white/80">Ω</span>
+                      <Gauge className="h-6 w-6 text-white/70" />
                       <span>Short-Term LUFS</span>
                     </h2>
                     <p className="text-sm text-white/50">
@@ -219,7 +218,8 @@ export default async function UploadFeedbackV3Page({
 
                 <div className="mt-14">
                   <div className="mb-4">
-                    <h2 className="text-2xl font-semibold text-white">
+                    <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                      <ShieldAlert className="h-6 w-6 text-white/70" />
                       Limiter Stress
                     </h2>
                     <p className="text-sm text-white/50">
