@@ -76,16 +76,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
   return (
     <section id="feedback-summary" className="space-y-4 w-full">
       <div className="rounded-2xl bg-black/30 border border-white/15 px-5 py-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xl font-semibold text-white">Feedback Summary</div>
-            <div className="mt-1 text-sm text-white/55">
-              Fix these before you upload — click an item to jump to the module.
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
           {/* LEFT — SYSTEM HEALTH */}
           <div className="space-y-4">

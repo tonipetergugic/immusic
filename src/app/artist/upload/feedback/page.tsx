@@ -15,7 +15,7 @@ import StreamingNormalization from "./components/StreamingNormalization";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
-import { Wrench, Gauge, Activity, SlidersHorizontal, AudioWaveform, Columns2, BarChart3, ShieldAlert } from "lucide-react";
+import { Wrench, Gauge, Activity, SlidersHorizontal, AudioWaveform, Columns2, BarChart3, ShieldAlert, ClipboardList } from "lucide-react";
 
 import { unlockPaidFeedbackAction } from "./actions";
 
@@ -80,6 +80,16 @@ export default async function UploadFeedbackV3Page({
             />
           ) : (
             <div className="mt-6 space-y-10">
+              <section className="mt-16 space-y-2">
+                <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                  <ClipboardList className="w-6 h-6 text-white/70" />
+                  Feedback Summary
+                </h2>
+                <p className="text-sm text-white/50">
+                  Fix these before you upload — click an item to jump to the module.
+                </p>
+              </section>
+
               <FeedbackSummary
                 critical={summary.clusters?.filter((c) => c.severity === "critical") ?? []}
                 improvements={summary.clusters?.filter((c) => c.severity === "warn") ?? []}
