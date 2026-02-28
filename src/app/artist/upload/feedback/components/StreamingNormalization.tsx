@@ -90,19 +90,22 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 flex-grow">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
           {/* Spotify */}
-          <div className={"rounded-2xl border px-4 py-4 " + toneClass(spotifyTone)}>
+          <div className={"rounded-2xl border px-4 py-4 flex flex-col justify-between min-h-[108px] " + toneClass(spotifyTone)}>
             <div className="text-[10px] uppercase tracking-wider text-white/40">
               Spotify (−14 LUFS)
             </div>
             <div className="mt-2 text-xl font-semibold text-white tabular-nums">
               {fmtDb(sn?.spotify?.applied_gain_db)}
             </div>
+            <div className="mt-1 text-[11px] text-white/45">
+              Applied playback gain
+            </div>
           </div>
 
           {/* YouTube */}
-          <div className={"rounded-2xl border px-4 py-4 " + toneClass(ytTone)}>
+          <div className={"rounded-2xl border px-4 py-4 flex flex-col justify-between min-h-[108px] " + toneClass(ytTone)}>
             <div className="text-[10px] uppercase tracking-wider text-white/40">
               YouTube (−14 LUFS)
             </div>
@@ -110,20 +113,20 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
               {fmtDb(sn?.youtube?.applied_gain_db)}
             </div>
             <div className="mt-1 text-[11px] text-white/45">
-              Turns down loud tracks only
+              Applied playback gain
             </div>
           </div>
 
           {/* Apple */}
-          <div className={"rounded-2xl border px-4 py-4 " + toneClass(appleTone)}>
+          <div className={"rounded-2xl border px-4 py-4 flex flex-col justify-between min-h-[108px] " + toneClass(appleTone)}>
             <div className="text-[10px] uppercase tracking-wider text-white/40">
               Apple Music (−16 LUFS)
             </div>
             <div className="mt-2 text-xl font-semibold text-white tabular-nums">
               {fmtDb(sn?.apple_music?.applied_gain_db)}
             </div>
-            <div className="mt-1 text-[11px] text-white/45 tabular-nums">
-              Desired: {fmtDb(sn?.apple_music?.desired_gain_db)}
+            <div className="mt-1 text-[11px] text-white/45">
+              Applied playback gain
             </div>
 
             {appleDesired !== null && appleDesired > 0 && (

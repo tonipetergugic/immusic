@@ -12,6 +12,7 @@ import PhaseCorrelationCard from "./components/PhaseCorrelationCard";
 import ShortTermLufsChart from "./components/ShortTermLufsChart";
 import SpectralRmsCard from "./components/SpectralRmsCard";
 import StreamingNormalization from "./components/StreamingNormalization";
+import StreamingRiskGauge from "./components/StreamingRiskGauge";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
@@ -124,7 +125,11 @@ export default async function UploadFeedbackV3Page({
                 </section>
 
                 <section id="streaming-normalization">
-                  <StreamingNormalization payload={payload} isReady={isReady} />
+                  <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+                    <StreamingNormalization payload={payload} isReady={isReady} />
+
+                    <StreamingRiskGauge payload={payload} isReady={isReady} />
+                  </div>
                 </section>
 
                 {/* (3) LIMITER STRESS */}
