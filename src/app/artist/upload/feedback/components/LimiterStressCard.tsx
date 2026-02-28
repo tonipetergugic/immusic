@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import evaluateLimiterStress from "../utils/evaluateLimiterStress";
 
 type Props = {
   durationS: number | null;
@@ -23,11 +24,10 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
       ? durationS
       : null;
 
-  // Events per minute
-  const eventsPerMin =
-    typeof count === "number" && typeof durationSec === "number"
-      ? count / (durationSec / 60)
-      : null;
+  const evaluation = evaluateLimiterStress(overs, durationSec);
+  const tone = evaluation.tone;
+  const eventsPerMin = evaluation.eventsPerMin;
+  const maxW = evaluation.maxInWindow;
 
   // Use t0 timestamps (filtering; no "every" hard-fail)
   const times =
@@ -106,18 +106,6 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
     return { start, end, v, severity };
   }, [hoverBin, heatmapBins, durationSec, maxBin]);
 
-  // Label thresholds (agreed)
-  let tone: "good" | "warn" | "critical" | "neutral" = "neutral";
-
-  if (typeof eventsPerMin === "number") {
-    const maxW = typeof maxInWindow === "number" ? maxInWindow : null;
-
-    const ok = eventsPerMin < 20 && (maxW === null || maxW < 8);
-    const critical = eventsPerMin > 60 || (maxW !== null && maxW > 20);
-
-    tone = critical ? "critical" : ok ? "good" : "warn";
-  }
-
   const toneClass =
     tone === "critical"
       ? "border-red-500/30 bg-red-500/5"
@@ -169,7 +157,7 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
           <div className={METRIC_TITLE}>Max / 10s</div>
           <div className={METRIC_VALUE}>
-            {typeof maxInWindow === "number" ? maxInWindow : "—"}
+            {typeof maxW === "number" ? maxW : "—"}
           </div>
         </div>
 
@@ -187,7 +175,6 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
           "Limiter activity is noticeable. Consider slightly more headroom or gentler bus compression."}
         {tone === "critical" &&
           "High limiter stress. Risk of distortion, especially after MP3/AAC encoding. Lower ceiling or reduce master gain."}
-        {tone === "neutral" && "—"}
       </div>
 
       {heatmapBins && maxBin !== null && maxBin > 0 && (

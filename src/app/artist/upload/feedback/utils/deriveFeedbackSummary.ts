@@ -1,5 +1,7 @@
+import evaluateLimiterStress from "./evaluateLimiterStress";
+
 export type FeedbackIssue = {
-  severity: "critical" | "improvement" | "stable";
+  severity: "critical" | "warn" | "good";
   title: string;
   message: string;
   targetId: string;
@@ -7,16 +9,10 @@ export type FeedbackIssue = {
   rank: number; // internal sort only
 };
 
-type Summary = {
-  critical: FeedbackIssue[];
-  improvements: FeedbackIssue[];
-  stable: FeedbackIssue[];
-};
-
 function sevWeight(s: FeedbackIssue["severity"]): number {
   if (s === "critical") return 3;
-  if (s === "improvement") return 2;
-  return 1;
+  if (s === "warn") return 2;
+  return 1; // good
 }
 
 function pushIssue(out: FeedbackIssue[], issue: FeedbackIssue) {
@@ -25,12 +21,12 @@ function pushIssue(out: FeedbackIssue[], issue: FeedbackIssue) {
   out.push(issue);
 }
 
-export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }): Summary {
+export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }): { clusters: any[] } {
   const { payload, isReady } = params;
 
   // If not ready, return empty summary (UI can handle)
   if (!isReady || !payload || typeof payload !== "object") {
-    return { critical: [], improvements: [], stable: [] };
+    return { clusters: [] };
   }
 
   const issues: FeedbackIssue[] = [];
@@ -114,7 +110,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
   if (typeof lufsI === "number") {
     if (lufsI > -7.0) {
       pushIssue(issues, {
-        severity: "improvement",
+        severity: "warn",
         title: "Too loud for streaming",
         message: "Master is very hot. Lower gain so streaming services don’t turn it down aggressively.",
         targetId: TARGET_ENGINEERING_CORE,
@@ -123,7 +119,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else if (lufsI < -14.0) {
       pushIssue(issues, {
-        severity: "improvement",
+        severity: "warn",
         title: "Very quiet master",
         message: "Overall level is low. Raise the master moderately so it competes better.",
         targetId: TARGET_ENGINEERING_CORE,
@@ -133,7 +129,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     } else {
       // stable candidate
       pushIssue(issues, {
-        severity: "stable",
+        severity: "good",
         title: "Loudness looks stable",
         message: "No loudness-related upload risk detected.",
         targetId: TARGET_ENGINEERING_CORE,
@@ -143,37 +139,78 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     }
   }
 
-  // ---------- LIMITER STRESS ----------
-  if (typeof truePeakOvers === "number") {
-    if (truePeakOvers >= 30) {
-      pushIssue(issues, {
-        severity: "critical",
-        title: "Limiter is overloaded",
-        message: "Limiter is hitting constantly. Reduce input level or relax limiting to avoid pumping.",
-        targetId: TARGET_LIMITER_STRESS,
-        source: "LimiterStress",
-        rank: 90,
-      });
-    } else if (truePeakOvers >= 10) {
-      pushIssue(issues, {
-        severity: "improvement",
-        title: "Limiter under pressure",
-        message: "Limiter is working often. More headroom can make the drop cleaner.",
-        targetId: TARGET_LIMITER_STRESS,
-        source: "LimiterStress",
-        rank: 55,
-      });
-    } else {
-      pushIssue(issues, {
-        severity: "stable",
-        title: "Limiter stress looks fine",
-        message: "Limiter operates within a safe range.",
-        targetId: TARGET_LIMITER_STRESS,
-        source: "LimiterStress",
-        rank: 8,
-      });
-    }
+  // ---------- STREAMING NORMALIZATION (EngineeringCore) ----------
+  const sn = payload?.metrics?.loudness?.streaming_normalization ?? null;
+
+  const spGain =
+    typeof sn?.spotify?.applied_gain_db === "number" && Number.isFinite(sn.spotify.applied_gain_db)
+      ? sn.spotify.applied_gain_db
+      : null;
+
+  const ytGain =
+    typeof sn?.youtube?.applied_gain_db === "number" && Number.isFinite(sn.youtube.applied_gain_db)
+      ? sn.youtube.applied_gain_db
+      : null;
+
+  const amGain =
+    typeof sn?.apple_music?.applied_gain_db === "number" && Number.isFinite(sn.apple_music.applied_gain_db)
+      ? sn.apple_music.applied_gain_db
+      : null;
+
+  const spTarget =
+    typeof sn?.spotify?.target_lufs_i === "number" && Number.isFinite(sn.spotify.target_lufs_i)
+      ? sn.spotify.target_lufs_i
+      : null;
+
+  const gains = [spGain, ytGain, amGain].filter(
+    (g): g is number => typeof g === "number"
+  );
+
+  if (gains.length > 0) {
+    const maxDown = Math.min(...gains); // most negative value
+    const abs = Math.abs(maxDown);
+
+    const sev: "critical" | "warn" | "good" =
+      abs >= 8 ? "warn" : abs >= 4 ? "warn" : "good";
+
+    const message =
+      abs >= 4
+        ? `Streaming platforms will reduce your level by up to ${abs.toFixed(
+            1
+          )} dB. Lower master loudness slightly to preserve punch and reduce limiter stress.`
+        : `Streaming impact is minor (${abs.toFixed(
+            1
+          )} dB reduction). No adjustment needed.`;
+
+    pushIssue(issues, {
+      severity: sev,
+      title: "Streaming normalization",
+      message,
+      targetId: TARGET_ENGINEERING_CORE,
+      source: "EngineeringCore",
+      rank: sev === "warn" ? 65 : 12,
+    });
   }
+
+  // ---------- LIMITER STRESS ----------
+  const limiterEvaluation = evaluateLimiterStress(
+    payload?.events?.loudness?.true_peak_overs_details ?? null,
+    payload?.metrics?.duration_s ?? null
+  );
+
+  pushIssue(issues, {
+    severity: limiterEvaluation.tone,
+    title: "Limiter Stress",
+    message:
+      limiterEvaluation.tone === "critical"
+        ? "High limiter stress. Lower the master ceiling by ~0.5–1 dB or reduce overall gain before limiting."
+        : limiterEvaluation.tone === "warn"
+        ? "Limiter is working hard. Slightly reduce master gain to keep transients cleaner."
+        : "Limiter behavior is controlled. No adjustment needed.",
+    targetId: TARGET_LIMITER_STRESS,
+    source: "LimiterStress",
+    rank: limiterEvaluation.tone === "critical" ? 90 : limiterEvaluation.tone === "warn" ? 55 : 8,
+  });
 
   // ---------- MONO (ONLY ONE issue max) ----------
   const monoCandidates: FeedbackIssue[] = [];
@@ -197,7 +234,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else if (isImprove) {
       monoCandidates.push({
-        severity: "improvement",
+        severity: "warn",
         title: "Mono stability needs work",
         message: "Low-end mono stability can be improved. Keep the sub more centered and reduce side-bass.",
         targetId: TARGET_LOW_END_MONO,
@@ -206,7 +243,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else {
       monoCandidates.push({
-        severity: "stable",
+        severity: "good",
         title: "Mono stability looks clean",
         message: "Low-end mono translation is stable.",
         targetId: TARGET_LOW_END_MONO,
@@ -229,7 +266,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else if (phaseCorr < 0.35) {
       monoCandidates.push({
-        severity: "improvement",
+        severity: "warn",
         title: "Stereo phase is unstable",
         message: "Stereo phase is a bit unstable. Align wide elements for better mono compatibility.",
         targetId: TARGET_PHASE_CORR,
@@ -238,7 +275,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else {
       monoCandidates.push({
-        severity: "stable",
+        severity: "good",
         title: "Phase correlation looks fine",
         message: "Stereo phase correlation looks stable.",
         targetId: TARGET_PHASE_CORR,
@@ -271,7 +308,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else if (attackStrength < 40) {
       pushIssue(issues, {
-        severity: "improvement",
+        severity: "warn",
         title: "Punch could be stronger",
         message: "More attack would help. Enhance transients slightly without clipping.",
         targetId: TARGET_TRANSIENTS,
@@ -280,7 +317,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else {
       pushIssue(issues, {
-        severity: "stable",
+        severity: "good",
         title: "Punch looks solid",
         message: "Transient impact is structurally sound.",
         targetId: TARGET_TRANSIENTS,
@@ -293,7 +330,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
   if (typeof transientDensity === "number") {
     if (transientDensity > 0.15) {
       pushIssue(issues, {
-        severity: "improvement",
+        severity: "warn",
         title: "Too dense / overfilled",
         message: "Transient density is very high. Clean up the arrangement so the drop stays clear.",
         targetId: TARGET_TRANSIENTS,
@@ -302,7 +339,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else if (transientDensity < 0.07) {
       pushIssue(issues, {
-        severity: "improvement",
+        severity: "warn",
         title: "Too empty",
         message: "Transient density is very low. More groove/detail may increase drive.",
         targetId: TARGET_TRANSIENTS,
@@ -328,7 +365,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else if (isWarn) {
       pushIssue(issues, {
-        severity: "improvement",
+        severity: "warn",
         title: "Dynamics can be improved",
         message: "Dynamics could be healthier. Slightly less pressure often sounds more open.",
         targetId: TARGET_DYNAMICS,
@@ -337,7 +374,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       });
     } else {
       pushIssue(issues, {
-        severity: "stable",
+        severity: "good",
         title: "Dynamics look healthy",
         message: "Dynamic range is within a healthy zone.",
         targetId: TARGET_DYNAMICS,
@@ -354,12 +391,76 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     return b.rank - a.rank;
   });
 
-  const critical = issues.filter((x) => x.severity === "critical").slice(0, 3);
-  const improvements = issues.filter((x) => x.severity === "improvement").slice(0, 4);
+  const clusters = [
+    {
+      key: "loudness_streaming",
+      title: "Loudness & Streaming",
+      sources: ["engineeringcore"],
+    },
+    {
+      key: "limiter_stress",
+      title: "Limiter Stress",
+      sources: ["limiterstress"],
+    },
+    {
+      key: "stereo_mono",
+      title: "Stereo & Mono Sicherheit",
+      sources: ["lowendmonostability", "phasecorrelation", "midside"],
+    },
+    {
+      key: "punch_dynamics",
+      title: "Punch & Dynamik",
+      sources: ["transients", "engineeringdynamics"],
+    },
+    {
+      key: "tonal_balance",
+      title: "Tonal Balance",
+      sources: ["spectralrms"],
+    },
+  ].map((cluster) => {
+    const related = issues.filter((i) => {
+      const s = typeof i.source === "string" ? i.source.toLowerCase() : "";
+      return cluster.sources.includes(s);
+    });
 
-  // stable only if no critical
-  const stable =
-    critical.length === 0 ? issues.filter((x) => x.severity === "stable").slice(0, 3) : [];
+    let severity: "good" | "warn" | "critical" = "good";
 
-  return { critical, improvements, stable };
+    if (related.some((r) => r.severity === "critical")) {
+      severity = "critical";
+    } else if (related.some((r) => r.severity === "warn")) {
+      severity = "warn";
+    }
+
+    const best =
+      related.length > 0
+        ? [...related].sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0))[0]
+        : null;
+
+    return {
+      key: cluster.key,
+      title: cluster.title,
+      severity,
+      message:
+        typeof best?.message === "string" && best.message.trim().length > 0
+          ? best.message
+          : severity === "critical"
+            ? "Critical technical risk detected. Fix this before upload."
+            : severity === "warn"
+              ? "Potential technical issue detected. Consider fixing before upload."
+              : "No notable technical risk detected in this area.",
+      targetId: typeof best?.targetId === "string" ? best.targetId : "",
+      source: cluster.key,
+      rank:
+        typeof best?.rank === "number"
+          ? best.rank
+          : severity === "critical"
+            ? 90
+            : severity === "warn"
+              ? 55
+              : 8,
+      issues: related,
+    };
+  });
+
+  return { clusters };
 }

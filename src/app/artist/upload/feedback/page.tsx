@@ -81,9 +81,9 @@ export default async function UploadFeedbackV3Page({
           ) : (
             <div className="mt-6 space-y-10">
               <FeedbackSummary
-                critical={summary.critical}
-                improvements={summary.improvements}
-                stable={summary.stable}
+                critical={summary.clusters?.filter((c) => c.severity === "critical") ?? []}
+                improvements={summary.clusters?.filter((c) => c.severity === "warn") ?? []}
+                stable={summary.clusters?.filter((c) => c.severity === "good") ?? []}
               />
               <DevExposePayload payload={payload} />
               <section id="journey" className="mb-14">

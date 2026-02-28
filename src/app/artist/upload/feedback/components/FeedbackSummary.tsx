@@ -30,12 +30,12 @@ function IssueRow({
   tone,
 }: {
   issue: FeedbackIssue;
-  tone: "critical" | "improvement" | "stable";
+  tone: "critical" | "warn" | "good";
 }) {
   const toneClasses =
     tone === "critical"
       ? "border-red-500/30 bg-red-500/10 hover:bg-red-500/15"
-      : tone === "improvement"
+      : tone === "warn"
         ? "border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/15"
         : "border-emerald-500/25 bg-emerald-500/10 hover:bg-emerald-500/15";
 
@@ -65,7 +65,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
   if (!hasAny) return null;
 
   return (
-    <section id="feedback-summary" className="space-y-4 max-w-3xl">
+    <section id="feedback-summary" className="space-y-4 w-full">
       <div className="rounded-2xl bg-black/30 border border-white/15 px-5 py-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -91,7 +91,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
                   <IssueRow
                     key={`${issue.source}:${issue.targetId}:${issue.title}`}
                     issue={issue}
-                    tone="stable"
+                    tone="good"
                   />
                 ))}
               </div>
@@ -133,7 +133,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
                       <IssueRow
                         key={`${issue.source}:${issue.targetId}:${issue.title}`}
                         issue={issue}
-                        tone="improvement"
+                        tone="warn"
                       />
                     ))}
                   </div>
