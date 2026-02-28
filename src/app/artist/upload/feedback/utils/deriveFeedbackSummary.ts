@@ -37,6 +37,11 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       ? payload.metrics.loudness.lufs_i
       : null;
 
+  const shortTermTimeline =
+    Array.isArray(payload?.metrics?.loudness?.short_term_lufs_timeline)
+      ? payload.metrics.loudness.short_term_lufs_timeline
+      : null;
+
   const truePeakMax =
     typeof payload?.metrics?.loudness?.true_peak_dbtp_max === "number" &&
     Number.isFinite(payload.metrics.loudness.true_peak_dbtp_max)
@@ -99,6 +104,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
   const TARGET_MID_SIDE = "mid-side";
   const TARGET_TRANSIENTS = "transients-punch";
   const TARGET_DYNAMICS = "engineering-dynamics";
+  const TARGET_SHORT_TERM = "short-term-lufs";
 
   // ---------- LOUDNESS (EngineeringCore) ----------
   if (typeof truePeakMax === "number") {
@@ -337,6 +343,73 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     }
   }
 
+  // ---------- SHORT-TERM LUFS (MOVEMENT) ----------
+  if (Array.isArray(shortTermTimeline) && shortTermTimeline.length > 0) {
+    const FLOOR = -28;
+    const values = shortTermTimeline
+      .map((p: any) => (p && typeof p.lufs === "number" ? p.lufs : null))
+      .filter((v: any) => typeof v === "number" && Number.isFinite(v) && v >= FLOOR) as number[];
+
+    if (values.length > 0) {
+      const sorted = [...values].sort((a, b) => a - b);
+
+      const percentile = (pp: number) => {
+        if (sorted.length === 1) return sorted[0];
+        const idx = (sorted.length - 1) * pp;
+        const lo = Math.floor(idx);
+        const hi = Math.ceil(idx);
+        const t = idx - lo;
+        return sorted[lo] * (1 - t) + sorted[hi] * t;
+      };
+
+      const p05 = percentile(0.05);
+      const p95 = percentile(0.95);
+      const rangeRobust = p95 - p05;
+
+      // Labels match ShortTermLufsChart thresholds
+      const label =
+        rangeRobust < 3
+          ? "Very Flat"
+          : rangeRobust < 6
+            ? "Slight Movement"
+            : rangeRobust < 9
+              ? "Natural Movement"
+              : rangeRobust < 13
+                ? "Strong Movement"
+                : "Very Wide Movement";
+
+      // Conservative severity: WARN only at extremes, otherwise GOOD (no artificial critical)
+      if (label === "Very Flat") {
+        pushIssue(issues, {
+          severity: "warn",
+          title: "Dynamics feel flat",
+          message: "Short-term loudness movement is very low. Drops may feel less impactful than breaks.",
+          targetId: TARGET_SHORT_TERM,
+          source: "ShortTermLUFS",
+          rank: 32,
+        });
+      } else if (label === "Very Wide Movement") {
+        pushIssue(issues, {
+          severity: "warn",
+          title: "Dynamics are very wide",
+          message: "Very large movement across sections. Make sure quieter parts stay present after normalization.",
+          targetId: TARGET_SHORT_TERM,
+          source: "ShortTermLUFS",
+          rank: 22,
+        });
+      } else {
+        pushIssue(issues, {
+          severity: "good",
+          title: "Dynamics movement looks healthy",
+          message: "Section contrast supports impact and emotional energy.",
+          targetId: TARGET_SHORT_TERM,
+          source: "ShortTermLUFS",
+          rank: 6,
+        });
+      }
+    }
+  }
+
   // ---------- DYNAMICS HEALTH ----------
   if (dynamicsLabel || typeof dynamicsScore === "number") {
     const isCritical = dynamicsLabel === "CRITICAL" || (typeof dynamicsScore === "number" && dynamicsScore <= 35);
@@ -402,7 +475,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       key: "punch_dynamics",
       title: "Punch & Dynamics",
       framing: "Does your track hit with punch and controlled dynamics?",
-      sources: ["transients", "engineeringdynamics"],
+      sources: ["transients", "engineeringdynamics", "shorttermlufs"],
     },
     {
       key: "tonal_balance",

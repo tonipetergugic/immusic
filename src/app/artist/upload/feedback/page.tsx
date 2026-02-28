@@ -122,7 +122,7 @@ export default async function UploadFeedbackV3Page({
                   </section>
                 </div>
 
-                <section className="mt-14 space-y-6">
+                <section id="short-term-lufs" className="mt-14 space-y-6">
                   <div className="space-y-2">
                     <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                       <Gauge className="h-6 w-6 text-white/70" />
