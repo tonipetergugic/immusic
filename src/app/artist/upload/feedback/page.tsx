@@ -197,7 +197,7 @@ export default async function UploadFeedbackV3Page({
                     />
                   </section>
 
-                  <div>
+                  <section id="mid-side">
                     <div className="mb-4">
                       <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                         <Columns2 className="w-6 h-6 text-white/70" />
@@ -213,7 +213,7 @@ export default async function UploadFeedbackV3Page({
                       sideRmsDbfs={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
                       ratio={payload?.metrics?.stereo?.mid_side_energy_ratio ?? null}
                     />
-                  </div>
+                  </section>
                 </div>
 
                 <div className="mt-14">

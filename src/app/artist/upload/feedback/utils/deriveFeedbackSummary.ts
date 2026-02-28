@@ -65,6 +65,12 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       ? payload.metrics.stereo.phase_correlation
       : null;
 
+  const midSideRatio =
+    typeof payload?.metrics?.stereo?.mid_side_energy_ratio === "number" &&
+    Number.isFinite(payload.metrics.stereo.mid_side_energy_ratio)
+      ? payload.metrics.stereo.mid_side_energy_ratio
+      : null;
+
   const attackStrength =
     typeof payload?.metrics?.transients?.attack_strength_0_100 === "number" &&
     Number.isFinite(payload.metrics.transients.attack_strength_0_100)
@@ -90,6 +96,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
   const TARGET_LIMITER_STRESS = "limiter-stress";
   const TARGET_LOW_END_MONO = "low-end-mono";
   const TARGET_PHASE_CORR = "phase-correlation";
+  const TARGET_MID_SIDE = "mid-side";
   const TARGET_TRANSIENTS = "transients-punch";
   const TARGET_DYNAMICS = "engineering-dynamics";
 
@@ -212,87 +219,68 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     rank: limiterEvaluation.tone === "critical" ? 90 : limiterEvaluation.tone === "warn" ? 55 : 8,
   });
 
-  // ---------- MONO (ONLY ONE issue max) ----------
-  const monoCandidates: FeedbackIssue[] = [];
+  // ---------- STEREO & MONO (ACTIONABLE) ----------
 
-  // Low-end mono stability
+  // Low-end mono stability (20–120 Hz)
   if (typeof lePhase20_120 === "number" || typeof leMonoLoss20_120 === "number") {
     const phaseVal = typeof lePhase20_120 === "number" ? lePhase20_120 : null;
     const lossVal = typeof leMonoLoss20_120 === "number" ? leMonoLoss20_120 : null;
 
-    const isCritical = (phaseVal !== null && phaseVal < 0.2) || (lossVal !== null && lossVal >= 25);
-    const isImprove = (phaseVal !== null && phaseVal < 0.5) || (lossVal !== null && lossVal >= 12);
+    const isWarn =
+      (phaseVal !== null && phaseVal < 0.5) ||
+      (lossVal !== null && lossVal >= 12);
 
-    if (isCritical) {
-      monoCandidates.push({
-        severity: "critical",
-        title: "Low-end collapses in mono",
-        message: "Sub/low-end loses stability in mono. Center the bass and reduce low-end stereo width up to ~120 Hz.",
-        targetId: TARGET_LOW_END_MONO,
-        source: "LowEndMonoStability",
-        rank: 85,
-      });
-    } else if (isImprove) {
-      monoCandidates.push({
-        severity: "warn",
-        title: "Mono stability needs work",
-        message: "Low-end mono stability can be improved. Keep the sub more centered and reduce side-bass.",
-        targetId: TARGET_LOW_END_MONO,
-        source: "LowEndMonoStability",
-        rank: 45,
-      });
-    } else {
-      monoCandidates.push({
-        severity: "good",
-        title: "Mono stability looks clean",
-        message: "Low-end mono translation is stable.",
-        targetId: TARGET_LOW_END_MONO,
-        source: "LowEndMonoStability",
-        rank: 7,
-      });
-    }
-  }
-
-  // Stereo phase correlation (global)
-  if (typeof phaseCorr === "number") {
-    if (phaseCorr < 0.1) {
-      monoCandidates.push({
-        severity: "critical",
-        title: "Phase issues in stereo",
-        message: "Stereo feels phasey. Check wide layers/FX or it may disappear in mono.",
-        targetId: TARGET_PHASE_CORR,
-        source: "PhaseCorrelation",
-        rank: 80,
-      });
-    } else if (phaseCorr < 0.35) {
-      monoCandidates.push({
-        severity: "warn",
-        title: "Stereo phase is unstable",
-        message: "Stereo phase is a bit unstable. Align wide elements for better mono compatibility.",
-        targetId: TARGET_PHASE_CORR,
-        source: "PhaseCorrelation",
-        rank: 35,
-      });
-    } else {
-      monoCandidates.push({
-        severity: "good",
-        title: "Phase correlation looks fine",
-        message: "Stereo phase correlation looks stable.",
-        targetId: TARGET_PHASE_CORR,
-        source: "PhaseCorrelation",
-        rank: 6,
-      });
-    }
-  }
-
-  if (monoCandidates.length > 0) {
-    monoCandidates.sort((a, b) => {
-      const sw = sevWeight(b.severity) - sevWeight(a.severity);
-      if (sw !== 0) return sw;
-      return b.rank - a.rank;
+    pushIssue(issues, {
+      severity: isWarn ? "warn" : "good",
+      title: isWarn ? "Low-end mono needs tightening" : "Low-end mono is safe",
+      message: isWarn
+        ? "Collapse everything below ~120 Hz to mono. Remove stereo widening from bass layers."
+        : "No adjustment needed.",
+      targetId: TARGET_LOW_END_MONO,
+      source: "LowEndMonoStability",
+      rank: isWarn ? 45 : 7,
     });
-    // pick strongest mono-related issue
-    issues.push(monoCandidates[0]);
+  }
+
+  // Phase correlation (global stereo)
+  if (typeof phaseCorr === "number") {
+    const isCritical = phaseCorr < -0.2;
+    const isWarn = phaseCorr < 0;
+
+    pushIssue(issues, {
+      severity: isCritical ? "critical" : isWarn ? "warn" : "good",
+      title: isCritical
+        ? "Stereo phase cancellation risk"
+        : isWarn
+          ? "Stereo phase is slightly unstable"
+          : "Stereo phase is stable",
+      message: isCritical
+        ? "Reduce stereo widening on leads/pads. Avoid phase-based wideners."
+        : isWarn
+          ? "Slightly reduce stereo width on wide elements. Check mono playback."
+          : "No adjustment needed.",
+      targetId: TARGET_PHASE_CORR,
+      source: "PhaseCorrelation",
+      rank: isCritical ? 80 : isWarn ? 35 : 6,
+    });
+  }
+
+  // Mid/Side balance (Side/Mid energy ratio)
+  if (typeof midSideRatio === "number") {
+    const r = midSideRatio;
+
+    const isWarn = r < 0.5 || r > 2;
+
+    pushIssue(issues, {
+      severity: isWarn ? "warn" : "good",
+      title: isWarn ? "Mix is very wide" : "Mid/Side balance is solid",
+      message: isWarn
+        ? "Add subtle mid reinforcement. Reduce excessive stereo FX."
+        : "No adjustment needed.",
+      targetId: TARGET_MID_SIDE,
+      source: "MidSide",
+      rank: isWarn ? 32 : 6,
+    });
   }
 
   // ---------- PUNCH / TRANSIENTS ----------
@@ -395,26 +383,31 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     {
       key: "loudness_streaming",
       title: "Loudness & Streaming",
+      framing: "Will your master translate after streaming normalization?",
       sources: ["engineeringcore"],
     },
     {
       key: "limiter_stress",
       title: "Limiter Stress",
+      framing: "Is your limiter working safely without crushing punch?",
       sources: ["limiterstress"],
     },
     {
       key: "stereo_mono",
-      title: "Stereo & Mono Sicherheit",
+      title: "Stereo & Mono Safety",
+      framing: "Does your track translate in club systems and mono playback?",
       sources: ["lowendmonostability", "phasecorrelation", "midside"],
     },
     {
       key: "punch_dynamics",
-      title: "Punch & Dynamik",
+      title: "Punch & Dynamics",
+      framing: "Does your track hit with punch and controlled dynamics?",
       sources: ["transients", "engineeringdynamics"],
     },
     {
       key: "tonal_balance",
       title: "Tonal Balance",
+      framing: "Does the tonal balance stay even across different systems?",
       sources: ["spectralrms"],
     },
   ].map((cluster) => {
@@ -439,6 +432,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     return {
       key: cluster.key,
       title: cluster.title,
+      framing: typeof (cluster as any).framing === "string" ? (cluster as any).framing : "",
       severity,
       message:
         typeof best?.message === "string" && best.message.trim().length > 0

@@ -47,8 +47,17 @@ function IssueRow({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{issue.title}</div>
-          <div className="mt-1 text-sm text-white/70 leading-snug">{issue.message}</div>
+          <div className="text-base md:text-lg font-semibold text-white truncate">
+            {issue.title}
+          </div>
+
+          {typeof (issue as any).framing === "string" && (issue as any).framing.trim().length > 0 ? (
+            <div className="mt-1 text-xs text-white/50 leading-snug">{(issue as any).framing}</div>
+          ) : null}
+
+          <div className="mt-3 text-base text-white/75 leading-snug">
+            {issue.message}
+          </div>
         </div>
         <div className="shrink-0 text-xs text-white/40 mt-0.5">View</div>
       </div>
