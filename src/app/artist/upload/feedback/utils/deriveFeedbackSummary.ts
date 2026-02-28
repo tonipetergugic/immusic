@@ -105,6 +105,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
   const TARGET_TRANSIENTS = "transients-punch";
   const TARGET_DYNAMICS = "engineering-dynamics";
   const TARGET_SHORT_TERM = "short-term-lufs";
+  const TARGET_TONAL_BALANCE = "tonal-balance";
 
   // ---------- LOUDNESS (EngineeringCore) ----------
   if (typeof truePeakMax === "number") {
@@ -287,6 +288,78 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       source: "MidSide",
       rank: isWarn ? 32 : 6,
     });
+  }
+
+  // ---------- TONAL BALANCE (Spectral RMS by band) ----------
+  // Policy: only WARN at clear extremes, otherwise GOOD. Never CRITICAL.
+  {
+    const s = payload?.metrics?.spectral ?? null;
+
+    const bands = [
+      typeof s?.sub_rms_dbfs === "number" && Number.isFinite(s.sub_rms_dbfs) ? s.sub_rms_dbfs : null,
+      typeof s?.low_rms_dbfs === "number" && Number.isFinite(s.low_rms_dbfs) ? s.low_rms_dbfs : null,
+      typeof s?.low_mid_rms_dbfs === "number" && Number.isFinite(s.low_mid_rms_dbfs) ? s.low_mid_rms_dbfs : null,
+      typeof s?.mid_rms_dbfs === "number" && Number.isFinite(s.mid_rms_dbfs) ? s.mid_rms_dbfs : null,
+      typeof s?.high_mid_rms_dbfs === "number" && Number.isFinite(s.high_mid_rms_dbfs) ? s.high_mid_rms_dbfs : null,
+      typeof s?.high_rms_dbfs === "number" && Number.isFinite(s.high_rms_dbfs) ? s.high_rms_dbfs : null,
+      typeof s?.air_rms_dbfs === "number" && Number.isFinite(s.air_rms_dbfs) ? s.air_rms_dbfs : null,
+    ].filter((v): v is number => typeof v === "number");
+
+    // Need enough data points to say something meaningful
+    if (bands.length >= 5) {
+      const sorted = [...bands].sort((a, b) => a - b);
+      const median = sorted.length % 2 === 1
+        ? sorted[(sorted.length - 1) / 2]
+        : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+
+      const maxDev = Math.max(...bands.map((v) => Math.abs(v - median)));
+
+      const sub = typeof s?.sub_rms_dbfs === "number" && Number.isFinite(s.sub_rms_dbfs) ? s.sub_rms_dbfs : null;
+      const mid = typeof s?.mid_rms_dbfs === "number" && Number.isFinite(s.mid_rms_dbfs) ? s.mid_rms_dbfs : null;
+      const air = typeof s?.air_rms_dbfs === "number" && Number.isFinite(s.air_rms_dbfs) ? s.air_rms_dbfs : null;
+
+      const warnStrongImbalance = maxDev >= 10; // clear outlier band
+      const warnTooMuchSub = typeof sub === "number" && typeof mid === "number" ? (sub - mid) >= 6 : false; // sub much louder than mid
+      const warnTooMuchAir = typeof air === "number" && typeof mid === "number" ? (air - mid) >= 6 : false; // air much louder than mid
+
+      if (warnStrongImbalance) {
+        pushIssue(issues, {
+          severity: "warn",
+          title: "Strong tonal imbalance",
+          message: "One frequency region dominates. Reduce the loudest band or support the weakest band for a smoother balance.",
+          targetId: TARGET_TONAL_BALANCE,
+          source: "SpectralRms",
+          rank: 26,
+        });
+      } else if (warnTooMuchSub) {
+        pushIssue(issues, {
+          severity: "warn",
+          title: "Too much sub weight",
+          message: "Sub is dominating. Tighten the sub (HPF on non-bass, reduce sub gain, check kick-bass overlap).",
+          targetId: TARGET_TONAL_BALANCE,
+          source: "SpectralRms",
+          rank: 20,
+        });
+      } else if (warnTooMuchAir) {
+        pushIssue(issues, {
+          severity: "warn",
+          title: "Too much top-end",
+          message: "Air region is very forward. Reduce harshness with gentle shelf/softer exciter settings and check cymbal/synth brightness.",
+          targetId: TARGET_TONAL_BALANCE,
+          source: "SpectralRms",
+          rank: 18,
+        });
+      } else {
+        pushIssue(issues, {
+          severity: "good",
+          title: "Tonal balance looks solid",
+          message: "Sub-to-air balance looks even. No obvious translation risk detected.",
+          targetId: TARGET_TONAL_BALANCE,
+          source: "SpectralRms",
+          rank: 6,
+        });
+      }
+    }
   }
 
   // ---------- PUNCH / TRANSIENTS ----------

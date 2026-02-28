@@ -102,6 +102,7 @@ export default async function UploadFeedbackV3Page({
                   </p>
                 </div>
 
+                {/* (2) LOUDNESS & STREAMING */}
                 <section id="engineering-core">
                   <EngineeringCore
                     isReady={isReady}
@@ -112,56 +113,31 @@ export default async function UploadFeedbackV3Page({
                   />
                 </section>
 
-                {/* Dynamics + Streaming side by side */}
-                <div className="grid gap-6 lg:grid-cols-2 items-stretch">
-                  <section id="engineering-dynamics">
-                    <EngineeringDynamics payload={payload} isReady={isReady} />
-                  </section>
-                  <section id="streaming-normalization">
-                    <StreamingNormalization payload={payload} isReady={isReady} />
-                  </section>
-                </div>
+                <section id="streaming-normalization">
+                  <StreamingNormalization payload={payload} isReady={isReady} />
+                </section>
 
-                <section id="short-term-lufs" className="mt-14 space-y-6">
-                  <div className="space-y-2">
+                {/* (3) LIMITER STRESS */}
+                <section id="limiter-stress">
+                  <div className="mb-4">
                     <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                      <Gauge className="h-6 w-6 text-white/70" />
-                      <span>Short-Term LUFS</span>
+                      <ShieldAlert className="h-6 w-6 text-white/70" />
+                      Limiter Stress
                     </h2>
                     <p className="text-sm text-white/50">
-                      3-second loudness window · dynamic behavior over time.
+                      How often the signal hits near 0 dBTP over time.
                     </p>
                   </div>
 
-                  <ShortTermLufsChart
-                    timeline={payload?.metrics?.loudness?.short_term_lufs_timeline ?? null}
-                    integratedLufs={payload?.metrics?.loudness?.lufs_i ?? null}
+                  <LimiterStressCard
+                    durationS={payload?.track?.duration_s ?? null}
+                    truePeakOvers={payload?.events?.loudness?.true_peak_overs ?? null}
                   />
                 </section>
 
-                <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-14">
-                  {/* Row 1 */}
-                  <section id="transients-punch">
-                    <div className="mb-4">
-                      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                        <Activity className="w-6 h-6 text-white/80" />
-                        Transients & Punch
-                      </h2>
-                      <p className="text-sm text-white/50">
-                        Attack behaviour and transient balance.
-                      </p>
-                    </div>
-
-                    <TransientsPanel
-                      attackStrength={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
-                      transientDensity={payload?.metrics?.transients?.transient_density ?? null}
-                      p95ShortCrestDb={payload?.metrics?.transients?.p95_short_crest_db ?? null}
-                      meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
-                      transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
-                    />
-                  </section>
-
-                  <section id="low-end-mono">
+                {/* (4) STEREO & MONO SICHERHEIT */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-14">
+                  <section id="low-end-mono" className="md:row-span-2">
                     <div className="mb-4">
                       <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                         <SlidersHorizontal className="w-6 h-6 text-white/80" />
@@ -180,7 +156,6 @@ export default async function UploadFeedbackV3Page({
                     />
                   </section>
 
-                  {/* Row 2 */}
                   <section id="phase-correlation">
                     <div className="mb-4">
                       <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
@@ -192,9 +167,7 @@ export default async function UploadFeedbackV3Page({
                       </p>
                     </div>
 
-                    <PhaseCorrelationCard
-                      value={payload?.metrics?.stereo?.phase_correlation ?? null}
-                    />
+                    <PhaseCorrelationCard value={payload?.metrics?.stereo?.phase_correlation ?? null} />
                   </section>
 
                   <section id="mid-side">
@@ -216,35 +189,75 @@ export default async function UploadFeedbackV3Page({
                   </section>
                 </div>
 
-                <div className="mt-14">
+                {/* (5) PUNCH & DYNAMIK */}
+                <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+                  <section id="engineering-dynamics" className="flex flex-col">
+                    <div className="mb-4">
+                      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                        <Activity className="w-6 h-6 text-white/80" />
+                        Dynamics
+                      </h2>
+                      <p className="text-sm text-white/50">
+                        Analyzer-provided metrics.
+                      </p>
+                    </div>
+
+                    <div className="flex-1">
+                      <EngineeringDynamics payload={payload} isReady={isReady} />
+                    </div>
+                  </section>
+
+                  <section id="transients-punch">
+                    <div className="mb-4">
+                      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                        <Activity className="w-6 h-6 text-white/80" />
+                        Transients & Punch
+                      </h2>
+                      <p className="text-sm text-white/50">
+                        Attack behaviour and transient balance.
+                      </p>
+                    </div>
+
+                    <TransientsPanel
+                      attackStrength={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
+                      transientDensity={payload?.metrics?.transients?.transient_density ?? null}
+                      p95ShortCrestDb={payload?.metrics?.transients?.p95_short_crest_db ?? null}
+                      meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
+                      transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
+                    />
+                  </section>
+                </div>
+
+                <section id="short-term-lufs" className="space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                      <Gauge className="h-6 w-6 text-white/70" />
+                      <span>Short-Term LUFS</span>
+                    </h2>
+                    <p className="text-sm text-white/50">
+                      3-second loudness window · dynamic behavior over time.
+                    </p>
+                  </div>
+
+                  <ShortTermLufsChart
+                    timeline={payload?.metrics?.loudness?.short_term_lufs_timeline ?? null}
+                    integratedLufs={payload?.metrics?.loudness?.lufs_i ?? null}
+                  />
+                </section>
+
+                {/* (6) TONAL BALANCE */}
+                <section id="tonal-balance">
                   <div className="mb-4">
                     <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                       <BarChart3 className="h-6 w-6 text-white/70" />
-                      Spectral (RMS by band)
+                      Tonal Balance (Sub → Air)
                     </h2>
                     <p className="text-sm text-white/50">
-                      Sub → Air loudness balance.
+                      Quick check: does your tonal balance translate across systems?
                     </p>
                   </div>
 
                   <SpectralRmsCard spectral={payload?.metrics?.spectral ?? null} />
-                </div>
-
-                <section id="limiter-stress" className="mt-14">
-                  <div className="mb-4">
-                    <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                      <ShieldAlert className="h-6 w-6 text-white/70" />
-                      Limiter Stress
-                    </h2>
-                    <p className="text-sm text-white/50">
-                      How often the signal hits near 0 dBTP over time.
-                    </p>
-                  </div>
-
-                  <LimiterStressCard
-                    durationS={payload?.track?.duration_s ?? null}
-                    truePeakOvers={payload?.events?.loudness?.true_peak_overs ?? null}
-                  />
                 </section>
               </div>
 

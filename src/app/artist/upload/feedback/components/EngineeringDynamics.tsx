@@ -79,13 +79,6 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
         <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Dynamics</h2>
-            <p className="mt-1 text-sm text-white/60">
-              Analyzer-provided metrics.
-            </p>
-          </div>
-
           {typeof score === "number" && (
             <div className="flex items-center gap-3">
               <span className="text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.05] text-white/80 font-semibold tracking-wide">
