@@ -1,6 +1,7 @@
 import DevExposePayload from "./components/DevExposePayload";
 import EngineeringCore from "./components/EngineeringCore";
 import EngineeringDynamics from "./components/EngineeringDynamics";
+import FeedbackSummary from "./components/FeedbackSummary";
 import HeroSection from "./components/HeroSection";
 import JourneySection from "./components/JourneySection";
 import LimiterStressCard from "./components/LimiterStressCard";
@@ -19,6 +20,7 @@ import { Wrench, Gauge, Activity, SlidersHorizontal, AudioWaveform, Columns2, Ba
 import { unlockPaidFeedbackAction } from "./actions";
 
 import { deriveFeedbackV3PageState } from "./utils/deriveFeedbackV3PageState";
+import { deriveFeedbackSummary } from "./utils/deriveFeedbackSummary";
 import { loadFeedbackV3Data } from "./utils/loadFeedbackV3Data";
 import { logFeedbackAccessEvent } from "./utils/logFeedbackAccessEvent";
 
@@ -44,6 +46,7 @@ export default async function UploadFeedbackV3Page({
   } = loaded;
 
   const { banner, heroChips, journey, coachRecommendations } = deriveFeedbackV3PageState({ payload, isReady });
+  const summary = deriveFeedbackSummary({ payload, isReady });
 
   await logFeedbackAccessEvent({
     supabase,
@@ -77,10 +80,15 @@ export default async function UploadFeedbackV3Page({
             />
           ) : (
             <div className="mt-6 space-y-10">
+              <FeedbackSummary
+                critical={summary.critical}
+                improvements={summary.improvements}
+                stable={summary.stable}
+              />
               <DevExposePayload payload={payload} />
-              <div className="mb-14">
+              <section id="journey" className="mb-14">
                 <JourneySection payload={payload} isReady={isReady} journey={journey} />
-              </div>
+              </section>
 
               <div className="space-y-6">
                 {/* Engineering full width */}
@@ -94,18 +102,24 @@ export default async function UploadFeedbackV3Page({
                   </p>
                 </div>
 
-                <EngineeringCore
-                  isReady={isReady}
-                  payload={payload}
-                  lufsI={payload?.metrics?.loudness?.lufs_i ?? null}
-                  truePeak={payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
-                  durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
-                />
+                <section id="engineering-core">
+                  <EngineeringCore
+                    isReady={isReady}
+                    payload={payload}
+                    lufsI={payload?.metrics?.loudness?.lufs_i ?? null}
+                    truePeak={payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
+                    durationS={payload?.track?.duration_s ?? payload?.track?.duration ?? null}
+                  />
+                </section>
 
                 {/* Dynamics + Streaming side by side */}
                 <div className="grid gap-6 lg:grid-cols-2 items-stretch">
-                  <EngineeringDynamics payload={payload} isReady={isReady} />
-                  <StreamingNormalization payload={payload} isReady={isReady} />
+                  <section id="engineering-dynamics">
+                    <EngineeringDynamics payload={payload} isReady={isReady} />
+                  </section>
+                  <section id="streaming-normalization">
+                    <StreamingNormalization payload={payload} isReady={isReady} />
+                  </section>
                 </div>
 
                 <section className="mt-14 space-y-6">
@@ -127,12 +141,12 @@ export default async function UploadFeedbackV3Page({
 
                 <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-14">
                   {/* Row 1 */}
-                  <div>
-                  <div className="mb-4">
-                    <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                      <Activity className="w-6 h-6 text-white/80" />
-                      Transients & Punch
-                    </h2>
+                  <section id="transients-punch">
+                    <div className="mb-4">
+                      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+                        <Activity className="w-6 h-6 text-white/80" />
+                        Transients & Punch
+                      </h2>
                       <p className="text-sm text-white/50">
                         Attack behaviour and transient balance.
                       </p>
@@ -145,9 +159,9 @@ export default async function UploadFeedbackV3Page({
                       meanShortCrestDb={payload?.metrics?.transients?.mean_short_crest_db ?? null}
                       transientDensityCv={payload?.metrics?.transients?.transient_density_cv ?? null}
                     />
-                  </div>
+                  </section>
 
-                  <div>
+                  <section id="low-end-mono">
                     <div className="mb-4">
                       <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                         <SlidersHorizontal className="w-6 h-6 text-white/80" />
@@ -164,10 +178,10 @@ export default async function UploadFeedbackV3Page({
                       phaseCorr20_60={payload?.metrics?.low_end?.phase_correlation_20_60 ?? null}
                       phaseCorr60_120={payload?.metrics?.low_end?.phase_correlation_60_120 ?? null}
                     />
-                  </div>
+                  </section>
 
                   {/* Row 2 */}
-                  <div>
+                  <section id="phase-correlation">
                     <div className="mb-4">
                       <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                         <AudioWaveform className="w-6 h-6 text-white/70" />
@@ -181,7 +195,7 @@ export default async function UploadFeedbackV3Page({
                     <PhaseCorrelationCard
                       value={payload?.metrics?.stereo?.phase_correlation ?? null}
                     />
-                  </div>
+                  </section>
 
                   <div>
                     <div className="mb-4">
@@ -216,7 +230,7 @@ export default async function UploadFeedbackV3Page({
                   <SpectralRmsCard spectral={payload?.metrics?.spectral ?? null} />
                 </div>
 
-                <div className="mt-14">
+                <section id="limiter-stress" className="mt-14">
                   <div className="mb-4">
                     <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
                       <ShieldAlert className="h-6 w-6 text-white/70" />
@@ -231,7 +245,7 @@ export default async function UploadFeedbackV3Page({
                     durationS={payload?.track?.duration_s ?? null}
                     truePeakOvers={payload?.events?.loudness?.true_peak_overs ?? null}
                   />
-                </div>
+                </section>
               </div>
 
               <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
