@@ -29,59 +29,36 @@ export default function HeroSection({ queueTitle, banner, heroChips }: Props) {
 
       <div className="relative">
         <div className="flex flex-col gap-3">
-          <div className="text-xs text-white/50">Feedback</div>
+          <div className="text-sm md:text-base font-semibold tracking-wide text-white/70 uppercase">
+            Feedback
+          </div>
 
-          <div className="flex flex-col gap-1">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] text-white">
               {queueTitle}
             </h1>
-            <p className="text-white/50 text-base md:text-lg">
-              Structure & impact overview — designed for fast understanding.
+
+            <div className="flex items-center gap-3 mt-2">
+              <span
+                className={
+                  "text-xs px-3 py-1.5 rounded-full border font-semibold tracking-wide " +
+                  banner.badgeClass
+                }
+              >
+                {banner.badge}
+              </span>
+              <span className="text-lg md:text-xl text-white font-semibold tracking-tight">
+                {banner.text}
+              </span>
+            </div>
+
+            <p className="mt-2 text-white/60 text-lg md:text-xl font-medium">
+              Pre-release structure, impact and translation analysis.
             </p>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span
-              className={
-                "text-[10px] px-2 py-1 rounded-full border font-semibold tracking-wide " +
-                banner.badgeClass
-              }
-            >
-              {banner.badge}
-            </span>
-            <span className="text-xs text-white/70">{banner.text}</span>
-          </div>
-
-          {/* Status chips */}
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            {[
-              { title: "Structure", value: heroChips.structure },
-              { title: "Drop", value: heroChips.drop },
-              { title: "Hook", value: heroChips.hook },
-              { title: "Streaming", value: heroChips.streaming },
-            ].map((x) => (
-              <div
-                key={x.title}
-                className="group relative overflow-hidden rounded-full border border-white/15 bg-white/[0.04] px-6 py-3 backdrop-blur-sm transition-all duration-300 hover:border-white/30 hover:bg-white/[0.08]"
-              >
-                <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                </div>
-
-                <div className="relative flex items-center gap-3">
-                  <span className="text-[11px] uppercase tracking-wider text-white/40">
-                    {x.title}
-                  </span>
-                  <span className="text-sm font-semibold text-white/85">
-                    {x.value}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-4 text-xs text-white/40">
-            Note: Feedback is tied to the exact audio file. Re-uploading requires a new unlock.
+          <p className="mt-6 text-sm md:text-base text-white/60 leading-relaxed max-w-2xl">
+            These results highlight probable technical imbalances. Always trust your ears — this feedback supports your decisions, it doesn't replace them.
           </p>
         </div>
       </div>
