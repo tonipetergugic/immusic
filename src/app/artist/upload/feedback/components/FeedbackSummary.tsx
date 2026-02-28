@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
+
 import type { FeedbackIssue } from "../utils/deriveFeedbackSummary";
 
 type Props = {
@@ -41,7 +43,7 @@ function IssueRow({
     <button
       type="button"
       onClick={() => scrollToTarget(issue.targetId)}
-      className={`w-full text-left rounded-xl border px-4 py-3 transition ${toneClasses}`}
+      className={`w-full text-left rounded-xl border px-4 py-2.5 transition ${toneClasses}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -63,8 +65,8 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
   if (!hasAny) return null;
 
   return (
-    <section id="feedback-summary" className="space-y-4">
-      <div className="rounded-2xl bg-black/30 border border-white/10 px-6 py-5">
+    <section id="feedback-summary" className="space-y-4 max-w-3xl">
+      <div className="rounded-2xl bg-black/30 border border-white/15 px-5 py-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-xl font-semibold text-white">Feedback Summary</div>
@@ -74,44 +76,77 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
           </div>
         </div>
 
-        <div className="mt-5 space-y-5">
-          {Array.isArray(critical) && critical.length > 0 ? (
-            <div className="space-y-2">
-              <SectionHeader label="🔴 Critical" />
-              <div className="space-y-2">
-                {critical.slice(0, 3).map((issue) => (
-                  <IssueRow key={`${issue.source}:${issue.targetId}:${issue.title}`} issue={issue} tone="critical" />
-                ))}
-              </div>
-            </div>
-          ) : null}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
 
-          {Array.isArray(improvements) && improvements.length > 0 ? (
-            <div className="space-y-2">
-              <SectionHeader label="🟡 Improvements" />
+          {/* LEFT — SYSTEM HEALTH */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-emerald-400">
+              <CheckCircle2 className="h-6 w-6" />
+              <span className="text-base font-semibold tracking-wide">System Health</span>
+            </div>
+
+            {Array.isArray(stable) && stable.length > 0 ? (
               <div className="space-y-2">
-                {improvements.slice(0, 4).map((issue) => (
+                {stable.slice(0, 5).map((issue) => (
                   <IssueRow
                     key={`${issue.source}:${issue.targetId}:${issue.title}`}
                     issue={issue}
-                    tone="improvement"
+                    tone="stable"
                   />
                 ))}
               </div>
-            </div>
-          ) : null}
-
-          {/* Optional: only render stable if caller passes it */}
-          {Array.isArray(stable) && stable.length > 0 && (!Array.isArray(critical) || critical.length === 0) ? (
-            <div className="space-y-2">
-              <SectionHeader label="🟢 Stable" />
-              <div className="space-y-2">
-                {stable.slice(0, 3).map((issue) => (
-                  <IssueRow key={`${issue.source}:${issue.targetId}:${issue.title}`} issue={issue} tone="stable" />
-                ))}
+            ) : (
+              <div className="text-sm text-white/50">
+                No stable metrics detected yet.
               </div>
+            )}
+          </div>
+
+          {/* RIGHT — ACTION REQUIRED */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-white">
+              <AlertTriangle className="h-6 w-6 text-red-400" />
+              <span className="text-base font-semibold tracking-wide">
+                Action Required
+              </span>
             </div>
-          ) : null}
+
+            {(Array.isArray(critical) && critical.length > 0) ||
+             (Array.isArray(improvements) && improvements.length > 0) ? (
+              <div className="space-y-4">
+
+                {Array.isArray(critical) && critical.length > 0 && (
+                  <div className="space-y-2">
+                    {critical.slice(0, 3).map((issue) => (
+                      <IssueRow
+                        key={`${issue.source}:${issue.targetId}:${issue.title}`}
+                        issue={issue}
+                        tone="critical"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {Array.isArray(improvements) && improvements.length > 0 && (
+                  <div className="space-y-2">
+                    {improvements.slice(0, 4).map((issue) => (
+                      <IssueRow
+                        key={`${issue.source}:${issue.targetId}:${issue.title}`}
+                        issue={issue}
+                        tone="improvement"
+                      />
+                    ))}
+                  </div>
+                )}
+
+              </div>
+            ) : (
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                No active technical risks. Track is upload-ready from a technical perspective.
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </section>

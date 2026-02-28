@@ -135,7 +135,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       pushIssue(issues, {
         severity: "stable",
         title: "Loudness looks stable",
-        message: "Overall loudness looks reasonable for streaming playback.",
+        message: "No loudness-related upload risk detected.",
         targetId: TARGET_ENGINEERING_CORE,
         source: "EngineeringCore",
         rank: 10,
@@ -167,7 +167,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       pushIssue(issues, {
         severity: "stable",
         title: "Limiter stress looks fine",
-        message: "Limiter stress appears low and controlled.",
+        message: "Limiter operates within a safe range.",
         targetId: TARGET_LIMITER_STRESS,
         source: "LimiterStress",
         rank: 8,
@@ -208,7 +208,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       monoCandidates.push({
         severity: "stable",
         title: "Mono stability looks clean",
-        message: "Low-end mono stability looks healthy.",
+        message: "Low-end mono translation is stable.",
         targetId: TARGET_LOW_END_MONO,
         source: "LowEndMonoStability",
         rank: 7,
@@ -282,7 +282,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       pushIssue(issues, {
         severity: "stable",
         title: "Punch looks solid",
-        message: "Attack/punch looks generally solid.",
+        message: "Transient impact is structurally sound.",
         targetId: TARGET_TRANSIENTS,
         source: "Transients",
         rank: 5,
@@ -339,7 +339,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       pushIssue(issues, {
         severity: "stable",
         title: "Dynamics look healthy",
-        message: "Dynamics look generally healthy.",
+        message: "Dynamic range is within a healthy zone.",
         targetId: TARGET_DYNAMICS,
         source: "EngineeringDynamics",
         rank: 4,
