@@ -102,7 +102,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
           ) : null}
 
           {/* Optional: only render stable if caller passes it */}
-          {Array.isArray(stable) && stable.length > 0 ? (
+          {Array.isArray(stable) && stable.length > 0 && (!Array.isArray(critical) || critical.length === 0) ? (
             <div className="space-y-2">
               <SectionHeader label="🟢 Stable" />
               <div className="space-y-2">

@@ -136,7 +136,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
         severity: "stable",
         title: "Loudness looks stable",
         message: "Overall loudness looks reasonable for streaming playback.",
-        targetId: TARGET_ENGINEING_CORE,
+        targetId: TARGET_ENGINEERING_CORE,
         source: "EngineeringCore",
         rank: 10,
       });
