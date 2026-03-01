@@ -78,25 +78,7 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
   return (
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
-        <div className="flex items-end justify-between gap-4">
-          {typeof score === "number" && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.05] text-white/80 font-semibold tracking-wide">
-                {label ?? "—"}
-              </span>
-              <div className="text-xl font-semibold text-white tabular-nums">
-                {score}/100
-              </div>
-              {labelCappedByLra && (
-                <div className="mt-1 text-[11px] text-white/45 tabular-nums">
-                  Label capped by LRA (&lt; 4.0)
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 flex-grow">
+        <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 shrink-0">
           {[
             {
               k: "Integrated LUFS",
@@ -136,6 +118,52 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
             </div>
           ))}
         </div>
+
+        {typeof score === "number" && (
+          <div className="mt-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  Dynamics score
+                </div>
+
+                <div className="mt-2 flex items-baseline gap-3">
+                  <div className="text-5xl font-semibold text-[#00FFC6] tabular-nums">
+                    {score}
+                  </div>
+                  <div className="text-base text-white/50 tabular-nums">/100</div>
+
+                  <span className="ml-2 text-xs px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.05] text-white/80 font-semibold tracking-wide">
+                    {label ?? "—"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="shrink-0 text-sm text-white/40">
+                Higher is healthier.
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <div className="h-3.5 w-full rounded-full bg-white/10 overflow-hidden relative">
+                <div
+                  className="h-full rounded-full bg-[#00FFC6] transition-all duration-500"
+                  style={{
+                    width:
+                      typeof score === "number"
+                        ? `${Math.max(0, Math.min(100, score))}%`
+                        : "0%",
+                    boxShadow: "0 0 12px rgba(0,255,198,0.6)"
+                  }}
+                />
+              </div>
+
+              <div className="mt-2 text-[11px] text-white/45">
+                Low LRA can cap the label — keep musical contrast while avoiding over-compression.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

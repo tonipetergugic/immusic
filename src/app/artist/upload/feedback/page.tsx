@@ -16,7 +16,7 @@ import StreamingRiskGauge from "./components/StreamingRiskGauge";
 import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
-import { Wrench, Gauge, Activity, SlidersHorizontal, AudioWaveform, Columns2, BarChart3, ShieldAlert, ClipboardList } from "lucide-react";
+import { Wrench, Gauge, Activity, TrendingUp, SlidersHorizontal, AudioWaveform, Columns2, BarChart3, ShieldAlert, ClipboardList } from "lucide-react";
 
 import { unlockPaidFeedbackAction } from "./actions";
 
@@ -209,7 +209,7 @@ export default async function UploadFeedbackV3Page({
                   <section id="engineering-dynamics" className="flex flex-col">
                     <div className="mb-4">
                       <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                        <Activity className="w-6 h-6 text-white/80" />
+                        <TrendingUp className="w-6 h-6 text-white" />
                         Dynamics
                       </h2>
                       <p className="text-sm text-white/50">
