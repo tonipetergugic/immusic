@@ -99,28 +99,8 @@ export default function EngineeringCore({
     payload?.codec_simulation?.mp3_overs ??
     null;
 
-  const headEng = payload?.metrics?.loudness?.headroom_engineering ?? null;
-  const postEncodeHeadroom =
-    typeof headEng?.post_encode_headroom_dbtp === "number" ? headEng.post_encode_headroom_dbtp : null;
-
   const sourceHeadroom =
     typeof headroomDb === "number" && Number.isFinite(headroomDb) ? headroomDb : null;
-
-  const postHeadroom =
-    typeof postEncodeHeadroom === "number" && Number.isFinite(postEncodeHeadroom)
-      ? Math.max(0, postEncodeHeadroom)
-      : null;
-
-  const hrEffective =
-    typeof sourceHeadroom === "number" || typeof postHeadroom === "number"
-      ? Math.min(sourceHeadroom ?? Infinity, postHeadroom ?? Infinity)
-      : null;
-
-  const headroomLost =
-    typeof sourceHeadroom === "number" &&
-    typeof postHeadroom === "number"
-      ? sourceHeadroom - postHeadroom
-      : null;
 
   const aacPostTp =
     typeof aac?.post_true_peak_db === "number" && Number.isFinite(aac.post_true_peak_db)
@@ -132,6 +112,19 @@ export default function EngineeringCore({
       ? mp3.post_true_peak_db
       : null;
 
+  const sourceTp =
+    typeof truePeak === "number" && Number.isFinite(truePeak) ? truePeak : null;
+
+  const aacTpIncrease =
+    typeof sourceTp === "number" && typeof aacPostTp === "number"
+      ? aacPostTp - sourceTp
+      : null;
+
+  const mp3TpIncrease =
+    typeof sourceTp === "number" && typeof mp3PostTp === "number"
+      ? mp3PostTp - sourceTp
+      : null;
+
   const tpEffective =
     typeof truePeak === "number" || typeof aacPostTp === "number" || typeof mp3PostTp === "number"
       ? Math.max(truePeak ?? -999, aacPostTp ?? -999, mp3PostTp ?? -999)
@@ -139,26 +132,7 @@ export default function EngineeringCore({
 
   const tpEffectiveLabel =
     typeof tpEffective === "number" && Number.isFinite(tpEffective)
-      ? `${Math.min(tpEffective, 0).toFixed(2)} dBTP`
-      : null;
-
-  const aacPostTpClamped = typeof aacPostTp === "number" ? Math.min(aacPostTp, 0.0) : null;
-  const mp3PostTpClamped = typeof mp3PostTp === "number" ? Math.min(mp3PostTp, 0.0) : null;
-
-  const aacPostHeadroom =
-    typeof aacPostTpClamped === "number" ? (0.0 - aacPostTpClamped) : null;
-
-  const mp3PostHeadroom =
-    typeof mp3PostTpClamped === "number" ? (0.0 - mp3PostTpClamped) : null;
-
-  const aacHeadroomLost =
-    typeof sourceHeadroom === "number" && typeof aacPostHeadroom === "number"
-      ? Math.max(0, sourceHeadroom - aacPostHeadroom)
-      : null;
-
-  const mp3HeadroomLost =
-    typeof sourceHeadroom === "number" && typeof mp3PostHeadroom === "number"
-      ? Math.max(0, sourceHeadroom - mp3PostHeadroom)
+      ? `${tpEffective.toFixed(2)} dBTP`
       : null;
 
   // Streaming Safety (deterministic + genre-neutral)
@@ -181,7 +155,6 @@ export default function EngineeringCore({
       ? `${(Math.round(oversPerMin * 100) / 100).toFixed(2)} / min`
       : null;
 
-  // postHeadroom is already clamped to >= 0 above (0 means: at/beyond 0.0 dBTP after encoding)
   let encodingRiskTone: "good" | "warn" | "critical" | "neutral" = "neutral";
 
   if (typeof tpEffective === "number") {
@@ -375,7 +348,7 @@ export default function EngineeringCore({
                 "Your track clips after streaming conversion. Set your limiter ceiling to −1.2 dBTP or reduce overall master gain."}
             </div>
 
-            <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
                 <div className={METRIC_TITLE}>AAC overs</div>
                 <div className={METRIC_VALUE}>
@@ -395,15 +368,6 @@ export default function EngineeringCore({
                   <div className="mt-1 text-sm text-white/45 tabular-nums">{fmtPerMin}</div>
                 ) : null}
               </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className={METRIC_TITLE}>Post-encode headroom</div>
-                <div className={METRIC_VALUE}>
-                  {typeof postHeadroom === "number"
-                    ? `${postHeadroom.toFixed(2)} dB`
-                    : "—"}
-                </div>
-              </div>
             </div>
           </div>
 
@@ -422,10 +386,10 @@ export default function EngineeringCore({
                   AAC 128
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className={METRIC_VALUE}>Headroom lost</span>
+                  <span className={METRIC_VALUE}>TP increase</span>
                   <span className={METRIC_VALUE}>
-                    {typeof aacHeadroomLost === "number"
-                      ? `${aacHeadroomLost.toFixed(2)} dB`
+                    {typeof aacTpIncrease === "number"
+                      ? `${aacTpIncrease.toFixed(2)} dB`
                       : "—"}
                   </span>
                 </div>
@@ -436,10 +400,10 @@ export default function EngineeringCore({
                   MP3 128
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className={METRIC_VALUE}>Headroom lost</span>
+                  <span className={METRIC_VALUE}>TP increase</span>
                   <span className={METRIC_VALUE}>
-                    {typeof mp3HeadroomLost === "number"
-                      ? `${mp3HeadroomLost.toFixed(2)} dB`
+                    {typeof mp3TpIncrease === "number"
+                      ? `${mp3TpIncrease.toFixed(2)} dB`
                       : "—"}
                   </span>
                 </div>

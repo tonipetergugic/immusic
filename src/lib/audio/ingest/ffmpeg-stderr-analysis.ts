@@ -412,8 +412,7 @@ export async function ffmpegDetectClippedSampleCount(params: {
 export async function ffmpegDetectTruePeakAndIntegratedLufs(params: {
   inPath: string;
 }): Promise<{ truePeakDbTp: number; integratedLufs: number }> {
-  // Single ebur128 run: parse both True Peak and Integrated LUFS from stderr.
-  // Use numeric peak option (peak=1) for broader ffmpeg build compatibility.
+  // loudnorm analysis prints JSON with input_i (LUFS) + input_tp (dBTP) for deterministic True Peak + Integrated LUFS
   const { stderr } = await execFileAsync("ffmpeg", [
     "-hide_banner",
     "-loglevel",
@@ -421,79 +420,32 @@ export async function ffmpegDetectTruePeakAndIntegratedLufs(params: {
     "-i",
     params.inPath,
     "-af",
-    "ebur128=peak=1",
+    "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
     "-f",
     "null",
     "-",
   ]);
 
   const out = String(stderr || "");
-  const lines = out.split(/\r?\n/);
-
-  // True Peak: prefer "True peak:" lines, fallback to "Peak:" if build doesn't emit true peak
-  let maxPeak = Number.NEGATIVE_INFINITY;
-  const truePeakRe = /True\s*peak:\s*([+-]?[0-9.]+)\s*dB/i;
-  const peakRe = /Peak:\s*([+-]?[0-9.]+)\s*dB/i;
-
-  // Integrated LUFS: take last "I:" value
-  let lastI = NaN;
-  const iRe = /\bI:\s*([+-]?[0-9.]+)\s*LUFS\b/i;
-
-  for (const line of lines) {
-    const tpm = line.match(truePeakRe);
-    if (tpm) {
-      const v = Number(tpm[1]);
-      if (Number.isFinite(v)) maxPeak = Math.max(maxPeak, v);
-    } else {
-      const pm = line.match(peakRe);
-      if (pm) {
-        const v = Number(pm[1]);
-        if (Number.isFinite(v)) maxPeak = Math.max(maxPeak, v);
-      }
-    }
-
-    const im = line.match(iRe);
-    if (im) {
-      const v = Number(im[1]);
-      if (Number.isFinite(v)) lastI = v;
-    }
+  const start = out.lastIndexOf("{");
+  const end = out.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    return { truePeakDbTp: NaN, integratedLufs: NaN };
   }
 
-  // Fallback: Some ffmpeg builds don't emit ebur128 peak lines. If maxPeak is still unset, run astats to get peak level dB.
-  if (maxPeak === Number.NEGATIVE_INFINITY) {
-    const { stderr: astatsStderr } = await execFileAsync("ffmpeg", [
-      "-hide_banner",
-      "-loglevel",
-      "info",
-      "-i",
-      params.inPath,
-      "-af",
-      "astats=metadata=0:reset=0",
-      "-f",
-      "null",
-      "-",
-    ]);
-
-    const astatsOut = String(astatsStderr || "");
-    const astatsLines = astatsOut.split(/\r?\n/);
-
-    // Typical line: "Peak level dB: -0.23"
-    const peakLevelRe = /Peak\s*level\s*dB:\s*([+-]?[0-9.]+)/i;
-    for (const line of astatsLines) {
-      const m = line.match(peakLevelRe);
-      if (m) {
-        const v = Number(m[1]);
-        if (Number.isFinite(v)) {
-          maxPeak = v;
-          break;
-        }
-      }
-    }
+  let json: any = null;
+  try {
+    json = JSON.parse(out.slice(start, end + 1));
+  } catch {
+    return { truePeakDbTp: NaN, integratedLufs: NaN };
   }
+
+  const tp = Number(json?.input_tp);
+  const i = Number(json?.input_i);
 
   return {
-    truePeakDbTp: maxPeak === Number.NEGATIVE_INFINITY ? NaN : maxPeak,
-    integratedLufs: lastI,
+    truePeakDbTp: Number.isFinite(tp) ? tp : NaN,
+    integratedLufs: Number.isFinite(i) ? i : NaN,
   };
 }
 
@@ -502,18 +454,34 @@ export async function ffmpegDetectLoudnessRangeLu(params: {
 }): Promise<number> {
   // EBU R128 Loudness Range (LRA) in LU, parsed from ffmpeg ebur128 summary.
   // Deterministic, whole-file.
-  const { stderr } = await execFileAsync("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "info",
-    "-i",
-    params.inPath,
-    "-af",
-    "ebur128=peak=1",
-    "-f",
-    "null",
-    "-",
-  ]);
+  let stderr: string = "";
+  try {
+    ({ stderr } = await execFileAsync("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "info",
+      "-i",
+      params.inPath,
+      "-af",
+      "ebur128=peak=2",
+      "-f",
+      "null",
+      "-",
+    ]));
+  } catch {
+    ({ stderr } = await execFileAsync("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "info",
+      "-i",
+      params.inPath,
+      "-af",
+      "ebur128=peak=1",
+      "-f",
+      "null",
+      "-",
+    ]));
+  }
 
   const out = String(stderr || "");
   const lines = out.split(/\r?\n/);
@@ -551,18 +519,34 @@ export async function ffmpegDetectShortTermLufsTimeline(params: {
 }): Promise<ShortTermLufsPoint[]> {
   const maxPoints = typeof params.maxPoints === "number" && Number.isFinite(params.maxPoints) ? Math.max(50, Math.trunc(params.maxPoints)) : 1200;
 
-  const { stderr } = await execFileAsync("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "verbose",
-    "-i",
-    params.inPath,
-    "-af",
-    "ebur128=peak=1:framelog=verbose",
-    "-f",
-    "null",
-    "-",
-  ]);
+  let stderr: string = "";
+  try {
+    ({ stderr } = await execFileAsync("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "verbose",
+      "-i",
+      params.inPath,
+      "-af",
+      "ebur128=peak=2:framelog=verbose",
+      "-f",
+      "null",
+      "-",
+    ]));
+  } catch {
+    ({ stderr } = await execFileAsync("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "verbose",
+      "-i",
+      params.inPath,
+      "-af",
+      "ebur128=peak=1:framelog=verbose",
+      "-f",
+      "null",
+      "-",
+    ]));
+  }
 
   const out = String(stderr || "");
   const lines = out.split(/\r?\n/);
@@ -640,19 +624,34 @@ export async function ffmpegDetectTruePeakOversEvents(params: {
 
   // Use ebur128 frame logging; parse time + peak-ish fields defensively.
   // We treat any peak > threshold as an over-segment.
-  const { stderr } = await execFileAsync("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "info",
-    "-i",
-    params.inPath,
-    "-af",
-    // framelog=verbose makes ffmpeg print per-frame lines in many builds
-    "ebur128=peak=1:framelog=verbose",
-    "-f",
-    "null",
-    "-",
-  ]);
+  let stderr: string = "";
+  try {
+    ({ stderr } = await execFileAsync("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "info",
+      "-i",
+      params.inPath,
+      "-af",
+      "ebur128=peak=2:framelog=verbose",
+      "-f",
+      "null",
+      "-",
+    ]));
+  } catch {
+    ({ stderr } = await execFileAsync("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "info",
+      "-i",
+      params.inPath,
+      "-af",
+      "ebur128=peak=1:framelog=verbose",
+      "-f",
+      "null",
+      "-",
+    ]));
+  }
 
   const out = String(stderr || "");
   const lines = out.split(/\r?\n/);
