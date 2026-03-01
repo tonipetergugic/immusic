@@ -3,7 +3,7 @@
 type Props = {
   midRmsDbfs: number | null;
   sideRmsDbfs: number | null;
-  ratio: number | null; // mid_side_energy_ratio = side_energy / mid_energy (power ratio), ~1 = balanced
+  widthIndex: number | null; // stereo_width_index = side^2 / (mid^2 + side^2), [0..1]
 };
 
 function fmtDb(x: number) {
@@ -11,30 +11,39 @@ function fmtDb(x: number) {
   return v.toFixed(1);
 }
 
-export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
+export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, widthIndex }: Props) {
   if (
     typeof midRmsDbfs !== "number" ||
     !Number.isFinite(midRmsDbfs) ||
     typeof sideRmsDbfs !== "number" ||
     !Number.isFinite(sideRmsDbfs) ||
-    typeof ratio !== "number" ||
-    !Number.isFinite(ratio)
+    typeof widthIndex !== "number" ||
+    !Number.isFinite(widthIndex)
   ) {
     return null;
   }
 
-  const r = ratio;
-  const rClamped = Math.max(0.25, Math.min(4, r));
-  // log2 mapping: 0.25 -> 0%, 1 -> 50%, 4 -> 100%
-  const log2 = (x: number) => Math.log(x) / Math.log(2);
-  const markerLeftPct = ((log2(rClamped) + 2) / 4) * 100;
+  const w = Math.max(0, Math.min(1, widthIndex));
+  const markerLeftPct = w * 100;
 
   const badge =
-    r < 0.5 || r > 2
-      ? { label: "WARN", badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200", valueClass: "text-yellow-300" }
-      : r < 0.8 || r > 1.25
-        ? { label: "OK", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/60" }
-        : { label: "INFO", badgeClass: "border-white/10 bg-white/5 text-white/60", valueClass: "text-white/60" };
+    w < 0.2
+      ? {
+          label: "CENTER-HEAVY",
+          badgeClass: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200",
+          valueClass: "text-yellow-300",
+        }
+      : w <= 0.45
+        ? {
+            label: "BALANCED",
+            badgeClass: "border-white/10 bg-white/5 text-white/80",
+            valueClass: "text-white/80",
+          }
+        : {
+            label: "WIDE",
+            badgeClass: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200",
+            valueClass: "text-emerald-300",
+          };
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8">
@@ -49,8 +58,10 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
             {badge.label}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xs text-white/45">Side/Mid</span>
-            <span className={"text-sm tabular-nums " + badge.valueClass}>{ratio.toFixed(2)}</span>
+            <span className="text-xs text-white/45">Width</span>
+            <span className={"text-sm tabular-nums " + badge.valueClass}>
+              {Math.round(w * 100)}%
+            </span>
           </div>
         </div>
       </div>
@@ -75,8 +86,8 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
 
       <div className="mt-5">
         <div className="flex items-center justify-between text-[10px] text-white/40">
-          <span>More Side</span>
-          <span>More Mid</span>
+          <span>Center</span>
+          <span>Wide</span>
         </div>
 
         <div className="mt-2 relative h-3 w-full rounded-full bg-white/10 overflow-visible">
@@ -100,7 +111,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, ratio }: Props) {
         </div>
 
         <div className="mt-2 text-[10px] text-white/35">
-          Side/Mid near 1.00 is balanced. Very low or high values can indicate unstable stereo balance.
+          Width near the middle is typical. Low width is center-focused; high width is very wide.
         </div>
       </div>
     </div>

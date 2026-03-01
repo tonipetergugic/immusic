@@ -298,9 +298,15 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     const bands = [
       typeof s?.sub_rms_dbfs === "number" && Number.isFinite(s.sub_rms_dbfs) ? s.sub_rms_dbfs : null,
       typeof s?.low_rms_dbfs === "number" && Number.isFinite(s.low_rms_dbfs) ? s.low_rms_dbfs : null,
-      typeof s?.low_mid_rms_dbfs === "number" && Number.isFinite(s.low_mid_rms_dbfs) ? s.low_mid_rms_dbfs : null,
+      typeof (s?.low_mid_rms_dbfs ?? (s as any)?.lowmid_rms_dbfs) === "number" &&
+      Number.isFinite((s?.low_mid_rms_dbfs ?? (s as any)?.lowmid_rms_dbfs))
+        ? (s?.low_mid_rms_dbfs ?? (s as any)?.lowmid_rms_dbfs)
+        : null,
       typeof s?.mid_rms_dbfs === "number" && Number.isFinite(s.mid_rms_dbfs) ? s.mid_rms_dbfs : null,
-      typeof s?.high_mid_rms_dbfs === "number" && Number.isFinite(s.high_mid_rms_dbfs) ? s.high_mid_rms_dbfs : null,
+      typeof (s?.high_mid_rms_dbfs ?? (s as any)?.highmid_rms_dbfs) === "number" &&
+      Number.isFinite((s?.high_mid_rms_dbfs ?? (s as any)?.highmid_rms_dbfs))
+        ? (s?.high_mid_rms_dbfs ?? (s as any)?.highmid_rms_dbfs)
+        : null,
       typeof s?.high_rms_dbfs === "number" && Number.isFinite(s.high_rms_dbfs) ? s.high_rms_dbfs : null,
       typeof s?.air_rms_dbfs === "number" && Number.isFinite(s.air_rms_dbfs) ? s.air_rms_dbfs : null,
     ].filter((v): v is number => typeof v === "number");
@@ -558,8 +564,9 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
     },
   ].map((cluster) => {
     const related = issues.filter((i) => {
-      const s = typeof i.source === "string" ? i.source.toLowerCase() : "";
-      return cluster.sources.includes(s);
+      const sRaw = typeof i.source === "string" ? i.source : "";
+      const s = sRaw.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return cluster.sources.some((x: string) => String(x).toLowerCase().replace(/[^a-z0-9]/g, "") === s);
     });
 
     let severity: "good" | "warn" | "critical" = "good";

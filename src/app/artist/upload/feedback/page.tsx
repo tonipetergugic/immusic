@@ -199,7 +199,7 @@ export default async function UploadFeedbackV3Page({
                     <MidSideCard
                       midRmsDbfs={payload?.metrics?.stereo?.mid_rms_dbfs ?? null}
                       sideRmsDbfs={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
-                      ratio={payload?.metrics?.stereo?.mid_side_energy_ratio ?? null}
+                      widthIndex={payload?.metrics?.stereo?.stereo_width_index ?? null}
                     />
                   </section>
                 </div>
