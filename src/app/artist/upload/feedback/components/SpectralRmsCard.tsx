@@ -78,7 +78,7 @@ export default function SpectralRmsCard({ spectral }: Props) {
           <span className="text-sm tabular-nums text-white/60">relative: 0 … -24 dB</span>
         </div>
 
-        <div className="mt-3 relative h-28 w-full rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <div className="mt-3 relative h-44 w-full rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="spectralFill" x1="0" y1="0" x2="0" y2="1">

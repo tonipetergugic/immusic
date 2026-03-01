@@ -128,7 +128,7 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
                 </div>
 
                 <div className="mt-2 flex items-baseline gap-3">
-                  <div className="text-5xl font-semibold text-[#00FFC6] tabular-nums">
+                  <div className="text-4xl font-semibold text-[#00FFC6] tabular-nums">
                     {score}
                   </div>
                   <div className="text-base text-white/50 tabular-nums">/100</div>
