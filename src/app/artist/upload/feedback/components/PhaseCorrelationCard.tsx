@@ -22,14 +22,14 @@ export default function PhaseCorrelationCard({ value }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-3xl font-semibold tracking-tight text-white">Phase Correlation</span>
-          <span className="mt-1 text-xs text-white/45">Stereo stability • mono safety</span>
+          <span className="mt-1 text-sm text-white/45">Stereo stability • mono safety</span>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className={"text-[10px] px-2 py-0.5 rounded-full border " + badge.badgeClass}>
+          <span className={"text-sm px-2 py-0.5 rounded-full border " + badge.badgeClass}>
             {badge.label}
           </span>
-          <span className={"text-sm tabular-nums " + badge.valueClass}>
+          <span className={"text-2xl tabular-nums " + badge.valueClass}>
             {value.toFixed(2)}
           </span>
         </div>
@@ -63,7 +63,7 @@ export default function PhaseCorrelationCard({ value }: Props) {
           </div>
         </div>
 
-        <div className="mt-2 flex justify-between text-[10px] text-white/40">
+        <div className="mt-2 flex justify-between text-sm text-white/40">
           <span>-1</span>
           <span>0</span>
           <span>+1</span>

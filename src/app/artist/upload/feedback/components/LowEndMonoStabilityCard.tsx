@@ -68,22 +68,22 @@ export default function LowEndMonoStabilityCard({
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Correlation */}
           <div>
-            <div className="text-[11px] uppercase tracking-wide text-white/30">
+            <div className="text-sm uppercase tracking-wide text-white/30">
               Left/Right similarity (20–120 Hz)
             </div>
 
-            <div className="mt-2 text-[28px] font-semibold text-white">
+            <div className="mt-2 text-2xl font-semibold text-white">
               {hasPc ? phaseCorr20_120.toFixed(2) : "—"}
             </div>
           </div>
 
           {/* Mono Loss */}
           <div>
-            <div className="text-[11px] uppercase tracking-wide text-white/30">
+            <div className="text-sm uppercase tracking-wide text-white/30">
               Mono Loss (20–120 Hz)
             </div>
 
-            <div className="mt-2 text-[28px] font-semibold text-white">
+            <div className="mt-2 text-2xl font-semibold text-white">
               {hasLoss ? `${monoLossPct20_120.toFixed(1)}%` : "—"}
             </div>
           </div>
@@ -92,7 +92,7 @@ export default function LowEndMonoStabilityCard({
 
       {/* Mini Heatbar (Correlation 20–120 Hz) */}
       <div className="mt-5">
-        <div className="text-[11px] text-white/40">Left/Right similarity (20–120 Hz)</div>
+        <div className="text-sm text-white/40">Left/Right similarity (20–120 Hz)</div>
 
         <div className="mt-2">
         {(() => {
@@ -115,7 +115,7 @@ export default function LowEndMonoStabilityCard({
         })()}
         </div>
 
-        <div className="mt-2 flex justify-between text-[11px] text-white/35">
+        <div className="mt-2 flex justify-between text-sm text-white/35">
           <span>-1</span>
           <span>0</span>
           <span>+1</span>
@@ -124,7 +124,7 @@ export default function LowEndMonoStabilityCard({
 
       {/* Mono energy retention */}
       <div className="mt-8 pt-6 border-t border-white/5">
-        <div className="text-[11px] uppercase tracking-wide text-white/30">
+        <div className="text-sm uppercase tracking-wide text-white/30">
           Mono energy retention (20–120 Hz)
         </div>
 
@@ -137,7 +137,7 @@ export default function LowEndMonoStabilityCard({
           />
         </div>
 
-        <div className="mt-2 text-[11px] text-white/35">
+        <div className="mt-2 text-sm text-white/35">
           {hasLoss
             ? `${(100 - monoLossPct20_120).toFixed(1)}% energy retained in mono`
             : "No mono retention data (20–120 Hz)"}
@@ -146,7 +146,7 @@ export default function LowEndMonoStabilityCard({
 
       {/* Sub-band correlation split */}
       <div className="mt-8 pt-6 border-t border-white/5">
-        <div className="text-[11px] uppercase tracking-wide text-white/30">
+        <div className="text-sm uppercase tracking-wide text-white/30">
           Sub-band detail (20–60 / 60–120 Hz)
         </div>
 
@@ -154,8 +154,8 @@ export default function LowEndMonoStabilityCard({
           {/* 20–60 */}
           <div>
             <div className="flex items-center justify-between">
-              <div className="text-[11px] text-white/40">20–60 Hz</div>
-              <div className="text-[11px] tabular-nums text-white/55">
+              <div className="text-sm text-white/40">20–60 Hz</div>
+              <div className="text-sm tabular-nums text-white/55">
                 {hasPc20_60 ? phaseCorr20_60.toFixed(2) : "—"}
               </div>
             </div>
@@ -181,7 +181,7 @@ export default function LowEndMonoStabilityCard({
             })()}
             </div>
 
-            <div className="mt-2 flex justify-between text-[11px] text-white/35">
+            <div className="mt-2 flex justify-between text-sm text-white/35">
               <span>-1</span>
               <span>0</span>
               <span>+1</span>
@@ -191,8 +191,8 @@ export default function LowEndMonoStabilityCard({
           {/* 60–120 */}
           <div>
             <div className="flex items-center justify-between">
-              <div className="text-[11px] text-white/40">60–120 Hz</div>
-              <div className="text-[11px] tabular-nums text-white/55">
+              <div className="text-sm text-white/40">60–120 Hz</div>
+              <div className="text-sm tabular-nums text-white/55">
                 {hasPc60_120 ? phaseCorr60_120.toFixed(2) : "—"}
               </div>
             </div>
@@ -218,7 +218,7 @@ export default function LowEndMonoStabilityCard({
             })()}
             </div>
 
-            <div className="mt-2 flex justify-between text-[11px] text-white/35">
+            <div className="mt-2 flex justify-between text-sm text-white/35">
               <span>-1</span>
               <span>0</span>
               <span>+1</span>

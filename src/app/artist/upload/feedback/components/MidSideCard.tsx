@@ -50,16 +50,16 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, widthIndex }: Pro
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-base font-semibold text-white/90">Mid/Side</span>
-          <span className="mt-1 text-xs text-white/45">Center vs side energy balance</span>
+          <span className="mt-1 text-sm text-white/45">Center vs side energy balance</span>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className={"text-[10px] px-2 py-0.5 rounded-full border " + badge.badgeClass}>
+          <span className={"text-sm px-2 py-0.5 rounded-full border " + badge.badgeClass}>
             {badge.label}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xs text-white/45">Width</span>
-            <span className={"text-sm tabular-nums " + badge.valueClass}>
+            <span className="text-sm text-white/45">Width</span>
+            <span className={"text-2xl tabular-nums " + badge.valueClass}>
               {Math.round(w * 100)}%
             </span>
           </div>
@@ -68,7 +68,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, widthIndex }: Pro
 
       <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-white/5 bg-white/[0.03] backdrop-blur-sm p-4">
-          <div className="text-xs uppercase tracking-wide text-white/40">Mid RMS</div>
+          <div className="text-sm uppercase tracking-wide text-white/40">Mid RMS</div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-semibold tabular-nums text-white/90">{fmtDb(midRmsDbfs)}</span>
             <span className="text-sm text-white/45">dBFS</span>
@@ -76,7 +76,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, widthIndex }: Pro
         </div>
 
         <div className="rounded-2xl border border-white/5 bg-white/[0.03] backdrop-blur-sm p-4">
-          <div className="text-xs uppercase tracking-wide text-white/40">Side RMS</div>
+          <div className="text-sm uppercase tracking-wide text-white/40">Side RMS</div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-semibold tabular-nums text-white/90">{fmtDb(sideRmsDbfs)}</span>
             <span className="text-sm text-white/45">dBFS</span>
@@ -85,7 +85,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, widthIndex }: Pro
       </div>
 
       <div className="mt-5">
-        <div className="flex items-center justify-between text-[10px] text-white/40">
+        <div className="flex items-center justify-between text-sm text-white/40">
           <span>Center</span>
           <span>Wide</span>
         </div>
@@ -110,7 +110,7 @@ export default function MidSideCard({ midRmsDbfs, sideRmsDbfs, widthIndex }: Pro
           </div>
         </div>
 
-        <div className="mt-2 text-[10px] text-white/35">
+        <div className="mt-2 text-sm text-white/35">
           Width near the middle is typical. Low width is center-focused; high width is very wide.
         </div>
       </div>

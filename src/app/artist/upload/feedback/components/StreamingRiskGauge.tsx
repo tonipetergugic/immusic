@@ -186,7 +186,7 @@ export default function StreamingRiskGauge({ isReady, payload }: Props) {
           </svg>
         </div>
 
-        <div className="mt-5 text-xl font-semibold tracking-wide text-white">
+        <div className="mt-5 text-2xl font-semibold tracking-wide text-white">
           {label}
         </div>
 

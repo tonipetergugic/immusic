@@ -115,8 +115,8 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-white/10 bg-white/[0.03]";
 
-  const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
-  const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
+  const METRIC_TITLE = "text-sm uppercase tracking-wider text-white/40";
+  const METRIC_VALUE = "mt-2 text-2xl font-semibold text-white tabular-nums";
 
   const label =
     tone === "good"
@@ -180,17 +180,17 @@ export default function LimiterStressCard({ durationS, truePeakOvers }: Props) {
       {heatmapBins && maxBin !== null && maxBin > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
+            <div className="text-sm uppercase tracking-wider text-white/40">
               Stress distribution over time
             </div>
 
             {hoverInfo ? (
-              <div className="text-xs text-white/70 tabular-nums">
+              <div className="text-sm text-white/70 tabular-nums">
                 {fmtTime(hoverInfo.start)}–{fmtTime(hoverInfo.end)} · {hoverInfo.v} ev ·{" "}
                 {hoverInfo.severity.toUpperCase()}
               </div>
             ) : (
-              <div className="text-xs text-white/40">Hover a bar</div>
+              <div className="text-sm text-white/40">Hover a bar</div>
             )}
           </div>
 

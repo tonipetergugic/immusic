@@ -122,7 +122,7 @@ const areaPath = `
   return (
     <div className="rounded-3xl border border-white/9 bg-black/30 p-6 md:p-8 shadow-xl shadow-black/40">
       <div className="mb-4">
-        <div className="text-lg font-semibold text-white">
+        <div className="text-2xl font-semibold text-white">
           Dynamic Movement: {dynDb.toFixed(1)} dB
         </div>
 
@@ -217,15 +217,15 @@ const areaPath = `
               )}
             </svg>
 
-            <div className="pointer-events-none absolute left-3 top-3 text-[10px] font-medium tabular-nums text-white/50">
+            <div className="pointer-events-none absolute left-3 top-3 text-sm font-medium tabular-nums text-white/50">
               0 LUFS
             </div>
             {typeof integratedLufs === "number" && Number.isFinite(integratedLufs) && (
-              <div className="pointer-events-none absolute right-3 top-3 text-[10px] font-medium tabular-nums text-white/60">
+              <div className="pointer-events-none absolute right-3 top-3 text-sm font-medium tabular-nums text-white/60">
                 Integrated: {integratedLufs.toFixed(1)} LUFS
               </div>
             )}
-            <div className="pointer-events-none absolute left-3 bottom-3 text-[10px] font-medium tabular-nums text-white/50">
+            <div className="pointer-events-none absolute left-3 bottom-3 text-sm font-medium tabular-nums text-white/50">
               {min.toFixed(1)} LUFS
             </div>
 
@@ -244,7 +244,7 @@ const areaPath = `
 
               return (
                 <div
-                  className="pointer-events-none absolute z-20 rounded-lg bg-black/85 border border-white/10 px-3 py-2 text-xs font-medium text-white shadow-xl backdrop-blur-md"
+                  className="pointer-events-none absolute z-20 rounded-lg bg-black/85 border border-white/10 px-3 py-2 text-sm font-medium text-white shadow-xl backdrop-blur-md"
                   style={{
                     left: x,
                     top: Math.max(

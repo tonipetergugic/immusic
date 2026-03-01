@@ -201,7 +201,7 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                     <div className="text-xs text-white/40">
                       This can happen if the track is very short or structure patterns are not stable enough.
                     </div>
-                    <div className="mt-1 text-[11px] text-white/35">
+                    <div className="mt-1 text-sm text-white/35">
                       Tip: Try a full-length render and re-upload for the most reliable structure read.
                     </div>
 
@@ -218,7 +218,7 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                   const dur = journey.durationS;
                   return (
                     <div className="mt-3 px-2 py-2">
-                      <div className="flex items-center justify-between text-[11px] text-white/45 tabular-nums">
+                      <div className="flex items-center justify-between text-sm text-white/45 tabular-nums">
                         <span>0:00</span>
                         <span className="text-white/35">Energy Flow</span>
                         <span>
@@ -303,27 +303,27 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                   return (
                     <div className="grid grid-cols-2 gap-y-8 md:flex md:justify-between md:items-start">
                       <div>
-                        <div className="text-[10px] tracking-widest text-white/35">High Energy</div>
+                        <div className="text-sm tracking-widest text-white/35">High Energy</div>
                         <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{highCoverage}%</div>
-                        <div className="mt-0.5 text-[11px] text-white/35">Above upper range</div>
+                        <div className="mt-0.5 text-sm text-white/35">Above upper range</div>
                       </div>
 
                       <div>
-                        <div className="text-[10px] tracking-widest text-white/35">Variability</div>
+                        <div className="text-sm tracking-widest text-white/35">Variability</div>
                         <div className="mt-1 text-2xl font-semibold text-white">{variability}</div>
-                        <div className="mt-0.5 text-[11px] text-white/35">Overall movement</div>
+                        <div className="mt-0.5 text-sm text-white/35">Overall movement</div>
                       </div>
 
                       <div>
-                        <div className="text-[10px] tracking-widest text-white/35">Biggest Build</div>
+                        <div className="text-sm tracking-widest text-white/35">Biggest Build</div>
                         <div className="mt-1 text-2xl font-semibold text-white tabular-nums">+{buildVal}</div>
-                        <div className="mt-0.5 text-[11px] text-white/35">Short-term rise</div>
+                        <div className="mt-0.5 text-sm text-white/35">Short-term rise</div>
                       </div>
 
                       <div className="text-right">
-                        <div className="text-[10px] tracking-widest text-white/35">Plateau</div>
+                        <div className="text-sm tracking-widest text-white/35">Plateau</div>
                         <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{plateauSec}s</div>
-                        <div className="mt-0.5 text-[11px] text-white/35">Stable segment</div>
+                        <div className="mt-0.5 text-sm text-white/35">Stable segment</div>
                       </div>
                     </div>
                   );

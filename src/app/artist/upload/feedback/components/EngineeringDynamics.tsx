@@ -108,11 +108,11 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
                   : "border-white/10 bg-white/[0.03]")
               }
             >
-              <div className="text-[10px] uppercase tracking-wider text-white/40">
+              <div className="text-sm uppercase tracking-wider text-white/40">
                 {m.k}
               </div>
 
-              <div className="mt-2 text-xl font-semibold text-white tabular-nums">
+              <div className="mt-2 text-2xl font-semibold text-white tabular-nums">
                 {typeof m.v === "number" && Number.isFinite(m.v) ? m.fmt(m.v) : "—"}
               </div>
             </div>
@@ -123,7 +123,7 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
           <div className="mt-6">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">
+                <div className="text-sm uppercase tracking-wider text-white/40">
                   Dynamics score
                 </div>
 
@@ -158,7 +158,7 @@ export default function EngineeringDynamics({ isReady, payload }: Props) {
                 />
               </div>
 
-              <div className="mt-2 text-[11px] text-white/45">
+              <div className="mt-2 text-sm text-white/45">
                 Low LRA can cap the label — keep musical contrast while avoiding over-compression.
               </div>
             </div>

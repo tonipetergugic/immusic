@@ -29,8 +29,8 @@ export default function TransientsPanel({
   else if (densityLabel === "Moderate") densityColorClass = "text-emerald-400";
   else if (densityLabel === "High") densityColorClass = "text-red-400";
 
-  const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
-  const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
+  const METRIC_TITLE = "text-sm uppercase tracking-wider text-white/40";
+  const METRIC_VALUE = "mt-2 text-2xl font-semibold text-white tabular-nums";
 
   // Punch Balance thresholds (domain-local; keep deterministic & documented)
   const PUNCH_OVERCOMPRESSED_ATTACK_LT = 40;
@@ -142,7 +142,7 @@ export default function TransientsPanel({
 
       <div className="flex items-center justify-between mt-8">
         <span className="text-base font-medium text-white/50">Transient Density</span>
-        <span className={`text-xl font-semibold ${densityColorClass}`}>
+        <span className={`text-2xl font-semibold ${densityColorClass}`}>
           {densityLabel ?? "—"}
         </span>
       </div>
@@ -155,7 +155,7 @@ export default function TransientsPanel({
             {typeof crestSpreadDb === "number" ? `${crestSpreadDb.toFixed(2)} dB` : "—"}
           </span>
 
-          <span className={`text-xl font-semibold ${crestSpreadColorClass}`}>
+          <span className={`text-2xl font-semibold ${crestSpreadColorClass}`}>
             {crestSpreadLabel ?? "—"}
           </span>
         </div>
@@ -171,7 +171,7 @@ export default function TransientsPanel({
               : "—"}
           </span>
 
-          <span className={`text-xl font-semibold ${stabilityColorClass}`}>
+          <span className={`text-2xl font-semibold ${stabilityColorClass}`}>
             {stabilityLabel ?? "—"}
           </span>
         </div>
@@ -179,7 +179,7 @@ export default function TransientsPanel({
 
       <div className="flex items-center justify-between mt-8">
         <span className="text-base font-medium text-white/50">Punch Balance</span>
-        <span className={`text-xl font-semibold ${punchColorClass}`}>
+        <span className={`text-2xl font-semibold ${punchColorClass}`}>
           {punchBalance ?? "—"}
         </span>
       </div>

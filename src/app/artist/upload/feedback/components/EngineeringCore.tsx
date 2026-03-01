@@ -207,8 +207,8 @@ export default function EngineeringCore({
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-white/10 bg-white/[0.03]";
 
-  const METRIC_TITLE = "text-[10px] uppercase tracking-wider text-white/40";
-  const METRIC_VALUE = "mt-2 text-xl font-semibold text-white tabular-nums";
+  const METRIC_TITLE = "text-sm uppercase tracking-wider text-white/40";
+  const METRIC_VALUE = "mt-2 text-2xl font-semibold text-white tabular-nums";
 
   const lufsLabel =
     typeof lufsI === "number" && Number.isFinite(lufsI)
@@ -253,7 +253,7 @@ export default function EngineeringCore({
             <div className={METRIC_VALUE}>
               {typeof lufsI === "number" ? lufsI.toFixed(1) : "—"}
             </div>
-            {lufsLabel ? <div className="mt-1 text-[11px] text-white/45">{lufsLabel}</div> : null}
+            {lufsLabel ? <div className="mt-1 text-sm text-white/45">{lufsLabel}</div> : null}
           </div>
 
           {/* True Peak */}
@@ -272,7 +272,7 @@ export default function EngineeringCore({
             <div className={METRIC_VALUE}>
               {typeof clippedSamples === "number" ? String(Math.trunc(clippedSamples)) : "—"}
             </div>
-            <div className="mt-1 text-[11px] text-white/45 tabular-nums">
+            <div className="mt-1 text-sm text-white/45 tabular-nums">
               {clippingTone === "good" && "OK • No hard digital clipping"}
               {clippingTone === "warn" && "WARN • Some hard clipping detected"}
               {clippingTone === "critical" && "CRITICAL • Audible clipping likely"}
@@ -319,7 +319,7 @@ export default function EngineeringCore({
                   {typeof width === "number" ? width.toFixed(2) : "—"}
                 </div>
 
-                <div className="mt-1 text-[11px] text-white/45 tabular-nums">
+                <div className="mt-1 text-sm text-white/45 tabular-nums">
                   {typeof tone === "string" ? labelForStereoWidthTone(tone) : "—"}
                   {typeof tone === "string" ? " • " + hintForStereoWidthTone(tone) : ""}
                 </div>
@@ -359,7 +359,7 @@ export default function EngineeringCore({
                   {encodingRiskTone === "neutral" && "—"}
                 </div>
                 {tpEffectiveLabel ? (
-                  <div className="mt-0.5 text-[11px] text-white/45 tabular-nums">
+                  <div className="mt-0.5 text-sm text-white/45 tabular-nums">
                     Worst-case TP: {tpEffectiveLabel}
                   </div>
                 ) : null}
@@ -382,7 +382,7 @@ export default function EngineeringCore({
                   {typeof aacOvers === "number" ? aacOvers : "—"}
                 </div>
                 {fmtPerMin ? (
-                  <div className="mt-1 text-[11px] text-white/45 tabular-nums">{fmtPerMin}</div>
+                  <div className="mt-1 text-sm text-white/45 tabular-nums">{fmtPerMin}</div>
                 ) : null}
               </div>
 
@@ -392,7 +392,7 @@ export default function EngineeringCore({
                   {typeof mp3Overs === "number" ? mp3Overs : "—"}
                 </div>
                 {fmtPerMin ? (
-                  <div className="mt-1 text-[11px] text-white/45 tabular-nums">{fmtPerMin}</div>
+                  <div className="mt-1 text-sm text-white/45 tabular-nums">{fmtPerMin}</div>
                 ) : null}
               </div>
 
@@ -418,7 +418,7 @@ export default function EngineeringCore({
 
             <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">
+                <div className="text-sm uppercase tracking-wider text-white/40">
                   AAC 128
                 </div>
                 <div className="mt-2 flex items-center justify-between">
@@ -432,7 +432,7 @@ export default function EngineeringCore({
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-wider text-white/40">
+                <div className="text-sm uppercase tracking-wider text-white/40">
                   MP3 128
                 </div>
                 <div className="mt-2 flex items-center justify-between">

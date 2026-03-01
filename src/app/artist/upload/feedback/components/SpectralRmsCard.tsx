@@ -112,8 +112,8 @@ export default function SpectralRmsCard({ spectral }: Props) {
           </svg>
 
           {/* axis labels */}
-          <div className="absolute left-3 top-2 text-[10px] text-white/35">0</div>
-          <div className="absolute left-3 bottom-2 text-[10px] text-white/35">-24</div>
+          <div className="absolute left-3 top-2 text-sm text-white/35">0</div>
+          <div className="absolute left-3 bottom-2 text-sm text-white/35">-24</div>
         </div>
 
         {/* Labels aligned to the SAME x positions (0..100). Keep width to avoid overlap. */}
@@ -130,8 +130,8 @@ export default function SpectralRmsCard({ spectral }: Props) {
                   width: "80px",
                 }}
               >
-                <div className="text-[10px] text-white/45">{b.label}</div>
-                <div className="text-[10px] tabular-nums text-white/55">{fmtDbfs(b.v - maxBand)}</div>
+                <div className="text-sm text-white/45">{b.label}</div>
+                <div className="text-sm tabular-nums text-white/55">{fmtDbfs(b.v - maxBand)}</div>
               </div>
             );
           })}
