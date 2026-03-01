@@ -22,6 +22,7 @@ import { unlockPaidFeedbackAction } from "./actions";
 
 import { deriveFeedbackV3PageState } from "./utils/deriveFeedbackV3PageState";
 import { deriveFeedbackSummary } from "./utils/deriveFeedbackSummary";
+import { getStreamingRiskTone } from "./utils/getStreamingRiskTone";
 import { loadFeedbackV3Data } from "./utils/loadFeedbackV3Data";
 import { logFeedbackAccessEvent } from "./utils/logFeedbackAccessEvent";
 

@@ -1,5 +1,7 @@
 "use client";
 
+import StreamingRiskGauge from "./StreamingRiskGauge";
+
 type Props = {
   isReady: boolean;
   payload: any;
@@ -40,10 +42,66 @@ export default function EngineeringCore({
     return "border-emerald-500/30 bg-emerald-500/5";
   }
 
-  const headroomDb =
-    typeof truePeak === "number" && Number.isFinite(truePeak)
-      ? Math.max(0, 0 - truePeak)
-      : null;
+  function masterBalanceLabel(args: {
+    lufsI: number | null;
+    truePeak: number | null;
+    limiterEventsPerMin: number | null;
+    codecTpIncreaseWorst: number | null;
+  }): string {
+    const { lufsI, truePeak, limiterEventsPerMin, codecTpIncreaseWorst } = args;
+
+    const loud =
+      typeof lufsI === "number" && Number.isFinite(lufsI) ? (lufsI > -9 ? "aggressive" : lufsI >= -14 ? "balanced" : "soft") : "unknown";
+
+    const head =
+      typeof truePeak === "number" && Number.isFinite(truePeak)
+        ? truePeak > 0
+          ? "over_ceiling"
+          : truePeak > -0.3
+            ? "tight"
+            : "healthy"
+      : "unknown";
+
+    const limit =
+      typeof limiterEventsPerMin === "number" && Number.isFinite(limiterEventsPerMin)
+        ? limiterEventsPerMin > 5
+          ? "heavy"
+          : limiterEventsPerMin >= 1
+            ? "moderate"
+            : "controlled"
+      : "unknown";
+
+    const codec =
+      typeof codecTpIncreaseWorst === "number" && Number.isFinite(codecTpIncreaseWorst)
+        ? codecTpIncreaseWorst >= 0.7
+          ? "high"
+          : codecTpIncreaseWorst >= 0.3
+            ? "medium"
+            : "low"
+      : "unknown";
+
+    // Hard negatives first
+    if (head === "over_ceiling") return "Over 0 dBTP (lower ceiling or gain)";
+    if (limit === "heavy" && loud === "aggressive") return "Over-limited (reduce loudness/limiting)";
+    if (codec === "high" && head !== "healthy") return "Codec-sensitive (add headroom)";
+
+    // Positive / neutral summaries
+    if (loud === "balanced" && head === "healthy" && (limit === "controlled" || limit === "moderate"))
+      return "Balanced master";
+
+    if (loud === "aggressive" && head === "healthy" && limit !== "heavy")
+      return "Aggressive but controlled";
+
+    if (loud === "soft" && head === "healthy")
+      return "Safe but quiet (may lose impact)";
+
+    return "Mixed signals (check loudness, headroom and limiter stress)";
+  }
+
+const headroomDb =
+  typeof truePeak === "number" && Number.isFinite(truePeak)
+    ? 0 - truePeak
+    : null;
 
   const truePeakTone =
     typeof truePeak === "number" && Number.isFinite(truePeak)
@@ -154,6 +212,21 @@ export default function EngineeringCore({
     typeof oversPerMin === "number" && Number.isFinite(oversPerMin)
       ? `${(Math.round(oversPerMin * 100) / 100).toFixed(2)} / min`
       : null;
+
+  const limiterEventsPerMin =
+    typeof oversPerMin === "number" && Number.isFinite(oversPerMin) ? oversPerMin : null;
+
+  const codecTpIncreaseWorst =
+    typeof aacTpIncrease === "number" || typeof mp3TpIncrease === "number"
+      ? Math.max(aacTpIncrease ?? -999, mp3TpIncrease ?? -999)
+      : null;
+
+  const masterBalance = masterBalanceLabel({
+    lufsI,
+    truePeak,
+    limiterEventsPerMin,
+    codecTpIncreaseWorst,
+  });
 
   let encodingRiskTone: "good" | "warn" | "critical" | "neutral" = "neutral";
 
@@ -267,9 +340,12 @@ export default function EngineeringCore({
 
           {/* Headroom */}
           <div className={"rounded-2xl border px-4 py-4 " + headroomClass}>
-            <div className={METRIC_TITLE}>Headroom (dB)</div>
+            <div className={METRIC_TITLE}>True Peak Margin (dB)</div>
             <div className={METRIC_VALUE}>
               {typeof headroomDb === "number" ? headroomDb.toFixed(2) : "—"}
+            </div>
+            <div className="mt-1 text-sm text-white/45">
+              Distance to 0 dBTP ceiling
             </div>
           </div>
 
@@ -303,74 +379,6 @@ export default function EngineeringCore({
 
         {/* Streaming Safety + Codec Simulation */}
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          {/* Streaming Safety */}
-          <div
-            className={
-              "rounded-3xl border p-6 md:p-8 bg-white/[0.02] h-full flex flex-col " +
-              (encodingRiskTone === "critical"
-                ? "border-red-500/40"
-                : encodingRiskTone === "warn"
-                  ? "border-yellow-500/40"
-                  : encodingRiskTone === "good"
-                    ? "border-emerald-500/40"
-                    : "border-white/10")
-            }
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">Streaming Safety</h3>
-                <p className="mt-1 text-sm text-white/60">
-                  Risk of audible distortion after MP3/AAC conversion.
-                </p>
-              </div>
-
-              <div className="text-right">
-                <div className="text-sm font-semibold text-white/85 tabular-nums">
-                  {encodingRiskTone === "good" && "Streaming-safe"}
-                  {encodingRiskTone === "warn" && "Minor distortion risk"}
-                  {encodingRiskTone === "critical" && "High distortion risk"}
-                  {encodingRiskTone === "neutral" && "—"}
-                </div>
-                {tpEffectiveLabel ? (
-                  <div className="mt-0.5 text-sm text-white/45 tabular-nums">
-                    Worst-case TP: {tpEffectiveLabel}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm text-white/70 leading-snug line-clamp-2 min-h-[2.6em]">
-              {encodingRiskTone === "good" &&
-                "No digital clipping detected after MP3/AAC conversion."}
-              {encodingRiskTone === "warn" &&
-                "Some clipping may occur after streaming compression. Set your limiter ceiling to −1.0 dBTP."}
-              {encodingRiskTone === "critical" &&
-                "Your track clips after streaming conversion. Set your limiter ceiling to −1.2 dBTP or reduce overall master gain."}
-            </div>
-
-            <div className="mt-auto pt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className={METRIC_TITLE}>AAC overs</div>
-                <div className={METRIC_VALUE}>
-                  {typeof aacOvers === "number" ? aacOvers : "—"}
-                </div>
-                {fmtPerMin ? (
-                  <div className="mt-1 text-sm text-white/45 tabular-nums">{fmtPerMin}</div>
-                ) : null}
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <div className={METRIC_TITLE}>MP3 overs</div>
-                <div className={METRIC_VALUE}>
-                  {typeof mp3Overs === "number" ? mp3Overs : "—"}
-                </div>
-                {fmtPerMin ? (
-                  <div className="mt-1 text-sm text-white/45 tabular-nums">{fmtPerMin}</div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
           {/* Codec Simulation */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 h-full flex flex-col">
             <div>
@@ -406,6 +414,27 @@ export default function EngineeringCore({
                       ? `${mp3TpIncrease.toFixed(2)} dB`
                       : "—"}
                   </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 h-full flex flex-col">
+            <div>
+              <h3 className="text-lg font-semibold leading-tight">Master Balance Snapshot</h3>
+              <p className="mt-1 text-sm text-white/60">
+                High-level balance across loudness, headroom and limiter behavior.
+              </p>
+            </div>
+
+            <div className="mt-auto pt-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="text-sm uppercase tracking-wider text-white/40">Status</div>
+                <div className="mt-2 text-2xl font-semibold text-white tabular-nums">
+                  {masterBalance}
+                </div>
+                <div className="mt-1 text-sm text-white/45">
+                  Based on loudness, true peak, limiter stress and codec sensitivity.
                 </div>
               </div>
             </div>
