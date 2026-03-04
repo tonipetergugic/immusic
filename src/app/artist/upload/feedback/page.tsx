@@ -1,4 +1,5 @@
 import DevExposePayload from "./components/DevExposePayload";
+import AiConsultantCard from "./components/AiConsultantCard";
 import EngineeringCore from "./components/EngineeringCore";
 import EngineeringDynamics from "./components/EngineeringDynamics";
 import FeedbackSummary from "./components/FeedbackSummary";
@@ -98,6 +99,27 @@ export default async function UploadFeedbackV3Page({
                 stable={summary.clusters?.filter((c) => c.severity === "good") ?? []}
               />
               <DevExposePayload payload={payload} />
+              {isReady ? (
+                <AiConsultantCard
+                  lufs={payload?.metrics?.loudness?.lufs_i ?? null}
+                  tp={payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
+                  lra={payload?.metrics?.dynamics?.loudness_range_lu ?? null}
+                  crest={payload?.metrics?.dynamics?.crest_factor_db ?? null}
+                  phase={payload?.metrics?.stereo?.phase_correlation ?? null}
+                  lowMono={payload?.metrics?.low_end?.phase_correlation_20_120 ?? null}
+
+                  width={payload?.metrics?.stereo?.stereo_width_index ?? null}
+                  midRms={payload?.metrics?.stereo?.mid_rms_dbfs ?? null}
+                  sideRms={payload?.metrics?.stereo?.side_rms_dbfs ?? null}
+
+                  attack={payload?.metrics?.transients?.attack_strength_0_100 ?? null}
+                  density={payload?.metrics?.transients?.transient_density ?? null}
+
+                  sub={payload?.metrics?.spectral?.sub_rms_dbfs ?? null}
+                  mid={payload?.metrics?.spectral?.mid_rms_dbfs ?? null}
+                  air={payload?.metrics?.spectral?.air_rms_dbfs ?? null}
+                />
+              ) : null}
               <section id="journey" className="mb-14">
                 <JourneySection payload={payload} isReady={isReady} journey={journey} />
               </section>
