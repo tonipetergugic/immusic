@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
+import { buildConsultantPrompt } from "@/lib/ai/consultant/buildConsultantPrompt"
 import { isAiConsultantLive } from "@/lib/ai/consultant/config"
 import { mockConsultantResponse } from "@/lib/ai/consultant/mockConsultantResponse"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import crypto from "crypto"
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { metrics } = body
+    const { metrics, context } = body
 
     if (!metrics) {
       return NextResponse.json(
@@ -14,14 +17,64 @@ export async function POST(req: Request) {
       )
     }
 
+    const goal = context?.goal ?? "balanced"
+    const genre = context?.genre ?? null
+
+    // build token-sparenden prompt (für später live)
+    const { system, user } = buildConsultantPrompt({
+      goal,
+      genre,
+      metrics,
+    })
+
+    const cacheKey = crypto
+      .createHash("sha256")
+      .update(JSON.stringify({ goal, genre, metrics }))
+      .digest("hex")
+
     if (!isAiConsultantLive()) {
       const result = mockConsultantResponse(metrics)
-      return NextResponse.json(result)
+      return NextResponse.json({ explanation: result.explanation ?? String(result) })
     }
 
-    return NextResponse.json({
-      explanation: "AI live mode not implemented yet"
-    })
+    const supabase = await createSupabaseServerClient()
+
+    const { data: cached } = await supabase
+      .from("ai_consultant_cache")
+      .select("explanation")
+      .eq("cache_key", cacheKey)
+      .maybeSingle()
+
+    if (cached?.explanation) {
+      return NextResponse.json({
+        explanation: cached.explanation,
+        cached: true
+      })
+    }
+
+    // system/user prompt already built via buildConsultantPrompt({ goal, genre, metrics })
+    // Launch TODO: send { system, user } to OpenAI and return explanation.
+    void system
+    void user
+
+    const explanation =
+      "AI live mode not implemented yet. Prompt builder is ready for launch."
+
+    // best-effort cache write (ignore errors)
+    await supabase.from("ai_consultant_cache").upsert(
+      {
+        cache_key: cacheKey,
+        goal: String(goal),
+        genre: genre ? String(genre) : null,
+        explanation,
+      },
+      { onConflict: "cache_key" }
+    )
+
+    return NextResponse.json(
+      { explanation, cached: false },
+      { status: 501 }
+    )
 
   } catch (error) {
     console.error("Consultant API error", error)
