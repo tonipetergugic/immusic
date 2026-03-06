@@ -47,6 +47,7 @@ export default async function DashboardLayout({
 
   return (
     <AppShell
+      innerClassName="w-full px-3 pb-40 sm:px-4 lg:px-6 lg:pb-48"
       sidebar={
         <>
           {/* Sidebar (Desktop only) */}

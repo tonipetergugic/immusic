@@ -28,33 +28,35 @@ export default function HomeReleasesSection({
   showWhenEmpty = true,
   wrapperClassName = "space-y-4",
 }: Props) {
-  if (!showWhenEmpty && releaseIds.length === 0) return null;
+  const validReleaseIds = releaseIds
+    .slice(0, 10)
+    .filter((rid) => !!releasesById[rid]);
+
+  if (!showWhenEmpty && validReleaseIds.length === 0) return null;
 
   return (
     <div className={wrapperClassName}>
       <h2 className="text-xl font-semibold">{title}</h2>
 
-      {releaseIds.length === 0 ? (
+      {validReleaseIds.length === 0 ? (
         <p className="text-white/40">{emptyText}</p>
       ) : (
         <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
-          {releaseIds.slice(0, 10).map((rid) => {
-            const data = releasesById[rid] ?? null;
+          {validReleaseIds.map((rid) => {
+            const data = releasesById[rid]!;
             return (
               <div key={rid} className="shrink-0 w-[150px] snap-start">
                 <ReleaseCard
                   releaseId={rid}
                   data={
-                    data
-                      ? ({
-                          id: data.id,
-                          title: data.title,
-                          cover_url: data.cover_url ?? null,
-                          release_type: data.release_type ?? null,
-                          artist_id: data.artist_id ?? null,
-                          artist_name: data.artist_name ?? null,
-                        } satisfies ReleaseCardData)
-                      : null
+                    {
+                      id: data.id,
+                      title: data.title,
+                      cover_url: data.cover_url ?? null,
+                      release_type: data.release_type ?? null,
+                      artist_id: data.artist_id ?? null,
+                      artist_name: data.artist_name ?? null,
+                    } satisfies ReleaseCardData
                   }
                 />
               </div>
