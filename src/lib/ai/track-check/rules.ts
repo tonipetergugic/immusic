@@ -25,12 +25,12 @@ export function collectHardFailReasonsV2(params: {
   const crest = Number.isFinite(params.crestFactorDb) ? params.crestFactorDb : null;
 
   // IMUSIC AI Gate Policy v1.0
-  // Hard-Fail only for objectively broken / audibly damaged audio.
-  // - True Peak: hard-fail only if extreme (> +1.0 dBTP). 0..+1.0 is warning/feedback-only (handled elsewhere).
+  // Hard-Fail only for objectively broken / clearly audibly damaged audio.
+  // - True Peak: hard-fail only if very extreme (> +2.0 dBTP). Values above 0.0 dBTP remain warning/feedback-only unless they cross this hard-fail line.
   // - Clipping: hard-fail only if massive (>= 100 clipped samples). Single/rare clipped samples are warning/feedback-only.
   // - LUFS / LRA are never hard-fail (feedback-only), per policy.
 
-  const HARDFAIL_TRUEPEAK_DBTP = 1.0;
+  const HARDFAIL_TRUEPEAK_DBTP = 2.0;
   const HARDFAIL_CLIPPED_SAMPLES = 100;
   const HARDFAIL_DYNAMIC_COLLAPSE_CREST_DB = 3.0;
   const HARDFAIL_DYNAMIC_COLLAPSE_LUFS = -4.0;
@@ -39,7 +39,7 @@ export function collectHardFailReasonsV2(params: {
 
   if (tp !== null && tp > HARDFAIL_TRUEPEAK_DBTP) {
     hardFailReasons.push({
-      id: "tp_over_1_0",
+      id: "tp_over_2_0",
       metric: "true_peak_db_tp",
       threshold: HARDFAIL_TRUEPEAK_DBTP,
       value: tp,

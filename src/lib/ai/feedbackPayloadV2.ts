@@ -283,23 +283,23 @@ export function buildFeedbackPayloadV2Mvp(params: {
     highlights.push("Technical listenability problems detected (hard-fail).");
   }
 
-  // --- True Peak policy (IMUSIC v1.0): hard-fail > +1.0 dBTP, warn if (0..+1.0], recommend -1.0 dBTP ---
+  // --- True Peak policy (IMUSIC v1.0): hard-fail only at very extreme overs (> +2.0 dBTP), warn if above 0.0 dBTP, recommend -1.0 dBTP ceiling ---
   const tp =
     typeof truePeakDbTp === "number" && Number.isFinite(truePeakDbTp) ? truePeakDbTp : null;
 
-  const HARDFAIL_TRUEPEAK_DBTP = 1.0;
+  const HARDFAIL_TRUEPEAK_DBTP = 2.0;
   const WARN_TRUEPEAK_EPS_DBTP = 0.01;
 
   if (tp !== null) {
     if (tp > HARDFAIL_TRUEPEAK_DBTP) {
       // CRITICAL (hard-fail threshold)
-      highlights.push(`True Peak exceeds +1.0 dBTP (${tp.toFixed(3)} dBTP) — extreme; high risk of audible distortion after encoding.`);
+      highlights.push(`True Peak exceeds +2.0 dBTP (${tp.toFixed(3)} dBTP) — extremely high; strong risk of clearly audible distortion after encoding.`);
 
       recommendations.push({
         id: "rec_true_peak_headroom",
         title: "Reduce true peak overs",
         severity: "critical",
-        why: "True Peak exceeds +1.0 dBTP, which is extreme and likely to cause audible distortion after encoding/normalization.",
+        why: "True Peak exceeds +2.0 dBTP, which is an extreme overshoot and strongly increases the risk of clearly audible distortion after encoding/normalization.",
         how: [
           "Set limiter ceiling to -1.0 dBTP (streaming-safe)",
           "Reduce limiter input until True Peak stays <= 0.0 dBTP (aim for <= -1.0 dBTP ceiling)",
