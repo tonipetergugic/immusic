@@ -110,7 +110,10 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
 
       </div>
 
-      <h3 className="mt-2 text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
+      <h3
+        className="mt-2 text-[13px] font-semibold text-white/90 truncate"
+        title={data.title}
+      >
         {data.title}
       </h3>
 

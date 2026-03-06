@@ -133,7 +133,10 @@ export default function PlaylistCard({
       </div>
 
       <div className="mt-2 block">
-        <h3 className="text-[13px] font-semibold text-white/90 line-clamp-2 min-h-0">
+        <h3
+          className="text-[13px] font-semibold text-white/90 truncate"
+          title={title}
+        >
           {title}
         </h3>
 
