@@ -62,18 +62,13 @@ export default function DashboardHeroAndToggle({
               <div className="text-[11px] uppercase tracking-[0.18em] text-white/55">
                 Welcome back
               </div>
-              <div className="mt-1 text-lg sm:text-xl font-semibold text-white/90 leading-tight">
-                Discover new music today
+              <div className="mt-1 text-3xl sm:text-4xl font-semibold text-white leading-tight">
+                <span className="text-[#00FFC6]">Discover</span> and rate new <span className="text-[#00FFC6]">music</span>
               </div>
               <div className="mt-1 text-sm text-white/50">
-                Development for feedback • Performance for proven tracks
+                <div>Development tracks are looking for feedback.</div>
+                <div>Performance shows proven tracks that stood out.</div>
               </div>
-            </div>
-
-            {/* decorative badge */}
-            <div className="shrink-0 hidden sm:flex items-center gap-2 rounded-full border border-[#00FFC622] bg-black/20 px-3 py-1.5 backdrop-blur">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#00FFC6] shadow-[0_0_12px_rgba(0,255,198,0.6)]" />
-              <span className="text-xs text-white/75">IMUSIC Discovery</span>
             </div>
           </div>
 
