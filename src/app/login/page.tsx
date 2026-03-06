@@ -50,7 +50,7 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-[#050507] text-white overflow-hidden px-4 pt-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="h-[820px] w-[820px] bg-[#00FFC6] opacity-20 blur-[220px] rounded-full translate-y-[-120px]" />
+        <div className="h-[720px] w-[720px] bg-[#00FFC6] opacity-10 blur-[180px] rounded-full translate-y-[-120px]" />
       </div>
 
       <div className="relative w-full max-w-md text-center">
@@ -98,8 +98,8 @@ export default function LoginPage() {
             />
           </div>
 
-          <p className="mt-2 text-xs text-white/40 text-center">
-            We'll send you a secure login link. No password required.
+          <p className="mt-2 text-sm text-white/40 text-center">
+            We'll send a secure login link to your email.
           </p>
 
           <div className="mt-10 flex justify-center">
@@ -136,7 +136,7 @@ export default function LoginPage() {
           ) : null}
         </form>
 
-        <p className="mt-8 text-xs text-white/40">
+        <p className="mt-8 text-sm text-white/40">
           By continuing, you agree to our Terms & Privacy Policy.
         </p>
       </div>
