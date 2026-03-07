@@ -14,11 +14,14 @@ type Props = {
   searchParams?: Promise<{ tab?: string }>;
 };
 
+const VALID_TABS = new Set(["playlists", "tracks", "artists"]);
+
 export default async function LibraryV2Page(props: Props) {
   const sp = (await props.searchParams) ?? {};
   const currentTab = sp.tab || "playlists";
 
   if (!sp.tab) redirect("/dashboard/library?tab=playlists");
+  if (!VALID_TABS.has(currentTab)) redirect("/dashboard/library?tab=playlists");
 
   const supabase = await createClient();
   const {

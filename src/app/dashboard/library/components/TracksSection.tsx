@@ -30,7 +30,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
             const releaseTrackId = releaseTrackIdByTrackId[String(track.id)];
             return (
             <TrackRowBase
-              key={`library-trackrow:${releaseTrackId}`}
+              key={`library-trackrow:${track.id}`}
               track={track}
               index={index}
               tracks={trackData}

@@ -189,13 +189,27 @@ export async function loadLibraryV2Tracks({
   // Ensure unique keys by track.id
   const unique = Array.from(new Map((normalizedTracks as any[]).map((t) => [String(t.id), t])).values());
 
+  const safeUnique = (unique as any[]).filter((t) => {
+    const audioUrl = (t as any)?.audio_url;
+    if (!audioUrl) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("LibraryV2: skipping track with missing audio_url/audio_path", {
+          trackId: (t as any)?.id ?? null,
+          userId,
+        });
+      }
+      return false;
+    }
+    return true;
+  });
+
   const releaseTrackIdByTrackId: Record<string, string> = {};
   const ratingByReleaseTrackId: Record<string, { avg: number | null; count: number; streams: number }> = {};
 
   const trackIds: string[] = [];
   const releaseTrackIds: string[] = [];
 
-  for (const t of unique as any[]) {
+  for (const t of safeUnique as any[]) {
     const tid = String(t?.id ?? "");
     if (tid) trackIds.push(tid);
 
@@ -281,21 +295,6 @@ export async function loadLibraryV2Tracks({
       }
     }
   }
-
-  // --- SAFETY: skip tracks that have no audio_url (toPlayerTrack would throw) ---
-  const safeUnique = (unique as any[]).filter((t) => {
-    const audioUrl = (t as any)?.audio_url;
-    if (!audioUrl) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("LibraryV2: skipping track with missing audio_url/audio_path", {
-          trackId: (t as any)?.id ?? null,
-          userId,
-        });
-      }
-      return false;
-    }
-    return true;
-  });
 
   const tracks = toPlayerTrackList(safeUnique as any);
 
