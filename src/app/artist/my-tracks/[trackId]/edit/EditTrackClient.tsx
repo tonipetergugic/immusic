@@ -370,22 +370,84 @@ export default function EditTrackClient({
               Genre
             </label>
             <select
-              className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+              className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 cursor-pointer"
               value={newGenre}
               onChange={(e) => setNewGenre(e.target.value)}
             >
               <option value="">Select genre</option>
-              <option value="Trance">Trance</option>
-              <option value="Progressive Trance">Progressive Trance</option>
-              <option value="Uplifting Trance">Uplifting Trance</option>
-              <option value="Tech Trance">Tech Trance</option>
-              <option value="Progressive House">Progressive House</option>
-              <option value="Techno">Techno</option>
-              <option value="Melodic Techno">Melodic Techno</option>
-              <option value="House">House</option>
-              <option value="EDM">EDM</option>
-              <option value="Hardstyle">Hardstyle</option>
-              <option value="Drum & Bass">Drum & Bass</option>
+
+              <optgroup label="Trance">
+                <option value="Trance">Trance</option>
+                <option value="Progressive Trance">Progressive Trance</option>
+                <option value="Uplifting Trance">Uplifting Trance</option>
+                <option value="Psytrance">Psytrance</option>
+                <option value="Vocal Trance">Vocal Trance</option>
+                <option value="Hard Trance">Hard Trance</option>
+                <option value="Tech Trance">Tech Trance</option>
+              </optgroup>
+
+              <optgroup label="Techno">
+                <option value="Techno">Techno</option>
+                <option value="Melodic Techno">Melodic Techno</option>
+                <option value="Peak Time Techno">Peak Time Techno</option>
+                <option value="Industrial Techno">Industrial Techno</option>
+                <option value="Hard Techno">Hard Techno</option>
+              </optgroup>
+
+              <optgroup label="House / EDM">
+                <option value="House">House</option>
+                <option value="Deep House">Deep House</option>
+                <option value="Progressive House">Progressive House</option>
+                <option value="Tech House">Tech House</option>
+                <option value="Afro House">Afro House</option>
+                <option value="Future House">Future House</option>
+                <option value="EDM">EDM</option>
+                <option value="Big Room">Big Room</option>
+                <option value="Electro House">Electro House</option>
+                <option value="Festival EDM">Festival EDM</option>
+              </optgroup>
+
+              <optgroup label="Bass Music">
+                <option value="Drum & Bass">Drum & Bass</option>
+                <option value="Liquid Drum & Bass">Liquid Drum & Bass</option>
+                <option value="Neurofunk">Neurofunk</option>
+                <option value="Dubstep">Dubstep</option>
+                <option value="Melodic Dubstep">Melodic Dubstep</option>
+                <option value="Future Bass">Future Bass</option>
+              </optgroup>
+
+              <optgroup label="Hard Dance">
+                <option value="Hardstyle">Hardstyle</option>
+                <option value="Rawstyle">Rawstyle</option>
+                <option value="Hardcore">Hardcore</option>
+                <option value="Uptempo Hardcore">Uptempo Hardcore</option>
+              </optgroup>
+
+              <optgroup label="Pop / Urban">
+                <option value="Pop">Pop</option>
+                <option value="Dance Pop">Dance Pop</option>
+                <option value="Indie Pop">Indie Pop</option>
+                <option value="Hip-Hop">Hip-Hop</option>
+                <option value="Trap">Trap</option>
+                <option value="Drill">Drill</option>
+                <option value="R&B">R&B</option>
+                <option value="Soul">Soul</option>
+              </optgroup>
+
+              <optgroup label="Rock / Metal">
+                <option value="Rock">Rock</option>
+                <option value="Alternative Rock">Alternative Rock</option>
+                <option value="Indie Rock">Indie Rock</option>
+                <option value="Metal">Metal</option>
+              </optgroup>
+
+              <optgroup label="Other">
+                <option value="Ambient">Ambient</option>
+                <option value="Cinematic">Cinematic</option>
+                <option value="LoFi">LoFi</option>
+                <option value="Other">Other</option>
+              </optgroup>
+
             </select>
           </div>
         </div>

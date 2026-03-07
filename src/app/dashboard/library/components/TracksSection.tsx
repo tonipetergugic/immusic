@@ -38,9 +38,26 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
               leadingSlot={<span className="text-white/50 text-[11px] tabular-nums">{index + 1}</span>}
               // NOTE: keep subtitle simple for now to avoid the key-warning rabbit hole.
               subtitleSlot={
-                <div className="mt-1 text-left text-xs text-white/60 truncate">
-                  {(track as any)?.profiles?.display_name ?? "Unknown Artist"}
-                </div>
+                (track as any)?.artist_id ? (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={() =>
+                      window.location.assign(`/dashboard/artist/${String((track as any).artist_id)}`)
+                    }
+                    className="mt-1 text-left text-xs text-white/60 truncate hover:text-[#00FFC6] hover:underline underline-offset-2 transition-colors cursor-pointer focus:outline-none"
+                    title={String((track as any)?.profiles?.display_name ?? "Unknown Artist")}
+                  >
+                    {(track as any)?.profiles?.display_name ?? "Unknown Artist"}
+                  </button>
+                ) : (
+                  <div className="mt-1 text-left text-xs text-white/60 truncate">
+                    {(track as any)?.profiles?.display_name ?? "Unknown Artist"}
+                  </div>
+                )
               }
               metaSlot={
                 releaseTrackIdByTrackId[String(track.id)] ? (() => {

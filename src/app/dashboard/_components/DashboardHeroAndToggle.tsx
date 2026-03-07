@@ -79,7 +79,7 @@ export default function DashboardHeroAndToggle({
                 type="button"
                 onClick={() => setDiscoveryMode("development")}
                 className={[
-                  "inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                   discoveryMode === "development"
                     ? "bg-[#0B1614] text-white/90 border border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
                     : "bg-transparent text-white/70 hover:text-white/90",
@@ -92,7 +92,7 @@ export default function DashboardHeroAndToggle({
                 type="button"
                 onClick={() => setDiscoveryMode("performance")}
                 className={[
-                  "inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                   discoveryMode === "performance"
                     ? "bg-[#0B1614] text-white/90 border border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
                     : "bg-transparent text-white/70 hover:text-white/90",

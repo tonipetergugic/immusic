@@ -326,7 +326,7 @@ function TrackRatingInline({
                   }}
                   className={[
                     "transition-colors",
-                    disabled ? "opacity-60 cursor-default" : "hover:text-[#00FFC6]",
+                    disabled ? "opacity-60 cursor-default" : "hover:text-[#00FFC6] cursor-pointer",
                     effectiveStars >= n ? "text-[#00FFC6]" : "text-white/35",
                   ].join(" ")}
                   aria-label={`Rated ${n} star`}
@@ -359,7 +359,7 @@ function TrackRatingInline({
                 }}
                 className={[
                   "transition-colors",
-                  disabled ? "opacity-60 cursor-default" : "hover:text-[#00FFC6]",
+                  disabled ? "opacity-60 cursor-default" : "hover:text-[#00FFC6] cursor-pointer",
                   effectiveStars >= n ? "text-[#00FFC6]" : "text-white/35",
                 ].join(" ")}
                 aria-label={`Rate ${n} star`}

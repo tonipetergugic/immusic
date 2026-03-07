@@ -58,15 +58,125 @@ export default function DevelopmentTracksSection({
               w-full h-10 rounded-full px-4 text-sm
               bg-black/25 border border-white/10
               text-white/80
-              focus:outline-none focus:ring-2 focus:ring-[#00FFC655]
+              focus:outline-none focus:ring-2 focus:ring-[#00FFC655] cursor-pointer
             "
           >
             <option value="all">All genres</option>
+
+            <optgroup label="Trance">
+              <option value="Trance">Trance</option>
+              <option value="Progressive Trance">Progressive Trance</option>
+              <option value="Uplifting Trance">Uplifting Trance</option>
+              <option value="Psytrance">Psytrance</option>
+              <option value="Vocal Trance">Vocal Trance</option>
+            </optgroup>
+
+            <optgroup label="Techno">
+              <option value="Techno">Techno</option>
+              <option value="Melodic Techno">Melodic Techno</option>
+              <option value="Peak Time Techno">Peak Time Techno</option>
+              <option value="Minimal Techno">Minimal Techno</option>
+              <option value="Industrial Techno">Industrial Techno</option>
+            </optgroup>
+
+            <optgroup label="House / EDM">
+              <option value="House">House</option>
+              <option value="Deep House">Deep House</option>
+              <option value="Progressive House">Progressive House</option>
+              <option value="Tech House">Tech House</option>
+              <option value="Afro House">Afro House</option>
+              <option value="EDM">EDM</option>
+              <option value="Big Room">Big Room</option>
+            </optgroup>
+
+            <optgroup label="Bass Music">
+              <option value="Drum & Bass">Drum & Bass</option>
+              <option value="Dubstep">Dubstep</option>
+              <option value="Bass House">Bass House</option>
+              <option value="Future Bass">Future Bass</option>
+              <option value="Trap">Trap</option>
+            </optgroup>
+
+            <optgroup label="Hard Dance">
+              <option value="Hardstyle">Hardstyle</option>
+              <option value="Hardcore">Hardcore</option>
+              <option value="Rawstyle">Rawstyle</option>
+              <option value="Uptempo">Uptempo</option>
+            </optgroup>
+
+            <optgroup label="Pop / Urban">
+              <option value="Pop">Pop</option>
+              <option value="Hip-Hop">Hip-Hop</option>
+              <option value="Rap">Rap</option>
+              <option value="R&B">R&B</option>
+              <option value="Reggaeton">Reggaeton</option>
+            </optgroup>
+
+            <optgroup label="Rock / Metal">
+              <option value="Rock">Rock</option>
+              <option value="Alternative Rock">Alternative Rock</option>
+              <option value="Metal">Metal</option>
+              <option value="Pop Punk">Pop Punk</option>
+            </optgroup>
+
+            <optgroup label="Other">
+              <option value="Ambient">Ambient</option>
+              <option value="Cinematic">Cinematic</option>
+              <option value="Lo-fi">Lo-fi</option>
+              <option value="Experimental">Experimental</option>
+              <option value="Other">Other</option>
+            </optgroup>
+
             {Array.from(
               new Set(
                 (devItems ?? [])
                   .map((x: DevItemLike) => (x.genre ?? "").trim())
-                  .filter(Boolean)
+                  .filter(
+                    (g) =>
+                      g &&
+                      ![
+                        "Trance",
+                        "Progressive Trance",
+                        "Uplifting Trance",
+                        "Psytrance",
+                        "Vocal Trance",
+                        "Techno",
+                        "Melodic Techno",
+                        "Peak Time Techno",
+                        "Minimal Techno",
+                        "Industrial Techno",
+                        "House",
+                        "Deep House",
+                        "Progressive House",
+                        "Tech House",
+                        "Afro House",
+                        "EDM",
+                        "Big Room",
+                        "Drum & Bass",
+                        "Dubstep",
+                        "Bass House",
+                        "Future Bass",
+                        "Trap",
+                        "Hardstyle",
+                        "Hardcore",
+                        "Rawstyle",
+                        "Uptempo",
+                        "Pop",
+                        "Hip-Hop",
+                        "Rap",
+                        "R&B",
+                        "Reggaeton",
+                        "Rock",
+                        "Alternative Rock",
+                        "Metal",
+                        "Pop Punk",
+                        "Ambient",
+                        "Cinematic",
+                        "Lo-fi",
+                        "Experimental",
+                        "Other",
+                      ].includes(g)
+                  )
               )
             )
               .sort((a, b) => a.localeCompare(b))
@@ -140,7 +250,7 @@ export default function DevelopmentTracksSection({
                       }}
                       className="
                         text-left text-[13px] font-semibold text-white truncate
-                        hover:text-[#00FFC6] transition-colors
+                        hover:text-[#00FFC6] transition-colors cursor-pointer
                         focus:outline-none
                       "
                       title={formatTrackTitle(
@@ -173,7 +283,7 @@ export default function DevelopmentTracksSection({
                               }
                               className="
                                 hover:text-[#00FFC6] hover:underline underline-offset-2
-                                transition-colors
+                                transition-colors cursor-pointer
                                 focus:outline-none
                               "
                               title={String(a.display_name)}
@@ -198,7 +308,7 @@ export default function DevelopmentTracksSection({
                       className="
                         mt-1 text-left text-xs text-white/60 truncate
                         hover:text-[#00FFC6] hover:underline underline-offset-2
-                        transition-colors
+                        transition-colors cursor-pointer
                         focus:outline-none
                       "
                       title={artist}

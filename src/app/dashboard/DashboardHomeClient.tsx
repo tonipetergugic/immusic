@@ -125,7 +125,7 @@ export default function DashboardHomeClient({
               key={t.key}
               type="button"
               onClick={() => setHomeTab(t.key as any)}
-              className={`pb-3 transition-colors ${
+              className={`pb-3 transition-colors cursor-pointer ${
                 isActive
                   ? "text-white font-medium border-b-2 border-[#00FFC6]"
                   : "text-neutral-400 hover:text-white"
