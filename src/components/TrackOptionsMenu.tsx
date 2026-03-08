@@ -112,7 +112,7 @@ export default function TrackOptionsMenu({
         label: isSaved ? "Remove from Library" : "Save to Library",
         action: "toggle_library",
       },
-      { label: "Share Track", action: "share" },
+      { label: "Share release", action: "share" },
     ];
 
     if (showGoToArtist) {

@@ -44,12 +44,12 @@ export default function ReleaseDetailClient({
   }, [tracks, selectedTrackId]);
 
   return (
-    <div className="mt-8 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-8 items-start">
+    <div className="mt-8 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-16 items-start">
       <div>
         <h2 className="text-lg font-semibold mb-3">Tracks</h2>
 
         {tracks.length ? (
-          <div className="divide-y divide-white/10 rounded-2xl overflow-hidden border border-white/10 bg-black/20">
+          <div className="divide-y divide-white/10">
             {tracks.map((row, index) => (
               <ReleaseTrackRowClient
                 key={row.releaseTrackId}
@@ -82,20 +82,16 @@ export default function ReleaseDetailClient({
         )}
       </div>
 
-      <aside className="xl:sticky xl:top-6 rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-5">
-        <div className="text-sm font-medium text-white/55 uppercase tracking-[0.18em]">
+      <aside className="xl:sticky xl:top-6 pt-1 xl:border-l xl:border-white/10 xl:pl-8">
+        <h2 className="text-xl font-semibold tracking-tight text-white">
           Lyrics
-        </div>
+        </h2>
 
         {selectedTrack ? (
           <>
-            <h3 className="mt-3 text-lg font-semibold text-white">
-              {selectedTrack.title ?? "Untitled"}
-            </h3>
-
             <div className="mt-4 max-h-[70vh] overflow-y-auto pr-1">
               {selectedTrack.lyrics?.trim() ? (
-                <div className="whitespace-pre-wrap text-sm leading-7 text-white/78">
+                <div className="mt-4 max-w-[60ch] whitespace-pre-wrap text-[15px] leading-8 text-white/78">
                   {selectedTrack.lyrics}
                 </div>
               ) : (

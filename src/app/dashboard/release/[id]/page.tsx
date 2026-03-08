@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Image from "next/image";
 import BackLink from "@/components/BackLink";
+import PlayOverlayButton from "@/components/PlayOverlayButton";
 import ReleaseDetailClient from "./ReleaseDetailClient";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatReleaseDate, formatTotalDuration } from "./_lib/format";
@@ -182,7 +183,7 @@ export default async function ReleaseDetailPage({
 
           <div className="flex flex-col md:flex-row md:items-end gap-8">
             {/* Cover */}
-            <div className="shrink-0">
+            <div className="shrink-0 relative group">
               {coverUrl ? (
                 <Image
                   src={coverUrl}
@@ -194,6 +195,14 @@ export default async function ReleaseDetailPage({
                 />
               ) : (
                 <div className="rounded-xl bg-neutral-800 w-[220px] h-[220px] md:w-[280px] md:h-[280px] shadow-2xl" />
+              )}
+              {playerQueue.length > 0 && (
+                <PlayOverlayButton
+                  size="lg"
+                  track={playerQueue[0]}
+                  tracks={playerQueue}
+                  index={0}
+                />
               )}
             </div>
 
@@ -207,39 +216,37 @@ export default async function ReleaseDetailPage({
                 )}
               </div>
 
-              <h1 className="text-5xl md:text-7xl font-black text-white leading-none break-words">
+              <h1 className="text-6xl md:text-8xl font-black text-white leading-none break-words">
                 {release.title}
               </h1>
 
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
-                <a
-                  href={`/dashboard/artist/${release.artist_id}`}
-                  className="text-white font-semibold text-base md:text-lg hover:text-[#00FFC6] transition-colors"
-                >
-                  {artistName}
-                </a>
+                  <a
+                    href={`/dashboard/artist/${release.artist_id}`}
+                    className="text-white font-semibold text-base md:text-lg hover:text-[#00FFC6] transition-colors cursor-pointer"
+                  >
+                    {artistName}
+                  </a>
 
-                {formatReleaseDate(release.release_date) ? (
-                  <>
-                    <span className="text-white/40">•</span>
-                    <span>Released {formatReleaseDate(release.release_date)}</span>
-                  </>
-                ) : null}
+                  {formatReleaseDate(release.release_date) ? (
+                    <>
+                      <span className="text-white/40">•</span>
+                      <span>Released {formatReleaseDate(release.release_date)}</span>
+                    </>
+                  ) : null}
 
-                <span className="text-white/40">•</span>
-                <span>
-                  {trackCount} {trackCount === 1 ? "track" : "tracks"}
-                </span>
+                  <span className="text-white/40">•</span>
+                  <span>
+                    {trackCount} {trackCount === 1 ? "track" : "tracks"}
+                  </span>
 
-                {formatTotalDuration(totalSeconds) ? (
-                  <>
-                    <span className="text-white/40">•</span>
-                    <span>{formatTotalDuration(totalSeconds)}</span>
-                  </>
-                ) : null}
+                  {formatTotalDuration(totalSeconds) ? (
+                    <>
+                      <span className="text-white/40">•</span>
+                      <span>{formatTotalDuration(totalSeconds)}</span>
+                    </>
+                  ) : null}
               </div>
-
-              {/* bewusst: KEIN globaler Play-Button im Release-Header */}
             </div>
           </div>
         </div>

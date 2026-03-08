@@ -43,7 +43,7 @@ export default function ReleaseTrackRowClient({
   return (
     <div
       onClick={onSelect}
-      className={isActive ? "cursor-pointer bg-white/8" : "cursor-pointer"}
+      className="cursor-pointer hover:bg-white/[0.04] transition-colors"
     >
       <TrackRowBase
         track={
@@ -79,7 +79,7 @@ export default function ReleaseTrackRowClient({
             className="
             text-left text-[13px] font-semibold text-white truncate
             hover:text-[#00FFC6] transition-colors
-            focus:outline-none
+            focus:outline-none cursor-pointer
           "
             title={formatTrackTitle(track.title, (track as any).version)}
           >
@@ -105,7 +105,7 @@ export default function ReleaseTrackRowClient({
                     className="
                       hover:text-[#00FFC6] hover:underline underline-offset-2
                       transition-colors
-                      focus:outline-none
+                      focus:outline-none cursor-pointer
                     "
                     title={a.display_name}
                   >
@@ -139,7 +139,9 @@ export default function ReleaseTrackRowClient({
                 ...(track as any),
                 id: track.id,
                 artist_id: (artists?.[0]?.id ?? null),
+                release_id: releaseId,
               }}
+              releaseId={releaseId}
               showGoToRelease={false}
             />
           </div>

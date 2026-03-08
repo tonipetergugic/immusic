@@ -16,6 +16,7 @@ const linkClassName = [
   "hover:text-[#00FFC6] active:text-[#00FFC6]",
   "transition-colors",
   "text-base",
+  "cursor-pointer",
 ].join(" ");
 
 const iconClassName = `

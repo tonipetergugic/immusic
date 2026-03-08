@@ -167,7 +167,8 @@ export default function TrackRowBase({
             ) : (
               <Link
                 href={to}
-                className="text-left text-[13px] font-semibold leading-tight text-white truncate hover:text-[#00FFC6] transition-colors block"
+                className={`text-left text-[13px] font-semibold leading-tight truncate transition-colors block
+${isCurrent ? "text-[#00FFC6]" : "text-white hover:text-[#00FFC6]"}`}
               >
                 {formatTrackTitle(track.title, (track as any).version)}
               </Link>

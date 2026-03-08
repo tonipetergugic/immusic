@@ -43,14 +43,14 @@ export default function PlayOverlayButton({
       ? "w-9 h-9"
       : SIZE === "md"
       ? "w-10 h-10"
-      : "w-14 h-14"; // lg – größer für Track Header
+      : "w-20 h-20"; // lg – größer für Track Header
 
   const iconClass =
     SIZE === "sm"
       ? "w-4 h-4"
       : SIZE === "md"
       ? "w-4 h-4"
-      : "w-6 h-6";
+      : "w-8 h-8";
 
   const effectiveId = currentTrackId ?? track.id;
   const isCurrent = currentTrack?.id === effectiveId;
