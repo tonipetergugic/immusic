@@ -34,7 +34,7 @@ function PlaylistRow({
     e.preventDefault();
     e.stopPropagation();
     const releaseId = (track as any)?.release_id ?? null;
-    router.push(releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${track.id}`);
+    if (releaseId) router.push(`/dashboard/release/${releaseId}`);
   }
 
   function goToArtist(e: React.MouseEvent) {

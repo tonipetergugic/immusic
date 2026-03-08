@@ -131,9 +131,10 @@ export default function TrackOptionsMenu({
   }, [isSaved, onRemove, showGoToArtist, showGoToRelease, releaseId, context]);
 
   const getShareUrl = () => {
-    if (!trackId) return null;
+    const rid = releaseId ?? (track as any)?.release_id ?? null;
+    if (!rid) return null;
     if (typeof window === "undefined") return null;
-    return `${window.location.origin}/dashboard/track/${trackId}`;
+    return `${window.location.origin}/dashboard/release/${rid}`;
   };
 
   const copyToClipboard = async (text: string) => {
@@ -230,18 +231,12 @@ export default function TrackOptionsMenu({
       }
 
       if (action === "go_release") {
-        const releaseId = (track as any)?.release_id ?? null;
-        if (!releaseId) {
-          // Fallback to track page if release_id is missing
-          if (!trackId) {
-            setToast("Release ID missing.");
-            return;
-          }
-          router.push(`/dashboard/track/${trackId}`);
-          onClose();
+        const rid = releaseId ?? (track as any)?.release_id ?? null;
+        if (!rid) {
+          setToast("Release ID missing.");
           return;
         }
-        router.push(`/dashboard/release/${releaseId}`);
+        router.push(`/dashboard/release/${rid}`);
         onClose();
         return;
       }

@@ -123,11 +123,7 @@ export default function PerformanceDiscoverySection({
                         e.stopPropagation();
                       }}
                       onClick={() => {
-                        routerPush(
-                          releaseId
-                            ? `/dashboard/release/${releaseId}`
-                            : `/dashboard/track/${trackId}`
-                        );
+                        if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                       }}
                       className="
                         text-left text-[13px] font-semibold text-white truncate

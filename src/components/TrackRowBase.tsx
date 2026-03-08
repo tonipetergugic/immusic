@@ -75,9 +75,7 @@ export default function TrackRowBase({
   coverSize = "md",
 }: TrackRowBaseProps) {
   const releaseId = (track as any)?.release_id ?? null;
-  const to =
-    href ??
-    (releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${track.id}`);
+  const to = href ?? (releaseId ? `/dashboard/release/${releaseId}` : "#");
 
   const coverBox = coverSize === "sm" ? "w-12 h-12" : "w-16 h-16";
   const overlaySize = coverSize === "sm" ? "sm" : "sm"; // rows: keep overlay compact

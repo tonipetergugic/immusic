@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Image from "next/image";
 import BackLink from "@/components/BackLink";
-import ReleaseTrackRowClient from "./ReleaseTrackRowClient";
+import ReleaseDetailClient from "./ReleaseDetailClient";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatReleaseDate, formatTotalDuration } from "./_lib/format";
 import { buildArtistsList } from "./_lib/artists";
@@ -61,6 +61,7 @@ export default async function ReleaseDetailPage({
       track:tracks (
         id,
         title,
+        lyrics,
         audio_path,
         duration,
         bpm,
@@ -123,6 +124,23 @@ export default async function ReleaseDetailPage({
       } as PlayerTrack;
     })
     .filter(Boolean) as PlayerTrack[];
+
+  const releaseTracks = (items ?? []).map((row: any) => ({
+    releaseTrackId: String(row.id),
+    trackId: String(row.track?.id ?? ""),
+    positionLabel: String(row.position ?? ""),
+    title: row.track?.title ?? null,
+    lyrics: row.track?.lyrics ?? null,
+    bpm: row.track?.bpm ?? null,
+    key: row.track?.key ?? null,
+    genre: row.track?.genre ?? null,
+    version: row.track?.version ?? null,
+    duration: row.track?.duration ?? null,
+    ratingAvg: row.rating_avg ?? null,
+    ratingCount: row.rating_count ?? null,
+    streamCount: row.stream_count ?? 0,
+    artists: buildArtistsList(row),
+  }));
 
   return (
     <div className="text-white">
@@ -227,40 +245,12 @@ export default async function ReleaseDetailPage({
         </div>
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-3">Tracks</h2>
-
-        {items?.length ? (
-          <div className="divide-y divide-white/10">
-            {items.map((row: any, index: number) => (
-              <ReleaseTrackRowClient
-                key={row.id}
-                releaseId={releaseId}
-                startIndex={index}
-                playerQueue={playerQueue}
-                positionLabel={String(row.position ?? "")}
-                track={{
-                  id: row.track?.id,
-                  title: row.track?.title ?? null,
-                  bpm: row.track?.bpm ?? null,
-                  key: row.track?.key ?? null,
-                  genre: row.track?.genre ?? null,
-                  version: row.track?.version ?? null,
-                }}
-                artists={buildArtistsList(row)}
-                ratingAvg={row.rating_avg ?? null}
-                ratingCount={row.rating_count ?? null}
-                streamCount={row.stream_count ?? 0}
-                duration={row.track?.duration ?? null}
-                releaseTrackId={row.id}
-                releaseCoverUrl={coverUrl}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-neutral-400">No tracks found.</div>
-        )}
-      </div>
+      <ReleaseDetailClient
+        releaseId={releaseId}
+        releaseCoverUrl={coverUrl}
+        playerQueue={playerQueue}
+        tracks={releaseTracks}
+      />
     </div>
   );
 }

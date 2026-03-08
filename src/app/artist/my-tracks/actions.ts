@@ -9,6 +9,7 @@ export type RenameTrackPayload = {
   key: string | null;
   genre: string | null;
   has_lyrics: boolean;
+  lyrics: string | null;
   is_explicit: boolean;
   version: string;
 };
@@ -147,6 +148,7 @@ export async function renameTrackAction(
     key: payload.key,
     genre: payload.genre,
     has_lyrics: payload.has_lyrics,
+    lyrics: payload.lyrics,
     is_explicit: payload.is_explicit,
     version: payload.version,
   };

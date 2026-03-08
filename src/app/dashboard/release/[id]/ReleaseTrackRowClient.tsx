@@ -20,6 +20,8 @@ export default function ReleaseTrackRowClient({
   duration,
   streamCount,
   releaseCoverUrl,
+  isActive,
+  onSelect,
 }: {
   releaseTrackId: string;
   releaseId: string;
@@ -33,11 +35,16 @@ export default function ReleaseTrackRowClient({
   duration: string | null;
   streamCount: number;
   releaseCoverUrl: string | null;
+  isActive: boolean;
+  onSelect: () => void;
 }) {
   const router = useRouter();
 
   return (
-    <div className="cursor-default">
+    <div
+      onClick={onSelect}
+      className={isActive ? "cursor-pointer bg-white/8" : "cursor-pointer"}
+    >
       <TrackRowBase
         track={
           {
@@ -67,7 +74,7 @@ export default function ReleaseTrackRowClient({
             }}
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/dashboard/track/${track.id}`);
+              onSelect();
             }}
             className="
             text-left text-[13px] font-semibold text-white truncate

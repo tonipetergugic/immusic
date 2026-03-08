@@ -16,7 +16,7 @@ export default function TrackCard({ track, index, tracks }: Props) {
   // play handled by PlayOverlayButton (standardized)
 
   const releaseId = (track as any)?.release_id ?? null;
-  const href = releaseId ? `/dashboard/release/${releaseId}` : `/dashboard/track/${track.id}`;
+  const href = releaseId ? `/dashboard/release/${releaseId}` : "#";
 
   return (
     <Link

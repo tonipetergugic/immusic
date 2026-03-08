@@ -16,6 +16,7 @@ type Track = {
   bpm: number | null;
   key: string | null;
   genre: string | null;
+  lyrics: string | null;
   has_lyrics: boolean;
   is_explicit: boolean;
   artist_id: string;
@@ -108,6 +109,9 @@ export default function EditTrackClient({
   const [newIsExplicit, setNewIsExplicit] = useState<boolean>(Boolean(track.is_explicit));
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const [newLyrics, setNewLyrics] = useState<string>(track.lyrics ?? "");
+  const [isLyricsModalOpen, setIsLyricsModalOpen] = useState(false);
+  const [lyricsDraft, setLyricsDraft] = useState<string>(track.lyrics ?? "");
 
   // Collaboration
   const [collabQuery, setCollabQuery] = useState("");
@@ -217,6 +221,7 @@ export default function EditTrackClient({
         key: keyValue,
         genre: newGenre.trim() === "" ? null : newGenre.trim(),
         has_lyrics: newHasLyrics,
+        lyrics: newHasLyrics ? (newLyrics.trim() === "" ? null : newLyrics) : null,
         is_explicit: newIsExplicit,
         version: versionValue,
       };
@@ -461,12 +466,35 @@ export default function EditTrackClient({
                 Mark instrumental tracks as off.
               </div>
             </div>
-            <input
-              type="checkbox"
-              checked={newHasLyrics}
-              onChange={(e) => setNewHasLyrics(e.target.checked)}
-              className="h-5 w-5 accent-[#00FFC6]"
-            />
+
+            <div className="flex items-center gap-3">
+
+              {newHasLyrics && (
+                <button
+                  type="button"
+                  className="
+                    text-xs font-semibold
+                    text-[#00FFC6]
+                    hover:text-[#00FFC6]/80
+                    transition
+                    cursor-pointer
+                  "
+                  onClick={() => {
+                    setLyricsDraft(newLyrics);
+                    setIsLyricsModalOpen(true);
+                  }}
+                >
+                  {newLyrics.trim() ? "Edit lyrics" : "Add lyrics"}
+                </button>
+              )}
+
+              <input
+                type="checkbox"
+                checked={newHasLyrics}
+                onChange={(e) => setNewHasLyrics(e.target.checked)}
+                className="h-5 w-5 accent-[#00FFC6]"
+              />
+            </div>
           </label>
 
           <label className="h-[52px] px-4 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03]">
@@ -621,6 +649,56 @@ export default function EditTrackClient({
             </div>
           </div>
         </div>
+
+        {isLyricsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsLyricsModalOpen(false)}
+            />
+
+            <div className="relative z-10 w-full max-w-3xl rounded-3xl border border-white/10 bg-black/30 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_20px_80px_rgba(0,0,0,0.45)]">
+              <div className="border-b border-white/10 px-6 py-5">
+                <h2 className="text-xl font-semibold text-white">
+                  {newLyrics.trim() ? "Edit lyrics" : "Add lyrics"}
+                </h2>
+                <p className="mt-1 text-sm text-white/60">
+                  Line breaks will be preserved on the release page.
+                </p>
+              </div>
+
+              <div className="px-6 py-5">
+                <textarea
+                  value={lyricsDraft}
+                  onChange={(e) => setLyricsDraft(e.target.value)}
+                  placeholder="Paste or write your lyrics here..."
+                  className="min-h-[320px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-white/10 px-6 py-4">
+                <button
+                  type="button"
+                  className="rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/40"
+                  onClick={() => setIsLyricsModalOpen(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-xl border border-[#00FFC6]/40 bg-[#00FFC6]/10 px-4 py-2.5 text-sm font-semibold text-[#00FFC6] transition hover:bg-[#00FFC6]/15"
+                  onClick={() => {
+                    setNewLyrics(lyricsDraft);
+                    setIsLyricsModalOpen(false);
+                  }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="h-px w-full bg-white/10" />
