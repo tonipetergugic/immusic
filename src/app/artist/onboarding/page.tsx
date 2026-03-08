@@ -49,24 +49,24 @@ export default async function ArtistOnboardingPage() {
       </div>
 
       {/* Content (compact, centered, no banner/card) */}
-      <div className="mx-auto w-full max-w-5xl px-6 py-20">
+      <div className="mx-auto w-full max-w-4xl px-6 py-14">
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
-          Become an Artist
+          Become an <span className="text-[#00FFC6]">Artist</span>
         </h1>
 
-        <p className="mt-5 max-w-4xl text-base md:text-xl leading-relaxed text-white/75">
-          Upload your tracks and releases to ImMusic from a desktop computer.
-          Your first upload will be reviewed by our AI. Upon approval, your account
-          will be upgraded to an Artist account.
+        <p className="mt-4 max-w-2xl text-base md:text-lg leading-relaxed text-white/75">
+          Upload your music to ImMusic from a desktop computer.
+          Your first track will be reviewed by our AI. Once approved, your account will
+          automatically unlock the Artist dashboard.
         </p>
 
-        <ul className="mt-8 list-disc pl-6 space-y-3 text-sm md:text-lg text-white/70">
+        <ul className="mt-6 list-disc pl-6 space-y-2 text-sm md:text-base text-white/75">
           <li>Upload and AI-powered review only available on desktop.</li>
           <li>Your first track will be reviewed: pending → approved / rejected.</li>
           <li>Upon approval, you become an Artist automatically.</li>
         </ul>
 
-        <form action={confirmBecomeArtistAction} className="mt-14">
+        <form action={confirmBecomeArtistAction} className="mt-10">
           <button
             type="submit"
             className="
@@ -76,7 +76,7 @@ export default async function ArtistOnboardingPage() {
               text-[#00FFC6]
               bg-black/30 backdrop-blur-md
               border border-[#00FFC6]/60
-              shadow-[0_0_0_1px_rgba(0,255,198,0.20),0_0_40px_rgba(0,255,198,0.25),0_0_90px_rgba(0,255,198,0.12)]
+              shadow-[0_0_0_1px_rgba(0,255,198,0.20),0_0_30px_rgba(0,255,198,0.22),0_0_60px_rgba(0,255,198,0.1)]
               hover:bg-black/40 hover:border-[#00FFC6]/80
               transition
               cursor-pointer
