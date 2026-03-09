@@ -9,6 +9,7 @@ type PublishedTrackApiRow = {
   title: string;
   bpm: number | null;
   key: string | null;
+  genre: string | null;
   artist_id: string | null;
   artist_name: string | null;
   cover_url: string | null;
@@ -230,7 +231,10 @@ export default function PlaylistAddTrackModal({
       <div className="w-full max-w-[560px] rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)] max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <div className="mb-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-white">Add Track to Playlist</h2>
+            <h2 className="text-[22px] font-semibold tracking-tight text-white">
+              Add <span className="text-[#00FFC6]">Track</span> to{" "}
+              <span className="text-[#00FFC6]">Playlist</span>
+            </h2>
             {errorMessage && (
               <span className="text-xs font-medium text-red-400">{errorMessage}</span>
             )}
@@ -240,7 +244,7 @@ export default function PlaylistAddTrackModal({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search tracks or artists..."
-            className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+            className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
           />
         </div>
 
@@ -263,13 +267,13 @@ export default function PlaylistAddTrackModal({
                 <div
                   key={raw.id}
                   onClick={() => handleSelect(option)}
-                  className={`flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 transition ${
+                  className={`flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 transition ${
                     isBusy
                       ? "opacity-60 cursor-wait"
-                      : "cursor-pointer hover:bg-white/[0.06] hover:border-[#00FFC6]/60"
+                      : "cursor-pointer hover:bg-white/[0.10] hover:border-[#00FFC6]/60"
                   }`}
                 >
-                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-neutral-800">
+                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-neutral-800">
                     <img
                       src={raw.cover_url ?? player?.cover_url ?? "/placeholder.png"}
                       alt={raw.title || player?.title || "Track"}
@@ -278,17 +282,24 @@ export default function PlaylistAddTrackModal({
                   </div>
 
                   <div className="flex flex-1 flex-col">
-                    <span className="text-sm font-semibold text-white">
+                    <span className="text-[16px] font-semibold text-white">
                       {player?.title || raw.title || "Untitled Track"}
                     </span>
-                    <span className="text-xs text-white/60">
+                    <span className="text-[13px] text-white/55">
                       {player?.profiles?.display_name ?? raw.artist_name ?? "Unknown Artist"}
                     </span>
                   </div>
 
-                  <div className="flex flex-col items-end text-xs text-white/60">
-                    <span>BPM: {player?.bpm ?? raw.bpm ?? "—"}</span>
-                    <span>Key: {player?.key ?? raw.key ?? "—"}</span>
+                  <div className="flex flex-col items-end text-[13px] text-white/55 leading-tight">
+                    <span>
+                      {(player?.bpm ?? raw.bpm ?? null) !== null ? `${player?.bpm ?? raw.bpm} BPM` : "—"}
+                      {" • "}
+                      Key: {player?.key ?? raw.key ?? "—"}
+                    </span>
+
+                    <span className="mt-1">
+                      {raw.genre ?? "Unknown genre"}
+                    </span>
                   </div>
                 </div>
               );
@@ -298,7 +309,7 @@ export default function PlaylistAddTrackModal({
         <div className="mt-5 flex justify-end">
           <button
             onClick={onClose}
-            className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+            className="inline-flex items-center justify-center cursor-pointer rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-white/70 transition hover:text-white hover:border-[#00FFC6]/50 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             Close
           </button>

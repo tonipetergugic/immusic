@@ -173,6 +173,20 @@ export default function PlaylistHeaderClient({
 
   const isPublic = !!playlist.is_public;
 
+  const totalDurationSeconds = playerTracks.reduce(
+    (sum, track) => sum + (track.duration_seconds ?? 0),
+    0
+  );
+
+  const totalDurationLabel =
+    totalDurationSeconds >= 3600
+      ? `${Math.floor(totalDurationSeconds / 3600)}:${String(
+          Math.floor((totalDurationSeconds % 3600) / 60)
+        ).padStart(2, "0")}:${String(totalDurationSeconds % 60).padStart(2, "0")}`
+      : `${Math.floor(totalDurationSeconds / 60)}:${String(
+          totalDurationSeconds % 60
+        ).padStart(2, "0")}`;
+
   const rawCover = playlist.cover_url ?? null;
 
   const fitTitle = useFitText<HTMLHeadingElement>(playlist.title, {
@@ -240,7 +254,7 @@ export default function PlaylistHeaderClient({
           <BackLink />
         </div>
 
-        <div className="flex flex-col md:flex-row items-start md:items-end gap-10">
+        <div className="flex flex-col md:flex-row items-start md:items-end gap-8">
           {/* COVER */}
           <div
             className={`
@@ -253,7 +267,7 @@ export default function PlaylistHeaderClient({
               onDragOver={isOwner ? onCoverDragOver : undefined}
               onDrop={isOwner ? onCoverDrop : undefined}
               className={`
-                group relative w-[220px] h-[220px] md:w-[280px] md:h-[280px]
+                group relative w-[240px] h-[240px] md:w-[320px] md:h-[320px]
                 rounded-xl overflow-hidden
                 border border-[#1A1A1C] bg-gradient-to-br from-neutral-900 to-neutral-800
                 flex items-center justify-center
@@ -266,7 +280,7 @@ export default function PlaylistHeaderClient({
                   alt={playlist.title}
                   fill
                   priority
-                  sizes="(min-width: 768px) 280px, 220px"
+                  sizes="(min-width: 768px) 320px, 240px"
                   className="object-cover rounded-xl"
                 />
               ) : (
@@ -308,7 +322,7 @@ export default function PlaylistHeaderClient({
                     await deleteCover();
                   }}
                   className={[
-                    "absolute bottom-3 right-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border",
+                    "absolute bottom-3 right-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border cursor-pointer",
                     "border-white/10 bg-black/40 backdrop-blur-md",
                     "opacity-0 transition group-hover:opacity-100",
                     "hover:border-red-400/40 hover:bg-red-500/10 hover:shadow-[0_0_0_1px_rgba(248,113,113,0.25)]",
@@ -331,7 +345,7 @@ export default function PlaylistHeaderClient({
                 font-semibold text-white tracking-tight leading-tight
                 text-[34px] sm:text-5xl md:text-6xl lg:text-5xl xl:text-7xl
                 max-w-[70vw] md:max-w-[600px]
-                truncate
+                whitespace-nowrap overflow-hidden text-ellipsis
               "
             >
               {playlist.title}
@@ -341,29 +355,24 @@ export default function PlaylistHeaderClient({
               {playlist.description || "EDM Playlist"}
             </p>
 
-            <p className="text-white/90 text-lg font-medium mt-2">
-              {playerTracks.length} Tracks
+            <p className="text-white/70 text-sm mt-2">
+              {playerTracks.length} Tracks • {totalDurationLabel} • {isPublic ? "Public playlist" : "Private playlist"}{" "}
+              {playlist.owner?.id ? (
+                <>
+                  • by{" "}
+                  <a
+                    href={
+                      playlist.owner.role === "artist"
+                        ? `/dashboard/artist/${playlist.owner.id}`
+                        : `/profile/${playlist.owner.id}`
+                    }
+                    className="hover:text-[#00FFC6] underline underline-offset-2 transition"
+                  >
+                    {playlist.owner.display_name ?? "Unknown"}
+                  </a>
+                </>
+              ) : null}
             </p>
-
-            <p className="text-white/70 text-sm mt-1">
-              {isPublic ? "Public playlist" : "Private playlist"}
-            </p>
-
-            {playlist.owner?.id ? (
-              <p className="text-white/60 text-sm mt-1">
-                Playlist by{" "}
-                <a
-                  href={
-                    playlist.owner.role === "artist"
-                      ? `/dashboard/artist/${playlist.owner.id}`
-                      : `/profile/${playlist.owner.id}`
-                  }
-                  className="hover:text-white underline underline-offset-2 transition"
-                >
-                  {playlist.owner.display_name ?? "Unknown"}
-                </a>
-              </p>
-            ) : null}
           </div>
         </div>
       </div>

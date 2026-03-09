@@ -102,6 +102,7 @@ export default function PlayOverlayButton({
         "pointer-events-auto",
         "rounded-full border border-[#00FFC655] bg-black/55",
         "flex items-center justify-center",
+        "cursor-pointer",
         sizeClass,
         "shadow-[0_0_18px_rgba(0,255,198,0.22)]",
       ].join(" ")}

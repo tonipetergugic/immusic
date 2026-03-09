@@ -73,7 +73,7 @@ export default function PlaylistTrackList({
   }
 
   return (
-    <div className="mt-6">
+    <div className="mt-3">
         <div
           className="
             grid
@@ -81,8 +81,8 @@ export default function PlaylistTrackList({
             lg:grid-cols-[40px_80px_1fr_56px_56px_180px_80px]
             items-center
             gap-x-2 md:gap-x-3
-            text-xs text-white/50 uppercase tracking-wide
-            px-3 sm:px-4 py-2
+            text-xs text-white/35 uppercase tracking-wide
+            px-3 sm:px-4 py-1.5
             border-b border-white/10
           "
         >

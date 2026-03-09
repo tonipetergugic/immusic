@@ -14,6 +14,7 @@ export async function GET() {
       title,
       bpm,
       key,
+      genre,
       artist_id,
       releases:releases!tracks_release_id_fkey!inner (
         status,
@@ -49,6 +50,7 @@ export async function GET() {
         title: row.title ?? "Untitled Track",
         bpm: row.bpm ?? null,
         key: row.key ?? null,
+        genre: row.genre ?? null,
         artist_id: row.artist_id ?? null,
         artist_name: artistObj?.display_name ?? null,
         cover_url,

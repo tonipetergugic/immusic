@@ -91,7 +91,7 @@ function PlaylistRow({
             }}
             onClick={goToTrack}
             className="
-            text-left text-[13px] font-semibold text-white truncate
+            text-left text-[13px] font-semibold text-white truncate cursor-pointer
             hover:text-[#00FFC6] transition-colors
             focus:outline-none
           "
@@ -113,6 +113,7 @@ function PlaylistRow({
                     }}
                     onClick={(e) => goToArtistId(String(a.id), e)}
                     className="
+                      cursor-pointer
                       hover:text-[#00FFC6] hover:underline underline-offset-2
                       transition-colors
                       focus:outline-none
@@ -134,7 +135,7 @@ function PlaylistRow({
               }}
               onClick={goToArtist}
               className="
-            mt-1 text-left text-xs text-white/60 truncate
+            mt-1 text-left text-xs text-white/60 truncate cursor-pointer
             hover:text-[#00FFC6] hover:underline underline-offset-2
             transition-colors
             focus:outline-none

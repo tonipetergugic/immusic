@@ -65,19 +65,21 @@ export default function PlaylistActionsBar({
       <div
         className="
           flex items-center gap-6
-          mt-4
+          mt-0
           pl-[36px] sm:pl-[44px] lg:pl-[56px]
         "
       >
         {/* PLAY (standard) */}
         {tracks && tracks.length > 0 ? (
-          <PlayOverlayButton
-            variant="standalone"
-            size="lg"
-            track={tracks[Math.max(0, startIndex)]}
-            tracks={tracks}
-            index={Math.max(0, startIndex)}
-          />
+          <div className="transition-all duration-200 hover:scale-105 hover:drop-shadow-[0_0_6px_rgba(0,255,198,0.6)]">
+            <PlayOverlayButton
+              variant="standalone"
+              size="lg"
+              track={tracks[Math.max(0, startIndex)]}
+              tracks={tracks}
+              index={Math.max(0, startIndex)}
+            />
+          </div>
         ) : (
           <button
             type="button"
@@ -106,8 +108,9 @@ export default function PlaylistActionsBar({
               className="
     inline-flex items-center justify-center
     w-9 h-9
+    cursor-pointer
     text-[#00FFC6]
-    hover:text-[#00E0B0]
+    hover:text-[#00E0B0] hover:scale-125 hover:drop-shadow-[0_0_8px_#00FFC6]
     transition
     align-middle
   "
@@ -127,8 +130,9 @@ export default function PlaylistActionsBar({
                 className="
     inline-flex items-center justify-center
     w-9 h-9
+    cursor-pointer
     text-[#00FFC6]
-    hover:text-[#00E0B0]
+    hover:text-[#00E0B0] hover:scale-125 hover:drop-shadow-[0_0_8px_#00FFC6]
     transition
     align-middle
   "
