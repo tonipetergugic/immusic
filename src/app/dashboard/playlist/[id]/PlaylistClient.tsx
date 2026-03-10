@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import PlaylistHeaderClient from "./PlaylistHeaderClient";
 import { reorderPlaylistTracksAction } from "./actions";
 import PlaylistActionsBar from "./_components/PlaylistActionsBar";
+import PlaylistSuggestedTracks from "./_components/PlaylistSuggestedTracks";
 import PlaylistTrackList from "./_components/PlaylistTrackList";
 import PlaylistEmptyState from "./_components/PlaylistEmptyState";
 import PlaylistModals from "./_components/PlaylistModals";
@@ -263,23 +264,36 @@ export default function PlaylistClient({
         onEditDetails={onEditDetails}
       />
 
-      {playerTracks.length ? (
-        <PlaylistTrackList
-          isOwner={isOwner}
-          user={user}
-          tracks={playerTracks}
-          onDragEnd={onDragEnd}
-          onDeleteTrack={(trackId) => {
-            if (!isOwner) return;
-            void onDeleteTrack(trackId);
-          }}
-        />
-      ) : (
-        <PlaylistEmptyState
-          isOwner={isOwner}
-          onAddTrack={() => setAddOpen(true)}
-        />
-      )}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_450px] xl:items-start">
+        <div className="min-w-0">
+          {playerTracks.length ? (
+            <PlaylistTrackList
+              isOwner={isOwner}
+              user={user}
+              tracks={playerTracks}
+              onDragEnd={onDragEnd}
+              onDeleteTrack={(trackId) => {
+                if (!isOwner) return;
+                void onDeleteTrack(trackId);
+              }}
+            />
+          ) : (
+            <PlaylistEmptyState
+              isOwner={isOwner}
+              onAddTrack={() => setAddOpen(true)}
+            />
+          )}
+        </div>
+
+        <div className="min-w-0 xl:sticky xl:top-4">
+          <PlaylistSuggestedTracks
+            playlistId={localPlaylist.id}
+            existingTrackIds={playerTracks.map((track) => track.id)}
+            isOwner={isOwner}
+            onTrackAdded={handleTrackAdded}
+          />
+        </div>
+      </div>
 
       <PlaylistModals
         isOwner={isOwner}
