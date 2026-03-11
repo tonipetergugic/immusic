@@ -192,7 +192,7 @@ export default function FollowCountsClient({
   return (
     <>
       {/* Variante A: ohne Trenner */}
-      <div className="mt-3 flex items-center gap-6 text-sm text-white/70">
+      <div className="mt-3 flex items-center gap-6 text-base text-white/70">
         <button
           type="button"
           onClick={() => openFollowList("followers")}

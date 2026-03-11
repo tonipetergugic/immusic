@@ -15,14 +15,14 @@ export default function ArtistReleasesSection({
   return (
     <div className="w-full px-0 mt-3 pb-4">
       <div className="flex items-end justify-between gap-4 mb-3">
-        <h2 className="text-2xl font-semibold text-white">Releases</h2>
+        <h2 className="text-3xl font-bold text-white">Releases</h2>
         <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
-          {releases.length > 0 ? `${releases.length} published` : ""}
+          {releases.length > 0 ? `${releases.length} Releases` : ""}
         </div>
       </div>
 
       {releases.length > 0 ? (
-        <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
+        <div className="flex gap-4 overflow-x-auto scrollbar-none scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
           {releases.map((rel) => {
             const cardData: ReleaseCardData = {
               id: rel.id,
@@ -34,7 +34,7 @@ export default function ArtistReleasesSection({
             };
 
             return (
-              <div key={rel.id} className="shrink-0 w-[150px] snap-start">
+              <div key={rel.id} className="shrink-0 w-[168px] snap-start">
                 <ReleaseCard releaseId={rel.id} data={cardData} />
               </div>
             );

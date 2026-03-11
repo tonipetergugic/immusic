@@ -110,7 +110,7 @@ export default async function ArtistV2Page({
     )
     .eq("artist_id", artistId)
     .order("streams_30d", { ascending: false })
-    .limit(10);
+    .limit(20);
 
   const topTracksRawApi: TopTracksRow[] =
     !topTracksRawError && Array.isArray(topTracksRaw)
@@ -167,7 +167,7 @@ export default async function ArtistV2Page({
   const detailsByTrackId = new Map<string, TopTrackResolvedRow>();
   for (const r of topTracksResolved) detailsByTrackId.set(r.track_id, r);
 
-  const topTracks: TopTrackDto[] = topTracksRawApi
+  const rankedTracks: TopTrackDto[] = topTracksRawApi
     .map((a): TopTrackDto | null => {
       const d = detailsByTrackId.get(a.track_id) ?? null;
       if (!d) return null;
@@ -180,8 +180,8 @@ export default async function ArtistV2Page({
       if (!audioUrl) return null;
 
       const coverUrl = d.cover_path
-        ? supabase.storage.from("release_covers").getPublicUrl(d.cover_path).data
-            .publicUrl ?? null
+        ? supabase.storage.from("release_covers").getPublicUrl(d.cover_path)
+            .data.publicUrl ?? null
         : null;
 
       const ownerId = String(d.owner_id ?? "");
@@ -214,8 +214,8 @@ export default async function ArtistV2Page({
         artists,
         audioUrl,
         bpm: d.bpm ?? null,
-        key: (d.key ?? null),
-        genre: (d.genre ?? null),
+        key: d.key ?? null,
+        genre: d.genre ?? null,
         stats30d: {
           streams: a.streams ?? 0,
           listeners: a.unique_listeners ?? 0,
@@ -226,6 +226,9 @@ export default async function ArtistV2Page({
       };
     })
     .filter((x): x is TopTrackDto => x !== null);
+
+  const topTracks: TopTrackDto[] = rankedTracks.slice(0, 5);
+  const allTracks: TopTrackDto[] = rankedTracks.slice(5, 20);
 
   // B) Viewer Context
   const {
@@ -321,6 +324,7 @@ export default async function ArtistV2Page({
     releases,
     playlists,
     topTracks,
+    allTracks,
   };
 
   return <ArtistClient dto={dto} shareUrl={shareUrl} />;

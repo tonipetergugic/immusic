@@ -18,6 +18,7 @@ export type ArtistPageDto = {
   playlists: PlaylistCardDto[];
 
   topTracks: TopTrackDto[];
+  allTracks: TopTrackDto[];
 };
 
 export type ArtistCoreDto = {

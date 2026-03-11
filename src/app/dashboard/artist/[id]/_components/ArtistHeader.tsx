@@ -40,7 +40,7 @@ export default function ArtistHeader({
         />
 
         {/* Banner: full-bleed, no card */}
-        <div className="relative w-full overflow-hidden aspect-[16/9] min-h-[260px] max-h-[520px]">
+        <div className="relative w-full overflow-hidden aspect-[16/9] min-h-[220px] max-h-[420px]">
           {bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -92,7 +92,7 @@ export default function ArtistHeader({
                 <img
                   src={avatarUrl}
                   alt={artist.displayName}
-                  className="w-44 h-44 md:w-48 md:h-48 rounded-full object-cover border-4 border-white/15 shadow-2xl"
+                  className="w-52 h-52 md:w-60 md:h-60 rounded-full object-cover border-4 border-white/15 shadow-2xl"
                 />
               ) : (
                 <div className="w-44 h-44 md:w-48 md:h-48 rounded-full bg-white/10 border-4 border-white/10" />
@@ -100,12 +100,12 @@ export default function ArtistHeader({
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-xl truncate leading-tight">
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold text-white drop-shadow-xl leading-tight break-words">
                 {artist.displayName}
               </h1>
 
               {artist.city || artist.country ? (
-                <p className="mt-1 text-base md:text-lg text-white/70 drop-shadow-md">
+                <p className="mt-2 text-lg md:text-xl text-white/80 drop-shadow-md">
                   {[artist.city, artist.country].filter(Boolean).join(", ")}
                 </p>
               ) : null}
@@ -124,7 +124,7 @@ export default function ArtistHeader({
 
       {/* Actions + Social (inline) + Bio */}
       <div className="w-full px-0 mt-6">
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex items-center justify-between gap-6">
           {/* Socials (bigger) */}
           <div className="flex flex-wrap items-center gap-5">
             {artist.socials.instagram ? (
@@ -191,12 +191,6 @@ export default function ArtistHeader({
             />
           </div>
         </div>
-
-        {artist.bio ? (
-          <p className="mt-6 max-w-3xl text-white/90 whitespace-pre-line leading-relaxed">
-            {artist.bio}
-          </p>
-        ) : null}
       </div>
     </div>
   );
