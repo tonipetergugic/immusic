@@ -8,6 +8,44 @@ import { toPlayerTrack } from "@/lib/playerTrack";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { TopTrackDto } from "../_types/artistPageDto";
 
+function Stars({
+  avg,
+  count,
+  trackId,
+}: {
+  avg: number | null;
+  count: number;
+  trackId: string;
+}) {
+  if (avg === null || count <= 0) {
+    return <div className="text-xs text-white/40">No ratings yet</div>;
+  }
+
+  const rounded = Math.round(Number(avg));
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-[2px] leading-none">
+        {[1, 2, 3, 4, 5].map((i) => {
+          const filled = i <= rounded;
+          return (
+            <span
+              key={`star-${trackId}-${i}`}
+              className={filled ? "text-[#00FFC6] text-sm" : "text-white/25 text-sm"}
+              aria-hidden="true"
+            >
+              ★
+            </span>
+          );
+        })}
+      </div>
+      <div className="text-xs text-white/50 tabular-nums">
+        {Number(avg).toFixed(1)} ({count})
+      </div>
+    </div>
+  );
+}
+
 export default function ArtistAllTracksSection({
   allTracks,
   fallbackArtistId,
@@ -47,7 +85,10 @@ export default function ArtistAllTracksSection({
   return (
     <div className="w-full px-0 mt-6 pb-6 overflow-x-hidden touch-pan-y min-w-0">
       <div className="flex items-end justify-between gap-4 mb-3">
-        <h2 className="text-3xl font-bold text-white">More from this Artist</h2>
+        <h2 className="text-3xl font-bold text-white">
+          More <span className="text-[#00FFC6]">Tracks</span> by{" "}
+          <span className="text-[#00FFC6]">{fallbackDisplayName}</span>
+        </h2>
         <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
           {allTracks.length > 0 ? `${allTracks.length} Tracks` : ""}
         </div>
@@ -83,6 +124,24 @@ export default function ArtistAllTracksSection({
                       fallbackDisplayName={fallbackDisplayName}
                       disableLinks
                     />
+                  </div>
+                }
+                metaSlot={
+                  <div
+                    key={`meta-${t.trackId}`}
+                    className="flex items-center gap-4 min-w-0"
+                  >
+                    <div className="w-[140px]">
+                      <Stars
+                        avg={t.stats30d.ratingAvg}
+                        count={t.stats30d.ratingsCount}
+                        trackId={t.trackId}
+                      />
+                    </div>
+
+                    <div className="hidden sm:block text-xs text-white/50 tabular-nums whitespace-nowrap">
+                      {(t.stats30d.streams ?? 0).toLocaleString()} streams
+                    </div>
                   </div>
                 }
                 bpmSlot={<span>{t.bpm ?? "—"}</span>}

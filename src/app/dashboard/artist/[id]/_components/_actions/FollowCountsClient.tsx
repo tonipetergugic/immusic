@@ -196,7 +196,7 @@ export default function FollowCountsClient({
         <button
           type="button"
           onClick={() => openFollowList("followers")}
-          className="hover:text-white transition"
+          className="hover:text-[#00FFC6] cursor-pointer transition-colors"
         >
           <span className="text-white/90 font-semibold tabular-nums">
             {localFollowerCount}
@@ -207,7 +207,7 @@ export default function FollowCountsClient({
         <button
           type="button"
           onClick={() => openFollowList("following")}
-          className="hover:text-white transition"
+          className="hover:text-[#00FFC6] cursor-pointer transition-colors"
         >
           <span className="text-white/90 font-semibold tabular-nums">
             {localFollowingCount}

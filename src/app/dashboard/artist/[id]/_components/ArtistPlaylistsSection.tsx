@@ -9,9 +9,11 @@ export default function ArtistPlaylistsSection({
   playlists: PlaylistCardDto[];
 }) {
   return (
-    <div className="w-full px-0 mt-3 pb-4">
+    <div className="w-full px-0 pb-4">
       <div className="flex items-end justify-between gap-4 mb-3">
-        <h2 className="text-3xl font-bold text-white">Playlists</h2>
+        <h2 className="text-3xl font-bold text-white whitespace-nowrap">
+          Artist <span className="text-[#00FFC6]">Playlists</span>
+        </h2>
         <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
           {playlists.length > 0 ? `${playlists.length} public` : ""}
         </div>

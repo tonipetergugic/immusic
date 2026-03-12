@@ -15,7 +15,9 @@ export default function ArtistReleasesSection({
   return (
     <div className="w-full px-0 mt-3 pb-4">
       <div className="flex items-end justify-between gap-4 mb-3">
-        <h2 className="text-3xl font-bold text-white">Releases</h2>
+        <h2 className="text-3xl font-bold text-white">
+          Rele<span className="text-[#00FFC6]">ases</span>
+        </h2>
         <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
           {releases.length > 0 ? `${releases.length} Releases` : ""}
         </div>

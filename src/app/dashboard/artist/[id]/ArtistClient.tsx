@@ -34,10 +34,12 @@ export default function ArtistClient({
           />
         </div>
 
-        <div className="lg:pl-6">
+        <div className="mt-3 lg:pl-6">
           {dto.artist.bio ? (
-            <div className="pt-1">
-              <h3 className="text-3xl font-bold text-white">About</h3>
+            <div>
+              <h3 className="text-3xl font-bold text-white">
+                Ab<span className="text-[#00FFC6]">out</span>
+              </h3>
               <p className="mt-4 whitespace-pre-line text-base leading-8 text-white/90">
                 {dto.artist.bio}
               </p>
@@ -52,15 +54,27 @@ export default function ArtistClient({
         artistName={dto.artist.displayName}
       />
 
-      <ArtistPlaylistsSection playlists={dto.playlists} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-0">
+        {dto.allTracks.length > 0 ? (
+          <>
+            <div className="lg:col-span-2">
+              <ArtistAllTracksSection
+                allTracks={dto.allTracks}
+                fallbackArtistId={dto.artist.id}
+                fallbackDisplayName={dto.artist.displayName}
+              />
+            </div>
 
-      {dto.allTracks.length > 0 && (
-        <ArtistAllTracksSection
-          allTracks={dto.allTracks}
-          fallbackArtistId={dto.artist.id}
-          fallbackDisplayName={dto.artist.displayName}
-        />
-      )}
+            <div className="mt-6 lg:pl-6">
+              <ArtistPlaylistsSection playlists={dto.playlists} />
+            </div>
+          </>
+        ) : (
+          <div> 
+            <ArtistPlaylistsSection playlists={dto.playlists} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
