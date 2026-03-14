@@ -17,7 +17,15 @@ export type ReleaseRecord = {
 export default function ReleasesClient({ initialReleases }: { initialReleases: ReleaseRecord[] }) {
   const [releases] = useState<ReleaseRecord[]>(initialReleases);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
+  const statusFilters = [
+  { value: "all", label: "All" },
+  { value: "published", label: "Published" },
+  { value: "draft", label: "Draft" },
+  { value: "withdrawn", label: "Withdrawn" },
+] as const;
+const [statusFilter, setStatusFilter] = useState<
+  (typeof statusFilters)[number]["value"]
+>("all");
 
   const visibleReleases = useMemo(() => {
     return releases
@@ -31,7 +39,11 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
             ? true
             : statusFilter === "published"
             ? s === "published"
-            : s !== "published";
+            : statusFilter === "withdrawn"
+            ? s === "withdrawn"
+            : statusFilter === "draft"
+            ? s === "draft"
+            : false;
 
         return matchesQuery && matchesStatus;
       })
@@ -54,112 +66,84 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
   return (
     <div className="w-full">
       {/* Header */}
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0 flex-1 max-w-[520px]">
-          <div className="w-full">
+      <div className="flex flex-col gap-6">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0 flex-1">
             <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
               <Disc3 className="h-7 w-7 text-[#00FFC6]" />
-              My Releases
+              My <span className="text-[#00FFC6]">Releases</span>
             </h1>
-          </div>
 
-          <div className="mt-2 flex items-end justify-between w-full">
-            <p className="text-sm text-[#B3B3B3]">
+            <p className="mt-2 text-[15px] text-[#B3B3B3]">
               Manage your releases, covers and details.
             </p>
-
-            <Link
-              href="/artist/releases/create"
-              className="
-                inline-flex items-center gap-2
-                rounded-xl px-4 py-2
-                text-sm font-semibold
-                text-[#00FFC6]
-                bg-black/40
-                border border-[#00FFC6]/40
-                transition
-                hover:bg-black/60
-                hover:border-[#00FFC6]/70
-              "
-            >
-              <Plus className="h-4 w-4" />
-              New Release
-            </Link>
           </div>
+
+          <Link
+            href="/artist/releases/create"
+            className="
+              inline-flex shrink-0 items-center gap-2
+              rounded-xl px-4 py-2
+              text-sm font-semibold
+              text-[#00FFC6]
+              bg-black/40
+              border border-[#00FFC6]/40
+              transition
+              hover:bg-black/60
+              hover:border-[#00FFC6]/70
+            "
+          >
+            <Plus className="h-4 w-4" />
+            New Release
+          </Link>
         </div>
 
-        <div className="shrink-0 flex items-center gap-6">
-          <div className="inline-flex items-center gap-8">
-            <button
-              type="button"
-              onClick={() => setStatusFilter("all")}
-              className={[
-                "relative text-[14px] font-semibold tracking-tight transition-colors",
-                statusFilter === "all"
-                  ? "text-white"
-                  : "text-white/55 hover:text-white/80",
-              ].join(" ")}
-            >
-              All
-              <span
+        <div className="flex flex-col gap-y-5 lg:flex-row lg:items-end lg:justify-between lg:gap-x-8">
+          <div className="inline-flex flex-wrap items-center gap-x-8 gap-y-3">
+            {statusFilters.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setStatusFilter(value)}
                 className={[
-                  "pointer-events-none absolute left-0 -bottom-2.5 h-[3px] w-full rounded-full transition-opacity",
-                  statusFilter === "all" ? "opacity-100 bg-white/70" : "opacity-0",
+                  "relative cursor-pointer text-[15px] font-semibold tracking-tight transition-colors",
+                  statusFilter === value
+                    ? value === "published"
+                      ? "text-[#00FFC6]"
+                      : value === "draft"
+                      ? "text-white/85"
+                      : "text-white"
+                    : "text-white/55 hover:text-white/80",
                 ].join(" ")}
-              />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatusFilter("published")}
-              className={[
-                "relative text-[14px] font-semibold tracking-tight transition-colors",
-                statusFilter === "published"
-                  ? "text-[#00FFC6]"
-                  : "text-white/55 hover:text-white/80",
-              ].join(" ")}
-            >
-              Published
-              <span
-                className={[
-                  "pointer-events-none absolute left-0 -bottom-2.5 h-[3px] w-full rounded-full transition-opacity",
-                  statusFilter === "published" ? "opacity-100 bg-[#00FFC6]" : "opacity-0",
-                ].join(" ")}
-              />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatusFilter("draft")}
-              className={[
-                "relative text-[14px] font-semibold tracking-tight transition-colors",
-                statusFilter === "draft"
-                  ? "text-white/85"
-                  : "text-white/55 hover:text-white/80",
-              ].join(" ")}
-            >
-              Drafts
-              <span
-                className={[
-                  "pointer-events-none absolute left-0 -bottom-2.5 h-[3px] w-full rounded-full transition-opacity",
-                  statusFilter === "draft" ? "opacity-100 bg-white/35" : "opacity-0",
-                ].join(" ")}
-              />
-            </button>
+              >
+                {label}
+                <span
+                  className={[
+                    "pointer-events-none absolute left-0 -bottom-2.5 h-[3px] w-full rounded-full transition-opacity",
+                    statusFilter === value
+                      ? value === "published"
+                        ? "opacity-100 bg-[#00FFC6]"
+                        : value === "draft"
+                        ? "opacity-100 bg-white/35"
+                        : "opacity-100 bg-white/70"
+                      : "opacity-0",
+                  ].join(" ")}
+                />
+              </button>
+            ))}
           </div>
-        </div>
-      </div>
 
-      {/* Search */}
-      <div className="mt-6">
-        <div className="flex items-center gap-3 w-full max-w-[520px] border-b border-white/15 pb-2 focus-within:border-[#00FFC6]/40 transition">
-          <Search className="h-4 w-4 text-white/45" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search releases…"
-            className="w-full bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
-          />
+          <div className="w-full max-w-[520px]">
+            <div className="flex items-center gap-3 border-b border-white/15 pb-2 transition focus-within:border-[#00FFC6]/40">
+              <Search className="h-4 w-4 text-white/45" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search releases…"
+                className="w-full bg-transparent text-[15px] text-white placeholder:text-white/40 outline-none"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -176,9 +160,9 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
             ))}
           </div>
         ) : visibleReleases.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center">
+          <div className="text-center py-12">
             <p className="text-white/80 font-semibold">No releases found</p>
-            <p className="mt-2 text-sm text-[#B3B3B3]">
+            <p className="mt-2 text-[15px] text-[#B3B3B3]">
               Create your first release to start uploading tracks.
             </p>
           </div>
@@ -189,15 +173,15 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
                 key={r.id}
                 href={`/artist/releases/${r.id}`}
                 className={[
-                  "group rounded-xl border bg-white/[0.03] p-3 transition",
+                  "group rounded-2xl border bg-white/[0.03] p-4 transition",
                   String(r.status ?? "draft") === "published"
                     ? "border-[#00FFC6]/25 hover:border-[#00FFC6]/45 hover:bg-[#00FFC6]/[0.06]"
                     : String(r.status ?? "draft") === "withdrawn"
                     ? "border-white/25 hover:border-white/45 hover:bg-white/[0.06]"
-                    : "border-white/10",
+                    : "border-white/10 hover:border-white/20 hover:bg-white/[0.05]",
                 ].join(" ")}
               >
-                <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-black/40">
                   {r.release_type ? (
                     <div className="pointer-events-none absolute top-3 right-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold tracking-widest text-white/90 border border-white/10 backdrop-blur">
                       {String(r.release_type).toUpperCase()}
@@ -218,9 +202,9 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
                   )}
                 </div>
 
-                <div className="mt-2.5">
+                <div className="mt-3.5">
                   <div>
-                    <p className="truncate text-[13px] font-semibold text-white">{r.title}</p>
+                    <p className="truncate text-[15px] font-semibold tracking-tight text-white">{r.title}</p>
                   </div>
                 </div>
               </Link>
