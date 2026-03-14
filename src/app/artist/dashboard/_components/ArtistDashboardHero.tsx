@@ -40,14 +40,14 @@ export default function ArtistDashboardHero({
               <p className="text-xs text-white/60 mb-2">Banner not set yet</p>
             ) : null}
 
-            <p className="text-sm text-white/80">Welcome to ImMusic</p>
+            <p className="text-sm md:text-base text-[#B3B3B3]">Welcome to ImMusic</p>
 
             <p className="mt-1 text-4xl md:text-6xl xl:text-7xl font-semibold text-white leading-tight tracking-tight">
               {artistName}
             </p>
 
-            <p className="mt-2 text-sm text-white/70">
-              Your hub for releases, uploads and analytics.
+            <p className="mt-2 text-base md:text-lg text-[#B3B3B3]">
+              Upload music, manage releases and track your performance.
             </p>
           </div>
         </div>

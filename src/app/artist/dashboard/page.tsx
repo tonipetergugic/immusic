@@ -166,7 +166,9 @@ export default async function ArtistDashboardPage() {
       <div className="space-y-3">
         <section className="mt-16 mb-10">
           <div>
-            <h2 className="text-lg font-semibold text-white">Quick Stats</h2>
+            <h2 className="text-xl md:text-2xl font-semibold text-white">
+              Quick <span className="text-[#00FFC6]">Stats</span>
+            </h2>
             <p className="mt-1 text-xs text-[#B3B3B3]">
               Last updated: {lastUpdatedLabel}
             </p>
@@ -178,32 +180,37 @@ export default async function ArtistDashboardPage() {
             <Stat
               label="Total Streams"
               value={formatNumber(totalStreams)}
-              valueClassName="text-3xl md:text-4xl font-semibold text-white"
+              valueClassName="text-4xl md:text-5xl font-semibold text-white"
             />
 
             <Stat
               label="Ø Streams / Track"
               value={formatNumber(Math.round(avgStreamsPerTrack))}
+              valueClassName="text-4xl md:text-5xl font-semibold text-white"
             />
 
             <Stat
               label="Releases"
               value={formatNumber(totalReleases)}
+              valueClassName="text-4xl md:text-5xl font-semibold text-white"
             />
 
             <Stat
               label="Tracks"
               value={formatNumber(totalTracks)}
+              valueClassName="text-4xl md:text-5xl font-semibold text-white"
             />
 
             <Stat
               label="Ø Rating"
               value={avgRating.toFixed(2).replace(".", ",")}
+              valueClassName="text-4xl md:text-5xl font-semibold text-white"
             />
 
             <Stat
               label="Ratings (Count)"
               value={formatNumber(totalRatingsCount)}
+              valueClassName="text-4xl md:text-5xl font-semibold text-white"
             />
 
             <Tooltip label="Premium Credits are system energy. Boost can use them to increase visibility in Performance Discovery.">
@@ -211,7 +218,7 @@ export default async function ArtistDashboardPage() {
                 <Stat
                   label="Premium Credits"
                   value={formatNumber(balance)}
-                  valueClassName="text-3xl md:text-4xl font-semibold text-[#00FFC6]"
+                  valueClassName="text-4xl md:text-5xl font-semibold text-[#00FFC6]"
                 />
               </div>
             </Tooltip>
@@ -224,7 +231,9 @@ export default async function ArtistDashboardPage() {
             {/* Quality */}
             <div>
               <div className="flex items-end justify-between">
-                <h3 className="text-base font-semibold text-white">Top rated</h3>
+                <h3 className="text-xl md:text-2xl font-semibold text-white mt-1">
+                  Top <span className="text-[#00FFC6]">rated</span>
+                </h3>
               </div>
 
               <div className="mt-4 space-y-3">
@@ -232,30 +241,27 @@ export default async function ArtistDashboardPage() {
                   qualityTracks.map((t) => (
                     <div
                       key={`q-${t.title}`}
-                      className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 transition hover:bg-white/[0.04]"
+                      className="flex items-center gap-5 rounded-xl border border-white/5 bg-white/[0.02] px-5 py-4 transition hover:bg-white/[0.05] hover:border-white/10"
                     >
                       {t.coverUrl ? (
                         <img
                           src={t.coverUrl}
                           alt=""
-                          className="h-12 w-12 rounded-lg object-cover border border-white/10"
+                          className="h-14 w-14 rounded-lg object-cover border border-white/10"
                         />
                       ) : (
-                        <div className="h-12 w-12 rounded-lg bg-white/5 border border-white/10" />
+                        <div className="h-14 w-14 rounded-lg bg-white/5 border border-white/10" />
                       )}
 
                   <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-white">
+                        <p className="truncate text-base font-semibold text-white">
                           {t.title}
                         </p>
                       </div>
 
                   <div className="shrink-0 text-right">
-                    <p className="text-base font-semibold text-white">
-                      {t.rating.toFixed(2).replace(".", ",")}
-                    </p>
-                    <p className="text-xs text-[#B3B3B3]">
-                      Rating · {t.ratingCount} votes
+                    <p className="text-base text-[#B3B3B3] whitespace-nowrap">
+                      {t.rating.toFixed(2).replace(".", ",")} rating · {t.ratingCount} votes
                     </p>
                   </div>
                     </div>
@@ -271,7 +277,9 @@ export default async function ArtistDashboardPage() {
             {/* Performance */}
             <div>
               <div className="flex items-end justify-between">
-                <h3 className="text-base font-semibold text-white">Top streams</h3>
+                <h3 className="text-xl md:text-2xl font-semibold text-white mt-1">
+                  Top <span className="text-[#00FFC6]">streams</span>
+                </h3>
               </div>
 
               <div className="mt-4 space-y-3">
@@ -279,30 +287,27 @@ export default async function ArtistDashboardPage() {
                   performanceTracks.map((t) => (
                     <div
                       key={`p-${t.title}`}
-                      className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 transition hover:bg-white/[0.04]"
+                      className="flex items-center gap-5 rounded-xl border border-white/5 bg-white/[0.02] px-5 py-4 transition hover:bg-white/[0.05] hover:border-white/10"
                     >
                       {t.coverUrl ? (
                         <img
                           src={t.coverUrl}
                           alt=""
-                          className="h-12 w-12 rounded-lg object-cover border border-white/10"
+                          className="h-14 w-14 rounded-lg object-cover border border-white/10"
                         />
                       ) : (
-                        <div className="h-12 w-12 rounded-lg bg-white/5 border border-white/10" />
+                        <div className="h-14 w-14 rounded-lg bg-white/5 border border-white/10" />
                       )}
 
                   <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-white">
+                        <p className="truncate text-base font-semibold text-white">
                           {t.title}
                         </p>
                       </div>
 
                   <div className="shrink-0 text-right">
-                    <p className="text-base font-semibold text-white">
-                      {t.streams.toLocaleString("de-DE")}
-                    </p>
-                    <p className="text-xs text-[#B3B3B3]">
-                      Streams
+                    <p className="text-base text-[#B3B3B3] whitespace-nowrap">
+                      {t.streams.toLocaleString("de-DE")} streams
                     </p>
                   </div>
                     </div>
@@ -322,7 +327,9 @@ export default async function ArtistDashboardPage() {
 
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
-          <h2 className="text-lg font-semibold text-white">Artist Menu</h2>
+          <h2 className="text-xl md:text-2xl font-semibold text-white">
+            Artist <span className="text-[#00FFC6]">Menu</span>
+          </h2>
           <p className="text-sm text-[#B3B3B3]">Jump to the tools you need.</p>
         </div>
 
@@ -336,17 +343,17 @@ export default async function ArtistDashboardPage() {
           />
 
           <MenuTile
-            href="/artist/releases"
-            title="Releases"
-            description="Manage your releases and publish updates."
-            icon={<Disc3 className="h-6 w-6" />}
-          />
-
-          <MenuTile
             href="/artist/my-tracks"
             title="My Tracks"
             description="Edit tracks, metadata and status."
             icon={<Music2 className="h-6 w-6" />}
+          />
+
+          <MenuTile
+            href="/artist/releases"
+            title="Releases"
+            description="Manage your releases and publish updates."
+            icon={<Disc3 className="h-6 w-6" />}
           />
 
           {/* Row 2 – Secondary */}
@@ -379,7 +386,9 @@ export default async function ArtistDashboardPage() {
           <div>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-white">Premium Credits History</h2>
+                <h2 className="text-xl md:text-2xl font-semibold text-white">
+                  Premium <span className="text-[#00FFC6]">Credits</span> History
+                </h2>
                 <p className="mt-1 text-xs text-[#B3B3B3]">
                   Last 20 transactions (read-only)
                 </p>
@@ -440,4 +449,3 @@ export default async function ArtistDashboardPage() {
     </div>
   );
 }
-
