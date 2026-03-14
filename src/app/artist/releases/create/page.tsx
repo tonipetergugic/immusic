@@ -12,7 +12,7 @@ function SubmitButton() {
       type="submit"
       disabled={pending}
       className={[
-        "group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/35 backdrop-blur-xl px-5 py-2.5 text-sm font-semibold text-white/90 transition",
+        "group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/35 backdrop-blur-xl px-6 py-3 text-[15px] font-semibold text-white transition cursor-pointer",
         "hover:bg-black/50 hover:border-[#00FFC6]/70 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)]",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60",
         pending ? "opacity-60 cursor-not-allowed hover:shadow-none" : "",
@@ -33,27 +33,26 @@ export default function CreateReleasePage() {
   return (
     <div className="w-full text-white">
       <div className="w-full max-w-[820px] mx-auto">
-        <div className="flex items-start justify-between gap-6">
-          <div className="min-w-0">
-            <BackLink href="/artist/releases" />
+        <div>
+          <BackLink href="/artist/releases" />
 
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">
-              Create Release
-            </h1>
-            <p className="mt-2 text-sm text-[#B3B3B3]">
-              Set the basics. You can add a cover and tracks after creating.
-            </p>
-          </div>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">
+            Create <span className="text-[#00FFC6]">Release</span>
+          </h1>
+
+          <p className="mt-2 text-[15px] text-[#B3B3B3]">
+            Set the basics. You can add a cover and tracks after creating.
+          </p>
         </div>
 
         <form
           action={createReleaseAction}
-          className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 sm:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_60px_rgba(0,255,198,0.06),0_30px_90px_rgba(0,0,0,0.55)]"
+          className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-7 sm:p-9 shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_0_48px_rgba(0,255,198,0.05),0_24px_72px_rgba(0,0,0,0.5)]"
         >
           <div className="grid gap-8">
           {/* Title */}
           <div>
-            <label htmlFor="release-title" className="block text-sm font-medium text-white/80">
+            <label htmlFor="release-title" className="block text-[16px] font-medium text-white/90">
               Release title
             </label>
             <input
@@ -62,13 +61,13 @@ export default function CreateReleasePage() {
               type="text"
               required
               placeholder="e.g. Come On"
-              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 backdrop-blur-xl px-4 py-3 text-base text-white outline-none transition placeholder:text-white/35 hover:border-white/20 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-3.5 text-[15px] text-white outline-none transition placeholder:text-white/35 hover:border-white/20 focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
             />
           </div>
 
           {/* Type */}
           <div>
-            <div className="text-sm font-medium text-white/80">Release type</div>
+            <div className="text-[16px] font-medium text-white/90">Release type</div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
@@ -91,11 +90,11 @@ export default function CreateReleasePage() {
 
                   <span
                     className="
-    inline-flex min-w-[140px] items-center justify-center
+    inline-flex min-w-[150px] items-center justify-center
     rounded-xl border border-white/10
     bg-black/30 backdrop-blur-xl
-    px-6 py-2.5
-    text-sm font-semibold
+    px-6 py-3
+    text-[15px] font-semibold
     cursor-pointer
     text-white/80
     transition
@@ -111,7 +110,7 @@ export default function CreateReleasePage() {
 
                   <span
                     className="
-  text-xs text-white/45
+  text-[14px] text-white/50
   text-center
   transition
   peer-checked:text-white/70
@@ -134,4 +133,3 @@ export default function CreateReleasePage() {
     </div>
   );
 }
-

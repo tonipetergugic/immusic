@@ -15,7 +15,7 @@ const linkClassName = [
   "text-white/70",
   "hover:text-[#00FFC6] active:text-[#00FFC6]",
   "transition-colors",
-  "text-base",
+  "text-[17px] font-medium",
   "cursor-pointer",
 ].join(" ");
 
