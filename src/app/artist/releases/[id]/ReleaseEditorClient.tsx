@@ -14,7 +14,6 @@ import { publishReleaseAction } from "./publishReleaseAction";
 import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
 import DeleteReleaseModal from "@/components/DeleteReleaseModal";
 import { deleteReleaseAction } from "./deleteReleaseAction";
-import { enableDevelopmentForReleaseAction } from "./enableDevelopmentForReleaseAction";
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
 type ReleaseStatus = "draft" | "published";
@@ -64,11 +63,6 @@ export default function ReleaseEditorClient({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [devAllPending, setDevAllPending] = useState(false);
-  const allTracksInDevelopment =
-    initialTracks.length > 0 &&
-    initialTracks.every((t) => trackStatusById[t.track_id] === "development");
-  const [devAllDone, setDevAllDone] = useState(allTracksInDevelopment);
   const isPublished = status === "published";
   const hasBeenPublished = Boolean(releaseData.published_at);
   const hasCover = Boolean(coverUrl);
@@ -206,60 +200,6 @@ export default function ReleaseEditorClient({
             {!allTracksMetadataComplete && hasAtLeastOneTrack ? (
               <div className="mt-3 text-xs text-white/65">
                 Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, genre, lyrics flag, and explicit flag.
-              </div>
-            ) : null}
-
-                {isPublished ? (
-              <div className="mt-8 space-y-3">
-                <h3 className="text-lg font-semibold tracking-tight text-white">
-                  Development <span className="text-[#00FFC6]">Discovery</span>
-                </h3>
-
-                <div className="text-[15px] leading-6 text-white/75">
-                  Enable Development for all tracks in this release. This can only be done once.
-                </div>
-
-                <button
-                  type="button"
-                  disabled={devAllPending || devAllDone || allTracksInDevelopment}
-                  onClick={() => {
-                    if (devAllPending || devAllDone || allTracksInDevelopment) return;
-
-                    setDevAllPending(true);
-                    startTransition(async () => {
-                      try {
-                        const res = await enableDevelopmentForReleaseAction(releaseId);
-                        if (res?.success) {
-                          setDevAllDone(true);
-                          window.location.reload();
-                        } else {
-                          alert(res?.error ?? "Failed to enable development.");
-                        }
-                      } finally {
-                        setDevAllPending(false);
-                      }
-                    });
-                  }}
-                  className="w-full rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/15 px-5 py-3 text-sm font-semibold text-[#00FFC6] backdrop-blur transition
-      hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/50
-      hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40
-      disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {allTracksInDevelopment
-                    ? "All tracks already in Development"
-                    : devAllDone
-                    ? "Development enabled"
-                    : devAllPending
-                    ? "Enabling..."
-                    : "Enable Development for all tracks"}
-                </button>
-
-                {(devAllDone || allTracksInDevelopment) ? (
-                  <div className="text-sm text-white/70">
-                    Done. Track statuses will update automatically.
-                  </div>
-                ) : null}
               </div>
             ) : null}
 
@@ -507,6 +447,11 @@ export default function ReleaseEditorClient({
             <div className="mt-2 text-sm text-[#B3B3B3]">
               If something is wrong, you must{" "}
               <span className="text-white/90 font-semibold">delete</span> the release and create a new one.
+            </div>
+
+            <div className="mt-2 text-sm text-[#B3B3B3]">
+              Tracks will automatically enter{" "}
+              <span className="text-white/90 font-semibold">Development Discovery</span> after publishing.
             </div>
 
             <div className="mt-5 flex items-center justify-end gap-2">

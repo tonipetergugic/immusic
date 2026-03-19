@@ -88,7 +88,7 @@ export async function publishReleaseAction(releaseId: string) {
     return { error: "Track metadata incomplete. Please fill BPM, key and genre for all tracks before publishing." };
   }
 
-  // Wenn alles ok → veröffentlichen
+  // Erst veröffentlichen
   // DB trigger sets published_at on first publish and freezes afterwards
   const { error: updateError } = await supabase
     .from("releases")
@@ -100,6 +100,16 @@ export async function publishReleaseAction(releaseId: string) {
   if (updateError) {
     console.error("Publish failed:", updateError);
     return { error: "Failed to publish the release." };
+  }
+
+  // Danach automatisch alle Tracks in Development verschieben
+  for (const trackId of trackIds) {
+    const { error } = await supabase.rpc("move_track_to_development", { p_track_id: trackId });
+
+    if (error) {
+      console.error("move_track_to_development failed:", { trackId, error });
+      return { error: "Release was published, but failed to move all tracks to Development." };
+    }
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
