@@ -103,8 +103,45 @@ export async function publishReleaseAction(releaseId: string) {
   }
 
   // Danach automatisch alle Tracks in Development verschieben
+  // Idempotent:
+  // - approved -> per RPC nach development
+  // - development -> skip
+  // - alles andere -> echter Fehler
+  const { data: statusRows, error: statusErr } = await supabase
+    .from("tracks")
+    .select("id, status")
+    .in("id", trackIds);
+
+  if (statusErr) {
+    console.error("Failed to load track statuses after publish:", statusErr);
+    return { error: "Release was published, but track statuses could not be verified." };
+  }
+
+  const statusByTrackId = new Map(
+    (statusRows ?? []).map((row: any) => [row.id, row.status])
+  );
+
   for (const trackId of trackIds) {
-    const { error } = await supabase.rpc("move_track_to_development", { p_track_id: trackId });
+    const trackStatus = statusByTrackId.get(trackId);
+
+    if (trackStatus === "development") {
+      continue;
+    }
+
+    if (trackStatus !== "approved") {
+      console.error("Unexpected track status for auto-development:", {
+        trackId,
+        trackStatus,
+      });
+      return {
+        error:
+          "Release was published, but one or more tracks were not eligible for Development.",
+      };
+    }
+
+    const { error } = await supabase.rpc("move_track_to_development", {
+      p_track_id: trackId,
+    });
 
     if (error) {
       console.error("move_track_to_development failed:", { trackId, error });

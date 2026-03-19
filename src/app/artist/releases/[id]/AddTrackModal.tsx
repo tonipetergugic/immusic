@@ -28,7 +28,6 @@ export default function AddTrackModal({
   const supabase = createSupabaseBrowserClient();
   const [tracks, setTracks] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [trackIdsInAnyRelease, setTrackIdsInAnyRelease] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
@@ -56,19 +55,8 @@ export default function AddTrackModal({
         .eq("artist_id", user.id)
         .order("created_at", { ascending: false });
 
-      // Fetch track IDs that are already assigned to ANY release
-      const { data: rtRows, error: rtErr } = await supabase
-        .from("release_tracks")
-        .select("track_id");
-
       if (!isCancelled) {
         setTracks(error ? [] : data || []);
-        if (!rtErr && rtRows) {
-          setTrackIdsInAnyRelease(new Set(rtRows.map((r) => String(r.track_id))));
-        } else {
-          // fallback: keep empty set if something fails (don't block UI)
-          setTrackIdsInAnyRelease(new Set());
-        }
         setLoading(false);
       }
     }
@@ -117,9 +105,7 @@ export default function AddTrackModal({
 
         {!loading && filteredTracks.length > 0 && (
           <ul className="space-y-2">
-            {filteredTracks
-              .filter((t) => !trackIdsInAnyRelease.has(String(t.id)))
-              .map((t) => (
+            {filteredTracks.map((t) => (
               <li
                 key={t.id}
                 className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm backdrop-blur-sm transition hover:bg-white/[0.07]"
