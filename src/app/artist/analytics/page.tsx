@@ -18,7 +18,6 @@ import {
 import type {
   AnalyticsTrackDailyRow,
   ValidListenRow,
-  ReleaseTrackRow,
   ReleaseRow,
   TrackTitleRow,
   CountryStreamsRow,
@@ -179,19 +178,23 @@ export default async function ArtistAnalyticsPage({
     });
   }
 
-  // resolve cover_path via release_tracks -> releases
+  // resolve cover_path via tracks.release_id -> releases
   const coverPathByTrackId = new Map<string, string | null>();
 
   if (ids.length) {
-    const { data: rtRows, error: rtErr } = await supabase
-      .from("release_tracks")
-      .select("track_id, release_id")
-      .in("track_id", ids);
+    const { data: trackRows, error: trackRowsErr } = await supabase
+      .from("tracks")
+      .select("id, release_id")
+      .in("id", ids);
 
-    if (rtErr) throw new Error(rtErr.message);
+    if (trackRowsErr) throw new Error(trackRowsErr.message);
 
     const releaseIds = Array.from(
-      new Set(((rtRows || []) as ReleaseTrackRow[]).map((r) => String(r.release_id)))
+      new Set(
+        (trackRows || [])
+          .map((r) => (r.release_id ? String(r.release_id) : null))
+          .filter((id): id is string => Boolean(id))
+      )
     );
 
     const coverPathByReleaseId = new Map<string, string | null>();
@@ -204,20 +207,19 @@ export default async function ArtistAnalyticsPage({
 
       if (relErr) throw new Error(relErr.message);
 
-      ((relRows || []) as ReleaseRow[]).forEach((r) =>
+      ((relRows || []) as ReleaseRow[]).forEach((r) => {
         coverPathByReleaseId.set(
           String(r.id),
           r.cover_path ? String(r.cover_path) : null
-        )
-      );
+        );
+      });
     }
 
-    ((rtRows || []) as ReleaseTrackRow[]).forEach((r) => {
-      const trackId = String(r.track_id);
-      const relId = String(r.release_id);
-      const coverPath = coverPathByReleaseId.get(relId) ?? null;
-      // first match wins (good enough for now)
-      if (!coverPathByTrackId.has(trackId)) coverPathByTrackId.set(trackId, coverPath);
+    (trackRows || []).forEach((r) => {
+      const trackId = String(r.id);
+      const releaseId = r.release_id ? String(r.release_id) : null;
+      const coverPath = releaseId ? (coverPathByReleaseId.get(releaseId) ?? null) : null;
+      coverPathByTrackId.set(trackId, coverPath);
     });
   }
 
@@ -403,18 +405,22 @@ export default async function ArtistAnalyticsPage({
         titleByEligibleId.set(String(t.id), String(t.title ?? "Unknown track"))
       );
 
-      // Cover urls for eligible tracks (release_tracks -> releases.cover_path)
+      // Cover urls for eligible tracks (tracks.release_id -> releases.cover_path)
       const coverPathByEligibleTrackId = new Map<string, string | null>();
 
-      const { data: rt2, error: rt2Err } = await supabase
-        .from("release_tracks")
-        .select("track_id, release_id")
-        .in("track_id", eligibleTrackIds);
+      const { data: eligibleTrackRows, error: eligibleTrackRowsErr } = await supabase
+        .from("tracks")
+        .select("id, release_id")
+        .in("id", eligibleTrackIds);
 
-      if (rt2Err) throw new Error(rt2Err.message);
+      if (eligibleTrackRowsErr) throw new Error(eligibleTrackRowsErr.message);
 
       const relIds2 = Array.from(
-        new Set(((rt2 || []) as ReleaseTrackRow[]).map((r) => String(r.release_id)))
+        new Set(
+          (eligibleTrackRows || [])
+            .map((r) => (r.release_id ? String(r.release_id) : null))
+            .filter((id): id is string => Boolean(id))
+        )
       );
 
       const coverPathByReleaseId2 = new Map<string, string | null>();
@@ -427,19 +433,19 @@ export default async function ArtistAnalyticsPage({
 
         if (rel2Err) throw new Error(rel2Err.message);
 
-        ((rel2 || []) as ReleaseRow[]).forEach((r) =>
+        ((rel2 || []) as ReleaseRow[]).forEach((r) => {
           coverPathByReleaseId2.set(
             String(r.id),
             r.cover_path ? String(r.cover_path) : null
-          )
-        );
+          );
+        });
       }
 
-      ((rt2 || []) as ReleaseTrackRow[]).forEach((r) => {
-        const tid = String(r.track_id);
-        const rid = String(r.release_id);
-        const cp = coverPathByReleaseId2.get(rid) ?? null;
-        if (!coverPathByEligibleTrackId.has(tid)) coverPathByEligibleTrackId.set(tid, cp);
+      (eligibleTrackRows || []).forEach((r) => {
+        const tid = String(r.id);
+        const rid = r.release_id ? String(r.release_id) : null;
+        const cp = rid ? (coverPathByReleaseId2.get(rid) ?? null) : null;
+        coverPathByEligibleTrackId.set(tid, cp);
       });
 
       const items = eligibleTrackIds
