@@ -56,8 +56,6 @@ export default async function ReleaseDetailPage({
       `
       id,
       position,
-      rating_avg,
-      rating_count,
       stream_count,
       track:tracks (
         id,
@@ -65,6 +63,8 @@ export default async function ReleaseDetailPage({
         lyrics,
         audio_path,
         duration,
+        rating_avg,
+        rating_count,
         bpm,
         key,
         genre,
@@ -137,8 +137,8 @@ export default async function ReleaseDetailPage({
     genre: row.track?.genre ?? null,
     version: row.track?.version ?? null,
     duration: row.track?.duration ?? null,
-    ratingAvg: row.rating_avg ?? null,
-    ratingCount: row.rating_count ?? null,
+    ratingAvg: row.track?.rating_avg ?? null,
+    ratingCount: row.track?.rating_count ?? null,
     streamCount: row.stream_count ?? 0,
     artists: buildArtistsList(row),
   }));

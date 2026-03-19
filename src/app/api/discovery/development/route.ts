@@ -111,7 +111,7 @@ export async function GET(req: Request) {
   const { data: releaseTracks, error: rtErr } = trackIds.length
     ? await supabase
         .from("release_tracks")
-        .select("id, track_id, release_id, rating_avg, rating_count, stream_count")
+        .select("id, track_id, release_id, stream_count, tracks!inner(rating_avg, rating_count)")
         .in("track_id", trackIds)
     : { data: [], error: null };
 
@@ -132,23 +132,22 @@ export async function GET(req: Request) {
   const releaseById = new Map<string, any>((releases ?? []).map((r: any) => [r.id, r]));
   const profileById = new Map<string, any>((profiles ?? []).map((p: any) => [p.id, p]));
 
-  // My stars (optional) – keyed by release_track_id
-  const releaseTrackIds = (releaseTracks ?? []).map((rt: any) => rt?.id).filter(Boolean);
-  const myStarsByReleaseTrackId = new Map<string, number>();
+  // My stars (optional) – keyed by track_id
+  const myStarsByTrackId = new Map<string, number>();
 
-  const { data: myRatings, error: myRatingsErr } = releaseTrackIds.length
+  const { data: myRatings, error: myRatingsErr } = trackIds.length
     ? await supabase
         .from("track_ratings")
-        .select("release_track_id, stars")
+        .select("track_id, stars")
         .eq("user_id", user.id)
-        .in("release_track_id", releaseTrackIds)
+        .in("track_id", trackIds)
     : { data: [], error: null };
 
   if (myRatingsErr) debugWarnings.push(`track_ratings: ${myRatingsErr.message}`);
 
   (myRatings ?? []).forEach((r: any) => {
-    if (r?.release_track_id && typeof r.stars === "number") {
-      myStarsByReleaseTrackId.set(r.release_track_id, r.stars);
+    if (r?.track_id && typeof r.stars === "number") {
+      myStarsByTrackId.set(r.track_id, r.stars);
     }
   });
 
@@ -211,10 +210,10 @@ export async function GET(req: Request) {
     };
 
     item.release_track_id = releaseTrackId;
-    item.rating_avg = rt?.rating_avg ?? null;
-    item.rating_count = typeof rt?.rating_count === "number" ? rt.rating_count : 0;
+    item.rating_avg = rt?.tracks?.rating_avg ?? null;
+    item.rating_count = typeof rt?.tracks?.rating_count === "number" ? rt.tracks.rating_count : 0;
     item.stream_count = typeof rt?.stream_count === "number" ? rt.stream_count : 0;
-    item.my_stars = releaseTrackId ? (myStarsByReleaseTrackId.get(releaseTrackId) ?? null) : null;
+    item.my_stars = myStarsByTrackId.get(r.track_id) ?? null;
 
     if (debug) {
       item.debug_reason = {

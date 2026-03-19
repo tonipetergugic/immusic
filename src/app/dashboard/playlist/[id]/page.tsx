@@ -306,31 +306,29 @@ export default async function PlaylistPage(
     }];
   });
 
-  const releaseTrackIds = convertedTracks
-    .map((t) => t.release_track_id)
+  const trackIds = convertedTracks
+    .map((t) => t.id)
     .filter(Boolean) as string[];
 
   let finalTracks = convertedTracks;
 
-  if (user && releaseTrackIds.length > 0) {
+  if (user && trackIds.length > 0) {
     const { data: myRatings, error: myRatingsError } = await supabase
       .from("track_ratings")
-      .select("release_track_id, stars")
+      .select("track_id, stars")
       .eq("user_id", user.id)
-      .in("release_track_id", releaseTrackIds);
+      .in("track_id", trackIds);
 
     if (myRatingsError) {
       console.error("Failed to load user ratings", myRatingsError);
     } else {
       const myRatingMap = new Map(
-        myRatings?.map((r) => [r.release_track_id, r.stars]) ?? []
+        myRatings?.map((r) => [r.track_id, r.stars]) ?? []
       );
 
       finalTracks = convertedTracks.map((t) => ({
         ...t,
-        my_stars: t.release_track_id
-          ? myRatingMap.get(t.release_track_id) ?? null
-          : null,
+        my_stars: myRatingMap.get(t.id) ?? null,
       }));
     }
   }

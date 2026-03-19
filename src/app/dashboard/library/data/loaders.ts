@@ -113,6 +113,8 @@ export async function loadLibraryV2Tracks({
         bpm,
         key,
         genre,
+        rating_avg,
+        rating_count,
         profiles:profiles!tracks_artist_id_fkey(
           id,
           display_name,
@@ -121,8 +123,6 @@ export async function loadLibraryV2Tracks({
         release_tracks:release_tracks!release_tracks_track_id_fkey(
           id,
           release_id,
-          rating_avg,
-          rating_count,
           stream_count
         ),
         releases:releases!tracks_release_id_fkey(
@@ -178,9 +178,9 @@ export async function loadLibraryV2Tracks({
           release_track_id: rt?.id ?? null,
           release_id: rt?.release_id ?? null,
 
-          // rating summary (from release_tracks)
-          rating_avg: rt?.rating_avg ?? null,
-          rating_count: rt?.rating_count ?? 0,
+          // rating summary (track-based), streams still from release_tracks for now
+          rating_avg: t.rating_avg ?? null,
+          rating_count: t.rating_count ?? 0,
           stream_count: rt?.stream_count ?? 0,
         };
       })
@@ -226,25 +226,25 @@ export async function loadLibraryV2Tracks({
     }
   }
 
-  // Map: release_track_id -> my latest stars
+  // Map: track_id -> my latest stars (variable name kept temporarily for compatibility)
   const myStarsByReleaseTrackId: Record<string, number | null> = {};
-  if (releaseTrackIds.length > 0) {
+  if (trackIds.length > 0) {
     const { data: myRows, error: myErr } = await supabase
       .from("track_ratings")
-      .select("release_track_id, stars, created_at")
+      .select("track_id, stars, created_at")
       .eq("user_id", userId)
-      .in("release_track_id", releaseTrackIds)
+      .in("track_id", trackIds)
       .order("created_at", { ascending: false });
 
     if (myErr) {
       console.error("LibraryV2: Failed to load my track_ratings (batch):", myErr);
     } else {
       for (const r of myRows ?? []) {
-        const rid = String((r as any).release_track_id ?? "");
-        if (!rid) continue;
+        const tid = String((r as any).track_id ?? "");
+        if (!tid) continue;
         // first wins due to sort desc
-        if (myStarsByReleaseTrackId[rid] === undefined) {
-          myStarsByReleaseTrackId[rid] = (r as any).stars ?? null;
+        if (myStarsByReleaseTrackId[tid] === undefined) {
+          myStarsByReleaseTrackId[tid] = (r as any).stars ?? null;
         }
       }
     }

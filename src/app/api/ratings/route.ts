@@ -139,7 +139,7 @@ export async function POST(req: Request) {
     .from("track_ratings")
     .select("id")
     .eq("user_id", user.id)
-    .eq("release_track_id", releaseTrackId)
+    .eq("track_id", trackId)
     .limit(1);
 
   if (ratedErr) {
@@ -159,10 +159,11 @@ export async function POST(req: Request) {
     .from("track_ratings")
     .insert({
       release_track_id: releaseTrackId,
+      track_id: trackId,
       user_id: user.id,
       stars,
     })
-    .select("id, release_track_id, user_id, stars, created_at, updated_at")
+    .select("id, release_track_id, track_id, user_id, stars, created_at, updated_at")
     .limit(1);
 
   if (insertError) {
@@ -191,7 +192,7 @@ export async function GET(req: Request) {
 
   const { data: rtRows, error: rtError } = await supabase
     .from("release_tracks")
-    .select("id, track_id, rating_avg, rating_count, stream_count, tracks(status)")
+    .select("id, track_id, stream_count, tracks(id, status, rating_avg, rating_count)")
     .eq("id", releaseTrackId)
     .limit(1);
 
@@ -204,12 +205,12 @@ export async function GET(req: Request) {
   const trackStatus = (rt as any).tracks?.status as string | undefined;
 
   let my_stars: number | null = null;
-  if (user) {
+  if (user && trackId) {
     const { data: myRows } = await supabase
       .from("track_ratings")
       .select("stars")
       .eq("user_id", user.id)
-      .eq("release_track_id", releaseTrackId)
+      .eq("track_id", trackId)
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -254,8 +255,8 @@ export async function GET(req: Request) {
       release_track_id: releaseTrackId,
       track_id: trackId ?? null,
       track_status: trackStatus ?? null,
-      rating_avg: (rt as any).rating_avg ?? null,
-      rating_count: (rt as any).rating_count ?? 0,
+      rating_avg: (rt as any).tracks?.rating_avg ?? null,
+      rating_count: (rt as any).tracks?.rating_count ?? 0,
       stream_count: (rt as any).stream_count ?? 0,
     },
     my_stars,

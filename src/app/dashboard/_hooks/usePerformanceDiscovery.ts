@@ -117,11 +117,11 @@ export function usePerformanceDiscovery({
             }
           }
 
-          // B) release_track_id + current agg (rating + streams) from release_tracks
+          // B) release_track_id + stream_count from release_tracks, rating aggregates from tracks
           if (trackIds.length > 0 && releaseIds.length > 0) {
             const { data: rts, error: rtsErr } = await supabase
               .from("release_tracks")
-              .select("id, track_id, release_id, rating_avg, rating_count, stream_count")
+              .select("id, track_id, release_id, stream_count, tracks!inner(rating_avg, rating_count)")
               .in("track_id", trackIds)
               .in("release_id", releaseIds);
 
@@ -134,8 +134,8 @@ export function usePerformanceDiscovery({
                 const key = `${rt.release_id}:${rt.track_id}`;
                 map[key] = {
                   release_track_id: rt.id,
-                  rating_avg: rt.rating_avg ?? null,
-                  rating_count: rt.rating_count ?? 0,
+                  rating_avg: rt.tracks?.rating_avg ?? null,
+                  rating_count: rt.tracks?.rating_count ?? 0,
                   stream_count: rt.stream_count ?? 0,
                 };
               }

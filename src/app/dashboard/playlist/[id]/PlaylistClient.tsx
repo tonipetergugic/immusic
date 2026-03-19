@@ -190,9 +190,9 @@ export default function PlaylistClient({
       .select(
         `
       id,
-      rating_avg,
-      rating_count,
       stream_count,
+      track_id,
+      tracks!inner(rating_avg, rating_count),
       releases!inner(status)
     `
       )
@@ -200,9 +200,12 @@ export default function PlaylistClient({
       .eq("releases.status", "published")
       .maybeSingle<{
         id: string;
-        rating_avg: number | null;
-        rating_count: number | null;
+        track_id: string;
         stream_count: number | null;
+        tracks: {
+          rating_avg: number | null;
+          rating_count: number | null;
+        };
         releases: { status: string };
       }>();
 
@@ -215,8 +218,8 @@ export default function PlaylistClient({
     const enriched: PlayerTrack = {
       ...newPlayerTrack,
       release_track_id: rt?.id ?? null,
-      rating_avg: rt?.rating_avg ?? null,
-      rating_count: rt?.rating_count ?? 0,
+      rating_avg: rt?.tracks?.rating_avg ?? null,
+      rating_count: rt?.tracks?.rating_count ?? 0,
       ...(rt?.stream_count !== null && rt?.stream_count !== undefined
         ? { stream_count: rt.stream_count }
         : {}),
