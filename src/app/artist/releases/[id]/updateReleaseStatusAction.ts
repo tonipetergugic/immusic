@@ -38,8 +38,8 @@ export async function updateReleaseStatusAction(releaseId: string, newStatus: st
     return { error: "This release has been published before and cannot be set back to draft." };
   }
 
-  // Safety: block if already published/withdrawn
-  if (current.status === "published" || current.status === "withdrawn") {
+  // Safety: block if already published
+  if (current.status === "published") {
     return { error: "This release cannot be changed." };
   }
 

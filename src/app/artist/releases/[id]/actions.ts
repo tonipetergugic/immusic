@@ -29,8 +29,8 @@ export async function updateReleaseCoverAction(releaseId: string, newFilePath: s
     throw new Error("Forbidden.");
   }
 
-  if (!(release.status === "draft" || release.status === "withdrawn")) {
-    throw new Error("Cover can only be changed while the release is draft or withdrawn.");
+  if (release.status !== "draft") {
+    throw new Error("Cover can only be changed while the release is draft.");
   }
 
   if (release.cover_path && release.cover_path !== newFilePath) {
@@ -81,8 +81,8 @@ export async function deleteReleaseCoverAction(releaseId: string) {
     throw new Error("Forbidden.");
   }
 
-  if (!(release.status === "draft" || release.status === "withdrawn")) {
-    throw new Error("Cover can only be changed while the release is draft or withdrawn.");
+  if (release.status !== "draft") {
+    throw new Error("Cover can only be changed while the release is draft.");
   }
 
   if (release.cover_path) {
@@ -134,7 +134,7 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
     return { error: "Not authorized." as const };
   }
 
-  // IMPORTANT: blocks both published and withdrawn
+  // IMPORTANT: blocks published releases
   if (rel.status !== "draft") {
     return { error: "Tracklist can only be changed while the release is in draft." as const };
   }
@@ -202,7 +202,7 @@ export async function removeTrackFromReleaseAction(releaseId: string, trackId: s
     return { error: "Not authorized." as const };
   }
 
-  // IMPORTANT: blocks both published and withdrawn
+  // IMPORTANT: blocks published releases
   if (rel.status !== "draft") {
     return { error: "Tracklist can only be changed while the release is in draft." as const };
   }
@@ -267,9 +267,9 @@ export async function reorderReleaseTracksAction(
   if (userError || !user) return { error: "Not authenticated." as const };
   if (rel.artist_id !== user.id) return { error: "Not authorized." as const };
 
-  // IMPORTANT: Reorder allowed ONLY in draft or withdrawn
-  if (!(rel.status === "draft" || rel.status === "withdrawn")) {
-    return { error: "Tracks can only be reordered while the release is draft or withdrawn." as const };
+  // IMPORTANT: Reorder allowed ONLY in draft
+  if (rel.status !== "draft") {
+    return { error: "Tracks can only be reordered while the release is in draft." as const };
   }
 
   for (const row of newOrder) {

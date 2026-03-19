@@ -3,10 +3,11 @@
 type DeleteReleaseModalProps = {
   open: boolean;
   onClose: () => void;
-  onConfirm?: () => void; // will be wired later
+  onConfirm?: () => void;
+  status: "draft" | "published";
 };
 
-export default function DeleteReleaseModal({ open, onClose, onConfirm }: DeleteReleaseModalProps) {
+export default function DeleteReleaseModal({ open, onClose, onConfirm, status }: DeleteReleaseModalProps) {
   if (!open) return null;
 
   return (
@@ -14,8 +15,19 @@ export default function DeleteReleaseModal({ open, onClose, onConfirm }: DeleteR
       <div className="bg-[#1A1A1D] text-white rounded-xl p-6 w-full max-w-md shadow-xl border border-gray-700">
         <h2 className="text-xl font-semibold mb-3">Delete Release</h2>
         <p className="text-gray-300 mb-6">
-          Are you sure you want to delete this release? This action cannot be undone.
-          The release and its cover will be removed, but your uploaded tracks will remain.
+          {status === "published" ? (
+            <>
+              This <span className="text-white font-semibold">published release</span> will be permanently deleted.
+              This action <span className="text-white font-semibold">cannot be undone</span>.
+              <br /><br />
+              The release and its cover will be removed. Your tracks and their ratings will remain.
+            </>
+          ) : (
+            <>
+              Are you sure you want to delete this draft release? This action cannot be undone.
+              The release and its cover will be removed, but your uploaded tracks will remain.
+            </>
+          )}
         </p>
 
         <div className="flex justify-end gap-3">

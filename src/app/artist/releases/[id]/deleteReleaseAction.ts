@@ -31,9 +31,9 @@ export async function deleteReleaseAction(releaseId: string) {
     return { error: "Not authorized." as const };
   }
 
-  // IMPORTANT: Delete allowed ONLY when draft or withdrawn (never when published)
-  if (!(release.status === "draft" || release.status === "withdrawn")) {
-    return { error: "Release can only be deleted while draft or withdrawn." as const };
+  // IMPORTANT: Delete allowed for draft and published
+  if (release.status !== "draft" && release.status !== "published") {
+    return { error: "Release can only be deleted while in draft or published." as const };
   }
 
   // 2. Delete all release_tracks entries
@@ -65,7 +65,7 @@ export async function deleteReleaseAction(releaseId: string) {
     .delete()
     .eq("id", releaseId)
     .eq("artist_id", user.id)
-    .in("status", ["draft", "withdrawn"]);
+    .in("status", ["draft", "published"]);
 
   if (deleteError) {
     console.error("Failed to delete release row:", deleteError);

@@ -53,7 +53,7 @@ function SortableTrackItem({
   premiumBalance: number;
   status: string | null;
   initialBoostEnabled: boolean;
-  releaseStatus: "draft" | "published" | "withdrawn";
+  releaseStatus: "draft" | "published";
   releasePublished: boolean;
 }) {
   const router = useRouter();
@@ -120,14 +120,14 @@ function SortableTrackItem({
     : "border-[#27272A] bg-[#18181B]"
   }
 `}
-      role={releaseStatus === "draft" || releaseStatus === "withdrawn" ? "button" : undefined}
-      tabIndex={releaseStatus === "draft" || releaseStatus === "withdrawn" ? 0 : undefined}
+      role={releaseStatus === "draft" ? "button" : undefined}
+      tabIndex={releaseStatus === "draft" ? 0 : undefined}
       onClick={() => {
-        if (!(releaseStatus === "draft" || releaseStatus === "withdrawn")) return;
+        if (releaseStatus !== "draft") return;
         router.push(`/artist/my-tracks/${track.track_id}/edit`);
       }}
       onKeyDown={(e) => {
-        if (!(releaseStatus === "draft" || releaseStatus === "withdrawn")) return;
+        if (releaseStatus !== "draft") return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           router.push(`/artist/my-tracks/${track.track_id}/edit`);
@@ -259,7 +259,7 @@ type TrackListSortableProps = {
   premiumBalance: number;
   trackStatusById: Record<string, string>;
   boostEnabledById: Record<string, boolean>;
-  releaseStatus: "draft" | "published" | "withdrawn";
+  releaseStatus: "draft" | "published";
   releasePublished: boolean;
 };
 

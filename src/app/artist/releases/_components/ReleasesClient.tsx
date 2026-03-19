@@ -21,7 +21,6 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
   { value: "all", label: "All" },
   { value: "published", label: "Published" },
   { value: "draft", label: "Draft" },
-  { value: "withdrawn", label: "Withdrawn" },
 ] as const;
 const [statusFilter, setStatusFilter] = useState<
   (typeof statusFilters)[number]["value"]
@@ -39,8 +38,6 @@ const [statusFilter, setStatusFilter] = useState<
             ? true
             : statusFilter === "published"
             ? s === "published"
-            : statusFilter === "withdrawn"
-            ? s === "withdrawn"
             : statusFilter === "draft"
             ? s === "draft"
             : false;
@@ -176,8 +173,6 @@ const [statusFilter, setStatusFilter] = useState<
                   "group rounded-2xl border bg-white/[0.03] p-4 transition",
                   String(r.status ?? "draft") === "published"
                     ? "border-[#00FFC6]/25 hover:border-[#00FFC6]/45 hover:bg-[#00FFC6]/[0.06]"
-                    : String(r.status ?? "draft") === "withdrawn"
-                    ? "border-white/25 hover:border-white/45 hover:bg-white/[0.06]"
                     : "border-white/10 hover:border-white/20 hover:bg-white/[0.05]",
                 ].join(" ")}
               >
