@@ -37,6 +37,7 @@ type RatingsErr = { ok: false; error: string; code?: ApiErrorCode };
 
 type TrackRatingInlineProps = {
   releaseTrackId: string;
+  trackId: string;
 
   // Optional initial rendering (avoid "empty" before GET resolves)
   initialAvg?: number | null;
@@ -85,6 +86,7 @@ function mapNotice(code?: ApiErrorCode, raw?: string) {
 
 function TrackRatingInline({
   releaseTrackId,
+  trackId,
   initialAvg = null,
   initialCount = 0,
   initialStreams = 0,
@@ -148,7 +150,7 @@ function TrackRatingInline({
   async function refresh(signal?: AbortSignal) {
     try {
       const res = await fetch(
-        `/api/ratings?releaseTrackId=${encodeURIComponent(releaseTrackId)}`,
+        `/api/ratings?trackId=${encodeURIComponent(trackId)}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -235,7 +237,7 @@ function TrackRatingInline({
       const res = await fetch("/api/ratings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ releaseTrackId, stars }),
+        body: JSON.stringify({ track_id: trackId, stars }),
       });
 
       const json = (await res.json()) as { ok: true } | RatingsErr;

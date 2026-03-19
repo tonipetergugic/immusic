@@ -152,6 +152,7 @@ function PlaylistRow({
           track.release_track_id ? (
             <TrackRatingInline
               releaseTrackId={track.release_track_id}
+              trackId={track.id}
               initialAvg={(track as any).rating_avg ?? null}
               initialCount={(track as any).rating_count ?? 0}
               initialStreams={(track as any).stream_count ?? 0}

@@ -197,6 +197,7 @@ export default function PerformanceDiscoverySection({
                     <TrackRatingInline
                       readOnly={true}
                       releaseTrackId={(rowTrack as any).release_track_id}
+                      trackId={(rowTrack as any).id}
                       initialAvg={(rowTrack as any).rating_avg}
                       initialCount={(rowTrack as any).rating_count}
                       initialStreams={(rowTrack as any).stream_count}

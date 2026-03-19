@@ -122,6 +122,7 @@ export default function ReleaseTrackRowClient({
         metaSlot={
           <TrackRatingInline
             releaseTrackId={releaseTrackId}
+            trackId={track.id}
             initialAvg={ratingAvg ?? null}
             initialCount={ratingCount ?? 0}
             initialStreams={streamCount ?? 0}

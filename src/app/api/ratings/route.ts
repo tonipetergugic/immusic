@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type Body = {
   release_track_id?: string;
   releaseTrackId?: string;
+  track_id?: string;
+  trackId?: string;
   stars?: number;
 };
 
@@ -60,41 +62,45 @@ export async function POST(req: Request) {
     return err("INVALID_JSON", "Invalid JSON body", 400);
   }
 
+  // ⚠️ DEPRECATED: releaseTrackId is legacy support only
+  // Preferred: use track_id directly
   const releaseTrackId = body.release_track_id ?? body.releaseTrackId;
   const stars = body.stars;
 
-  if (!releaseTrackId) {
-    return err("MISSING_RELEASE_TRACK_ID", "Missing release_track_id", 400);
+  // === NEW: support direct track_id ===
+  const directTrackId = body.track_id ?? body.trackId;
+
+  if (!directTrackId && !releaseTrackId) {
+    return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
   }
   if (typeof stars !== "number" || !Number.isInteger(stars) || stars < 1 || stars > 5) {
     return err("INVALID_STARS", "stars must be an integer between 1 and 5", 400);
   }
 
-  // Gate: nur Development Tracks dürfen roh bewertet werden (Phase 1.3)
-  // Join: release_tracks -> tracks
-  const { data: rtRows, error: rtError } = await supabase
-    .from("release_tracks")
-    .select("id, track_id, tracks(status)")
-    .eq("id", releaseTrackId)
-    .limit(1);
+  let trackId: string | null = null;
 
-  const rt = rtRows && rtRows.length > 0 ? rtRows[0] : null;
+  if (directTrackId) {
+    trackId = directTrackId;
+  } else if (releaseTrackId) {
+    const { data: releaseTrack, error: rtErr } = await supabase
+      .from("release_tracks")
+      .select("track_id")
+      .eq("id", releaseTrackId)
+      .single();
 
-  if (rtError) {
-    return err("INTERNAL_ERROR", "Failed to load release_track", 500);
+    if (rtErr) {
+      return err("INTERNAL_ERROR", "Failed to resolve release_track", 500);
+    }
+
+    if (!releaseTrack || !("track_id" in releaseTrack) || !releaseTrack.track_id) {
+      return err("RELEASE_TRACK_NOT_FOUND", "release_track not found", 404);
+    }
+
+    trackId = releaseTrack.track_id as string;
   }
-  if (!rt) {
-    return err("RELEASE_TRACK_NOT_FOUND", "release_track not found", 404);
-  }
 
-  const trackStatus = (rt as any).tracks?.status as string | undefined;
-  if (trackStatus !== "development") {
-    return err("RATINGS_NOT_ALLOWED_STATUS", "Ratings are only allowed for development tracks.", 403);
-  }
-
-  const trackId = (rt as any).track_id as string | undefined;
   if (!trackId) {
-    return err("INTERNAL_ERROR", "release_track missing track_id", 500);
+    return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
   }
 
   // PHASE 19 Gate 1: Ratings-Window muss offen sein (Exposure completed + innerhalb 7 Tage + gate noch nicht erreicht)
@@ -158,10 +164,10 @@ export async function POST(req: Request) {
   const { data: insertedRows, error: insertError } = await supabase
     .from("track_ratings")
     .insert({
-      release_track_id: releaseTrackId,
       track_id: trackId,
       user_id: user.id,
       stars,
+      ...(releaseTrackId ? { release_track_id: releaseTrackId } : {}),
     })
     .select("id, release_track_id, track_id, user_id, stars, created_at, updated_at")
     .limit(1);
@@ -183,26 +189,59 @@ export async function GET(req: Request) {
   } = await supabase.auth.getUser();
 
   const { searchParams } = new URL(req.url);
+  const directTrackId =
+    searchParams.get("track_id") ?? searchParams.get("trackId");
+
+  // ⚠️ DEPRECATED: releaseTrackId is legacy support only
   const releaseTrackId =
     searchParams.get("release_track_id") ?? searchParams.get("releaseTrackId");
 
-  if (!releaseTrackId) {
-    return err("MISSING_RELEASE_TRACK_ID", "Missing release_track_id", 400);
+  let trackId: string | null = null;
+  let streamCount = 0;
+  let trackStatus: string | null = null;
+  let ratingAvg: number | null = null;
+  let ratingCount = 0;
+
+  if (directTrackId) {
+    const { data: trackRows, error: trackErr } = await supabase
+      .from("tracks")
+      .select("id, status, rating_avg, rating_count")
+      .eq("id", directTrackId)
+      .limit(1);
+
+    if (trackErr) {
+      return err("INTERNAL_ERROR", "Failed to load track", 500);
+    }
+
+    const track = trackRows && trackRows.length > 0 ? trackRows[0] : null;
+    if (!track) return err("RELEASE_TRACK_NOT_FOUND", "track not found", 404);
+
+    trackId = String((track as any).id);
+    trackStatus = ((track as any).status as string | null) ?? null;
+    ratingAvg = ((track as any).rating_avg as number | null) ?? null;
+    ratingCount = Number((track as any).rating_count ?? 0);
+  } else if (releaseTrackId) {
+    const { data: rtRows, error: rtError } = await supabase
+      .from("release_tracks")
+      .select("id, track_id, stream_count, tracks(id, status, rating_avg, rating_count)")
+      .eq("id", releaseTrackId)
+      .limit(1);
+
+    if (rtError) {
+      return err("INTERNAL_ERROR", "Failed to load release_track", 500);
+    }
+
+    const rt = rtRows && rtRows.length > 0 ? rtRows[0] : null;
+    if (!rt) return err("RELEASE_TRACK_NOT_FOUND", "release_track not found", 404);
+
+    trackId = ((rt as any).track_id as string | undefined) ?? null;
+    trackStatus = ((rt as any).tracks?.status as string | null) ?? null;
+    ratingAvg = ((rt as any).tracks?.rating_avg as number | null) ?? null;
+    ratingCount = Number((rt as any).tracks?.rating_count ?? 0);
+    streamCount = Number((rt as any).stream_count ?? 0);
+  } else {
+    return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
   }
-
-  const { data: rtRows, error: rtError } = await supabase
-    .from("release_tracks")
-    .select("id, track_id, stream_count, tracks(id, status, rating_avg, rating_count)")
-    .eq("id", releaseTrackId)
-    .limit(1);
-
-  if (rtError) return err("INTERNAL_ERROR", "Failed to load release_track", 500);
-
-  const rt = rtRows && rtRows.length > 0 ? rtRows[0] : null;
-  if (!rt) return err("RELEASE_TRACK_NOT_FOUND", "release_track not found", 404);
-
-  const trackId = (rt as any).track_id as string | undefined;
-  const trackStatus = (rt as any).tracks?.status as string | undefined;
 
   let my_stars: number | null = null;
   if (user && trackId) {
@@ -252,12 +291,12 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     summary: {
-      release_track_id: releaseTrackId,
+      release_track_id: releaseTrackId ?? null,
       track_id: trackId ?? null,
       track_status: trackStatus ?? null,
-      rating_avg: (rt as any).tracks?.rating_avg ?? null,
-      rating_count: (rt as any).tracks?.rating_count ?? 0,
-      stream_count: (rt as any).stream_count ?? 0,
+      rating_avg: ratingAvg,
+      rating_count: ratingCount,
+      stream_count: streamCount,
     },
     my_stars,
     eligibility: {

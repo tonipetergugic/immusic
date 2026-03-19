@@ -69,6 +69,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                   return (
                     <TrackRatingInline
                       releaseTrackId={rid}
+                      trackId={String(track.id)}
                       initialAvg={summary.avg}
                       initialCount={summary.count}
                       initialStreams={summary.streams}
