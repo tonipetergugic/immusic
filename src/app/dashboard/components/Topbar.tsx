@@ -119,7 +119,7 @@ export default function Topbar({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/";
+      window.location.href = "/login";
   };
 
   return (

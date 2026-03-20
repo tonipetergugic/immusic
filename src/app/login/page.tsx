@@ -49,9 +49,18 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-[#050507] text-white overflow-hidden px-4 pt-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="h-[720px] w-[720px] bg-[#00FFC6] opacity-10 blur-[180px] rounded-full translate-y-[-120px]" />
-      </div>
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url(/landing/hero-bg.png)" }}
+        aria-hidden="true"
+      />
+
+      {/* Dark overlay (stärker als Landingpage für bessere Lesbarkeit) */}
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/85 to-black/90"
+        aria-hidden="true"
+      />
 
       <div className="relative w-full max-w-md text-center">
         {/* Header */}
@@ -83,11 +92,11 @@ export default function LoginPage() {
                 w-full max-w-sm
                 px-5 py-4
                 rounded-full
-                bg-white/5
-                border border-white/15
+                bg-white/10
+                border border-white/20
                 backdrop-blur-md
                 text-center
-                placeholder:text-white/40
+                placeholder:text-white/50
                 transition-all duration-200
                 focus:outline-none
                 focus:border-[#00FFC6]/80
@@ -102,19 +111,20 @@ export default function LoginPage() {
             We'll send a secure login link to your email.
           </p>
 
-          <div className="mt-10 flex justify-center">
+          <div className="mt-8 flex justify-center sm:mt-10">
             <button
               type="submit"
               disabled={!canSubmit}
               className={`
                 inline-flex items-center justify-center
-                px-7 py-2.5
+                px-10 py-3
                 rounded-full
                 bg-[#0E0E10]
                 border border-[#00FFC6]/80
                 text-[#00FFC6]
                 font-semibold
-                tracking-wide
+                tracking-tight
+                cursor-pointer
                 transition-all duration-200
                 shadow-[0_0_0_1px_rgba(0,255,198,0.45),0_0_30px_rgba(0,255,198,0.25)]
                 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.7),0_0_60px_rgba(0,255,198,0.45)]
