@@ -34,6 +34,14 @@ export default function AdminDashboardPage() {
         <div className="text-lg font-semibold">Moderation</div>
         <div className="mt-1 text-sm text-[#B3B3B3]">Open</div>
       </Link>
+
+      <Link
+        href="/dashboard/admin/users"
+        className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition"
+      >
+        <div className="text-lg font-semibold">Users: Manage</div>
+        <div className="mt-1 text-sm text-[#B3B3B3]">Delete / Moderate</div>
+      </Link>
     </div>
   );
 }

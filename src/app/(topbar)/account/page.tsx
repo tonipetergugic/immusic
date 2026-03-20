@@ -26,6 +26,8 @@ export default function AccountPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteInfo, setDeleteInfo] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -117,6 +119,33 @@ export default function AccountPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError(null);
+    setDeleteInfo(null);
+
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+      setDeleteError('Please type "DELETE" to confirm.');
+      return;
+    }
+
+    setDeleteLoading(true);
+
+    try {
+      const { error } = await supabase.rpc("delete_my_account");
+
+      if (error) {
+        setDeleteError(error.message);
+        return;
+      }
+
+      setDeleteOpen(false);
+      setDeleteInfo("Your account was permanently deleted.");
+      window.location.href = "/login";
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -396,7 +425,7 @@ export default function AccountPage() {
           >
             <div className="text-white/90 font-medium">Delete account</div>
             <div className="text-sm text-[#B3B3B3] mt-1">
-              This permanently deletes your account. This is a UI-only flow for now (no backend wired).
+              This permanently deletes your account and all associated data. This action cannot be undone.
             </div>
 
             <div className="mt-4 flex items-center gap-3">
@@ -447,7 +476,9 @@ export default function AccountPage() {
               type="button"
               className="absolute inset-0 bg-black/70"
               aria-label="Close modal"
-              onClick={() => setDeleteOpen(false)}
+              onClick={() => {
+                if (!deleteLoading) setDeleteOpen(false);
+              }}
             />
 
             <div
@@ -465,10 +496,10 @@ export default function AccountPage() {
               </div>
 
               <div className="mt-2 text-sm text-[#B3B3B3]">
-                Type <span className="text-white/90 font-medium">DELETE</span> to enable the final button.
+                Type <span className="text-white/90 font-medium">DELETE</span> to permanently remove your account and all associated data.
                 <br />
                 <span className="text-red-300">
-                  UI only: No backend deletion is executed in this build.
+                  This action is irreversible.
                 </span>
               </div>
 
@@ -495,6 +526,12 @@ export default function AccountPage() {
                 />
               </div>
 
+              {deleteError && (
+                <div className="mt-4 text-sm text-red-400">
+                  {deleteError}
+                </div>
+              )}
+
               <div className="mt-5 flex items-center justify-end gap-3">
                 <button
                   type="button"
@@ -516,11 +553,11 @@ export default function AccountPage() {
 
                 <button
                   type="button"
-                  disabled={deleteConfirmText.trim().toUpperCase() !== "DELETE"}
-                  onClick={() => {
-                    setDeleteOpen(false);
-                    setDeleteInfo("Account deletion confirmed (UI only). Backend wiring comes later.");
-                  }}
+                  disabled={
+                    deleteLoading ||
+                    deleteConfirmText.trim().toUpperCase() !== "DELETE"
+                  }
+                  onClick={handleDeleteAccount}
                   className="
                     inline-flex items-center justify-center
                     rounded-lg
@@ -537,7 +574,7 @@ export default function AccountPage() {
                     disabled:hover:text-red-300
                   "
                 >
-                  Delete permanently
+                  {deleteLoading ? "Deleting..." : "Delete permanently"}
                 </button>
               </div>
             </div>
