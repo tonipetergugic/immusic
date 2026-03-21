@@ -4,7 +4,7 @@ export async function markQueueRejected(params: {
   queueId: string;
   reject_reason: "technical" | "duplicate_audio";
 }) {
-  await params.supabase
+  const { error } = await params.supabase
     .from("tracks_ai_queue")
     .update({
       status: "rejected",
@@ -14,6 +14,14 @@ export async function markQueueRejected(params: {
     })
     .eq("id", params.queueId)
     .eq("user_id", params.userId);
+
+  if (error) {
+    console.error("QUEUE_REJECT_UPDATE_ERROR", {
+      queueId: params.queueId,
+      userId: params.userId,
+      error,
+    });
+  }
 }
 
 export async function markQueueApproved(params: {
@@ -22,11 +30,19 @@ export async function markQueueApproved(params: {
   queueId: string;
   audio_path: string;
 }) {
-  await params.supabase
+  const { error } = await params.supabase
     .from("tracks_ai_queue")
     .update({ status: "approved", message: null, audio_path: params.audio_path })
     .eq("id", params.queueId)
     .eq("user_id", params.userId);
+
+  if (error) {
+    console.error("QUEUE_APPROVE_UPDATE_ERROR", {
+      queueId: params.queueId,
+      userId: params.userId,
+      error,
+    });
+  }
 }
 
 export async function resetQueueToPending(params: {
@@ -34,9 +50,17 @@ export async function resetQueueToPending(params: {
   userId: string;
   queueId: string;
 }) {
-  await params.supabase
+  const { error } = await params.supabase
     .from("tracks_ai_queue")
     .update({ status: "pending", message: null })
     .eq("id", params.queueId)
     .eq("user_id", params.userId);
+
+  if (error) {
+    console.error("QUEUE_RESET_UPDATE_ERROR", {
+      queueId: params.queueId,
+      userId: params.userId,
+      error,
+    });
+  }
 }
