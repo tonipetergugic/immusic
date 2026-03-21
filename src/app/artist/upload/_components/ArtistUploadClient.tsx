@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, ArrowRight, RotateCcw, Upload as UploadIcon } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { ArrowRight, RotateCcw, Upload as UploadIcon } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
 import { submitToQueueAction } from "../actions";
@@ -145,6 +145,12 @@ export default function ArtistUploadClient({ userId }: Props) {
   const [rightsAccepted, setRightsAccepted] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [fileError, setFileError] = useState(false);
+  const [uiError, setUiError] = useState<string | null>(null);
+  const [flowStep, setFlowStep] = useState<"idle" | "validating" | "uploading" | "queueing">("idle");
+
+  const submitFormRef = useRef<HTMLFormElement | null>(null);
+  const audioPathInputRef = useRef<HTMLInputElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const hasTitleError = titleTouched && !title.trim();
 
@@ -152,17 +158,25 @@ export default function ArtistUploadClient({ userId }: Props) {
     if (!next) {
       setFile(null);
       setFileError(false);
+      setUiError(null);
+      setAudioPath(null);
+      setFlowStep("idle");
       return;
     }
 
     const ext = (next.name.split(".").pop() || "").toLowerCase();
     if (ext !== "wav") {
       setFileError(true);
+      setUiError("Only WAV files are supported. Please export your track as WAV.");
       setFile(null);
+      setAudioPath(null);
       setResetSignal((s) => s + 1);
+      setFlowStep("idle");
       return;
     }
 
+    setUiError(null);
+    setAudioPath(null);
     setFileError(false);
     setFile(next);
   }
@@ -170,49 +184,77 @@ export default function ArtistUploadClient({ userId }: Props) {
   async function handleUpload() {
     if (!file) return;
 
-    // Validate WAV header BEFORE upload (enforcement)
-    try {
-      const v = await validateWavFile(file);
-      if (!v.ok) {
-        alert(v.reason);
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Could not read WAV file. Please re-export and try again.");
-      return;
-    }
+    setUiError(null);
 
     const extCheck = (file.name.split(".").pop() || "").toLowerCase();
     if (extCheck !== "wav") {
-      alert("Only WAV files are supported. Please export your track as WAV.");
+      setFileError(true);
+      setUiError("Only WAV files are supported. Please export your track as WAV.");
       return;
     }
 
     if (!title.trim()) {
-      alert("Please enter a track title.");
+      setTitleTouched(true);
+      setUiError("Please enter a track title.");
+      return;
+    }
+
+    if (!rightsAccepted) {
+      setUiError("Please confirm your rights before uploading.");
       return;
     }
 
     setUploading(true);
 
-    const safeTitle = slugify(title.trim()) || "untitled";
-    const filePath = `${userId}/${safeTitle}-${randomId()}.wav`;
+    try {
+      setFlowStep("validating");
 
-    const { error } = await supabase.storage.from("ingest_wavs").upload(filePath, file, {
-      contentType: "audio/wav",
-      upsert: false,
-    });
+      const v = await validateWavFile(file);
+      if (!v.ok) {
+        setUiError(v.reason);
+        setUploading(false);
+        setFlowStep("idle");
+        return;
+      }
 
-    if (error) {
-      console.error(error);
-      alert("Upload failed");
+      setFlowStep("uploading");
+
+      const safeTitle = slugify(title.trim()) || "untitled";
+      const filePath = `${userId}/${safeTitle}-${randomId()}.wav`;
+
+      const { error } = await supabase.storage.from("ingest_wavs").upload(filePath, file, {
+        contentType: "audio/wav",
+        upsert: false,
+      });
+
+      if (error) {
+        console.error(error);
+        setUiError("Upload failed. Please try again.");
+        setUploading(false);
+        setFlowStep("idle");
+        return;
+      }
+
+      setAudioPath(filePath);
+      setFlowStep("queueing");
+
+      if (!submitFormRef.current || !audioPathInputRef.current || !titleInputRef.current) {
+        setUiError("Could not start the quality check. Please try again.");
+        setUploading(false);
+        setFlowStep("idle");
+        return;
+      }
+
+      audioPathInputRef.current.value = filePath;
+      titleInputRef.current.value = title.trim();
+
+      submitFormRef.current.requestSubmit();
+    } catch (e) {
+      console.error(e);
+      setUiError("Could not start the quality check. Please try again.");
       setUploading(false);
-      return;
+      setFlowStep("idle");
     }
-
-    setAudioPath(filePath);
-    setUploading(false);
   }
 
   return (
@@ -308,6 +350,56 @@ export default function ArtistUploadClient({ userId }: Props) {
                   </span>
                 )}
               </div>
+
+              {uploading ? (
+                <div className="mt-4 rounded-xl border border-[#00FFC6]/20 bg-[#00FFC6]/5 px-4 py-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-semibold text-white">
+                        {flowStep === "validating" && "Validating file..."}
+                        {flowStep === "uploading" && "Uploading file..."}
+                        {flowStep === "queueing" && "Starting quality check..."}
+                      </div>
+                      <p className="mt-1 text-sm text-white/65">
+                        Please wait. Do not close this page.
+                      </p>
+                    </div>
+
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
+                      In progress
+                    </span>
+                  </div>
+
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className={`h-full rounded-full bg-[#00FFC6] transition-all duration-300 ${
+                        flowStep === "validating"
+                          ? "w-1/3"
+                          : flowStep === "uploading"
+                            ? "w-2/3"
+                            : "w-full"
+                      }`}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {uiError ? (
+                <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+                  {uiError}
+                </div>
+              ) : null}
+
+              {audioPath && !uploading ? (
+                <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+                    Uploaded file path
+                  </div>
+                  <div className="mt-2 break-all text-sm text-[#B3B3B3]">
+                    {audioPath}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -326,65 +418,49 @@ export default function ArtistUploadClient({ userId }: Props) {
         </div>
 
         {/* Actions */}
-        <div className="mt-6">
-          {file && !audioPath && (
-            <button
-              onClick={handleUpload}
-              disabled={uploading || title.trim().length === 0 || !rightsAccepted}
-              className="group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-              type="button"
-            >
-              <Plus size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
-              <span>{uploading ? "Uploading..." : "Upload to Storage"}</span>
-            </button>
-          )}
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            onClick={handleUpload}
+            disabled={!file || uploading || title.trim().length === 0 || !rightsAccepted}
+            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+            type="button"
+          >
+            <ArrowRight size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
+            <span>
+              {flowStep === "validating"
+                ? "Validating..."
+                : flowStep === "uploading"
+                  ? "Uploading..."
+                  : flowStep === "queueing"
+                    ? "Starting quality check..."
+                    : "Upload and start quality check"}
+            </span>
+          </button>
 
-          {audioPath && (
-            <div className="mt-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">Uploaded to storage</div>
-                  <div className="mt-2 break-all text-sm text-[#B3B3B3]">{audioPath}</div>
-                </div>
+          <button
+            type="button"
+            onClick={() => {
+              setTitle("");
+              setFile(null);
+              setAudioPath(null);
+              setRightsAccepted(false);
+              setTitleTouched(false);
+              setResetSignal((s) => s + 1);
+              setFileError(false);
+              setUiError(null);
+              setFlowStep("idle");
+            }}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RotateCcw size={16} strokeWidth={2.5} className="text-white/40" />
+            Reset upload
+          </button>
 
-                <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
-                  Ready
-                </span>
-              </div>
-
-              <div className="mt-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTitle("");
-                    setFile(null);
-                    setAudioPath(null);
-                    setRightsAccepted(false);
-                    setTitleTouched(false);
-                    setResetSignal((s) => s + 1);
-                    setFileError(false);
-                  }}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white"
-                >
-                  <RotateCcw size={16} strokeWidth={2.5} className="text-white/40" />
-                  Reset upload
-                </button>
-              </div>
-
-              <form action={submitToQueueAction} className="mt-6 flex items-center gap-3">
-                <input type="hidden" name="audio_path" value={audioPath!} />
-                <input type="hidden" name="title" value={title} />
-                <button
-                  type="submit"
-                  disabled={!rightsAccepted}
-                  className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-                >
-                  <ArrowRight size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
-                  Submit to QC
-                </button>
-              </form>
-            </div>
-          )}
+          <form ref={submitFormRef} action={submitToQueueAction} className="hidden">
+            <input ref={audioPathInputRef} type="hidden" name="audio_path" defaultValue="" />
+            <input ref={titleInputRef} type="hidden" name="title" defaultValue="" />
+          </form>
         </div>
       </div>
     </div>

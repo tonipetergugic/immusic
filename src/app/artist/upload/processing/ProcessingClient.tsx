@@ -21,6 +21,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const [canFeedback, setCanFeedback] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [visualStep, setVisualStep] = useState(0);
 
   const pollCountRef = useRef(0);
   const startedAtRef = useRef<number>(0);
@@ -117,15 +118,77 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     };
   }, [retryKey, queueId]);
 
+  useEffect(() => {
+    if (approved || rejected || timedOut || errorText) return;
+
+    const steps = [
+      "Preparing analysis…",
+      "Checking audio quality…",
+      "Inspecting technical details…",
+      "Finalizing result…",
+    ];
+
+    setVisualStep(0);
+
+    const interval = window.setInterval(() => {
+      setVisualStep((prev) => (prev + 1) % steps.length);
+    }, 2200);
+
+    return () => window.clearInterval(interval);
+  }, [approved, rejected, timedOut, errorText, retryKey]);
+
+  const visualStatuses = [
+    "Preparing analysis…",
+    "Checking audio quality…",
+    "Inspecting technical details…",
+    "Finalizing result…",
+  ];
+
+  const activeVisualStatus = visualStatuses[visualStep] ?? visualStatuses[0];
+  const isRunning = !approved && !rejected && !timedOut && !errorText;
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] text-white">
-      <div className="text-center mb-6 max-w-lg px-6">
-        <h1 className="text-2xl font-bold mb-2">Processing your track</h1>
-        {!rejected && !approved && (
-          <p className="text-white/60">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] px-6 text-white">
+      <div className="mb-6 w-full max-w-2xl text-center">
+        <h1 className="mb-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <span className="text-[#00FFC6]">Processing</span> your{" "}
+          <span className="text-[#00FFC6]">track</span>
+        </h1>
+
+        {isRunning ? (
+          <div className="mt-8 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.025] p-7 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div className="min-w-0">
+                <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                  {activeVisualStatus}
+                </p>
+
+                {/* statusText entfernt für klarere UI */}
+              </div>
+
+              <div className="relative mt-1 h-5 w-5 shrink-0">
+                <span className="absolute inset-0 rounded-full border border-white/15" />
+                <span className="absolute inset-0 rounded-full bg-[#00FFC6]/20 blur-[6px]" />
+                <span className="absolute inset-0 animate-ping rounded-full bg-[#00FFC6]/25" />
+                <span className="absolute inset-[4px] rounded-full bg-[#00FFC6]" />
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
+                <div className="processing-bar h-full w-1/3 rounded-full bg-[#00FFC6]" />
+              </div>
+            </div>
+
+            <p className="mt-6 text-center text-sm text-white/70 sm:text-[15px]">
+              Do not close this page — your track is currently being processed.
+            </p>
+          </div>
+        ) : !rejected && !approved ? (
+          <p className="text-base text-white/60">
             {statusText}
           </p>
-        )}
+        ) : null}
 
         {timedOut && !approved && !rejected && (
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
@@ -225,6 +288,25 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           </p>
         )}
       </div>
+
+      <style jsx>{`
+        .processing-bar {
+          animation: processing-slide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          box-shadow: 0 0 24px rgba(0, 255, 198, 0.35);
+        }
+
+        @keyframes processing-slide {
+          0% {
+            transform: translateX(-130%);
+          }
+          55% {
+            transform: translateX(105%);
+          }
+          100% {
+            transform: translateX(280%);
+          }
+        }
+      `}</style>
     </div>
   );
 }
