@@ -11,6 +11,7 @@ export async function markQueueRejected(params: {
       rejected_at: new Date().toISOString(),
       reject_reason: params.reject_reason,
       message: null,
+      processing_started_at: null,
     })
     .eq("id", params.queueId)
     .eq("user_id", params.userId);
@@ -32,7 +33,12 @@ export async function markQueueApproved(params: {
 }) {
   const { error } = await params.supabase
     .from("tracks_ai_queue")
-    .update({ status: "approved", message: null, audio_path: params.audio_path })
+    .update({
+      status: "approved",
+      message: null,
+      audio_path: params.audio_path,
+      processing_started_at: null,
+    })
     .eq("id", params.queueId)
     .eq("user_id", params.userId);
 
@@ -52,7 +58,11 @@ export async function resetQueueToPending(params: {
 }) {
   const { error } = await params.supabase
     .from("tracks_ai_queue")
-    .update({ status: "pending", message: null })
+    .update({
+      status: "pending",
+      message: null,
+      processing_started_at: null,
+    })
     .eq("id", params.queueId)
     .eq("user_id", params.userId);
 

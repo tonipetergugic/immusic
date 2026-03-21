@@ -422,6 +422,19 @@ async function runApproveAndInsertTrack(params: {
     setTmpMp3Path,
   } = params;
 
+  const safeTitleOut = (title || "untitled")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const mp3Path = `${userId}/${safeTitleOut}-${queueId}.mp3`;
+
+  async function bestEffortRemoveUploadedMp3() {
+    try {
+      await supabase.storage.from("tracks").remove([mp3Path]);
+    } catch {}
+  }
+
   // APPROVE -> insert track
   if (!title) {
     await supabase
@@ -439,13 +452,6 @@ async function runApproveAndInsertTrack(params: {
 
     return { ok: true, response };
   }
-
-  const safeTitleOut = (title || "untitled")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  const mp3Path = `${userId}/${safeTitleOut}-${queueId}.mp3`;
 
   let mp3Bytes: Uint8Array;
   try {
@@ -486,6 +492,8 @@ async function runApproveAndInsertTrack(params: {
   const finalAudioHash = audioHash;
 
   if (!finalAudioHash) {
+    await bestEffortRemoveUploadedMp3();
+
     const response = await respondInfraError500AndReset({
       supabase,
       userId,
@@ -513,6 +521,7 @@ async function runApproveAndInsertTrack(params: {
       const isQueueUnique = msg.includes("tracks_source_queue_id_uq") || msg.includes("source_queue_id");
 
       if (isAudioHashUnique && !isQueueUnique) {
+        await bestEffortRemoveUploadedMp3();
         await bestEffortRemoveIngestWav({ supabase, audioPath });
 
         await markQueueRejected({
@@ -560,6 +569,8 @@ async function runApproveAndInsertTrack(params: {
 
       return { ok: true, response };
     }
+
+    await bestEffortRemoveUploadedMp3();
 
     const response = await respondInfraError500AndReset({
       supabase,

@@ -6,6 +6,10 @@ export type PersistPrivateResult =
   | { ok: false; error: "private_metrics_upsert_failed"; details?: any }
   | { ok: false; error: "private_events_upsert_failed"; details?: any };
 
+function finiteOrNull(value: number | null | undefined) {
+  return Number.isFinite(value) ? value : null;
+}
+
 export async function persistPrivateMetricsAndEvents(params: {
   admin: any;
   queueId: string;
@@ -42,22 +46,11 @@ export async function persistPrivateMetricsAndEvents(params: {
   // 3.5.1) Persist private metrics (server-only truth). Must happen before any cleanup/terminal return.
   if (
     !Number.isFinite(params.truePeakDb) ||
+    !Number.isFinite(params.truePeakDbEffective) ||
     !Number.isFinite(params.integratedLufs) ||
-    !Number.isFinite(params.maxSamplePeakDbfs) ||
     !Number.isFinite(params.clippedSampleCount) ||
     params.clippedSampleCount < 0 ||
-    !Number.isFinite(params.phaseCorrelation) ||
-    !Number.isFinite(params.midRmsDbfs) ||
-    !Number.isFinite(params.sideRmsDbfs) ||
-    !Number.isFinite(params.midSideEnergyRatio) ||
-    !Number.isFinite(params.stereoWidthIndex) ||
-    !Number.isFinite(params.spectralSubRmsDbfs) ||
-    !Number.isFinite(params.spectralLowRmsDbfs) ||
-    !Number.isFinite(params.spectralLowMidRmsDbfs) ||
-    !Number.isFinite(params.spectralMidRmsDbfs) ||
-    !Number.isFinite(params.spectralHighMidRmsDbfs) ||
-    !Number.isFinite(params.spectralHighRmsDbfs) ||
-    !Number.isFinite(params.spectralAirRmsDbfs)
+    !Number.isFinite(params.crestFactorDb)
   ) {
     return { ok: false, error: "private_metrics_invalid" };
   }
@@ -79,25 +72,25 @@ export async function persistPrivateMetricsAndEvents(params: {
           duration_s: params.durationSec,
           true_peak_overs: Array.isArray(params.truePeakOvers) ? params.truePeakOvers : [],
           loudness_range_lu: params.lraLu,
-          max_sample_peak_dbfs: params.maxSamplePeakDbfs,
+          max_sample_peak_dbfs: finiteOrNull(params.maxSamplePeakDbfs),
           clipped_sample_count: Math.trunc(params.clippedSampleCount),
           crest_factor_db: params.crestFactorDb,
-          phase_correlation: params.phaseCorrelation,
-          mid_rms_dbfs: params.midRmsDbfs,
-          side_rms_dbfs: params.sideRmsDbfs,
-          mid_side_energy_ratio: params.midSideEnergyRatio,
-          stereo_width_index: params.stereoWidthIndex,
+          phase_correlation: finiteOrNull(params.phaseCorrelation),
+          mid_rms_dbfs: finiteOrNull(params.midRmsDbfs),
+          side_rms_dbfs: finiteOrNull(params.sideRmsDbfs),
+          mid_side_energy_ratio: finiteOrNull(params.midSideEnergyRatio),
+          stereo_width_index: finiteOrNull(params.stereoWidthIndex),
           low_end_phase_corr_20_120: params.lowEndPhaseCorrelation20_120,
           low_end_mono_loss_pct_20_120: params.lowEndMonoEnergyLossPct20_120,
           low_end_phase_corr_20_60: params.lowEndPhaseCorrelation20_60,
           low_end_phase_corr_60_120: params.lowEndPhaseCorrelation60_120,
-          spectral_sub_rms_dbfs: params.spectralSubRmsDbfs,
-          spectral_low_rms_dbfs: params.spectralLowRmsDbfs,
-          spectral_lowmid_rms_dbfs: params.spectralLowMidRmsDbfs,
-          spectral_mid_rms_dbfs: params.spectralMidRmsDbfs,
-          spectral_highmid_rms_dbfs: params.spectralHighMidRmsDbfs,
-          spectral_high_rms_dbfs: params.spectralHighRmsDbfs,
-          spectral_air_rms_dbfs: params.spectralAirRmsDbfs,
+          spectral_sub_rms_dbfs: finiteOrNull(params.spectralSubRmsDbfs),
+          spectral_low_rms_dbfs: finiteOrNull(params.spectralLowRmsDbfs),
+          spectral_lowmid_rms_dbfs: finiteOrNull(params.spectralLowMidRmsDbfs),
+          spectral_mid_rms_dbfs: finiteOrNull(params.spectralMidRmsDbfs),
+          spectral_highmid_rms_dbfs: finiteOrNull(params.spectralHighMidRmsDbfs),
+          spectral_high_rms_dbfs: finiteOrNull(params.spectralHighRmsDbfs),
+          spectral_air_rms_dbfs: finiteOrNull(params.spectralAirRmsDbfs),
           mean_short_rms_dbfs: params.transient.mean_short_rms_dbfs,
           p95_short_rms_dbfs: params.transient.p95_short_rms_dbfs,
           mean_short_peak_dbfs: params.transient.mean_short_peak_dbfs,

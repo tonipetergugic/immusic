@@ -10,7 +10,10 @@ export async function claimPendingQueueItem(params: {
 }) : Promise<ClaimQueueResult> {
   const { data: claimRows, error: claimErr } = await params.supabase
     .from("tracks_ai_queue")
-    .update({ status: "processing" })
+    .update({
+      status: "processing",
+      processing_started_at: new Date().toISOString(),
+    })
     .eq("id", params.queueId)
     .eq("user_id", params.userId)
     .eq("status", "pending")
