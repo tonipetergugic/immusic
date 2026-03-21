@@ -44,7 +44,13 @@
   }
  
   if (existingPending && existingPending.length > 0) {
-    redirect("/artist/upload/processing");
+    const existingQueueId = existingPending[0]?.id;
+
+    if (!existingQueueId) {
+      throw new Error("Existing queue entry is missing an id.");
+    }
+
+    redirect(`/artist/upload/processing?queue_id=${encodeURIComponent(existingQueueId)}`);
   }
  
   const { data: insertedRow, error: insertErr } = await supabase

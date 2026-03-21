@@ -280,7 +280,7 @@ export default function ArtistUploadClient({ userId }: Props) {
       </div>
 
       {/* Panel */}
-      <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_-1px_0_0_rgba(255,255,255,0.06)] sm:p-8">
+      <div className="mt-6 rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-7 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
         {/* Title */}
         <div>
           <label className="block text-lg font-semibold text-white" htmlFor="track-title">
@@ -309,8 +309,12 @@ export default function ArtistUploadClient({ userId }: Props) {
         {/* Dropzone */}
         <div className="mt-6">
           <div className="mt-8 text-lg font-semibold text-white">Audio file</div>
-          <p className="mt-2 text-sm text-[#B3B3B3]">
-            Required: <span className="text-white/80">WAV (Master)</span>, 44.1 kHz or 48 kHz, 16-bit or 24-bit, stereo, max 10 min.
+          <p className="text-sm text-white/70">
+            WAV (Master), 44.1 kHz or 48 kHz, 16-bit or 24-bit, stereo
+          </p>
+
+          <p className="mt-1 text-sm text-white/40">
+            Max length: 10 minutes
           </p>
           <p className="mt-2 text-xs leading-relaxed text-white/60">
             IMUSIC uses lossless WAV ingest for reliable analysis. After quality control, the system transcodes to MP3 for streaming.
@@ -341,8 +345,8 @@ export default function ArtistUploadClient({ userId }: Props) {
                 </div>
 
                 {(file.name.split(".").pop() || "").toLowerCase() === "wav" ? (
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
-                    WAV detected
+                  <span className="inline-flex shrink-0 items-center rounded-md border border-[#00FFC6]/40 bg-[#00FFC6]/10 px-2 py-1 text-[11px] font-medium tracking-wide text-white">
+                    WAV DETECTED
                   </span>
                 ) : (
                   <span className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
@@ -403,16 +407,15 @@ export default function ArtistUploadClient({ userId }: Props) {
             </div>
           ) : null}
 
-          <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-[#00FFC6]/40 hover:bg-white/[0.03]">
+          <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
             <input
               type="checkbox"
               checked={rightsAccepted}
               onChange={(e) => setRightsAccepted(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/[0.03] accent-[#00FFC6]"
+              className="mt-1 accent-[#00FFC6]"
             />
-            <span className="text-sm font-medium leading-relaxed text-white/90">
-              I confirm that I own or control all rights to this recording and that it does not contain any copyrighted
-              material used without permission.
+            <span>
+              I confirm that I own or control all rights to this recording and that it does not contain copyrighted material.
             </span>
           </label>
         </div>
@@ -422,10 +425,10 @@ export default function ArtistUploadClient({ userId }: Props) {
           <button
             onClick={handleUpload}
             disabled={!file || uploading || title.trim().length === 0 || !rightsAccepted}
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/90 transition hover:border-[#00FFC6]/60 hover:bg-white/[0.06] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#00FFC6]/60 hover:bg-[#00FFC6]/16 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.16)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-white/40 disabled:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
             type="button"
           >
-            <ArrowRight size={16} strokeWidth={2.5} className="text-white/70 transition group-hover:text-[#00FFC6]" />
+            <ArrowRight size={16} strokeWidth={2.5} className="text-[#00FFC6] transition group-hover:translate-x-0.5" />
             <span>
               {flowStep === "validating"
                 ? "Validating..."
@@ -442,6 +445,7 @@ export default function ArtistUploadClient({ userId }: Props) {
             onClick={() => {
               setTitle("");
               setFile(null);
+              setUploading(false);
               setAudioPath(null);
               setRightsAccepted(false);
               setTitleTouched(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, DragEvent } from "react";
+import { Upload as UploadIcon } from "lucide-react";
 
 export default function AudioDropzone({
   onFileSelected,
@@ -64,25 +65,32 @@ export default function AudioDropzone({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={`
-  w-full h-32 rounded-xl cursor-pointer flex items-center justify-center
-  border-2 border-dashed transition
+  w-full cursor-pointer rounded-2xl border border-white/10 bg-black/30 p-8 text-center transition
+  hover:border-[#00FFC6]/40 hover:bg-black/40
   active:scale-[0.99]
-  hover:border-[#00FFC6]/60 hover:bg-white/[0.03]
-  hover:shadow-[0_0_0_1px_rgba(0,255,198,0.18),0_20px_60px_rgba(0,255,198,0.10)]
   ${
     dragActive
-      ? "border-[#00FFC6] bg-[#00FFC6]/10 shadow-[0_0_0_1px_rgba(0,255,198,0.30),0_28px_80px_rgba(0,255,198,0.14)]"
-      : "border-[#2A2A2D] bg-[#111112]"
+      ? "border-[#00FFC6]/40 bg-black/40 shadow-[0_0_0_1px_rgba(0,255,198,0.20),0_20px_60px_rgba(0,255,198,0.12)]"
+      : ""
   }
-  ${fileError ? "border-red-400/60 bg-red-400/5" : ""}
+  ${fileError ? "border-red-400/60 bg-red-400/10" : ""}
 `}
     >
       {fileName ? (
-        <p className="text-white/80 text-sm">{fileName}</p>
+        <p className="text-sm text-white/80">{fileName}</p>
       ) : (
-        <div className="text-center text-white/60">
-          <p className="text-sm">Drag & Drop audio here</p>
-          <p className="text-xs text-white/40">or click to choose</p>
+        <div className="flex flex-col items-center justify-center gap-3">
+          <div className="rounded-full bg-[#00FFC6]/10 p-3">
+            <UploadIcon className="h-5 w-5 text-[#00FFC6]" />
+          </div>
+
+          <p className="text-sm font-medium text-white">
+            Drag & drop your audio file
+          </p>
+
+          <p className="text-sm text-white/50">
+            or click to browse
+          </p>
         </div>
       )}
     </div>
