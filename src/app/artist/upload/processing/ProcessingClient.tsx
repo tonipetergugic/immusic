@@ -22,6 +22,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [visualStep, setVisualStep] = useState(0);
+  const [buyingCredits, setBuyingCredits] = useState(false);
 
   const pollCountRef = useRef(0);
   const startedAtRef = useRef<number>(0);
@@ -125,14 +126,23 @@ export default function ProcessingClient({ credits, queueId }: Props) {
       "Preparing analysis…",
       "Checking audio quality…",
       "Inspecting technical details…",
-      "Finalizing result…",
     ];
 
     setVisualStep(0);
 
+    let current = 0;
+
     const interval = window.setInterval(() => {
-      setVisualStep((prev) => (prev + 1) % steps.length);
-    }, 2200);
+      current += 1;
+
+      if (current >= steps.length - 1) {
+        setVisualStep(steps.length - 1);
+        window.clearInterval(interval);
+        return;
+      }
+
+      setVisualStep(current);
+    }, 3000);
 
     return () => window.clearInterval(interval);
   }, [approved, rejected, timedOut, errorText, retryKey]);
@@ -141,152 +151,277 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     "Preparing analysis…",
     "Checking audio quality…",
     "Inspecting technical details…",
-    "Finalizing result…",
   ];
 
   const activeVisualStatus = visualStatuses[visualStep] ?? visualStatuses[0];
   const isRunning = !approved && !rejected && !timedOut && !errorText;
 
+  async function handleBuyCredits() {
+    try {
+      setBuyingCredits(true);
+
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pack_id: "starter",
+          queue_id: queueId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.checkout_url) {
+        throw new Error(data?.error || "Failed to start checkout.");
+      }
+
+      window.location.href = data.checkout_url as string;
+    } catch (error) {
+      console.error(error);
+      setErrorText("Could not start credit checkout. Please try again.");
+      setBuyingCredits(false);
+    }
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] px-6 text-white">
-      <div className="mb-6 w-full max-w-2xl text-center">
+    <div className="min-h-screen bg-[#0E0E10] px-6 py-10 text-white">
+      <div className="mx-auto w-full max-w-4xl">
         <h1 className="mb-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
           <span className="text-[#00FFC6]">Processing</span> your{" "}
           <span className="text-[#00FFC6]">track</span>
         </h1>
 
         {isRunning ? (
-          <div className="mt-8 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.025] p-7 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div className="min-w-0">
-                <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                  {activeVisualStatus}
-                </p>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex items-start justify-between gap-6">
+                <div className="min-w-0">
+                  <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                    {activeVisualStatus}
+                  </p>
 
-                {/* statusText entfernt für klarere UI */}
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-white/60 sm:text-base">
+                    {statusText}
+                  </p>
+                </div>
+
+                <div className="relative mt-1 h-5 w-5 shrink-0">
+                  <span className="absolute inset-0 rounded-full border border-white/15" />
+                  <span className="absolute inset-0 rounded-full bg-[#00FFC6]/20 blur-[6px]" />
+                  <span className="absolute inset-0 animate-ping rounded-full bg-[#00FFC6]/25" />
+                  <span className="absolute inset-[4px] rounded-full bg-[#00FFC6]" />
+                </div>
               </div>
 
-              <div className="relative mt-1 h-5 w-5 shrink-0">
-                <span className="absolute inset-0 rounded-full border border-white/15" />
-                <span className="absolute inset-0 rounded-full bg-[#00FFC6]/20 blur-[6px]" />
-                <span className="absolute inset-0 animate-ping rounded-full bg-[#00FFC6]/25" />
-                <span className="absolute inset-[4px] rounded-full bg-[#00FFC6]" />
+              <div className="mt-8">
+                <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="processing-bar h-full w-1/3 rounded-full bg-[#00FFC6]" />
+                </div>
               </div>
+
+              <p className="mt-auto pt-6 text-center text-sm text-white/70 sm:text-[15px]">
+                Do not close this page — your track is currently being processed.
+              </p>
             </div>
-
-            <div className="mt-8">
-              <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
-                <div className="processing-bar h-full w-1/3 rounded-full bg-[#00FFC6]" />
-              </div>
-            </div>
-
-            <p className="mt-6 text-center text-sm text-white/70 sm:text-[15px]">
-              Do not close this page — your track is currently being processed.
-            </p>
           </div>
-        ) : !rejected && !approved ? (
-          <p className="text-base text-white/60">
-            {statusText}
-          </p>
         ) : null}
 
         {timedOut && !approved && !rejected && (
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-              onClick={() => setRetryKey((k) => k + 1)}
-            >
-              Retry Processing
-            </button>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+            <div className="flex min-h-0 flex-1 flex-col text-center">
+              <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                Taking longer than expected.
+              </p>
 
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-              onClick={() => router.replace("/artist/upload")}
-            >
-              Back to Upload
-            </button>
+              <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
+                <button
+                  type="button"
+                  className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                  onClick={() => setRetryKey((k) => k + 1)}
+                >
+                  Retry Processing
+                </button>
+
+                <button
+                  type="button"
+                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                  onClick={() => router.replace("/artist/upload")}
+                >
+                  Back to Upload
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {rejected && (
-          <div className="mt-6 text-white/70">
-            <p className="mb-3">
-              {rejectReason === "duplicate_audio" || rejectReason === "duplicate"
-                ? "This audio already exists on IMUSIC. Uploading it again is not allowed."
-                : "Processing completed. Detailed AI feedback is available to unlock for this upload."}
-            </p>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
             {rejectReason === "duplicate_audio" || rejectReason === "duplicate" ? (
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  type="button"
-                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-                  onClick={() => router.replace("/artist/upload")}
-                >
-                  Back to Upload
-                </button>
-                <button
-                  type="button"
-                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-                  onClick={() => router.replace("/artist/my-tracks")}
-                >
-                  Go to My Tracks
-                </button>
+              <div className="flex min-h-0 flex-1 flex-col text-center text-white/70">
+                <p className="mb-4 text-xl font-semibold tracking-tight text-white/95 sm:text-2xl">
+                  This audio already exists on IMUSIC. Uploading it again is not allowed.
+                </p>
+
+                <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    onClick={() => router.replace("/artist/upload")}
+                  >
+                    Back to Upload
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    onClick={() => router.replace("/artist/my-tracks")}
+                  >
+                    Go to My Tracks
+                  </button>
+                </div>
+              </div>
+            ) : credits >= 10 ? (
+              <div className="flex min-h-0 flex-1 flex-col text-center text-white/70">
+                <p className="mb-5 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                  Track <span className="text-red-400">rejected</span>. Detailed AI analysis is available for this upload.
+                </p>
+
+                <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    onClick={() => router.replace("/artist/upload")}
+                  >
+                    Back to Upload
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    onClick={() => router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
+                  >
+                    Detailed AI Analysis (10 Credits)
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  type="button"
-                  className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-                  onClick={() => router.replace("/artist/upload")}
-                >
-                  Back to Upload
-                </button>
-                <button
-                  type="button"
-                  className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-                  onClick={() => router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
-                >
-                  Start detailed AI analysis (1 Credit)
-                </button>
+              <div className="flex min-h-0 flex-1 flex-col text-center text-white/70">
+                <p className="mb-5 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                  Track <span className="text-red-400">rejected</span>. Detailed AI analysis is available for this upload.
+                </p>
+
+                <p className="mt-3 text-base text-white/75 sm:text-lg">
+                  Detailed AI analysis requires{" "}
+                  <span className="font-semibold text-white/85">10 credits</span>.
+                </p>
+
+                <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    onClick={() => router.replace("/artist/upload")}
+                  >
+                    Back to Upload
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={buyingCredits}
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleBuyCredits}
+                  >
+                    {buyingCredits ? "Opening checkout..." : "Buy Credits"}
+                  </button>
+                </div>
               </div>
             )}
           </div>
         )}
 
         {approved && (
-          <div className="mt-6">
-            <p className="text-white/70 mb-4">
-              Track approved. You may publish.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              type="button"
-              className="px-6 py-3 rounded-xl bg-[#00FFC6] text-black font-semibold hover:bg-[#00E0B0]"
-              onClick={() => router.replace("/artist/my-tracks")}
-            >
-              Go to My Tracks
-            </button>
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+            {credits >= 10 ? (
+              <div className="flex min-h-0 flex-1 flex-col text-center">
+                <p className="mb-4 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                  Track <span className="text-[#00FFC6]">approved</span>. You may publish.
+                </p>
 
-            {credits >= 1 ? (
-              <button
-                type="button"
-                className="px-6 py-3 rounded-xl border border-white/15 bg-[#111112] text-white font-semibold hover:border-white/25"
-                onClick={() => router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
-              >
-                Detailed AI Analysis
-              </button>
-            ) : null}
-            </div>
+                <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    onClick={() => router.replace("/artist/my-tracks")}
+                  >
+                    Go to My Tracks
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    onClick={() => router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
+                  >
+                    Detailed AI Analysis (10 Credits)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col text-center">
+                <p className="mb-4 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                  Track <span className="text-[#00FFC6]">approved</span>. You may publish.
+                </p>
+
+                <p className="mt-3 text-base text-white/75 sm:text-lg">
+                  Detailed AI analysis requires{" "}
+                  <span className="font-semibold text-white/85">10 credits</span>.
+                </p>
+
+                <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
+                  <button
+                    type="button"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    onClick={() => router.replace("/artist/my-tracks")}
+                  >
+                    Go to My Tracks
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={buyingCredits}
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleBuyCredits}
+                  >
+                    {buyingCredits ? "Opening checkout..." : "Buy Credits"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {errorText && (
-          <p className="mt-4 text-red-400 font-medium">
-            {errorText}
-          </p>
-        )}
+        {errorText && !isRunning && !approved && !rejected && !timedOut ? (
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+            <div className="flex min-h-0 flex-1 flex-col text-center">
+              <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                Processing <span className="text-red-400">failed</span>. Please try again.
+              </p>
+
+              <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-white/65 sm:text-lg">
+                We could not complete the next step for this track.
+              </p>
+
+              <div className="mt-auto flex justify-center pt-6">
+                <button
+                  type="button"
+                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                  onClick={() => router.replace("/artist/upload")}
+                >
+                  Back to Upload
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <style jsx>{`
