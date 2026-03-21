@@ -31,7 +31,7 @@ Core goals:
    - persist private metrics/events
    - apply hard-fail gate
    - duplicate check
-   - analyzer stub
+   - analyzer decision
    - transcode WAV -> MP3
    - upload MP3
    - insert approved track
@@ -58,7 +58,7 @@ Responsibilities:
 - Persist private metrics/events
 - Apply hard-fail rules
 - Check duplicates
-- Run analyzer stub
+- Run analyzer decision
 - Insert approved track
 - Produce safe responses (no leaks)
 
@@ -164,9 +164,10 @@ Current hard-fail policy is intentionally narrow:
 - `decision.ts`
   - Terminal technical rejection helpers
 - `analyzer.ts`
-  - **Currently only a stub**
-  - Returns `approved`
-  - A real analyzer decision layer is planned later
+  - Conservative analyzer decision layer
+  - Uses a small verified metrics contract from the worker
+  - Rejects only on confirmed defect clusters
+  - Does not emit fail-codes or detailed reasons
 
 ### Hash / Duplicate protection
 - `hash.ts`
@@ -197,8 +198,10 @@ At the moment, the engine effectively does this:
    - reject only on narrow objective failures
 3. Duplicate check:
    - reject duplicate audio
-4. Analyzer:
-   - currently returns `approved`
+4. Analyzer decision:
+   - evaluates conservative defect clusters
+   - does not judge genre/style/preferences
+   - rejects only when multiple problem groups are confirmed
 5. Otherwise:
    - approve
 
@@ -206,7 +209,7 @@ So the current system is:
 - a real technical gate
 - a real duplicate gate
 - a real private metrics pipeline
-- but **not yet a final full analyzer-based quality engine**
+- a real conservative analyzer decision layer
 
 ---
 
@@ -224,13 +227,19 @@ So the current system is:
 2. Keep it strictly limited to clearly objective failures
 3. Ensure locked state reveals nothing detailed
 
-### Build the real analyzer later
-A future analyzer can evaluate:
-- poorly audible / clearly problematic tracks
-- combinations of weaker quality issues
-- non-catastrophic but still reject-worthy cases
+### Refine the analyzer carefully
+The current analyzer is intentionally conservative.
 
-This is intentionally a later step, after pipeline stability.
+Future refinements may improve:
+- threshold calibration using real test tracks
+- multi-genre robustness
+- reduction of false rejects / false approvals
+- additional defect-cluster confirmation logic
+
+Any refinement must keep these rules:
+- no genre/style judging
+- no single-metric reject
+- no detail leakage in locked state
 
 ---
 
@@ -245,6 +254,8 @@ Verify:
 - claim sets `processing_started_at`
 - stuck recovery only affects truly stuck processing jobs
 - duplicate handling works
+- clearly broken tracks can be rejected
+- loud but still usable tracks can still be approved
 - approved path inserts track and cleans ingest WAV
 - duplicate/error paths do not leave orphan MP3s
 - locked feedback reveals no private payload
