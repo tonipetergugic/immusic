@@ -107,6 +107,21 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
 
   await assertTrackNotLocked(supabase, user.id, trackId);
 
+  const { data: trackRow, error: trackLoadError } = await supabase
+    .from("tracks")
+    .select("id, source_queue_id, audio_hash")
+    .eq("id", trackId)
+    .eq("artist_id", user.id)
+    .maybeSingle();
+
+  if (trackLoadError) {
+    throw new Error("Failed to load track before delete");
+  }
+
+  if (!trackRow?.id) {
+    throw new Error("Track not found");
+  }
+
   const { error: dbError } = await supabase
     .from("tracks")
     .delete()
@@ -115,6 +130,30 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
 
   if (dbError) {
     throw new Error("Failed to delete track");
+  }
+
+  if (trackRow.source_queue_id) {
+    const { error: queueDeleteByIdError } = await supabase
+      .from("tracks_ai_queue")
+      .delete()
+      .eq("id", trackRow.source_queue_id)
+      .eq("user_id", user.id);
+
+    if (queueDeleteByIdError) {
+      throw new Error("Failed to delete queue entry");
+    }
+  }
+
+  if (trackRow.audio_hash) {
+    const { error: queueDeleteByHashError } = await supabase
+      .from("tracks_ai_queue")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("audio_hash", trackRow.audio_hash);
+
+    if (queueDeleteByHashError) {
+      throw new Error("Failed to delete duplicate queue history");
+    }
   }
 
   if (audioPath) {

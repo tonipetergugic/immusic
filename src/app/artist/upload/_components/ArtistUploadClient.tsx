@@ -271,7 +271,9 @@ export default function ArtistUploadClient({ userId }: Props) {
         <div className="relative">
           <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
             <UploadIcon className="h-7 w-7 text-[#00FFC6]" aria-hidden="true" />
-            <span>Upload Track</span>
+            <span>
+              Upload <span className="text-[#00FFC6]">Track</span>
+            </span>
           </h1>
           <p className="mt-2 text-sm text-[#B3B3B3]">
             Upload your audio file and submit it for quality control.
@@ -368,10 +370,6 @@ export default function ArtistUploadClient({ userId }: Props) {
                         Please wait. Do not close this page.
                       </p>
                     </div>
-
-                    <span className="inline-flex shrink-0 items-center rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-2.5 py-1 text-[11px] font-medium text-[#00FFC6]">
-                      In progress
-                    </span>
                   </div>
 
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">

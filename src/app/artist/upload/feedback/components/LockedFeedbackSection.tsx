@@ -23,7 +23,7 @@ export default function LockedFeedbackSection({
         <div className="text-sm text-white/60">
           Credits: <span className="text-white font-semibold">{creditBalance}</span>
           <span className="text-white/30"> • </span>
-          Unlock costs <span className="text-white font-semibold">1</span> credit
+          Unlock costs <span className="text-white font-semibold">10</span> credits
         </div>
 
         <form action={unlockPaidFeedbackAction}>

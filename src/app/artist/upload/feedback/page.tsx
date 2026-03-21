@@ -74,14 +74,6 @@ export default async function UploadFeedbackV3Page({
 
         {/* CONTENT */}
         <main className="px-6 pb-16">
-          {!unlocked ? (
-            <LockedFeedbackSection
-              error={error}
-              creditBalance={creditBalance}
-              queueId={queueId}
-              unlockPaidFeedbackAction={unlockPaidFeedbackAction}
-            />
-          ) : (
             <div className="mt-6 space-y-10">
               <section className="mt-16 space-y-2">
                 <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
@@ -309,7 +301,6 @@ export default async function UploadFeedbackV3Page({
                 unlockPaidFeedbackAction={unlockPaidFeedbackAction}
               />
             </div>
-          )}
         </main>
       </div>
     </div>

@@ -400,7 +400,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   }
 
   const balance = typeof creditRow?.balance === "number" ? creditRow.balance : 0;
-  if (balance < 1) {
+  if (balance < 10) {
     // rollback unlock
     await supabase.from("track_ai_feedback_unlocks").delete().eq("id", unlockId).eq("user_id", user.id);
     // Security/Observability (rein beobachtend, darf niemals den Flow brechen)
@@ -427,7 +427,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
   // 4) Credit spend
   const { error: spendErr } = await supabase.rpc("credit_spend", {
     p_profile_id: user.id,
-    p_amount: 1,
+    p_amount: 10,
     p_reason: "paid_feedback_unlock",
     p_source: "upload_feedback",
     p_created_by: user.id,
@@ -485,7 +485,7 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     hashChecked: false,
     queueAudioHash: (queueRow as any)?.audio_hash ?? null,
     unlockAudioHash: (queueRow as any)?.audio_hash ?? null,
-    metadata: { credits_spent: 1, source: "unlockPaidFeedbackAction" },
+    metadata: { credits_spent: 10, source: "unlockPaidFeedbackAction" },
   });
 
   redirect(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`);

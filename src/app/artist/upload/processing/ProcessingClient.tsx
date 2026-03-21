@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { unlockPaidFeedbackAction } from "../feedback/actions";
+
 type ApiResponse =
   | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean; queue_id?: string }
   | { ok: true; processed: true; decision: "rejected"; reason?: string; feedback_available?: boolean; queue_id?: string }
@@ -142,7 +144,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
       }
 
       setVisualStep(current);
-    }, 3000);
+    }, 5500);
 
     return () => window.clearInterval(interval);
   }, [approved, rejected, timedOut, errorText, retryKey]);
@@ -238,7 +240,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                 <button
                   type="button"
-                  className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                  className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
                   onClick={() => setRetryKey((k) => k + 1)}
                 >
                   Retry Processing
@@ -246,7 +248,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
                 <button
                   type="button"
-                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                   onClick={() => router.replace("/artist/upload")}
                 >
                   Back to Upload
@@ -267,14 +269,14 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                     onClick={() => router.replace("/artist/upload")}
                   >
                     Back to Upload
                   </button>
                   <button
                     type="button"
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
                     onClick={() => router.replace("/artist/my-tracks")}
                   >
                     Go to My Tracks
@@ -290,19 +292,21 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                     onClick={() => router.replace("/artist/upload")}
                   >
                     Back to Upload
                   </button>
 
-                  <button
-                    type="button"
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
-                    onClick={() => router.replace(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
-                  >
-                    Detailed AI Analysis (10 Credits)
-                  </button>
+                  <form action={unlockPaidFeedbackAction}>
+                    <input type="hidden" name="queue_id" value={queueId} />
+                    <button
+                      type="submit"
+                      className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    >
+                      Detailed AI Analysis (10 Credits)
+                    </button>
+                  </form>
                 </div>
               </div>
             ) : (
@@ -319,7 +323,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                     onClick={() => router.replace("/artist/upload")}
                   >
                     Back to Upload
@@ -328,7 +332,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                   <button
                     type="button"
                     disabled={buyingCredits}
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handleBuyCredits}
                   >
                     {buyingCredits ? "Opening checkout..." : "Buy Credits"}
@@ -350,19 +354,21 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                     onClick={() => router.replace("/artist/my-tracks")}
                   >
                     Go to My Tracks
                   </button>
 
-                  <button
-                    type="button"
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
-                    onClick={() => router.push(`/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`)}
-                  >
-                    Detailed AI Analysis (10 Credits)
-                  </button>
+                  <form action={unlockPaidFeedbackAction}>
+                    <input type="hidden" name="queue_id" value={queueId} />
+                    <button
+                      type="submit"
+                      className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    >
+                      Detailed AI Analysis (10 Credits)
+                    </button>
+                  </form>
                 </div>
               </div>
             ) : (
@@ -379,7 +385,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                     onClick={() => router.replace("/artist/my-tracks")}
                   >
                     Go to My Tracks
@@ -388,7 +394,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                   <button
                     type="button"
                     disabled={buyingCredits}
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handleBuyCredits}
                   >
                     {buyingCredits ? "Opening checkout..." : "Buy Credits"}
@@ -413,7 +419,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               <div className="mt-auto flex justify-center pt-6">
                 <button
                   type="button"
-                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
                   onClick={() => router.replace("/artist/upload")}
                 >
                   Back to Upload
