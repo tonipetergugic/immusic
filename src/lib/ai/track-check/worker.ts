@@ -29,7 +29,7 @@ import { hardFailRejectTechnical, rejectMissingAudioPath } from "@/lib/ai/track-
 import { bestEffortRemoveIngestWav } from "@/lib/ai/track-check/cleanup";
 import { checkDuplicateAudio } from "@/lib/ai/track-check/duplicate";
 import { hasFeedbackUnlock } from "@/lib/ai/track-check/unlock";
-import { analyzeAudioStub } from "@/lib/ai/track-check/analyzer";
+import { analyzeAudio } from "@/lib/ai/track-check/analyzer";
 import { runCodecSimulationBestEffort } from "@/lib/ai/track-check/codec-simulation";
 import { persistCodecSimulationBestEffort } from "@/lib/ai/track-check/codec-sim-persist";
 import { ensureQueueAudioHash } from "@/lib/ai/track-check/hash";
@@ -56,6 +56,21 @@ type TechnicalPhaseOk = {
     integratedLufs: number;
     truePeakDb: number;
     clippedSampleCount: number;
+    analyzerMetrics: {
+      integratedLufs: number;
+      truePeakDbEffective: number;
+      clippedSampleCount: number;
+      crestFactorDb: number;
+      phaseCorrelation: number;
+      stereoWidthIndex: number;
+      lowEndPhaseCorrelation20_120: number;
+      lowEndMonoEnergyLossPct20_120: number;
+      lraLu: number;
+      transient: {
+        punch_index: number;
+        transient_density_cv: number;
+      };
+    };
   };
 };
 
@@ -380,6 +395,21 @@ async function runTechnicalGatesAndPersistMetrics(params: {
       integratedLufs,
       truePeakDb,
       clippedSampleCount,
+      analyzerMetrics: {
+        integratedLufs,
+        truePeakDbEffective,
+        clippedSampleCount,
+        crestFactorDb,
+        phaseCorrelation,
+        stereoWidthIndex,
+        lowEndPhaseCorrelation20_120,
+        lowEndMonoEnergyLossPct20_120,
+        lraLu,
+        transient: {
+          punch_index: transient.punch_index,
+          transient_density_cv: transient.transient_density_cv,
+        },
+      },
     },
   };
 }
@@ -758,12 +788,12 @@ export async function runTrackCheckWorker(params: {
 
     const { audioPath, title, wavBuf, tmpWavPath: tmpWavPathFromTech } = tech;
     let audioHash = tech.audioHash;
-    const { integratedLufs, truePeakDb, clippedSampleCount } = tech.metrics;
+    const { integratedLufs, truePeakDb, clippedSampleCount, analyzerMetrics } = tech.metrics;
     tmpWavPath = tmpWavPathFromTech;
 
     const tAnalyze = nowNs();
-    const decision = await analyzeAudioStub(wavBuf);
-    logStage("analyze_stub", elapsedMs(tAnalyze));
+    const decision = await analyzeAudio(analyzerMetrics);
+    logStage("analyze", elapsedMs(tAnalyze));
 
     const decisionPhase = await runDuplicateAndRejectedBranch({
       supabase,

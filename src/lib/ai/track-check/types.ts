@@ -2,6 +2,24 @@ import type { HardFailReason } from "@/lib/ai/track-check/rules";
 
 export type TrackCheckDecision = "approved" | "rejected";
 
+export type AnalyzerMetrics = {
+  integratedLufs: number;
+  truePeakDbEffective: number;
+  clippedSampleCount: number;
+  crestFactorDb: number;
+
+  phaseCorrelation: number;
+  stereoWidthIndex: number;
+  lowEndPhaseCorrelation20_120: number;
+  lowEndMonoEnergyLossPct20_120: number;
+
+  lraLu: number;
+  transient: {
+    punch_index: number;
+    transient_density_cv: number;
+  };
+};
+
 /** Shape of the row returned by select("id, user_id, audio_path, title, status, hash_status, audio_hash") on tracks_ai_queue */
 export type PendingQueueItemRow = {
   id: string;
