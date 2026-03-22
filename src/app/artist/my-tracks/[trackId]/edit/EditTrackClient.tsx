@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteTrackAction,
@@ -9,41 +9,24 @@ import {
   type RenameTrackPayload,
 } from "../../actions";
 import BackLink from "@/components/BackLink";
-
-type Track = {
-  id: string;
-  title: string;
-  version: string | null;
-  bpm: number | null;
-  key: string | null;
-  genre: string | null;
-  lyrics: string | null;
-  has_lyrics: boolean;
-  is_explicit: boolean;
-  artist_id: string;
-  audio_path: string | null;
-  queue_id: string | null;
-};
-
-const TRACK_VERSION_OPTIONS = [
-  { value: "None", label: "None" },
-  { value: "Original Mix", label: "Original Mix" },
-  { value: "Extended Mix", label: "Extended Mix" },
-  { value: "Radio Edit", label: "Radio Edit" },
-  { value: "Club Mix", label: "Club Mix" },
-  { value: "Instrumental Mix", label: "Instrumental Mix" },
-  { value: "Dub Mix", label: "Dub Mix" },
-  { value: "VIP Mix", label: "VIP Mix" },
-  { value: "Special Mix", label: "Special Mix" },
-] as const;
-
-const TRACK_VERSION_VALUES = new Set(TRACK_VERSION_OPTIONS.map((o) => o.value));
-
-// BPM quick suggestions (UI only)
-const BPM_SUGGESTIONS = [
-  60, 70, 80, 90, 100, 110,
-  120, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 145, 150, 160, 174
-] as const;
+import LyricsModal from "./LyricsModal";
+import DeleteTrackModal from "./DeleteTrackModal";
+import TrackActionsSection from "./TrackActionsSection";
+import CollaborationSection from "./CollaborationSection";
+import TrackMetadataSection from "./TrackMetadataSection";
+import type {
+  AcceptedCollab,
+  CollabResult,
+  CollaborationRole,
+  PendingInvite,
+  Track,
+} from "./types";
+import {
+  BPM_SUGGESTIONS,
+  TRACK_VERSION_OPTIONS,
+  TRACK_VERSION_VALUES,
+} from "./trackMetadataOptions";
+import { ALLOWED_KEYS, KEY_SUGGESTIONS } from "./trackKeyOptions";
 
 export default function EditTrackClient({
   track,
@@ -51,54 +34,10 @@ export default function EditTrackClient({
   initialAcceptedCollabs,
 }: {
   track: Track;
-  initialPendingInvites: Array<{
-    id: string;
-    role: "CO_OWNER" | "FEATURED";
-    invitee_display_name: string | null;
-    created_at: string;
-  }>;
-  initialAcceptedCollabs: Array<{
-    id: string;
-    role: "CO_OWNER" | "FEATURED";
-    display_name: string | null;
-  }>;
+  initialPendingInvites: PendingInvite[];
+  initialAcceptedCollabs: AcceptedCollab[];
 }) {
   const router = useRouter();
-
-  const ALLOWED_KEYS = useMemo(
-    () =>
-      new Set([
-        "C",
-        "C#",
-        "D",
-        "D#",
-        "E",
-        "F",
-        "F#",
-        "G",
-        "G#",
-        "A",
-        "A#",
-        "B",
-        "Cm",
-        "C#m",
-        "Dm",
-        "D#m",
-        "Em",
-        "Fm",
-        "F#m",
-        "Gm",
-        "G#m",
-        "Am",
-        "A#m",
-        "Bm",
-      ]),
-    []
-  );
-
-  const KEY_SUGGESTIONS = useMemo(() => {
-    return Array.from(ALLOWED_KEYS).sort((a, b) => a.localeCompare(b));
-  }, [ALLOWED_KEYS]);
 
   const [isPending, startTransition] = useTransition();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -119,28 +58,15 @@ export default function EditTrackClient({
 
   // Collaboration
   const [collabQuery, setCollabQuery] = useState("");
-  const [collabRole, setCollabRole] = useState<"CO_OWNER" | "FEATURED">("CO_OWNER");
-  const [collabResults, setCollabResults] = useState<
-    Array<{ id: string; display_name: string }>
-  >([]);
+  const [collabRole, setCollabRole] = useState<CollaborationRole>("CO_OWNER");
+  const [collabResults, setCollabResults] = useState<CollabResult[]>([]);
   const [collabLoading, setCollabLoading] = useState(false);
   const [collabError, setCollabError] = useState<string | null>(null);
   const [collabSuccess, setCollabSuccess] = useState<string | null>(null);
 
-  const [pendingInvites, setPendingInvites] = useState<
-    Array<{
-      id: string;
-      role: "CO_OWNER" | "FEATURED";
-      invitee_display_name: string | null;
-      created_at: string;
-    }>
-  >(initialPendingInvites);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>(initialPendingInvites);
 
-  const [acceptedCollabs, setAcceptedCollabs] = useState<
-    Array<{ id: string; role: "CO_OWNER" | "FEATURED"; display_name: string | null }>
-  >(initialAcceptedCollabs);
-
-  const [collabListLoading, setCollabListLoading] = useState(false);
+  const [acceptedCollabs, setAcceptedCollabs] = useState<AcceptedCollab[]>(initialAcceptedCollabs);
 
   const runCollabSearch = async () => {
     const q = collabQuery.trim();
@@ -178,6 +104,76 @@ export default function EditTrackClient({
     } finally {
       setCollabLoading(false);
     }
+  };
+
+  const handleBpmBlur = () => {
+    if (newBpm === "") return;
+
+    const n = Number.parseInt(newBpm, 10);
+    if (Number.isNaN(n)) {
+      setNewBpm("");
+      return;
+    }
+
+    const clamped = Math.min(240, Math.max(40, n));
+    setNewBpm(String(clamped));
+  };
+
+  const handleOpenLyricsModal = () => {
+    setLyricsDraft(newLyrics);
+    setIsLyricsModalOpen(true);
+  };
+
+  const handleInviteCollaborator = async (p: CollabResult) => {
+    setCollabError(null);
+    setCollabSuccess(null);
+
+    try {
+      await inviteTrackCollaboratorAction({
+        trackId: track.id,
+        inviteeProfileId: p.id,
+        role: collabRole,
+      });
+      setCollabSuccess(`Invite sent to ${p.display_name}`);
+      setPendingInvites((prev) => [
+        {
+          id: `optimistic_${Date.now()}`,
+          role: collabRole,
+          invitee_display_name: p.display_name ?? null,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+      setCollabResults([]);
+      setCollabQuery("");
+    } catch (e: any) {
+      setCollabError(e?.message ?? "Failed to send invite.");
+    }
+  };
+
+  const handleDone = () => {
+    router.push("/artist/my-tracks");
+  };
+
+  const handleViewFeedback = () => {
+    if (!track.queue_id) return;
+
+    router.push(
+      `/artist/upload/feedback?queue_id=${encodeURIComponent(track.queue_id)}`
+    );
+  };
+
+  const handleOpenDeleteModal = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteTrack = () => {
+    startTransition(async () => {
+      await deleteTrackAction(track.id, track.audio_path ?? "");
+      setShowDeleteModal(false);
+      router.push("/artist/my-tracks");
+      router.refresh();
+    });
   };
 
   const handleSave = () => {
@@ -268,611 +264,77 @@ export default function EditTrackClient({
       {/* 2-column layout */}
       <div className="mt-10 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.45fr)_420px] xl:items-stretch">
         {/* Left column */}
-        <section className="min-w-0 rounded-[28px] border border-white/10 bg-white/[0.03] p-6">
-          <div>
-            <div className="text-[1.125rem] font-semibold uppercase tracking-[0.12em] text-[#00FFC6]">
-              Track metadata
-            </div>
-            <div className="mt-1 text-sm text-white/45">
-              Core information used for releases and discovery.
-            </div>
-          </div>
-
-          <div className="mt-7 space-y-6">
-            {/* Title */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                Title
-              </label>
-              <input
-                type="text"
-                className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                maxLength={100}
-                placeholder="Track title"
-              />
-            </div>
-
-            {/* BPM + Key */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                  BPM
-                </label>
-                <input
-                  inputMode="numeric"
-                  type="text"
-                  className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  value={newBpm}
-                  list="bpm-suggestions"
-                  maxLength={3}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/[^\d]/g, "");
-                    if (raw.length <= 3) {
-                      setNewBpm(raw);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (newBpm === "") return;
-
-                    const n = Number.parseInt(newBpm, 10);
-                    if (Number.isNaN(n)) {
-                      setNewBpm("");
-                      return;
-                    }
-
-                    const clamped = Math.min(240, Math.max(40, n));
-                    setNewBpm(String(clamped));
-                  }}
-                  placeholder="Typical range: 60–180"
-                />
-                {newBpm !== "" &&
-                  (() => {
-                    const n = Number.parseInt(newBpm, 10);
-                    if (Number.isNaN(n)) return null;
-                    if (n < 60 || n > 180) {
-                      return (
-                        <div className="text-xs text-white/50">
-                          Unusual BPM (typical range is 60–180).
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                  Key
-                </label>
-                <input
-                  type="text"
-                  className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-                  value={newKey}
-                  list="key-suggestions"
-                  maxLength={3}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\s+/g, "");
-                    if (v === "" || ALLOWED_KEYS.has(v)) {
-                      setNewKey(v);
-                    }
-                  }}
-                  placeholder="e.g. Dm"
-                />
-              </div>
-            </div>
-
-            {/* Version + Genre */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                  Version
-                </label>
-                <select
-                  className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-                  value={newVersion}
-                  onChange={(e) => setNewVersion(e.target.value)}
-                >
-                  <option value="" className="text-white/60">
-                    None
-                  </option>
-
-                  {TRACK_VERSION_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                  Genre
-                </label>
-                <select
-                  className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-                  value={newGenre}
-                  onChange={(e) => setNewGenre(e.target.value)}
-                >
-                  <option value="">Select genre</option>
-
-                  <optgroup label="Trance">
-                    <option value="Trance">Trance</option>
-                    <option value="Progressive Trance">Progressive Trance</option>
-                    <option value="Uplifting Trance">Uplifting Trance</option>
-                    <option value="Psytrance">Psytrance</option>
-                    <option value="Vocal Trance">Vocal Trance</option>
-                    <option value="Hard Trance">Hard Trance</option>
-                    <option value="Tech Trance">Tech Trance</option>
-                  </optgroup>
-
-                  <optgroup label="Techno">
-                    <option value="Techno">Techno</option>
-                    <option value="Melodic Techno">Melodic Techno</option>
-                    <option value="Peak Time Techno">Peak Time Techno</option>
-                    <option value="Industrial Techno">Industrial Techno</option>
-                    <option value="Hard Techno">Hard Techno</option>
-                  </optgroup>
-
-                  <optgroup label="House / EDM">
-                    <option value="House">House</option>
-                    <option value="Deep House">Deep House</option>
-                    <option value="Progressive House">Progressive House</option>
-                    <option value="Tech House">Tech House</option>
-                    <option value="Afro House">Afro House</option>
-                    <option value="Future House">Future House</option>
-                    <option value="EDM">EDM</option>
-                    <option value="Big Room">Big Room</option>
-                    <option value="Electro House">Electro House</option>
-                    <option value="Festival EDM">Festival EDM</option>
-                  </optgroup>
-
-                  <optgroup label="Bass Music">
-                    <option value="Drum & Bass">Drum & Bass</option>
-                    <option value="Liquid Drum & Bass">Liquid Drum & Bass</option>
-                    <option value="Neurofunk">Neurofunk</option>
-                    <option value="Dubstep">Dubstep</option>
-                    <option value="Melodic Dubstep">Melodic Dubstep</option>
-                    <option value="Future Bass">Future Bass</option>
-                  </optgroup>
-
-                  <optgroup label="Hard Dance">
-                    <option value="Hardstyle">Hardstyle</option>
-                    <option value="Rawstyle">Rawstyle</option>
-                    <option value="Hardcore">Hardcore</option>
-                    <option value="Uptempo Hardcore">Uptempo Hardcore</option>
-                  </optgroup>
-
-                  <optgroup label="Pop / Urban">
-                    <option value="Pop">Pop</option>
-                    <option value="Dance Pop">Dance Pop</option>
-                    <option value="Indie Pop">Indie Pop</option>
-                    <option value="Hip-Hop">Hip-Hop</option>
-                    <option value="Trap">Trap</option>
-                    <option value="Drill">Drill</option>
-                    <option value="R&B">R&B</option>
-                    <option value="Soul">Soul</option>
-                  </optgroup>
-
-                  <optgroup label="Rock / Metal">
-                    <option value="Rock">Rock</option>
-                    <option value="Alternative Rock">Alternative Rock</option>
-                    <option value="Indie Rock">Indie Rock</option>
-                    <option value="Metal">Metal</option>
-                  </optgroup>
-
-                  <optgroup label="Other">
-                    <option value="Ambient">Ambient</option>
-                    <option value="Cinematic">Cinematic</option>
-                    <option value="LoFi">LoFi</option>
-                    <option value="Other">Other</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-
-            {/* Toggles */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                  Contains lyrics
-                </label>
-
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5">
-                  <div className="flex min-h-[52px] items-center justify-between gap-4">
-                    <div className="min-w-0 text-base text-white">
-                      Enable lyrics for this track.
-                    </div>
-
-                    <input
-                      type="checkbox"
-                      checked={newHasLyrics}
-                      onChange={(e) => setNewHasLyrics(e.target.checked)}
-                      className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                  Explicit content
-                </label>
-
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5">
-                  <div className="flex min-h-[52px] items-center justify-between gap-4">
-                    <div className="min-w-0 text-base text-white">
-                      Enable if the track is explicit.
-                    </div>
-
-                    <input
-                      type="checkbox"
-                      checked={newIsExplicit}
-                      onChange={(e) => setNewIsExplicit(e.target.checked)}
-                      className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6]"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Lyrics */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs uppercase tracking-[0.12em] text-white/60">
-                Lyrics
-              </label>
-
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-                {newHasLyrics ? (
-                  <>
-                    <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3.5">
-                      <div className="text-sm text-white/55">
-                        Song text for releases and discovery.
-                      </div>
-
-                      <button
-                        type="button"
-                        className="cursor-pointer text-sm font-semibold text-[#00FFC6] transition hover:text-[#00FFC6]/80"
-                        onClick={() => {
-                          setLyricsDraft(newLyrics);
-                          setIsLyricsModalOpen(true);
-                        }}
-                      >
-                        {newLyrics.trim() ? "Expand editor" : "+ Add lyrics"}
-                      </button>
-                    </div>
-
-                    <textarea
-                      value={newLyrics}
-                      onChange={(e) => setNewLyrics(e.target.value)}
-                      placeholder="Paste or write your lyrics here..."
-                      className="min-h-[240px] w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-white outline-none placeholder:text-white/30"
-                    />
-                  </>
-                ) : (
-                  <div className="flex min-h-[292px] items-center justify-center px-6 text-center text-sm text-white/35">
-                    {'Enable "Contains lyrics" to add song text.'}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+        <TrackMetadataSection
+          newTitle={newTitle}
+          onTitleChange={setNewTitle}
+          newBpm={newBpm}
+          onBpmChange={setNewBpm}
+          onBpmBlur={handleBpmBlur}
+          newKey={newKey}
+          onKeyChange={setNewKey}
+          allowedKeys={ALLOWED_KEYS}
+          newVersion={newVersion}
+          onVersionChange={setNewVersion}
+          trackVersionOptions={TRACK_VERSION_OPTIONS}
+          newGenre={newGenre}
+          onGenreChange={setNewGenre}
+          newHasLyrics={newHasLyrics}
+          onHasLyricsChange={setNewHasLyrics}
+          newIsExplicit={newIsExplicit}
+          onIsExplicitChange={setNewIsExplicit}
+          newLyrics={newLyrics}
+          onLyricsChange={setNewLyrics}
+          onOpenLyricsModal={handleOpenLyricsModal}
+        />
 
         {/* Right column */}
         <div className="min-w-0 xl:flex xl:h-full xl:flex-col xl:gap-8">
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6">
-            <div>
-              <div className="text-[1.125rem] font-semibold uppercase tracking-[0.12em] text-[#00FFC6]">
-                Collaboration
-              </div>
-              <div className="mt-1 text-sm text-white/45">
-                Invite co-owners or featured artists for this track.
-              </div>
-            </div>
+          <CollaborationSection
+            collabQuery={collabQuery}
+            onCollabQueryChange={setCollabQuery}
+            collabRole={collabRole}
+            onCollabRoleChange={setCollabRole}
+            collabLoading={collabLoading}
+            onSearch={runCollabSearch}
+            collabError={collabError}
+            collabSuccess={collabSuccess}
+            collabResults={collabResults}
+            onInvite={handleInviteCollaborator}
+            pendingInvites={pendingInvites}
+            acceptedCollabs={acceptedCollabs}
+          />
 
-            <div className="mt-6 space-y-6">
-              <div className="grid grid-cols-1 gap-3">
-                <input
-                  type="text"
-                  value={collabQuery}
-                  onChange={(e) => setCollabQuery(e.target.value)}
-                  className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-                  placeholder="Search artist by name…"
-                />
-
-                <div className="grid grid-cols-[1fr_auto] gap-3">
-                  <select
-                    className="h-[52px] rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-                    value={collabRole}
-                    onChange={(e) => setCollabRole(e.target.value as any)}
-                  >
-                    <option value="CO_OWNER">Co-owner</option>
-                    <option value="FEATURED">Featured</option>
-                  </select>
-
-                  <button
-                    type="button"
-                    className="h-[52px] rounded-xl border border-white/10 bg-transparent px-4 text-sm font-semibold text-white/80 transition cursor-pointer hover:bg-white/[0.06] hover:border-[#00FFC6]/40 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={collabLoading || collabQuery.trim().length < 2}
-                    onClick={runCollabSearch}
-                  >
-                    {collabLoading ? "Searching..." : "Search"}
-                  </button>
-                </div>
-              </div>
-
-              {collabError && <div className="text-sm text-red-400">{collabError}</div>}
-              {collabSuccess && (
-                <div className="text-sm text-emerald-300">{collabSuccess}</div>
-              )}
-
-              {collabResults.length > 0 && (
-                <div className="divide-y divide-white/10 rounded-xl border border-white/10">
-                  {collabResults.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left text-white/85 hover:bg-white/[0.04]"
-                      onClick={async () => {
-                        setCollabError(null);
-                        setCollabSuccess(null);
-
-                        try {
-                          await inviteTrackCollaboratorAction({
-                            trackId: track.id,
-                            inviteeProfileId: p.id,
-                            role: collabRole,
-                          });
-                          setCollabSuccess(`Invite sent to ${p.display_name}`);
-                          setPendingInvites((prev) => [
-                            {
-                              id: `optimistic_${Date.now()}`,
-                              role: collabRole,
-                              invitee_display_name: p.display_name ?? null,
-                              created_at: new Date().toISOString(),
-                            },
-                            ...prev,
-                          ]);
-                          setCollabResults([]);
-                          setCollabQuery("");
-                        } catch (e: any) {
-                          setCollabError(e?.message ?? "Failed to send invite.");
-                        }
-                      }}
-                    >
-                      <span className="truncate">{p.display_name}</span>
-                      <span className="text-xs text-white/50">Invite</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="space-y-6">
-                <div>
-                  <div className="mb-3 text-xs uppercase tracking-[0.12em] text-white/60">
-                    Pending invites
-                  </div>
-                  {collabListLoading ? (
-                    <div className="text-sm text-white/60">Loading…</div>
-                  ) : pendingInvites.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-white/50">
-                      None
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-white/10 rounded-xl border border-white/10">
-                      {pendingInvites.map((i) => (
-                        <div
-                          key={i.id}
-                          className="flex items-center justify-between gap-3 px-4 py-3"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm text-white/85">
-                              {i.invitee_display_name ?? "Unknown"}
-                            </div>
-                            <div className="text-xs text-white/50">{i.role}</div>
-                          </div>
-                          <div className="shrink-0 text-xs text-white/40">
-                            {new Date(i.created_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <div className="mb-3 text-xs uppercase tracking-[0.12em] text-white/60">
-                    Accepted collaborators
-                  </div>
-                  {collabListLoading ? (
-                    <div className="text-sm text-white/60">Loading…</div>
-                  ) : acceptedCollabs.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-white/50">
-                      None
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-white/10 rounded-xl border border-white/10">
-                      {acceptedCollabs.map((c) => (
-                        <div
-                          key={c.id}
-                          className="flex items-center justify-between gap-3 px-4 py-3"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm text-white/85">
-                              {c.display_name ?? "Unknown"}
-                            </div>
-                            <div className="text-xs text-white/50">{c.role}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 xl:mt-auto">
-            <div>
-              <div className="text-[1.125rem] font-semibold uppercase tracking-[0.12em] text-[#00FFC6]">
-                Actions
-              </div>
-              <div className="mt-1 text-sm text-white/45">
-                Save changes, review feedback, or manage this track.
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {editError && (
-                <div className="rounded-xl border border-red-400/15 bg-red-400/10 px-3 py-2 text-sm text-red-300">
-                  {editError}
-                </div>
-              )}
-              {editSuccess && (
-                <div className="rounded-xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-300">
-                  {editSuccess}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5 flex flex-col gap-3">
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-xl border border-[#00FFC6]/35 bg-[#00FFC6]/12 px-4 py-3 text-sm font-semibold text-[#00FFC6] transition cursor-pointer hover:bg-[#00FFC6]/16 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-                disabled={isPending}
-                onClick={handleSave}
-              >
-                {isPending ? "Saving..." : "Save Changes"}
-              </button>
-
-              <button
-                type="button"
-                className="rounded-xl border border-white/10 bg-transparent px-4 py-3 text-sm font-semibold text-white/82 transition cursor-pointer hover:bg-white/[0.06] hover:border-[#00FFC6]/40"
-                onClick={() => router.push("/artist/my-tracks")}
-              >
-                Done
-              </button>
-
-              {track.queue_id && (
-                <button
-                  type="button"
-                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/78 transition cursor-pointer hover:bg-white/[0.06] hover:border-[#00FFC6]/40"
-                  onClick={() =>
-                    router.push(
-                      `/artist/upload/feedback?queue_id=${encodeURIComponent(track.queue_id!)}`
-                    )
-                  }
-                >
-                  View Feedback
-                </button>
-              )}
-
-              <div className="mt-2 border-t border-white/10 pt-4">
-                <button
-                  type="button"
-                  className="w-full rounded-xl border border-red-400/15 bg-red-400/8 px-4 py-3 text-sm font-semibold text-red-200/90 transition cursor-pointer hover:bg-red-400/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
-                  onClick={() => setShowDeleteModal(true)}
-                >
-                  Delete Track
-                </button>
-              </div>
-            </div>
-          </section>
+          <TrackActionsSection
+            editError={editError}
+            editSuccess={editSuccess}
+            isPending={isPending}
+            queueId={track.queue_id}
+            onSave={handleSave}
+            onDone={handleDone}
+            onViewFeedback={handleViewFeedback}
+            onDelete={handleOpenDeleteModal}
+          />
         </div>
       </div>
 
-      {isLyricsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsLyricsModalOpen(false)}
-          />
+      <LyricsModal
+        open={isLyricsModalOpen}
+        value={newLyrics}
+        draft={lyricsDraft}
+        onDraftChange={setLyricsDraft}
+        onClose={() => setIsLyricsModalOpen(false)}
+        onApply={() => {
+          setNewLyrics(lyricsDraft);
+          setIsLyricsModalOpen(false);
+        }}
+      />
 
-          <div className="relative z-10 w-full max-w-3xl rounded-3xl border border-white/10 bg-black/30 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_20px_80px_rgba(0,0,0,0.45)]">
-            <div className="border-b border-white/10 px-6 py-5">
-              <h2 className="text-xl font-semibold text-white">
-                {newLyrics.trim() ? "Edit lyrics" : "+ Add lyrics"}
-              </h2>
-              <p className="mt-1 text-sm text-white/60">
-                Line breaks will be preserved on the release page.
-              </p>
-            </div>
-
-            <div className="px-6 py-5">
-              <textarea
-                value={lyricsDraft}
-                onChange={(e) => setLyricsDraft(e.target.value)}
-                placeholder="Paste or write your lyrics here..."
-                className="min-h-[320px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 border-t border-white/10 px-6 py-4">
-              <button
-                type="button"
-                className="rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-semibold text-white/80 transition cursor-pointer hover:bg-white/[0.06] hover:border-[#00FFC6]/40"
-                onClick={() => setIsLyricsModalOpen(false)}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-xl border border-[#00FFC6]/40 bg-[#00FFC6]/10 px-4 py-2.5 text-sm font-semibold text-[#00FFC6] transition cursor-pointer hover:bg-[#00FFC6]/15"
-                onClick={() => {
-                  setNewLyrics(lyricsDraft);
-                  setIsLyricsModalOpen(false);
-                }}
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
-          <div
-            className="w-full max-w-[380px] rounded-2xl border border-white/10 bg-[#0E0E10] p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-lg font-semibold text-white">Delete Track?</div>
-            <p className="mt-2 text-sm text-white/60">
-              Are you sure you want to delete this track? This cannot be undone.
-            </p>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/80 transition cursor-pointer hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2.5 text-sm font-semibold text-red-200 transition cursor-pointer hover:bg-red-400/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isPending}
-                onClick={() => {
-                  startTransition(async () => {
-                    await deleteTrackAction(track.id, track.audio_path ?? "");
-                    setShowDeleteModal(false);
-                    router.push("/artist/my-tracks");
-                    router.refresh();
-                  });
-                }}
-              >
-                {isPending ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteTrackModal
+        open={showDeleteModal}
+        isPending={isPending}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteTrack}
+      />
     </div>
   );
 }
