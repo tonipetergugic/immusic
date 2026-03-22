@@ -20,13 +20,27 @@ export default async function EditTrackPage({
 
   const { data: track, error } = await supabase
     .from("tracks")
-    .select("id,title,version,bpm,key,genre,lyrics,has_lyrics,is_explicit,artist_id")
+    .select("id,title,version,bpm,key,genre,lyrics,has_lyrics,is_explicit,artist_id,audio_path")
     .eq("id", trackId)
     .eq("artist_id", user.id)
     .single();
 
   if (error || !track) {
     notFound();
+  }
+
+  let queueId: string | null = null;
+
+  if (track.audio_path) {
+    const { data: queueRows } = await supabase
+      .from("tracks_ai_queue")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("audio_path", track.audio_path)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    queueId = queueRows?.[0]?.id ?? null;
   }
 
   const [{ data: pendingInvites }, { data: acceptedCollabs }] = await Promise.all([
@@ -64,6 +78,8 @@ export default async function EditTrackPage({
             has_lyrics: Boolean(track.has_lyrics),
             is_explicit: Boolean(track.is_explicit),
             artist_id: track.artist_id,
+            audio_path: track.audio_path,
+            queue_id: queueId,
           }}
           initialPendingInvites={(pendingInvites ?? []).map((r: any) => ({
             id: r.id,
