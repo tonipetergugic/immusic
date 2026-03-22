@@ -57,7 +57,7 @@ export default function TrackListClient({ tracks }: TrackListClientProps) {
         onChange={(event) => setQuery(event.target.value)}
       />
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4 2xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         {filtered.map((track) => (
           <TrackCard key={track.id} track={track} />
         ))}
