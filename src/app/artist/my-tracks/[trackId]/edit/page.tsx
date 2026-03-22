@@ -61,8 +61,8 @@ export default async function EditTrackPage({
     <div className="relative min-h-screen overflow-hidden -mt-16 pt-16">
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[640px] w-[640px] -translate-x-1/2 rounded-full bg-[#00FFC6]/12 blur-[160px]" />
-        <div className="absolute top-[20%] right-[5%] h-[420px] w-[420px] rounded-full bg-white/6 blur-[140px]" />
+        <div className="absolute -top-44 left-1/2 h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-[#00FFC6]/5 blur-[190px]" />
+        <div className="absolute top-[18%] right-[6%] h-[360px] w-[360px] rounded-full bg-white/4 blur-[160px]" />
       </div>
 
       <div className="relative z-10">
