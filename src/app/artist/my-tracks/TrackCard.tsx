@@ -1,6 +1,5 @@
 "use client";
 
-import { } from "react";
 import { useRouter } from "next/navigation";
 import { Music, Check, AlertTriangle } from "lucide-react";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
@@ -9,7 +8,7 @@ type Track = {
   id: string;
   title: string;
   version: string | null;
-  audio_path: string;
+  audio_path: string | null;
   queue_id?: string | null;
   bpm: number | null;
   key: string | null;
@@ -18,6 +17,7 @@ type Track = {
   is_explicit: boolean;
   artist_id: string;
   status: "approved" | "development" | "performance";
+  isLocked?: boolean;
 };
 
 type TrackCardProps = {
@@ -35,7 +35,7 @@ export function TrackCard({ track }: TrackCardProps) {
     typeof track?.has_lyrics === "boolean" &&
     typeof track?.is_explicit === "boolean";
 
-  const isLocked = Boolean((track as any).isLocked);
+  const isLocked = Boolean(track.isLocked);
 
   return (
     <div

@@ -3,6 +3,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
 export type RenameTrackPayload = {
   title: string;
   bpm: number | null;
@@ -71,7 +73,7 @@ export async function inviteTrackCollaboratorAction(args: {
 }
 
 async function assertTrackNotLocked(
-  supabase: any,
+  supabase: SupabaseServerClient,
   userId: string,
   trackId: string
 ) {

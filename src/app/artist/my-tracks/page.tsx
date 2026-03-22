@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FileMusic } from "lucide-react";
 import TrackListClient from "./TrackListClient";
@@ -12,7 +13,7 @@ export default async function MyTracksPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("Not authenticated.");
+    redirect("/login");
   }
 
   // 0) Determine locked tracks (tracks that belong to a published release)
@@ -98,7 +99,7 @@ export default async function MyTracksPage() {
             My Tracks
           </h1>
           <p className="mt-2 text-sm text-white/55">
-            Approved tracks ready to be added to releases.
+            All your tracks in one place.
           </p>
 
           {/* Info-Box */}
