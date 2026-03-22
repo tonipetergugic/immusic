@@ -76,26 +76,27 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
 
   return (
     <section>
-      <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-        <Zap className="h-7 w-7 text-white/80" strokeWidth={1.8} />
-        Song Journey
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm text-white/50 leading-relaxed">
-        Continuous energy flow based on short-term loudness. This view highlights dynamic movement, intensity shifts, and structural
-        momentum across the entire track.
-      </p>
+      <div className="space-y-2.5">
+        <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
+          <Zap className="h-7 w-7 text-white/80" strokeWidth={1.8} />
+          <span>Song Journey</span>
+        </h2>
+        <p className="max-w-3xl text-base leading-relaxed text-white/58">
+          Continuous energy flow based on short-term loudness. This view highlights dynamic movement, intensity shifts and structural momentum across the entire track.
+        </p>
+      </div>
 
-      <div className="mt-6">
+      <div className="mt-7">
         <V3JourneyStyles />
 
-        <div className="mt-6 rounded-3xl border border-white/10 bg-black/30 p-5">
+        <div className="mt-6 rounded-[32px] border border-white/10 bg-black/30 p-6 sm:p-7">
           <div className="relative">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-transparent" />
             </div>
 
             <div className="relative">
-              <div className="h-[180px] md:h-[220px]">
+              <div className="h-[190px] md:h-[240px]">
                 {hasSeries ? (
                   <JourneyWaveformWithTooltip
                     series={series}
@@ -196,7 +197,7 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                     })()}
                   </JourneyWaveformWithTooltip>
                 ) : (
-                  <div className="relative flex h-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-black/20 px-6 text-center">
+                  <div className="relative flex h-full flex-col items-center justify-center gap-2 overflow-hidden rounded-[24px] border border-white/10 bg-black/20 px-6 text-center">
                     <div className="text-sm font-semibold text-white/70">Journey data not available yet</div>
                     <div className="text-xs text-white/40">
                       This can happen if the track is very short or structure patterns are not stable enough.
@@ -217,8 +218,8 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                 {(() => {
                   const dur = journey.durationS;
                   return (
-                    <div className="mt-3 px-2 py-2">
-                      <div className="flex items-center justify-between text-sm text-white/45 tabular-nums">
+                    <div className="mt-4 px-2 py-2">
+                      <div className="flex items-center justify-between text-sm tabular-nums text-white/45">
                         <span>0:00</span>
                         <span className="text-white/35">Energy Flow</span>
                         <span>
@@ -232,7 +233,7 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
               </div>
 
               {/* Energy Metrics */}
-              <div className="mt-10 px-2">
+              <div className="mt-12 px-2">
                 {(() => {
                   const raw = series ?? [];
                   if (raw.length < 10) return null;
@@ -301,29 +302,29 @@ export default function JourneySection({ payload, isReady, journey }: Props) {
                   const plateauSec = plateauSecRaw >= MIN_PLATEAU_S ? plateauSecRaw : 0;
 
                   return (
-                    <div className="grid grid-cols-2 gap-y-8 md:flex md:justify-between md:items-start">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:flex md:items-start md:justify-between">
                       <div>
-                        <div className="text-sm tracking-widest text-white/35">High Energy</div>
-                        <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{highCoverage}%</div>
-                        <div className="mt-0.5 text-sm text-white/35">Above upper range</div>
+                        <div className="text-sm font-medium tracking-[0.18em] text-white/35">High Energy</div>
+                        <div className="mt-1.5 text-[28px] font-semibold tracking-tight text-white tabular-nums">{highCoverage}%</div>
+                        <div className="mt-1 text-sm leading-relaxed text-white/35">Above upper range</div>
                       </div>
 
                       <div>
-                        <div className="text-sm tracking-widest text-white/35">Variability</div>
-                        <div className="mt-1 text-2xl font-semibold text-white">{variability}</div>
-                        <div className="mt-0.5 text-sm text-white/35">Overall movement</div>
+                        <div className="text-sm font-medium tracking-[0.18em] text-white/35">Variability</div>
+                        <div className="mt-1.5 text-[28px] font-semibold tracking-tight text-white tabular-nums">{variability}</div>
+                        <div className="mt-1 text-sm leading-relaxed text-white/35">Overall movement</div>
                       </div>
 
                       <div>
-                        <div className="text-sm tracking-widest text-white/35">Biggest Build</div>
-                        <div className="mt-1 text-2xl font-semibold text-white tabular-nums">+{buildVal}</div>
-                        <div className="mt-0.5 text-sm text-white/35">Short-term rise</div>
+                        <div className="text-sm font-medium tracking-[0.18em] text-white/35">Biggest Build</div>
+                        <div className="mt-1.5 text-[28px] font-semibold tracking-tight text-white tabular-nums">+{buildVal}</div>
+                        <div className="mt-1 text-sm leading-relaxed text-white/35">Short-term rise</div>
                       </div>
 
                       <div className="text-right">
-                        <div className="text-sm tracking-widest text-white/35">Plateau</div>
-                        <div className="mt-1 text-2xl font-semibold text-white tabular-nums">{plateauSec}s</div>
-                        <div className="mt-0.5 text-sm text-white/35">Stable segment</div>
+                        <div className="text-sm font-medium tracking-[0.18em] text-white/35">Plateau</div>
+                        <div className="mt-1.5 text-[28px] font-semibold tracking-tight text-white tabular-nums">{plateauSec}s</div>
+                        <div className="mt-1 text-sm leading-relaxed text-white/35">Stable segment</div>
                       </div>
                     </div>
                   );

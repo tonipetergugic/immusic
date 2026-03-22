@@ -124,7 +124,7 @@ export default function StreamingRiskGauge({ isReady, payload }: Props) {
       "inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.6)"
   }}
 >
-      <h3 className="text-xl font-semibold text-white">Streaming Risk</h3>
+      <h3 className="text-2xl font-semibold text-white">Streaming Risk</h3>
       <p className="mt-1 text-sm text-white/60">
         Quick signal for normalization + true-peak stress.
       </p>

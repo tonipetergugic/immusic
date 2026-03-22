@@ -43,23 +43,23 @@ function IssueRow({
     <button
       type="button"
       onClick={() => scrollToTarget(issue.targetId)}
-      className={`w-full text-left rounded-xl border px-4 py-2.5 transition ${toneClasses}`}
+      className={`w-full cursor-pointer rounded-2xl border px-5 py-4 text-left transition ${toneClasses}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-2xl font-semibold text-white truncate">
+          <div className="text-xl font-semibold tracking-tight text-white">
             {issue.title}
           </div>
 
           {typeof (issue as any).framing === "string" && (issue as any).framing.trim().length > 0 ? (
-            <div className="mt-1 text-sm text-white/50 leading-snug">{(issue as any).framing}</div>
+            <div className="mt-1.5 text-sm leading-relaxed text-white/55">{(issue as any).framing}</div>
           ) : null}
 
-          <div className="mt-3 text-base text-white/75 leading-snug">
+          <div className="mt-3 text-[15px] leading-relaxed text-white/78">
             {issue.message}
           </div>
         </div>
-        <div className="shrink-0 text-sm text-white/40 mt-0.5">View</div>
+        <div className="mt-0.5 shrink-0 text-sm font-medium text-white/45">View</div>
       </div>
     </button>
   );
@@ -75,14 +75,14 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
 
   return (
     <section id="feedback-summary" className="space-y-4 w-full">
-      <div className="rounded-2xl bg-black/30 border border-white/15 px-5 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="rounded-[28px] border border-white/15 bg-black/30 px-6 py-6 sm:px-7 sm:py-7">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
 
           {/* LEFT — SYSTEM HEALTH */}
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-emerald-400">
               <CheckCircle2 className="h-6 w-6" />
-              <span className="text-base font-semibold tracking-wide">System Health</span>
+              <span className="text-lg font-semibold tracking-tight text-white">System Health</span>
             </div>
 
             {Array.isArray(stable) && stable.length > 0 ? (
@@ -106,7 +106,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-white">
               <AlertTriangle className="h-6 w-6 text-red-400" />
-              <span className="text-base font-semibold tracking-wide">
+              <span className="text-lg font-semibold tracking-tight text-white">
                 Action Required
               </span>
             </div>
@@ -141,7 +141,7 @@ export default function FeedbackSummary({ critical, improvements, stable }: Prop
 
               </div>
             ) : (
-              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-4 text-sm leading-relaxed text-emerald-300">
                 No active technical risks. Track is upload-ready from a technical perspective.
               </div>
             )}

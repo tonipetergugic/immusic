@@ -253,8 +253,9 @@ const headroomDb =
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-white/10 bg-white/[0.03]";
 
-  const METRIC_TITLE = "text-sm uppercase tracking-wider text-white/40";
-  const METRIC_VALUE = "mt-2 text-2xl font-semibold text-white tabular-nums";
+  const METRIC_TITLE = "text-[13px] font-medium uppercase tracking-[0.16em] text-white/38";
+  const METRIC_VALUE = "mt-3 text-[40px] leading-none font-semibold tracking-tight text-white tabular-nums";
+  const CODEC_METRIC_VALUE = "mt-2 text-2xl font-semibold text-white tabular-nums";
 
   const lufsLabel =
     typeof lufsI === "number" && Number.isFinite(lufsI)
@@ -292,18 +293,18 @@ const headroomDb =
   return (
     <section className="h-full">
       <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 flex-grow">
+        <div className="mt-6 grid flex-grow gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {/* Integrated LUFS */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-5">
             <div className={METRIC_TITLE}>Integrated LUFS</div>
             <div className={METRIC_VALUE}>
               {typeof lufsI === "number" ? lufsI.toFixed(1) : "—"}
             </div>
-            {lufsLabel ? <div className="mt-1 text-sm text-white/45">{lufsLabel}</div> : null}
+            {lufsLabel ? <div className="mt-2 text-sm leading-relaxed text-white/50">{lufsLabel}</div> : null}
           </div>
 
           {/* True Peak */}
-          <div className={"rounded-2xl border px-4 py-4 " + truePeakClass}>
+          <div className={"rounded-[24px] border px-5 py-5 " + truePeakClass}>
             <div className={METRIC_TITLE}>True Peak (dBTP)</div>
             <div className={METRIC_VALUE}>
               {typeof truePeak === "number"
@@ -313,12 +314,12 @@ const headroomDb =
           </div>
 
           {/* Clipping */}
-          <div className={"rounded-2xl border px-4 py-4 " + clippingClass}>
+          <div className={"rounded-[24px] border px-5 py-5 " + clippingClass}>
             <div className={METRIC_TITLE}>Clipped Samples</div>
             <div className={METRIC_VALUE}>
               {typeof clippedSamples === "number" ? String(Math.trunc(clippedSamples)) : "—"}
             </div>
-            <div className="mt-1 text-sm text-white/45 tabular-nums">
+            <div className="mt-2 text-sm leading-relaxed text-white/50 tabular-nums">
               {clippingTone === "good" && "OK • No hard digital clipping"}
               {clippingTone === "warn" && "WARN • Some hard clipping detected"}
               {clippingTone === "critical" && "CRITICAL • Audible clipping likely"}
@@ -327,7 +328,7 @@ const headroomDb =
           </div>
 
           {/* Duration */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-5">
             <div className={METRIC_TITLE}>Duration (min)</div>
             <div className={METRIC_VALUE}>
               {typeof durationS === "number"
@@ -339,12 +340,12 @@ const headroomDb =
           </div>
 
           {/* Headroom */}
-          <div className={"rounded-2xl border px-4 py-4 " + headroomClass}>
-            <div className={METRIC_TITLE}>True Peak Margin (dB)</div>
+          <div className={"rounded-[24px] border px-5 py-5 " + headroomClass}>
+            <div className={METRIC_TITLE}>True Peak Margin</div>
             <div className={METRIC_VALUE}>
               {typeof headroomDb === "number" ? headroomDb.toFixed(2) : "—"}
             </div>
-            <div className="mt-1 text-sm text-white/45">
+            <div className="mt-2 text-sm leading-relaxed text-white/50">
               Distance to 0 dBTP ceiling
             </div>
           </div>
@@ -361,14 +362,14 @@ const headroomDb =
                 : "border-white/10 bg-white/[0.03]";
 
             return (
-              <div className={"rounded-2xl border px-4 py-4 " + cls}>
+              <div className={"rounded-[24px] border px-5 py-5 " + cls}>
                 <div className={METRIC_TITLE}>Stereo Width</div>
 
                 <div className={METRIC_VALUE}>
                   {typeof width === "number" ? width.toFixed(2) : "—"}
                 </div>
 
-                <div className="mt-1 text-sm text-white/45 tabular-nums">
+                <div className="mt-2 text-sm leading-relaxed text-white/50 tabular-nums">
                   {typeof tone === "string" ? labelForStereoWidthTone(tone) : "—"}
                   {typeof tone === "string" ? " • " + hintForStereoWidthTone(tone) : ""}
                 </div>
@@ -382,7 +383,7 @@ const headroomDb =
           {/* Codec Simulation */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 h-full flex flex-col">
             <div>
-              <h3 className="text-lg font-semibold leading-tight">Codec Simulation</h3>
+              <h3 className="text-2xl font-semibold leading-tight text-white">Codec Simulation</h3>
               <p className="mt-1 text-sm text-white/60">
                 Lossy encode → decode check (AAC 128 / MP3 128).
               </p>
@@ -394,8 +395,8 @@ const headroomDb =
                   AAC 128
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className={METRIC_VALUE}>TP increase</span>
-                  <span className={METRIC_VALUE}>
+                  <span className={CODEC_METRIC_VALUE}>TP increase</span>
+                  <span className={CODEC_METRIC_VALUE}>
                     {typeof aacTpIncrease === "number"
                       ? `${aacTpIncrease.toFixed(2)} dB`
                       : "—"}
@@ -408,8 +409,8 @@ const headroomDb =
                   MP3 128
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className={METRIC_VALUE}>TP increase</span>
-                  <span className={METRIC_VALUE}>
+                  <span className={CODEC_METRIC_VALUE}>TP increase</span>
+                  <span className={CODEC_METRIC_VALUE}>
                     {typeof mp3TpIncrease === "number"
                       ? `${mp3TpIncrease.toFixed(2)} dB`
                       : "—"}
@@ -421,7 +422,7 @@ const headroomDb =
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 md:p-8 h-full flex flex-col">
             <div>
-              <h3 className="text-lg font-semibold leading-tight">Master Balance Snapshot</h3>
+              <h3 className="text-2xl font-semibold leading-tight text-white">Master Balance Snapshot</h3>
               <p className="mt-1 text-sm text-white/60">
                 High-level balance across loudness, headroom and limiter behavior.
               </p>

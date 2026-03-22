@@ -17,6 +17,14 @@ type Props = {
 };
 
 export default function HeroSection({ queueTitle, banner, heroChips }: Props) {
+  const bannerTextClass = banner.badgeClass.includes("text-red-")
+    ? "text-red-200"
+    : banner.badgeClass.includes("text-yellow-")
+      ? "text-yellow-200"
+      : banner.badgeClass.includes("text-emerald-")
+        ? "text-[#00FFC6]"
+        : "text-white";
+
   return (
     <section className="relative overflow-hidden px-6 pt-12 pb-20 md:pt-16 md:pb-28">
       <V3HeroStyles />
@@ -38,18 +46,12 @@ export default function HeroSection({ queueTitle, banner, heroChips }: Props) {
               {queueTitle}
             </h1>
 
-            <div className="flex items-center gap-3 mt-2">
-              <span
-                className={
-                  "text-xs px-3 py-1.5 rounded-full border font-semibold tracking-wide " +
-                  banner.badgeClass
-                }
-              >
-                {banner.badge}
-              </span>
-              <span className="text-lg md:text-xl text-white font-semibold tracking-tight">
-                {banner.text}
-              </span>
+            <div className="mt-1.5">
+              <div className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
+                <span className={"text-xl font-semibold tracking-tight md:text-2xl " + bannerTextClass}>
+                  {banner.text}
+                </span>
+              </div>
             </div>
 
             <p className="mt-2 text-white/60 text-lg md:text-xl font-medium">

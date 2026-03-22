@@ -18,6 +18,7 @@ export default function JourneyWaveformWithTooltip(props: {
     time: number;
     value: number;
     lufs: number | null;
+    containerWidth: number;
   } | null>(null);
 
   const tlSorted = React.useMemo(() => {
@@ -36,6 +37,7 @@ export default function JourneyWaveformWithTooltip(props: {
     time: number;
     value: number;
     lufs: number | null;
+    containerWidth: number;
   } | null>(null);
 
   React.useEffect(() => {
@@ -98,6 +100,7 @@ export default function JourneyWaveformWithTooltip(props: {
             time,
             value: val,
             lufs: lufsNow,
+            containerWidth: rect.width,
           };
 
           const prevSnap =
@@ -143,6 +146,15 @@ export default function JourneyWaveformWithTooltip(props: {
         // Artist-first interpretation (no numbers)
         const v = Math.max(0, Math.min(1, hoverPoint.value ?? 0));
 
+        const tooltipWidth = 240;
+        const edgePadding = 14;
+        const containerWidth = hoverPoint.containerWidth;
+        const idealLeft = hoverPoint.x - tooltipWidth / 2;
+        const clampedLeft = Math.max(
+          edgePadding,
+          Math.min(idealLeft, containerWidth - tooltipWidth - edgePadding)
+        );
+
         const level =
           v >= 0.78 ? "High energy" :
           v >= 0.48 ? "Medium energy" :
@@ -176,11 +188,10 @@ export default function JourneyWaveformWithTooltip(props: {
 
         return (
           <div
-            className="pointer-events-none absolute rounded-xl border border-white/10 bg-black/85 px-3.5 py-2.5 text-xs text-white shadow-lg"
+            className="pointer-events-none absolute flex min-h-[132px] w-[240px] flex-col rounded-xl border border-white/10 bg-black/85 px-3.5 py-2.5 text-xs text-white shadow-lg"
             style={{
-              left: `clamp(14px, ${hoverPoint.x}px, calc(100% - 14px))`,
+              left: `${clampedLeft}px`,
               bottom: 12,
-              transform: "translateX(-50%)",
             }}
           >
             <div className="flex items-center justify-between gap-3">
@@ -201,7 +212,7 @@ export default function JourneyWaveformWithTooltip(props: {
               Short-term: {hoverPoint.lufs === null ? "—" : `${hoverPoint.lufs.toFixed(1)} LUFS`}
             </div>
 
-            <div className="mt-1 text-[11px] leading-snug text-white/55 max-w-[200px]">
+            <div className="mt-1 min-h-[32px] text-[11px] leading-snug text-white/55">
               {hint}
             </div>
           </div>

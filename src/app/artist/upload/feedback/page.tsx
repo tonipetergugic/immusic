@@ -74,23 +74,17 @@ export default async function UploadFeedbackV3Page({
 
         {/* CONTENT */}
         <main className="px-6 pb-16">
-            <div className="mt-6 space-y-10">
-              <section className="mt-16 space-y-2">
-                <h2 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-white">
-                  <ClipboardList className="w-6 h-6 text-white/70" />
-                  Feedback Summary
-                </h2>
-                <p className="text-sm text-white/50">
-                  Fix these before you upload — click an item to jump to the module.
-                </p>
-              </section>
+          <div className="mt-10 space-y-10">
+            <section className="space-y-1.5">
+              <h2 className="flex items-center gap-3 text-[28px] font-semibold tracking-tight text-white">
+                <ClipboardList className="h-5.5 w-5.5 text-white/70" />
+                <span>Feedback Summary</span>
+              </h2>
+              <p className="max-w-2xl text-sm leading-relaxed text-white/50">
+                Fix these before you upload — click an item to jump to the module.
+              </p>
+            </section>
 
-              <FeedbackSummary
-                critical={summary.clusters?.filter((c) => c.severity === "critical") ?? []}
-                improvements={summary.clusters?.filter((c) => c.severity === "warn") ?? []}
-                stable={summary.clusters?.filter((c) => c.severity === "good") ?? []}
-              />
-              <DevExposePayload payload={payload} />
               {isReady ? (
                 <AiConsultantCard
                   lufs={payload?.metrics?.loudness?.lufs_i ?? null}
@@ -112,6 +106,14 @@ export default async function UploadFeedbackV3Page({
                   air={payload?.metrics?.spectral?.air_rms_dbfs ?? null}
                 />
               ) : null}
+              <div className="pt-1">
+                <FeedbackSummary
+                  critical={summary.clusters?.filter((c) => c.severity === "critical") ?? []}
+                  improvements={summary.clusters?.filter((c) => c.severity === "warn") ?? []}
+                  stable={summary.clusters?.filter((c) => c.severity === "good") ?? []}
+                />
+              </div>
+              <DevExposePayload payload={payload} />
               <section id="journey" className="mb-14">
                 <JourneySection payload={payload} isReady={isReady} journey={journey} />
               </section>

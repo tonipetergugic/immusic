@@ -83,7 +83,7 @@ export default function StreamingNormalization({ isReady, payload }: Props) {
       <div className="h-full rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 flex flex-col">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">Streaming normalization</h2>
+            <h2 className="text-2xl font-semibold text-white">Streaming normalization</h2>
             <p className="mt-1 text-sm text-white/60">
               Playback gain can reveal "too loud" (clipping risk) or "too quiet" (reduced impact after normalization).
             </p>
