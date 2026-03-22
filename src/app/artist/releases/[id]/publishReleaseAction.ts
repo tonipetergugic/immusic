@@ -15,138 +15,17 @@ export async function publishReleaseAction(releaseId: string) {
     return { error: "Not authenticated." };
   }
 
-  // Release laden (inkl. published_at)
-  const { data: release, error: releaseError } = await supabase
-    .from("releases")
-    .select("artist_id, title, cover_path, status, published_at")
-    .eq("id", releaseId)
-    .eq("artist_id", user.id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("publish_release_atomically", {
+    p_release_id: releaseId,
+  });
 
-  if (releaseError || !release) {
-    return { error: "Release not found." };
+  if (error) {
+    console.error("publish_release_atomically failed:", error);
+    return { error: error.message || "Failed to publish the release." };
   }
 
-  // Hard rule: publish only once
-  if (release.published_at || release.status === "published") {
-    return { error: "This release is already published and cannot be republished." };
-  }
-
-  // Validation
-  if (!release.title || release.title.trim().length === 0) {
-    return { error: "Title is required before publishing." };
-  }
-
-  if (!release.cover_path) {
-    return { error: "Cover is required before publishing." };
-  }
-
-  // Track Count Validation (count-only, no data load)
-  const { count, error: trackError } = await supabase
-    .from("release_tracks")
-    .select("id", { count: "exact", head: true })
-    .eq("release_id", releaseId);
-
-  if (trackError) {
-    return { error: "Could not load tracks." };
-  }
-
-  if (!count || count < 1) {
-    return { error: "You must add at least one track before publishing." };
-  }
-
-  // Server-side metadata completeness check (bpm, key, genre)
-  const { data: releaseTrackRows, error: releaseTrackErr } = await supabase
-    .from("release_tracks")
-    .select("track_id")
-    .eq("release_id", releaseId);
-
-  if (releaseTrackErr) {
-    return { error: "Could not load release tracks." };
-  }
-
-  const trackIds = (releaseTrackRows ?? []).map((r: any) => r.track_id).filter(Boolean);
-
-  if (trackIds.length < 1) {
-    return { error: "You must add at least one track before publishing." };
-  }
-
-  const { data: metaRows, error: metaErr } = await supabase
-    .from("tracks")
-    .select("id, bpm, key, genre")
-    .in("id", trackIds);
-
-  if (metaErr) {
-    return { error: "Could not validate track metadata." };
-  }
-
-  const missingMeta =
-    (metaRows ?? []).length !== trackIds.length ||
-    (metaRows ?? []).some((t: any) => t.bpm == null || t.key == null || t.genre == null);
-
-  if (missingMeta) {
-    return { error: "Track metadata incomplete. Please fill BPM, key and genre for all tracks before publishing." };
-  }
-
-  // Erst veröffentlichen
-  // DB trigger sets published_at on first publish and freezes afterwards
-  const { error: updateError } = await supabase
-    .from("releases")
-    .update({ status: "published" })
-    .eq("id", releaseId)
-    .eq("artist_id", user.id)
-    .eq("status", "draft");
-
-  if (updateError) {
-    console.error("Publish failed:", updateError);
-    return { error: "Failed to publish the release." };
-  }
-
-  // Danach automatisch alle Tracks in Development verschieben
-  // Idempotent:
-  // - approved -> per RPC nach development
-  // - development -> skip
-  // - alles andere -> echter Fehler
-  const { data: statusRows, error: statusErr } = await supabase
-    .from("tracks")
-    .select("id, status")
-    .in("id", trackIds);
-
-  if (statusErr) {
-    console.error("Failed to load track statuses after publish:", statusErr);
-    return { error: "Release was published, but track statuses could not be verified." };
-  }
-
-  const statusByTrackId = new Map(
-    (statusRows ?? []).map((row: any) => [row.id, row.status])
-  );
-
-  for (const trackId of trackIds) {
-    const trackStatus = statusByTrackId.get(trackId);
-
-    if (trackStatus === "development") {
-      continue;
-    }
-
-    if (trackStatus !== "approved") {
-      console.error("Unexpected track status for auto-development:", {
-        trackId,
-        trackStatus,
-      });
-      return {
-        error:
-          "Release was published, but one or more tracks were not eligible for Development.",
-      };
-    }
-
-    const { error } = await supabase.rpc("move_track_to_development", {
-      p_track_id: trackId,
-    });
-
-    if (error) {
-      console.error("move_track_to_development failed:", { trackId, error });
-      return { error: "Release was published, but failed to move all tracks to Development." };
-    }
+  if (!data) {
+    return { error: "Publish RPC returned no data." };
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);

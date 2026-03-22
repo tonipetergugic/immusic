@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import ReleaseEditorClient from "./ReleaseEditorClient";
 
 export default async function ReleaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,11 +12,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return (
-      <div className="text-white p-6">
-        <h1 className="text-2xl font-bold">Please login</h1>
-      </div>
-    );
+    redirect("/login");
   }
 
   const { data: release, error: releaseError } = await supabase
@@ -38,11 +34,15 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
     ? supabase.storage.from("release_covers").getPublicUrl(release.cover_path).data.publicUrl
     : null;
 
-  const { data: rawTracks } = await supabase
+  const { data: rawTracks, error: rawTracksError } = await supabase
     .from("release_tracks")
     .select("track_id, track_title, position, release_id")
     .eq("release_id", release.id)
     .order("position", { ascending: true });
+
+  if (rawTracksError) {
+    throw rawTracksError;
+  }
 
   const baseTracks =
     rawTracks?.map((t) => ({

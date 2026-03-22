@@ -58,7 +58,9 @@ export default function ReleaseEditorClient({
   const hasAtLeastOneTrack = tracks.length > 0;
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState(releaseData.title);
+  const [savedTitle, setSavedTitle] = useState(releaseData.title);
   const [releaseType, setReleaseType] = useState(releaseData.release_type);
+  const [savedReleaseType, setSavedReleaseType] = useState(releaseData.release_type);
   const [status, setStatus] = useState<ReleaseStatus>(releaseData.status ?? "draft");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -66,10 +68,11 @@ export default function ReleaseEditorClient({
   const isPublished = status === "published";
   const hasBeenPublished = Boolean(releaseData.published_at);
   const hasCover = Boolean(coverUrl);
+  const isLocked = isPublished || hasBeenPublished;
 
   // Publish Preconditions (verbindlich)
   const canPublish =
-    status === "draft" && hasCover && hasAtLeastOneTrack && allTracksMetadataComplete;
+    !isLocked && hasCover && hasAtLeastOneTrack && allTracksMetadataComplete;
 
   const markAsDraft = useCallback(() => {
     // Published releases are immutable (DB-enforced). Never attempt draft transitions.
@@ -124,7 +127,7 @@ export default function ReleaseEditorClient({
                   "w-full",
                   "max-w-[320px]",
                   "aspect-square",
-                  isPublished ? "pointer-events-none opacity-60" : "",
+                  isLocked ? "pointer-events-none opacity-60" : "",
                 ].join(" ")}
               >
                 <ReleaseCoverUploader
@@ -134,14 +137,14 @@ export default function ReleaseEditorClient({
                 />
               </div>
 
-              {isPublished ? (
+              {isLocked ? (
                 <div className="mt-2 text-xs text-white/60">
                   Cover is locked because this release is published.
                 </div>
               ) : null}
             </div>
 
-            {status === "draft" &&
+            {!isLocked &&
               releaseData.updated_at &&
               releaseData.created_at !== releaseData.updated_at && (
               <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
@@ -204,7 +207,7 @@ export default function ReleaseEditorClient({
             ) : null}
 
             <div className="mt-8 flex flex-col gap-2">
-              {!hasBeenPublished && releaseData.status === "draft" && (
+              {!isLocked && (
                 <button
                   onClick={() => {
                     if (!canPublish) return;
@@ -261,20 +264,22 @@ export default function ReleaseEditorClient({
                     <input
                       className="w-full bg-transparent text-5xl font-semibold tracking-tight text-white outline-none border-b border-white/10 pb-4 transition placeholder:text-white/25 focus:border-[#00FFC6]/60 disabled:cursor-not-allowed disabled:opacity-60 sm:text-6xl"
                       value={title}
-                      disabled={isPublished || isPending}
+                      disabled={isLocked || isPending}
                       onChange={(e) => setTitle(e.target.value)}
                       onBlur={() => {
-                        if (isPublished) return;
+                        if (isLocked) return;
 
                         const trimmed = title.trim();
-                        if (trimmed !== releaseData.title) {
-                          startTransition(async () => {
-                            const result = await updateReleaseTitleAction(releaseId, trimmed);
-                            if (!result?.error) {
-                              markAsDraft();
-                            }
-                          });
-                        }
+
+                        if (trimmed === savedTitle) return;
+
+                        startTransition(async () => {
+                          const result = await updateReleaseTitleAction(releaseId, trimmed);
+                          if (!result?.error) {
+                            setSavedTitle(trimmed);
+                            markAsDraft();
+                          }
+                        });
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -282,7 +287,7 @@ export default function ReleaseEditorClient({
                         }
                       }}
                       aria-busy={isPending}
-                      aria-disabled={isPublished || isPending}
+                      aria-disabled={isLocked || isPending}
                     />
                   </div>
 
@@ -303,21 +308,22 @@ export default function ReleaseEditorClient({
                   <select
                     className="cursor-pointer bg-transparent p-0 text-sm font-semibold uppercase tracking-[0.16em] text-[#00FFC6] outline-none transition hover:text-[#00E0B0] disabled:cursor-not-allowed disabled:opacity-60"
                     value={releaseType}
-                    disabled={isPublished || isPending}
+                    disabled={isLocked || isPending}
                     onChange={(e) => {
-                      if (isPublished) return;
+                      if (isLocked) return;
 
                       const nextType = e.target.value;
                       setReleaseType(nextType);
 
-                      if (nextType !== releaseData.release_type) {
-                        startTransition(async () => {
-                          const result = await updateReleaseTypeAction(releaseId, nextType);
-                          if (!result?.error) {
-                            markAsDraft();
-                          }
-                        });
-                      }
+                      if (nextType === savedReleaseType) return;
+
+                      startTransition(async () => {
+                        const result = await updateReleaseTypeAction(releaseId, nextType);
+                        if (!result?.error) {
+                          setSavedReleaseType(nextType);
+                          markAsDraft();
+                        }
+                      });
                     }}
                   >
                     <option value="single">SINGLE</option>
@@ -351,10 +357,10 @@ export default function ReleaseEditorClient({
 
               <button
                 onClick={() => {
-                  if (status !== "draft") return;
+                  if (isLocked) return;
                   setModalOpen(true);
                 }}
-                disabled={status !== "draft" || isPending}
+                disabled={isLocked || isPending}
                 className="inline-flex items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:border-[#00FFC6]/40 hover:bg-[#00FFC6]/10 hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
               >
@@ -383,7 +389,7 @@ export default function ReleaseEditorClient({
                 </div>
               ) : (
                 <div className="px-0 sm:px-1">
-                  <div className={isPublished ? "pointer-events-none" : ""}>
+                  <div className={isLocked ? "pointer-events-none" : ""}>
                     <TrackListSortable
                       releaseId={releaseId}
                       tracks={tracks}
@@ -394,11 +400,11 @@ export default function ReleaseEditorClient({
                       trackStatusById={trackStatusById}
                       boostEnabledById={boostEnabledById}
                       releaseStatus={status}
-                      releasePublished={hasBeenPublished}
+                      releasePublished={isLocked}
                     />
                   </div>
 
-                  {isPublished ? (
+                  {isLocked ? (
                     <div className="mt-2 text-xs text-white/60">
                       Tracklist locked because this release is published.
                     </div>
@@ -411,22 +417,29 @@ export default function ReleaseEditorClient({
       </div>
 
       <AddTrackModal
-        open={status === "draft" ? modalOpen : false}
+        open={!isLocked ? modalOpen : false}
         onClose={() => setModalOpen(false)}
         existingTrackIds={derivedTrackIds}
         releaseId={releaseId}
         clientTracks={tracks}
         setClientTracks={setTracks}
-        onReleaseModified={isPublished ? undefined : markAsDraft}
+        onReleaseModified={isLocked ? undefined : markAsDraft}
       />
 
       <DeleteReleaseModal
         open={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={() => {
-          deleteReleaseAction(releaseId);
+          startTransition(async () => {
+            const result = await deleteReleaseAction(releaseId);
+
+            if (result?.error) {
+              alert(result.error);
+            }
+          });
         }}
         status={status}
+        isPending={isPending}
       />
 
       {publishModalOpen ? (

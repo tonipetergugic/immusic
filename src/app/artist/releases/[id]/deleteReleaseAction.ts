@@ -114,16 +114,22 @@ export async function deleteReleaseAction(releaseId: string) {
   }
 
   // 6. Delete the release record
-  const { error: deleteError } = await supabase
+  const { data: deletedRelease, error: deleteError } = await supabase
     .from("releases")
     .delete()
     .eq("id", releaseId)
     .eq("artist_id", user.id)
-    .in("status", ["draft", "published"]);
+    .in("status", ["draft", "published"])
+    .select("id")
+    .maybeSingle();
 
   if (deleteError) {
     console.error("Failed to delete release row:", deleteError);
     return { error: "Failed to delete release." as const };
+  }
+
+  if (!deletedRelease) {
+    return { error: "Release could not be deleted." as const };
   }
 
   // 7. Redirect back to releases page

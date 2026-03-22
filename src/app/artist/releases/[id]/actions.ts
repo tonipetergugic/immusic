@@ -43,13 +43,20 @@ export async function updateReleaseCoverAction(releaseId: string, newFilePath: s
     }
   }
 
-  const { error: updateError } = await supabase
+  const { data: updatedRelease, error: updateError } = await supabase
     .from("releases")
     .update({ cover_path: newFilePath })
-    .eq("id", releaseId);
+    .eq("id", releaseId)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
 
   if (updateError) {
     throw new Error("Failed to update the cover.");
+  }
+
+  if (!updatedRelease) {
+    throw new Error("Cover can only be changed while the release is draft.");
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
@@ -95,13 +102,20 @@ export async function deleteReleaseCoverAction(releaseId: string) {
     }
   }
 
-  const { error: updateError } = await supabase
+  const { data: updatedRelease, error: updateError } = await supabase
     .from("releases")
     .update({ cover_path: null })
-    .eq("id", releaseId);
+    .eq("id", releaseId)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
 
   if (updateError) {
     throw new Error("Failed to update the cover.");
+  }
+
+  if (!updatedRelease) {
+    throw new Error("Cover can only be changed while the release is draft.");
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
@@ -272,16 +286,17 @@ export async function reorderReleaseTracksAction(
     return { error: "Tracks can only be reordered while the release is in draft." as const };
   }
 
-  for (const row of newOrder) {
-    const { error: updErr } = await supabase
-      .from("release_tracks")
-      .update({ position: row.position })
-      .eq("release_id", releaseId)
-      .eq("track_id", row.track_id);
-
-    if (updErr) {
-      return { error: "Failed to reorder tracks." as const };
+  const { error: reorderError } = await supabase.rpc(
+    "reorder_release_tracks_atomically",
+    {
+      p_release_id: releaseId,
+      p_new_order: newOrder,
     }
+  );
+
+  if (reorderError) {
+    console.error("Failed to reorder tracks:", reorderError);
+    return { error: reorderError.message || "Failed to reorder tracks." as const };
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);

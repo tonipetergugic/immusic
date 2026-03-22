@@ -37,15 +37,22 @@ export async function updateReleaseTitleAction(releaseId: string, newTitle: stri
     return { error: "This release is published and cannot be edited." as const };
   }
 
-  const { error } = await supabase
+  const { data: updatedRelease, error } = await supabase
     .from("releases")
     .update({ title: newTitle.trim() })
     .eq("id", releaseId)
-    .eq("artist_id", user.id);
+    .eq("artist_id", user.id)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     console.error("Failed to update release title:", error);
     return { error: "Failed to update title." as const };
+  }
+
+  if (!updatedRelease) {
+    return { error: "This release is published and cannot be edited." as const };
   }
 
   return { success: true as const };

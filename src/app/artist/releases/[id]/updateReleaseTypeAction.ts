@@ -44,15 +44,22 @@ export async function updateReleaseTypeAction(releaseId: string, newType: string
     return { error: "This release is published and cannot be edited." as const };
   }
 
-  const { error } = await supabase
+  const { data: updatedRelease, error } = await supabase
     .from("releases")
     .update({ release_type: normalized })
     .eq("id", releaseId)
-    .eq("artist_id", user.id);
+    .eq("artist_id", user.id)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     console.error("Failed to update release type:", error);
     return { error: "Failed to update release type." as const };
+  }
+
+  if (!updatedRelease) {
+    return { error: "This release is published and cannot be edited." as const };
   }
 
   return { success: true as const };

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import ReleasesClient, { type ReleaseRecord } from "./_components/ReleasesClient";
 
 export default async function ReleasesPage() {
@@ -8,7 +9,7 @@ export default async function ReleasesPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("Not authenticated.");
+    redirect("/login");
   }
 
   const { data, error } = await supabase
@@ -17,7 +18,11 @@ export default async function ReleasesPage() {
     .eq("artist_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error || !data) {
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
     return <ReleasesClient initialReleases={[]} />;
   }
 
