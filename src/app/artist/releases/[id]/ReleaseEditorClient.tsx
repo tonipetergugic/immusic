@@ -37,8 +37,6 @@ type ReleaseEditorClientProps = {
     string,
     { is_development: boolean; exposure_completed: boolean; rating_count: number }
   >;
-  premiumBalance: number;
-  trackStatusById: Record<string, string>;
   boostEnabledById: Record<string, boolean>;
 };
 
@@ -50,8 +48,6 @@ export default function ReleaseEditorClient({
   coverUrl,
   allTracksMetadataComplete,
   eligibilityByTrackId,
-  premiumBalance,
-  trackStatusById,
   boostEnabledById,
 }: ReleaseEditorClientProps) {
   const [tracks, setTracks] = useState<Track[]>(initialTracks ?? []);
@@ -66,10 +62,11 @@ export default function ReleaseEditorClient({
   const [status, setStatus] = useState<ReleaseStatus>(releaseData.status ?? "draft");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [currentCoverUrl, setCurrentCoverUrl] = useState<string | null>(coverUrl);
   const [isPending, startTransition] = useTransition();
   const isPublished = status === "published";
   const hasBeenPublished = Boolean(releaseData.published_at);
-  const hasCover = Boolean(coverUrl);
+  const hasCover = Boolean(currentCoverUrl);
   const isLocked = isPublished || hasBeenPublished;
 
   // Publish Preconditions (verbindlich)
@@ -134,7 +131,8 @@ export default function ReleaseEditorClient({
               >
                 <ReleaseCoverUploader
                   releaseId={releaseId}
-                  initialCoverUrl={coverUrl}
+                  initialCoverUrl={currentCoverUrl}
+                  onCoverUrlChange={setCurrentCoverUrl}
                   onReleaseModified={status === "draft" ? markAsDraft : undefined}
                 />
               </div>
@@ -146,13 +144,6 @@ export default function ReleaseEditorClient({
               ) : null}
             </div>
 
-            {!isLocked &&
-              releaseData.updated_at &&
-              releaseData.created_at !== releaseData.updated_at && (
-              <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
-                This release has been modified. Re-publish to make changes public.
-              </div>
-            )}
           </div>
 
           {/* Pre-Publish Checklist */}
@@ -165,7 +156,7 @@ export default function ReleaseEditorClient({
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/70">Cover added</span>
                 <span
-                  className={`inline-flex items-center justify-center min-w-[84px] rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${
+                  className={`inline-flex items-center justify-center w-[112px] rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${
                     hasCover
                       ? "border-[#00FFC6]/25 bg-[#00FFC6]/12 text-[#7DFFE3]"
                       : "border-white/10 bg-white/[0.04] text-white/55"
@@ -178,7 +169,7 @@ export default function ReleaseEditorClient({
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/70">At least 1 track</span>
                 <span
-                  className={`inline-flex items-center justify-center min-w-[84px] rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${
+                  className={`inline-flex items-center justify-center w-[112px] rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${
                     hasAtLeastOneTrack
                       ? "border-[#00FFC6]/25 bg-[#00FFC6]/12 text-[#7DFFE3]"
                       : "border-white/10 bg-white/[0.04] text-white/55"
@@ -191,7 +182,7 @@ export default function ReleaseEditorClient({
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/70">Track metadata complete</span>
                 <span
-                  className={`inline-flex items-center justify-center min-w-[84px] rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${
+                  className={`inline-flex items-center justify-center w-[112px] rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${
                     allTracksMetadataComplete
                       ? "border-[#00FFC6]/25 bg-[#00FFC6]/12 text-[#7DFFE3]"
                       : "border-white/10 bg-white/[0.04] text-white/55"
@@ -412,15 +403,13 @@ export default function ReleaseEditorClient({
                 </div>
               ) : (
                 <div className="px-0 sm:px-1">
-                  <div className={isLocked ? "pointer-events-none" : ""}>
+                  <div>
                     <TrackListSortable
                       releaseId={releaseId}
                       tracks={tracks}
                       setTracks={setTracks}
                       onReleaseModified={status === "draft" ? markAsDraft : undefined}
                       eligibilityByTrackId={eligibilityByTrackId}
-                      premiumBalance={premiumBalance}
-                      trackStatusById={trackStatusById}
                       boostEnabledById={boostEnabledById}
                       releaseStatus={status}
                       releasePublished={isLocked}

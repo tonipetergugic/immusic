@@ -8,10 +8,16 @@ import { deleteReleaseCoverAction, updateReleaseCoverAction } from "./actions";
 type Props = {
   releaseId: string;
   initialCoverUrl: string | null;
+  onCoverUrlChange?: (url: string | null) => void;
   onReleaseModified?: () => void;
 };
 
-export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onReleaseModified }: Props) {
+export default function ReleaseCoverUploader({
+  releaseId,
+  initialCoverUrl,
+  onReleaseModified,
+  onCoverUrlChange,
+}: Props) {
   const supabase = createSupabaseBrowserClient();
   const [coverPending, setCoverPending] = useState<"uploading" | "removing" | null>(null);
   const isPending = coverPending !== null;
@@ -49,6 +55,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
       } = supabase.storage.from("release_covers").getPublicUrl(filePath);
 
       setCoverUrl(publicUrl);
+      onCoverUrlChange?.(publicUrl);
     } catch (e) {
       console.error(e);
 
@@ -156,6 +163,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
             try {
               await deleteReleaseCoverAction(releaseId);
               setCoverUrl(null);
+              onCoverUrlChange?.(null);
               onReleaseModified?.();
             } catch (e) {
               console.error(e);

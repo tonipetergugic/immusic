@@ -1,6 +1,7 @@
 "use client";
 
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addTrackToReleaseAction } from "./actions";
@@ -27,6 +28,7 @@ export default function AddTrackModal({
   onReleaseModified,
 }: AddTrackModalProps) {
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
   const [tracks, setTracks] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [addingTrackId, setAddingTrackId] = useState<string | null>(null);
@@ -34,6 +36,8 @@ export default function AddTrackModal({
 
   useEffect(() => {
     if (!open) return;
+
+    setQuery("");
 
     let isCancelled = false;
 
@@ -78,20 +82,22 @@ export default function AddTrackModal({
     return set;
   }, [open, existingTrackIds, clientTracks]);
 
-  const filteredTracks = useMemo(() => {
+  const matchingTracks = useMemo(() => {
     const base = (tracks ?? []).filter((t) => !blockedIds.has(t.id));
     const q = query.trim().toLowerCase();
 
-    const searched = !q
+    return !q
       ? base
       : base.filter((t) => String(t.title ?? "").toLowerCase().includes(q));
-
-    return searched.slice(0, 12);
   }, [tracks, blockedIds, query]);
+
+  const filteredTracks = useMemo(() => {
+    return matchingTracks.slice(0, 12);
+  }, [matchingTracks]);
 
   if (!open) return null;
 
-  const shouldShowLimitedNote = (tracks ?? []).filter((t) => !blockedIds.has(t.id)).length > 12;
+  const shouldShowLimitedNote = matchingTracks.length > 12;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md">
@@ -169,6 +175,7 @@ export default function AddTrackModal({
 
                       setTracks((prev) => prev?.filter((x) => x.id !== t.id) || []);
                       onReleaseModified?.();
+                      router.refresh();
                     } finally {
                       setAddingTrackId(null);
                     }

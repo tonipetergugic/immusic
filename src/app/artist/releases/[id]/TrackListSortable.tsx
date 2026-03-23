@@ -36,8 +36,6 @@ function SortableTrackItem({
   onReleaseModified,
   eligibilityByTrackId,
   onRefresh,
-  premiumBalance,
-  status,
   initialBoostEnabled,
   releaseStatus,
   releasePublished,
@@ -51,21 +49,14 @@ function SortableTrackItem({
     { is_development: boolean; exposure_completed: boolean; rating_count: number }
   >;
   onRefresh?: () => void;
-  premiumBalance: number;
-  status: string | null;
   initialBoostEnabled: boolean;
   releaseStatus: "draft" | "published";
   releasePublished: boolean;
   reorderPending: boolean;
 }) {
   const router = useRouter();
-  const [devPending, setDevPending] = useState(false);
-  const [boostPending, setBoostPending] = useState(false);
-  const [boostEnabled, setBoostEnabled] = useState<boolean>(initialBoostEnabled);
+  const boostEnabled = initialBoostEnabled;
   const [removePending, setRemovePending] = useState(false);
-
-  const isPerformance = status === "performance";
-  const boostDisabled = !isPerformance || premiumBalance <= 0 || boostPending;
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: track.track_id });
 
   const style = {
@@ -80,25 +71,10 @@ function SortableTrackItem({
 
   const isEligible = isDevOk && isExposureOk && ratingCount >= 3;
 
-  const missingLabel = !isDevOk
-    ? "Need Dev"
-    : !isExposureOk
-    ? "Need Exposure"
-    : ratingCount < 3
-    ? `Need ${3 - ratingCount} rating(s)`
-    : null;
+  const exposureTooltipText =
+    "Exposure missing: At least 20 listeners must hear this track to complete Exposure.";
 
-  const tooltipText = isEligible
-    ? "This track currently satisfies all Earned Credits gates (Development + Exposure + 3+ ratings)."
-    : !isDevOk
-    ? "To become eligible: Put this track into Development Discovery."
-    : !isExposureOk
-    ? "To become eligible: Complete Guaranteed Exposure for this track."
-    : ratingCount < 3
-    ? "To become eligible: Collect at least 3 unique listener ratings in Development Discovery."
-    : "Not eligible yet.";
-
-  const devLabel = isDevOk ? "Dev ✓" : "Dev ✕";
+  const devLabel = isDevOk ? "Development ✓" : "Development ✕";
   const exposureLabel = isExposureOk ? "Exposure ✓" : "Exposure ✕";
   const ratingsLabel = `Ratings ${ratingCount}/3`;
 
@@ -142,12 +118,12 @@ function SortableTrackItem({
       <div className="flex min-w-0 items-start gap-4">
         <div
           className={`mt-0.5 select-none transition ${
-            reorderPending
+            reorderPending || releaseStatus !== "draft"
               ? "cursor-not-allowed text-white/20"
               : "cursor-grab text-white/35 hover:text-white/55"
           }`}
-          {...(reorderPending ? {} : attributes)}
-          {...(reorderPending ? {} : listeners)}
+          {...(reorderPending || releaseStatus !== "draft" ? {} : attributes)}
+          {...(reorderPending || releaseStatus !== "draft" ? {} : listeners)}
           onClick={(e) => e.stopPropagation()}
         >
           |||
@@ -179,26 +155,30 @@ function SortableTrackItem({
             <div className="text-[15px] font-semibold text-white/80">
               <span>{devLabel}</span>
               <span className="mx-3 text-white/30">•</span>
-              <span>{exposureLabel}</span>
+              {!isExposureOk ? (
+                <Tooltip label={exposureTooltipText}>
+                  <span className="cursor-help">{exposureLabel}</span>
+                </Tooltip>
+              ) : (
+                <span>{exposureLabel}</span>
+              )}
               <span className="mx-3 text-white/30">•</span>
               <span>{ratingsLabel}</span>
             </div>
 
-            <Tooltip label={tooltipText}>
-              <div className="inline-flex items-center justify-end gap-2 cursor-help">
-                {isEligible ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
-                    <span className="text-sm font-semibold text-[#00FFC6]">Eligible</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 text-white/40" />
-                    <span className="text-sm font-semibold text-white/70">Not eligible</span>
-                  </>
-                )}
-              </div>
-            </Tooltip>
+            <div className="inline-flex items-center justify-end gap-2">
+              {isEligible ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
+                  <span className="text-sm font-semibold text-[#00FFC6]">Performance ready</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 text-white/40" />
+                  <span className="text-sm font-semibold text-white/70">Not ready for Performance</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Row 2: Next step (left) + Remove (right) */}
@@ -206,7 +186,7 @@ function SortableTrackItem({
             <div>
               {isEligible ? (
                 <div className="text-[11px] text-[#00FFC6]/80">
-                  Eligible — ready to generate Earned Credits (Development).
+                  Performance ready.
                 </div>
               ) : null}
 
@@ -228,9 +208,10 @@ function SortableTrackItem({
 
             <button
               type="button"
-              disabled={removePending}
+              disabled={removePending || releaseStatus !== "draft"}
               onClick={async (e) => {
                 e.stopPropagation();
+                if (releaseStatus !== "draft") return;
 
                 if (removePending) return;
 
@@ -251,6 +232,7 @@ function SortableTrackItem({
                       .map((t, index) => ({ ...t, position: index + 1 })),
                   );
                   onReleaseModified?.();
+                  onRefresh?.();
                 } finally {
                   setRemovePending(false);
                 }
@@ -275,8 +257,6 @@ type TrackListSortableProps = {
     string,
     { is_development: boolean; exposure_completed: boolean; rating_count: number }
   >;
-  premiumBalance: number;
-  trackStatusById: Record<string, string>;
   boostEnabledById: Record<string, boolean>;
   releaseStatus: "draft" | "published";
   releasePublished: boolean;
@@ -288,8 +268,6 @@ export default function TrackListSortable({
   setTracks,
   onReleaseModified,
   eligibilityByTrackId,
-  premiumBalance,
-  trackStatusById,
   boostEnabledById,
   releaseStatus,
   releasePublished,
@@ -367,8 +345,6 @@ export default function TrackListSortable({
               onReleaseModified={onReleaseModified}
               eligibilityByTrackId={eligibilityByTrackId}
               onRefresh={() => router.refresh()}
-              premiumBalance={premiumBalance}
-              status={trackStatusById[track.track_id] ?? null}
               initialBoostEnabled={!!boostEnabledById[track.track_id]}
               releaseStatus={releaseStatus}
               releasePublished={releasePublished}

@@ -17,7 +17,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const { data: release, error: releaseError } = await supabase
     .from("releases")
-    .select("id, artist_id, title, release_type, cover_path, created_at, status, published_at")
+    .select("id, artist_id, title, release_type, cover_path, created_at, updated_at, status, published_at")
     .eq("id", id)
     .eq("artist_id", user.id)
     .maybeSingle();
@@ -55,35 +55,17 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const existingTrackIds = baseTracks.map((t) => t.track_id);
 
-  // --- Premium Credits (for Boost UI) ---
-  const { data: creditsRow, error: creditsErr } = await supabase
-    .from("artist_credits")
-    .select("balance")
-    .eq("profile_id", user.id)
-    .single();
-
-  if (creditsErr && creditsErr.code !== "PGRST116") {
-    throw creditsErr;
-  }
-
-  const premiumBalance = creditsRow?.balance ?? 0;
-
   // --- Tracks lookup (single query) ---
   const { data: trackRows, error: trackErr } = existingTrackIds.length
     ? await supabase
         .from("tracks")
-        .select("id, status, version, bpm, key, genre")
+        .select("id, version, bpm, key, genre")
         .in("id", existingTrackIds)
     : { data: [] as any[], error: null };
 
   if (trackErr) {
     throw trackErr;
   }
-
-  const trackStatusById = (trackRows ?? []).reduce((acc: Record<string, string>, r: any) => {
-    acc[r.id] = String(r.status ?? "");
-    return acc;
-  }, {});
 
   const trackVersionById = (trackRows ?? []).reduce(
     (acc: Record<string, string | null>, r: any) => {
@@ -162,6 +144,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
         title: release.title,
         release_type: release.release_type,
         created_at: release.created_at,
+        updated_at: release.updated_at,
         status: release.status,
         published_at: release.published_at,
       }}
@@ -170,8 +153,6 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
       coverUrl={coverUrl}
       allTracksMetadataComplete={allTracksMetadataComplete}
       eligibilityByTrackId={eligibilityByTrackId}
-      premiumBalance={premiumBalance}
-      trackStatusById={trackStatusById}
       boostEnabledById={boostEnabledById}
     />
   );

@@ -33,7 +33,7 @@ export default function Tooltip({
 
       {open && pos && (
         <span
-          className={`fixed z-[90] rounded-xl border border-white/10 bg-[#0E0E10] px-3 py-2 text-xs text-white shadow-[0_0_30px_rgba(0,0,0,0.55)] max-w-[280px] whitespace-normal break-words leading-relaxed`}
+          className={`fixed z-[90] max-w-[420px] rounded-xl border border-white/10 bg-[#0E0E10] px-4 py-3 text-left text-sm leading-6 text-white/90 shadow-[0_0_30px_rgba(0,0,0,0.55)] whitespace-normal break-words`}
           style={{
             left: pos.left,
             top: placement === "top" ? pos.top - 12 : pos.top + 28,
