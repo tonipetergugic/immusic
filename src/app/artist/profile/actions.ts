@@ -3,6 +3,12 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+function normalizeOptionalText(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
 export async function updateArtistProfileAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
 
@@ -16,39 +22,17 @@ export async function updateArtistProfileAction(formData: FormData) {
   }
 
   if (!user) {
-    throw new Error("Not authenticated");
+    redirect("/login");
   }
 
-  const display_name = (formData.get("display_name") as string | null) ?? null;
-  const bio = (formData.get("bio") as string | null) ?? null;
-  const location = (formData.get("location") as string | null) ?? null;
-  const country = formData.get("country") as string | null;
-  const city = formData.get("city") as string | null;
-  const instagram = (formData.get("instagram") as string | null) ?? null;
-  const tiktok = (formData.get("tiktok") as string | null) ?? null;
-  const facebook = (formData.get("facebook") as string | null) ?? null;
-  const x = (formData.get("x") as string | null) ?? null;
-
-  const collecting_society_member_on =
-    (formData.get("collecting_society_member_on") as string | null) ?? "";
-
-  const collecting_society_member =
-    collecting_society_member_on === ""
-      ? null
-      : collecting_society_member_on === "1";
-
-  const collecting_society_name_raw =
-    (formData.get("collecting_society_name") as string | null) ?? "";
-  const collecting_society_number_raw =
-    (formData.get("collecting_society_number") as string | null) ?? "";
-
-  const collecting_society_name = collecting_society_member === true
-    ? (collecting_society_name_raw.trim() || null)
-    : null;
-
-  const collecting_society_number = collecting_society_member === true
-    ? (collecting_society_number_raw.trim() || null)
-    : null;
+  const display_name = normalizeOptionalText(formData.get("display_name"));
+  const bio = normalizeOptionalText(formData.get("bio"));
+  const country = normalizeOptionalText(formData.get("country"));
+  const city = normalizeOptionalText(formData.get("city"));
+  const instagram = normalizeOptionalText(formData.get("instagram"));
+  const tiktok = normalizeOptionalText(formData.get("tiktok"));
+  const facebook = normalizeOptionalText(formData.get("facebook"));
+  const x = normalizeOptionalText(formData.get("x"));
 
   const { error } = await supabase
     .from("profiles")
@@ -61,9 +45,6 @@ export async function updateArtistProfileAction(formData: FormData) {
       tiktok,
       facebook,
       x,
-      collecting_society_member,
-      collecting_society_name,
-      collecting_society_number,
     })
     .eq("id", user.id);
 

@@ -19,11 +19,13 @@ export default function BannerUpload({
 }) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [posY, setPosY] = useState<number>(currentBannerPosY ?? 50);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const [isPositionDragging, setIsPositionDragging] = useState(false);
   const [isCommittingPos, setIsCommittingPos] = useState(false);
+  const [positionSaveState, setPositionSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const posYRef = useRef<number>(posY);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -151,10 +153,29 @@ export default function BannerUpload({
 
   const commitBannerPosY = async (value: number) => {
     if (isCommittingPos) return;
+
     setIsCommittingPos(true);
+    setPositionSaveState("saving");
+    setErrorMessage(null);
+
     try {
       await setBannerPosYAction(value);
       router.refresh();
+      setPositionSaveState("saved");
+
+      window.setTimeout(() => {
+        setPositionSaveState("idle");
+      }, 1600);
+    } catch (err: any) {
+      if (err instanceof Error) {
+        setErrorMessage(err.message);
+      } else if (typeof err === "string") {
+        setErrorMessage(err);
+      } else {
+        setErrorMessage("Failed to save banner position.");
+      }
+
+      setPositionSaveState("idle");
     } finally {
       setIsCommittingPos(false);
     }
@@ -296,17 +317,16 @@ export default function BannerUpload({
         >
           <BannerPreview url={currentBannerUrl} posY={posY} />
 
-          {currentBannerUrl ? (
-            <div className="pointer-events-none absolute left-3 top-3 rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white/70 backdrop-blur-md">
-              Drag to reposition
-            </div>
-          ) : null}
         </div>
 
         {/* Click overlay to trigger file input (works even when banner exists) */}
         <label
           htmlFor="banner_upload_input"
-          className="absolute inset-0 cursor-pointer"
+          className={[
+            "absolute inset-0",
+            currentBannerUrl ? "cursor-pointer" : "cursor-pointer",
+            uploading ? "pointer-events-none" : "",
+          ].join(" ")}
           aria-label="Upload banner"
         />
 
@@ -324,41 +344,12 @@ export default function BannerUpload({
         {currentBannerUrl ? (
           <button
             type="button"
-            onClick={async () => {
-              if (uploading) return;
-              const ok = window.confirm("Delete banner?");
-              if (!ok) return;
-
-              setUploading(true);
-              setErrorMessage(null);
-
-              try {
-                // Remove DB URL first (UI becomes empty immediately after refresh)
-                await setBannerUrlAction(null);
-
-                // Best-effort: remove files inside this user's prefix
-                const { data: listed } = await supabase.storage
-                  .from("profile-banners")
-                  .list(userId, { limit: 100, offset: 0 });
-
-                const toDelete =
-                  (listed ?? []).map((f) => `${userId}/${f.name}`);
-
-                if (toDelete.length > 0) {
-                  await supabase.storage.from("profile-banners").remove(toDelete);
-                }
-
-                router.refresh();
-                window.location.href = "/artist/profile?banner-deleted=1";
-              } catch (err: any) {
-                if (err instanceof Error) setErrorMessage(err.message);
-                else setErrorMessage(String(err));
-              } finally {
-                setUploading(false);
-              }
+            onClick={() => {
+              if (uploading || deleting) return;
+              setIsDeleteModalOpen(true);
             }}
             className={[
-              "absolute bottom-3 right-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border",
+              "absolute bottom-3 right-3 z-10 inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border",
               "border-white/10 bg-black/40 backdrop-blur-md",
               "opacity-0 transition group-hover:opacity-100",
               "hover:border-red-400/40 hover:bg-red-500/10 hover:shadow-[0_0_0_1px_rgba(248,113,113,0.25)]",
@@ -383,8 +374,16 @@ export default function BannerUpload({
 
       {currentBannerUrl ? (
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
             <div className="text-sm text-white/70">Banner position</div>
+
+            <div className="text-xs">
+              {positionSaveState === "saving" ? (
+                <span className="text-[#00FFC6]">Saving...</span>
+              ) : positionSaveState === "saved" ? (
+                <span className="text-emerald-300">Saved</span>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -405,7 +404,7 @@ export default function BannerUpload({
               onPointerCancel={async () => {
                 await commitBannerPosY(posYRef.current ?? 50);
               }}
-              className="w-full accent-[#00FFC6]"
+              className="w-full cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed"
               aria-label="Banner vertical position"
             />
             <div className="w-12 text-right text-sm text-white/50 tabular-nums">
@@ -413,8 +412,74 @@ export default function BannerUpload({
             </div>
           </div>
 
-          <div className="text-xs text-white/40">
+          <div className="text-sm text-[#B3B3B3]">
             Tip: adjust what part of the image stays visible after cropping.
+          </div>
+        </div>
+      ) : null}
+
+      {isDeleteModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111214] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.55)]">
+            <div>
+              <h3 className="text-xl font-semibold tracking-tight text-white">
+                Delete banner?
+              </h3>
+              <p className="mt-2 text-sm text-[#B3B3B3]">
+                This will permanently remove your current banner image.
+              </p>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleting) return;
+                  setIsDeleteModalOpen(false);
+                }}
+                disabled={deleting}
+                className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/20 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!currentBannerUrl || deleting) return;
+
+                  setDeleting(true);
+                  setErrorMessage(null);
+
+                  try {
+                    await setBannerUrlAction(null);
+
+                    const { data: listed } = await supabase.storage
+                      .from("profile-banners")
+                      .list(userId, { limit: 100, offset: 0 });
+
+                    const toDelete = (listed ?? []).map((f) => `${userId}/${f.name}`);
+
+                    if (toDelete.length > 0) {
+                      await supabase.storage.from("profile-banners").remove(toDelete);
+                    }
+
+                    setIsDeleteModalOpen(false);
+                    router.refresh();
+                    window.location.href = "/artist/profile?banner-deleted=1";
+                  } catch (err: any) {
+                    if (err instanceof Error) setErrorMessage(err.message);
+                    else setErrorMessage(String(err));
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                className="inline-flex min-w-[140px] cursor-pointer items-center justify-center rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:border-red-400/50 hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete banner"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

@@ -238,7 +238,7 @@ export default function ReleaseEditorClient({
               onClick={() => {
                 setDeleteModalOpen(true);
               }}
-              disabled={false}
+              disabled={isPending}
               className="mt-4 w-full inline-flex cursor-pointer items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 hover:border-red-500/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50 disabled:cursor-not-allowed"
               type="button"
             >

@@ -8,10 +8,15 @@ export async function updateBannerAction(formData: FormData) {
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
+  if (userError) {
+    throw userError;
+  }
+
   if (!user) {
-    throw new Error("Not authenticated");
+    redirect("/login");
   }
 
   const file = formData.get("banner");
@@ -53,15 +58,22 @@ export async function setBannerUrlAction(url: string | null) {
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    throw new Error("Not authenticated");
+  if (userError) {
+    throw userError;
   }
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const updatedAt = new Date().toISOString();
 
   const { error } = await supabase
     .from("profiles")
-    .update({ banner_url: url, updated_at: new Date().toISOString() })
+    .update({ banner_url: url, updated_at: updatedAt })
     .eq("id", user.id);
 
   if (error) {
@@ -76,21 +88,29 @@ export async function clearBannerUrlAction() {
 
   const {
     data: { user },
-    error: userErr,
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (userErr || !user) {
-    throw new Error("Not authenticated.");
+  if (userError) {
+    throw userError;
   }
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const updatedAt = new Date().toISOString();
 
   const { error } = await supabase
     .from("profiles")
-    .update({ banner_url: null })
+    .update({ banner_url: null, updated_at: updatedAt })
     .eq("id", user.id);
 
   if (error) {
-    throw new Error(error.message);
+    throw error;
   }
+
+  return { success: true };
 }
 
 export async function setBannerPosYAction(posY: number) {
@@ -98,23 +118,29 @@ export async function setBannerPosYAction(posY: number) {
 
   const {
     data: { user },
-    error: userErr,
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (userErr || !user) {
-    throw new Error("Not authenticated.");
+  if (userError) {
+    throw userError;
   }
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const updatedAt = new Date().toISOString();
 
   const n = Number.isFinite(posY) ? Math.round(posY) : 50;
   const clamped = Math.max(0, Math.min(100, n));
 
   const { error } = await supabase
     .from("profiles")
-    .update({ banner_pos_y: clamped, updated_at: new Date().toISOString() })
+    .update({ banner_pos_y: clamped, updated_at: updatedAt })
     .eq("id", user.id);
 
   if (error) {
-    throw new Error(error.message);
+    throw error;
   }
 
   return { success: true };
