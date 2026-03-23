@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import BannerPreview from "./BannerPreview";
-import { setBannerUrlAction, clearBannerUrlAction } from "./bannerActions";
+import { setBannerUrlAction } from "./bannerActions";
 import { setBannerPosYAction } from "./bannerActions";
 import { Trash2 } from "lucide-react";
 
@@ -27,9 +26,6 @@ export default function BannerUpload({
   const [isCommittingPos, setIsCommittingPos] = useState(false);
   const [positionSaveState, setPositionSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const posYRef = useRef<number>(posY);
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
 
@@ -61,7 +57,7 @@ export default function BannerUpload({
         return;
       }
 
-    } catch (e) {
+    } catch {
     }
   }
 
@@ -102,7 +98,6 @@ export default function BannerUpload({
 
       await setBannerUrlAction(publicData.publicUrl);
 
-      router.refresh();
       window.location.href = "/artist/profile?banner-updated=1";
     } catch (err: any) {
       console.error("Banner upload unexpected error:", err);
@@ -135,6 +130,19 @@ export default function BannerUpload({
   }, [currentBannerPosY]);
 
   useEffect(() => {
+    if (!isDeleteModalOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (deleting) return;
+      setIsDeleteModalOpen(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDeleteModalOpen, deleting]);
+
+  useEffect(() => {
     posYRef.current = posY;
   }, [posY]);
 
@@ -160,7 +168,6 @@ export default function BannerUpload({
 
     try {
       await setBannerPosYAction(value);
-      router.refresh();
       setPositionSaveState("saved");
 
       window.setTimeout(() => {
@@ -181,75 +188,6 @@ export default function BannerUpload({
     }
   };
 
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-
-    if (uploading) return;
-
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-
-    // optional: sehr einfache Validierung, passend zum accept image/*
-    if (!file.type.startsWith("image/")) {
-      setErrorMessage("Please drop an image file (JPG/PNG/WebP).");
-      return;
-    }
-
-    await uploadFile(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (uploading) return;
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  };
-
-  async function handleDelete(): Promise<void> {
-    if (!currentBannerUrl) return;
-
-    setDeleting(true);
-    setErrorMessage(null);
-
-    try {
-      // 1) alle Banner-Dateien unter userId/ löschen
-      const { data: listed, error: listErr } = await supabase.storage
-        .from("profile-banners")
-        .list(userId, { limit: 100, offset: 0 });
-
-      if (!listErr && listed && listed.length > 0) {
-        const toDelete = listed.map((f) => `${userId}/${f.name}`);
-        await supabase.storage.from("profile-banners").remove(toDelete);
-      }
-
-      // 2) DB URL löschen
-      await clearBannerUrlAction();
-
-      router.refresh();
-      window.location.href = "/artist/profile?banner-removed=1";
-    } catch (err: any) {
-      console.error("Banner delete unexpected error:", err);
-
-      if (err instanceof Error) {
-        setErrorMessage(err.message);
-      } else if (typeof err === "string") {
-        setErrorMessage(err);
-      } else {
-        setErrorMessage(JSON.stringify(err));
-      }
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   return (
     <div className="space-y-4">
       {/* Dropzone / Click-to-upload surface */}
@@ -265,12 +203,7 @@ export default function BannerUpload({
           const file = e.dataTransfer.files?.[0];
           if (!file) return;
 
-          // mimic input change
-          const fakeEvent = {
-            target: { files: [file] },
-          } as unknown as React.ChangeEvent<HTMLInputElement>;
-
-          handleUpload(fakeEvent);
+          void uploadFile(file);
         }}
       >
         {/* Preview (drag to reposition) */}
@@ -323,9 +256,8 @@ export default function BannerUpload({
         <label
           htmlFor="banner_upload_input"
           className={[
-            "absolute inset-0",
-            currentBannerUrl ? "cursor-pointer" : "cursor-pointer",
-            uploading ? "pointer-events-none" : "",
+            "absolute inset-0 cursor-pointer",
+            uploading || deleting || isDeleteModalOpen ? "pointer-events-none" : "",
           ].join(" ")}
           aria-label="Upload banner"
         />
@@ -345,7 +277,7 @@ export default function BannerUpload({
           <button
             type="button"
             onClick={() => {
-              if (uploading || deleting) return;
+              if (uploading) return;
               setIsDeleteModalOpen(true);
             }}
             className={[
@@ -419,8 +351,17 @@ export default function BannerUpload({
       ) : null}
 
       {isDeleteModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111214] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.55)]">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+          onClick={() => {
+            if (deleting) return;
+            setIsDeleteModalOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111214] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.55)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div>
               <h3 className="text-xl font-semibold tracking-tight text-white">
                 Delete banner?
@@ -465,7 +406,6 @@ export default function BannerUpload({
                     }
 
                     setIsDeleteModalOpen(false);
-                    router.refresh();
                     window.location.href = "/artist/profile?banner-deleted=1";
                   } catch (err: any) {
                     if (err instanceof Error) setErrorMessage(err.message);
@@ -485,7 +425,7 @@ export default function BannerUpload({
       ) : null}
 
       {errorMessage && (
-        <p className="text-sm text-red-400">Upload error: {errorMessage}</p>
+        <p className="text-sm text-red-400">{errorMessage}</p>
       )}
     </div>
   );

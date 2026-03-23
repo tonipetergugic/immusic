@@ -59,6 +59,14 @@ export default async function ArtistProfilePage({
   }
 
   const params = await searchParams;
+  const successMessage =
+    params?.success === "1"
+      ? "Profile saved"
+      : params?.["banner-updated"] === "1"
+        ? "Banner updated"
+        : params?.["banner-deleted"] === "1"
+          ? "Banner deleted"
+          : null;
 
   return (
     <div className="relative w-full text-white">
@@ -75,7 +83,7 @@ export default async function ArtistProfilePage({
           </p>
         </div>
 
-        {params?.success === "1" && <ProfileSuccessToast />}
+        {successMessage ? <ProfileSuccessToast message={successMessage} /> : null}
 
         <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.03] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_rgba(0,0,0,0.35)]">
           <div className="flex items-start justify-between gap-4">

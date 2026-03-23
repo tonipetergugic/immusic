@@ -3,7 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ProfileSuccessToast() {
+export default function ProfileSuccessToast({
+  message,
+}: {
+  message: string;
+}) {
   const router = useRouter();
 
   useEffect(() => {
@@ -15,9 +19,9 @@ export default function ProfileSuccessToast() {
   }, [router]);
 
   return (
-    <div className="rounded-2xl border border-[#00FFC6]/20 bg-[#00FFC6]/10 px-4 py-3 text-sm text-[#00FFC6] flex items-center justify-between">
-      <span>Profile saved</span>
-      <span className="text-xs px-2 py-1 rounded-full border border-[#00FFC6]/20 bg-black/20 text-[#B3B3B3]">
+    <div className="flex items-center justify-between rounded-2xl border border-[#00FFC6]/20 bg-[#00FFC6]/10 px-4 py-3 text-sm text-[#00FFC6]">
+      <span>{message}</span>
+      <span className="rounded-full border border-[#00FFC6]/20 bg-black/20 px-2 py-1 text-xs text-[#B3B3B3]">
         Success
       </span>
     </div>

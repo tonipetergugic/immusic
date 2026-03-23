@@ -110,7 +110,7 @@ export default function ProfileForm({
           </div>
         </div>
 
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-3">
             <label htmlFor="bio" className="text-sm font-medium text-white/80">
               Bio
             </label>
