@@ -59,8 +59,10 @@ export default function ReleaseEditorClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState(releaseData.title);
   const [savedTitle, setSavedTitle] = useState(releaseData.title);
+  const [titlePending, setTitlePending] = useState(false);
   const [releaseType, setReleaseType] = useState(releaseData.release_type);
   const [savedReleaseType, setSavedReleaseType] = useState(releaseData.release_type);
+  const [releaseTypePending, setReleaseTypePending] = useState(false);
   const [status, setStatus] = useState<ReleaseStatus>(releaseData.status ?? "draft");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
@@ -223,7 +225,7 @@ export default function ReleaseEditorClient({
   hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/60
   hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
   focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60
-  disabled:opacity-40 disabled:cursor-not-allowed"
+  cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Publish Release
                 </button>
@@ -246,7 +248,7 @@ export default function ReleaseEditorClient({
                 setDeleteModalOpen(true);
               }}
               disabled={false}
-              className="mt-4 w-full inline-flex items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 hover:border-red-500/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-4 w-full inline-flex cursor-pointer items-center justify-center rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 hover:border-red-500/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50 disabled:cursor-not-allowed"
               type="button"
             >
               Delete Release
@@ -264,20 +266,29 @@ export default function ReleaseEditorClient({
                     <input
                       className="w-full bg-transparent text-5xl font-semibold tracking-tight text-white outline-none border-b border-white/10 pb-4 transition placeholder:text-white/25 focus:border-[#00FFC6]/60 disabled:cursor-not-allowed disabled:opacity-60 sm:text-6xl"
                       value={title}
-                      disabled={isLocked || isPending}
+                      disabled={isLocked || titlePending}
                       onChange={(e) => setTitle(e.target.value)}
                       onBlur={() => {
-                        if (isLocked) return;
+                        if (isLocked || titlePending) return;
 
                         const trimmed = title.trim();
 
                         if (trimmed === savedTitle) return;
 
+                        setTitlePending(true);
+
                         startTransition(async () => {
-                          const result = await updateReleaseTitleAction(releaseId, trimmed);
-                          if (!result?.error) {
-                            setSavedTitle(trimmed);
-                            markAsDraft();
+                          try {
+                            const result = await updateReleaseTitleAction(releaseId, trimmed);
+
+                            if (!result?.error) {
+                              setSavedTitle(trimmed);
+                              markAsDraft();
+                            } else {
+                              alert(result.error);
+                            }
+                          } finally {
+                            setTitlePending(false);
                           }
                         });
                       }}
@@ -286,8 +297,8 @@ export default function ReleaseEditorClient({
                           (e.target as HTMLInputElement).blur();
                         }
                       }}
-                      aria-busy={isPending}
-                      aria-disabled={isLocked || isPending}
+                      aria-busy={titlePending}
+                      aria-disabled={isLocked || titlePending}
                     />
                   </div>
 
@@ -304,24 +315,38 @@ export default function ReleaseEditorClient({
                   </div>
                 </div>
 
+                {titlePending ? (
+                  <div className="mt-3 text-sm font-medium text-[#00FFC6]">Saving title...</div>
+                ) : null}
+
                 <div className="mt-2 flex items-center gap-3 text-sm text-white/70">
                   <select
                     className="cursor-pointer bg-transparent p-0 text-sm font-semibold uppercase tracking-[0.16em] text-[#00FFC6] outline-none transition hover:text-[#00E0B0] disabled:cursor-not-allowed disabled:opacity-60"
                     value={releaseType}
-                    disabled={isLocked || isPending}
+                    disabled={isLocked || releaseTypePending}
                     onChange={(e) => {
-                      if (isLocked) return;
+                      if (isLocked || releaseTypePending) return;
 
                       const nextType = e.target.value;
                       setReleaseType(nextType);
 
                       if (nextType === savedReleaseType) return;
 
+                      setReleaseTypePending(true);
+
                       startTransition(async () => {
-                        const result = await updateReleaseTypeAction(releaseId, nextType);
-                        if (!result?.error) {
-                          setSavedReleaseType(nextType);
-                          markAsDraft();
+                        try {
+                          const result = await updateReleaseTypeAction(releaseId, nextType);
+
+                          if (!result?.error) {
+                            setSavedReleaseType(nextType);
+                            markAsDraft();
+                          } else {
+                            alert(result.error);
+                            setReleaseType(savedReleaseType);
+                          }
+                        } finally {
+                          setReleaseTypePending(false);
                         }
                       });
                     }}
@@ -344,6 +369,12 @@ export default function ReleaseEditorClient({
                     })()}
                   </div>
                 </div>
+
+                {releaseTypePending ? (
+                  <div className="mt-3 text-sm font-medium text-[#00FFC6]">
+                    Saving release type...
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -361,7 +392,7 @@ export default function ReleaseEditorClient({
                   setModalOpen(true);
                 }}
                 disabled={isLocked || isPending}
-                className="inline-flex items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:border-[#00FFC6]/40 hover:bg-[#00FFC6]/10 hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:border-[#00FFC6]/40 hover:bg-[#00FFC6]/10 hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
               >
                 <span className="text-white/70 group-hover:text-[#00FFC6] transition">+</span>
@@ -371,20 +402,12 @@ export default function ReleaseEditorClient({
 
             <div className="mt-6">
               {tracks.length === 0 ? (
-                <div className="px-1 sm:px-2 py-8">
-                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-                    Tracklist
-                  </div>
-                  <div className="mt-2 text-base font-semibold text-white/90">
+                <div className="px-1 py-8 sm:px-2">
+                  <div className="text-base font-semibold text-white/90">
                     No tracks yet
                   </div>
                   <div className="mt-1 text-sm text-[#B3B3B3]">
-                    Add tracks to build your release.
-                  </div>
-
-                  <div className="mt-5 inline-flex items-center gap-2 text-sm text-white/70">
-                    <span className="text-[#00FFC6]">Tip:</span>
-                    Use “Add Tracks” in the top-right.
+                    Click “Add Tracks”.
                   </div>
                 </div>
               ) : (
@@ -446,7 +469,10 @@ export default function ReleaseEditorClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setPublishModalOpen(false)}
+            onClick={() => {
+              if (isPending) return;
+              setPublishModalOpen(false);
+            }}
           />
 
           <div className="relative w-[92vw] max-w-md rounded-2xl border border-white/10 bg-[#0E0E10] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_30px_120px_rgba(0,0,0,0.6)]">
@@ -470,8 +496,12 @@ export default function ReleaseEditorClient({
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setPublishModalOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/[0.07] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                onClick={() => {
+                  if (isPending) return;
+                  setPublishModalOpen(false);
+                }}
+                disabled={isPending}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/[0.07] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -485,7 +515,7 @@ export default function ReleaseEditorClient({
   hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
   focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Publish
+                {isPending ? "Publishing..." : "Publish"}
               </button>
             </div>
           </div>

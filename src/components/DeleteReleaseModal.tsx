@@ -61,7 +61,7 @@ export default function DeleteReleaseModal({
     hover:shadow-[0_0_0_1px_rgba(239,68,68,0.25),0_12px_40px_rgba(239,68,68,0.18)]
     focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Delete Release
+            {isPending ? "Deleting..." : "Delete Release"}
           </button>
         </div>
       </div>

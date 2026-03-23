@@ -13,7 +13,8 @@ type Props = {
 
 export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onReleaseModified }: Props) {
   const supabase = createSupabaseBrowserClient();
-  const [uploading, setUploading] = useState(false);
+  const [coverPending, setCoverPending] = useState<"uploading" | "removing" | null>(null);
+  const isPending = coverPending !== null;
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -21,7 +22,8 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
 
   async function uploadFile(file: File) {
     setErrorMsg(null);
-    setUploading(true);
+    setCoverPending("uploading");
+    let uploadedFilePath: string | null = null;
 
     try {
       const ext = file.name.split(".").pop() || "jpg";
@@ -30,6 +32,8 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
       const { error: uploadError } = await supabase.storage
         .from("release_covers")
         .upload(filePath, file, { upsert: true });
+
+      uploadedFilePath = filePath;
 
       if (uploadError) {
         console.error(uploadError);
@@ -47,9 +51,20 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
       setCoverUrl(publicUrl);
     } catch (e) {
       console.error(e);
+
+      if (uploadedFilePath) {
+        const { error: rollbackError } = await supabase.storage
+          .from("release_covers")
+          .remove([uploadedFilePath]);
+
+        if (rollbackError) {
+          console.error("Failed to rollback uploaded cover file:", rollbackError);
+        }
+      }
+
       setErrorMsg("Cover update not allowed for this release.");
     } finally {
-      setUploading(false);
+      setCoverPending(null);
     }
   }
 
@@ -63,6 +78,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
   }
 
   function handleClick() {
+    if (isPending) return;
     fileInputRef.current?.click();
   }
 
@@ -73,13 +89,13 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
         onDragEnter={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (uploading) return;
+          if (isPending) return;
           setIsDragging(true);
         }}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (uploading) return;
+          if (isPending) return;
           setIsDragging(true);
         }}
         onDragLeave={(e) => {
@@ -91,7 +107,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
           e.preventDefault();
           e.stopPropagation();
           setIsDragging(false);
-          if (uploading) return;
+          if (isPending) return;
 
           const file = e.dataTransfer.files?.[0];
           if (!file) return;
@@ -103,7 +119,7 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
           "w-full aspect-square rounded bg-[#1F1F23] mb-2 flex items-center justify-center cursor-pointer transition overflow-hidden",
           "hover:opacity-90",
           isDragging ? "ring-2 ring-[#00FFC6]/60 border border-[#00FFC6]/40" : "border border-white/10",
-          uploading ? "opacity-60 cursor-not-allowed" : "",
+          isPending ? "opacity-60 cursor-not-allowed" : "",
         ].join(" ")}
       >
         {coverUrl ? (
@@ -130,9 +146,12 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
       {coverUrl && (
         <button
           type="button"
+          disabled={isPending}
           onClick={async () => {
+            if (isPending) return;
+
             setErrorMsg(null);
-            setUploading(true);
+            setCoverPending("removing");
 
             try {
               await deleteReleaseCoverAction(releaseId);
@@ -142,17 +161,23 @@ export default function ReleaseCoverUploader({ releaseId, initialCoverUrl, onRel
               console.error(e);
               setErrorMsg("Cover removal not allowed for this release.");
             } finally {
-              setUploading(false);
+              setCoverPending(null);
             }
           }}
-          className="mt-2 inline-flex items-center gap-2 text-xs text-red-400 hover:text-red-300 transition"
+          className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-red-400 transition hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4 opacity-80" />
-          <span>Remove Cover</span>
+          <span>{coverPending === "removing" ? "Removing..." : "Remove Cover"}</span>
         </button>
       )}
 
-      {uploading && <p className="text-xs text-gray-400 mt-1">Uploading cover...</p>}
+      {coverPending === "uploading" ? (
+        <p className="mt-1 text-xs text-gray-400">Uploading cover...</p>
+      ) : null}
+
+      {coverPending === "removing" ? (
+        <p className="mt-1 text-xs text-gray-400">Removing cover...</p>
+      ) : null}
       {errorMsg && <p className="text-xs text-red-400 mt-1">{errorMsg}</p>}
     </div>
   );

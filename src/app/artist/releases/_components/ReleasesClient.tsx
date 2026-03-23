@@ -59,6 +59,7 @@ const [statusFilter, setStatusFilter] = useState<
   }, [releases, query, statusFilter]);
 
   const loading = false;
+  const isFiltering = query.trim().length > 0 || statusFilter !== "all";
 
   return (
     <div className="w-full">
@@ -157,10 +158,14 @@ const [statusFilter, setStatusFilter] = useState<
             ))}
           </div>
         ) : visibleReleases.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-white/80 font-semibold">No releases found</p>
+          <div className="py-12 text-center">
+            <p className="font-semibold text-white/80">
+              {isFiltering ? "No matching releases" : "No releases yet"}
+            </p>
             <p className="mt-2 text-[15px] text-[#B3B3B3]">
-              Create your first release to start uploading tracks.
+              {isFiltering
+                ? "Try a different search or filter."
+                : "Create your first release to start uploading tracks."}
             </p>
           </div>
         ) : (

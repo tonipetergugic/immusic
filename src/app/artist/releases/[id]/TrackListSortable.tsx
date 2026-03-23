@@ -41,6 +41,7 @@ function SortableTrackItem({
   initialBoostEnabled,
   releaseStatus,
   releasePublished,
+  reorderPending,
 }: {
   track: Track;
   setTracks: Dispatch<SetStateAction<Track[]>>;
@@ -55,11 +56,13 @@ function SortableTrackItem({
   initialBoostEnabled: boolean;
   releaseStatus: "draft" | "published";
   releasePublished: boolean;
+  reorderPending: boolean;
 }) {
   const router = useRouter();
   const [devPending, setDevPending] = useState(false);
   const [boostPending, setBoostPending] = useState(false);
   const [boostEnabled, setBoostEnabled] = useState<boolean>(initialBoostEnabled);
+  const [removePending, setRemovePending] = useState(false);
 
   const isPerformance = status === "performance";
   const boostDisabled = !isPerformance || premiumBalance <= 0 || boostPending;
@@ -114,7 +117,9 @@ function SortableTrackItem({
     <li
       ref={setNodeRef}
       style={style}
-      className={`rounded border p-3 text-sm flex items-center justify-between transition
+      className={`rounded border p-3 text-sm flex items-center justify-between transition ${
+        releaseStatus === "draft" ? "cursor-pointer" : "cursor-default"
+      }
   ${isEligible
     ? "border-[#00FFC6]/35 bg-[#00FFC6]/[0.06] shadow-[0_0_0_1px_rgba(0,255,198,0.18),0_20px_60px_rgba(0,255,198,0.10)]"
     : "border-[#27272A] bg-[#18181B]"
@@ -136,9 +141,13 @@ function SortableTrackItem({
     >
       <div className="flex min-w-0 items-start gap-4">
         <div
-          className="mt-0.5 cursor-grab select-none text-white/35 hover:text-white/55 transition"
-          {...attributes}
-          {...listeners}
+          className={`mt-0.5 select-none transition ${
+            reorderPending
+              ? "cursor-not-allowed text-white/20"
+              : "cursor-grab text-white/35 hover:text-white/55"
+          }`}
+          {...(reorderPending ? {} : attributes)}
+          {...(reorderPending ? {} : listeners)}
           onClick={(e) => e.stopPropagation()}
         >
           |||
@@ -219,26 +228,36 @@ function SortableTrackItem({
 
             <button
               type="button"
+              disabled={removePending}
               onClick={async (e) => {
                 e.stopPropagation();
-                const res = await removeTrackFromReleaseAction(track.release_id, track.track_id);
 
-                if (res && "error" in res) {
-                  alert(res.error);
-                  onRefresh?.();
-                  return;
+                if (removePending) return;
+
+                setRemovePending(true);
+
+                try {
+                  const res = await removeTrackFromReleaseAction(track.release_id, track.track_id);
+
+                  if (res && "error" in res) {
+                    alert(res.error);
+                    onRefresh?.();
+                    return;
+                  }
+
+                  setTracks((prev) =>
+                    prev
+                      .filter((t) => t.track_id !== track.track_id)
+                      .map((t, index) => ({ ...t, position: index + 1 })),
+                  );
+                  onReleaseModified?.();
+                } finally {
+                  setRemovePending(false);
                 }
-
-                setTracks((prev) =>
-                  prev
-                    .filter((t) => t.track_id !== track.track_id)
-                    .map((t, index) => ({ ...t, position: index + 1 })),
-                );
-                onReleaseModified?.();
               }}
-              className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[12px] font-semibold text-red-200/90 transition hover:bg-red-500/10 hover:border-red-500/40"
+              className="cursor-pointer rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-[12px] font-semibold text-red-200/90 transition hover:border-red-500/40 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-white/10 disabled:hover:bg-white/[0.02]"
             >
-              Remove
+              {removePending ? "Removing..." : "Remove"}
             </button>
           </div>
         </div>
@@ -276,6 +295,7 @@ export default function TrackListSortable({
   releasePublished,
 }: TrackListSortableProps) {
   const router = useRouter();
+  const [reorderPending, setReorderPending] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -283,14 +303,18 @@ export default function TrackListSortable({
   );
 
   async function handleDragEnd(event: DragEndEvent) {
+    if (reorderPending) return;
+
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
+    const previousTracks = tracks.map((t) => ({ ...t }));
     let reorderedResult: Track[] = [];
 
     setTracks((prev) => {
       const oldIndex = prev.findIndex((t) => t.track_id === active.id);
       const newIndex = prev.findIndex((t) => t.track_id === over.id);
+
       if (oldIndex === -1 || newIndex === -1) {
         return prev;
       }
@@ -303,16 +327,31 @@ export default function TrackListSortable({
       }));
 
       reorderedResult = reordered;
-
       return reordered;
     });
 
-    if (reorderedResult.length > 0) {
-      await reorderReleaseTracksAction(
+    if (reorderedResult.length === 0) return;
+
+    setReorderPending(true);
+
+    try {
+      const res = await reorderReleaseTracksAction(
         releaseId,
         reorderedResult.map((t) => ({ track_id: t.track_id, position: t.position })),
       );
+
+      if (res && "error" in res) {
+        setTracks(previousTracks);
+        alert(res.error);
+        return;
+      }
+
       onReleaseModified?.();
+    } catch {
+      setTracks(previousTracks);
+      alert("Failed to save track order.");
+    } finally {
+      setReorderPending(false);
     }
   }
 
@@ -333,6 +372,7 @@ export default function TrackListSortable({
               initialBoostEnabled={!!boostEnabledById[track.track_id]}
               releaseStatus={releaseStatus}
               releasePublished={releasePublished}
+              reorderPending={reorderPending}
             />
           ))}
         </ul>

@@ -12,8 +12,8 @@ function SubmitButton() {
       type="submit"
       disabled={pending}
       className={[
-        "group inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/35 backdrop-blur-xl px-6 py-3 text-[15px] font-semibold text-white transition cursor-pointer",
-        "hover:bg-black/50 hover:border-[#00FFC6]/70 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_20px_60px_rgba(0,255,198,0.15)]",
+        "group inline-flex items-center gap-2 rounded-xl border border-[#00FFC6]/40 bg-black/35 backdrop-blur-xl px-6 py-3 text-[15px] font-semibold text-white transition cursor-pointer",
+        "hover:bg-black/50 hover:border-[#00FFC6]/70 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.12)]",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60",
         pending ? "opacity-60 cursor-not-allowed hover:shadow-none" : "",
       ].join(" ")}
@@ -71,9 +71,9 @@ export default function CreateReleasePage() {
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { value: "single", label: "Single", desc: "1–2 tracks" },
-                { value: "ep", label: "EP", desc: "3–6 tracks" },
-                { value: "album", label: "Album", desc: "7+ tracks" },
+                { value: "single", label: "Single" },
+                { value: "ep", label: "EP" },
+                { value: "album", label: "Album" },
               ].map((option) => (
                 <label
                   key={option.value}
@@ -106,17 +106,6 @@ export default function CreateReleasePage() {
   "
                   >
                     {option.label}
-                  </span>
-
-                  <span
-                    className="
-  text-[14px] text-white/50
-  text-center
-  transition
-  peer-checked:text-white/70
-"
-                  >
-                    {option.desc}
                   </span>
                 </label>
               ))}

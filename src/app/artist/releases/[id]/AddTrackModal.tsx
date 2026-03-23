@@ -1,6 +1,7 @@
 "use client";
 
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addTrackToReleaseAction } from "./actions";
 
@@ -28,6 +29,8 @@ export default function AddTrackModal({
   const supabase = createSupabaseBrowserClient();
   const [tracks, setTracks] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [addingTrackId, setAddingTrackId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -75,16 +78,31 @@ export default function AddTrackModal({
     return set;
   }, [open, existingTrackIds, clientTracks]);
 
+  const filteredTracks = useMemo(() => {
+    const base = (tracks ?? []).filter((t) => !blockedIds.has(t.id));
+    const q = query.trim().toLowerCase();
+
+    const searched = !q
+      ? base
+      : base.filter((t) => String(t.title ?? "").toLowerCase().includes(q));
+
+    return searched.slice(0, 12);
+  }, [tracks, blockedIds, query]);
+
   if (!open) return null;
 
-  const filteredTracks = tracks?.filter((t) => !blockedIds.has(t.id)) ?? [];
+  const shouldShowLimitedNote = (tracks ?? []).filter((t) => !blockedIds.has(t.id)).length > 12;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] p-6 text-white relative shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_80px_rgba(0,0,0,0.55)]">
         <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 text-sm"
+          onClick={() => {
+            if (addingTrackId) return;
+            onClose();
+          }}
+          disabled={Boolean(addingTrackId)}
+          className="absolute top-3 right-3 cursor-pointer text-sm text-gray-400 hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           ✕
         </button>
@@ -99,49 +117,81 @@ export default function AddTrackModal({
 
         {!loading && tracks && tracks.length > 0 && filteredTracks.length === 0 && (
           <p className="text-sm text-gray-400">
-            No available tracks found.
+            {query.trim() ? "No matching tracks found." : "No available tracks found."}
           </p>
         )}
 
+        {!loading && tracks && tracks.length > 0 ? (
+          <div className="mb-4">
+            <div className="flex items-center gap-3 border-b border-white/15 pb-2 transition focus-within:border-[#00FFC6]/40">
+              <Search className="h-4 w-4 text-white/45" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search tracks..."
+                className="w-full bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
+              />
+            </div>
+          </div>
+        ) : null}
+
         {!loading && filteredTracks.length > 0 && (
-          <ul className="space-y-2">
-            {filteredTracks.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm backdrop-blur-sm transition hover:bg-white/[0.07]"
-              >
-                <span>{t.title}</span>
-                <button
+          <>
+            <ul className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+              {filteredTracks.map((t) => (
+                <li
+                  key={t.id}
                   onClick={async () => {
-                    const result = await addTrackToReleaseAction(releaseId, t.id);
+                    if (addingTrackId !== null) return;
 
-                    if (result?.error) {
-                      alert("⚠️ This track already belongs to another release.");
-                      return;
+                    setAddingTrackId(t.id);
+
+                    try {
+                      const result = await addTrackToReleaseAction(releaseId, t.id);
+
+                      if (result?.error) {
+                        alert(result.error);
+                        return;
+                      }
+
+                      setClientTracks((prev) => {
+                        const nextPosition = prev.length + 1;
+                        return [
+                          ...prev,
+                          {
+                            track_id: t.id,
+                            track_title: t.title,
+                            position: nextPosition,
+                            release_id: releaseId,
+                          },
+                        ];
+                      });
+
+                      setTracks((prev) => prev?.filter((x) => x.id !== t.id) || []);
+                      onReleaseModified?.();
+                    } finally {
+                      setAddingTrackId(null);
                     }
-
-                    setClientTracks((prev) => {
-                      const nextPosition = prev.length + 1;
-                      return [
-                        ...prev,
-                        {
-                          track_id: t.id,
-                          track_title: t.title,
-                          position: nextPosition,
-                          release_id: releaseId,
-                        },
-                      ];
-                    });
-                    setTracks((prev) => prev?.filter((x) => x.id !== t.id) || []);
-                    onReleaseModified?.();
                   }}
-                  className="text-[#00FFC6] hover:text-[#00E0B0] text-xs font-semibold"
+                  className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm backdrop-blur-sm transition hover:bg-white/[0.07]"
                 >
-                  Add
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <span>{t.title}</span>
+
+                  <span
+                    className={`text-xs font-semibold ${
+                      addingTrackId === t.id ? "text-white/50" : "text-[#00FFC6]"
+                    }`}
+                  >
+                    {addingTrackId === t.id ? "Adding..." : "+ Add"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {shouldShowLimitedNote ? (
+              <p className="mt-3 text-xs text-white/45">Showing the 12 most recent matching tracks.</p>
+            ) : null}
+          </>
         )}
       </div>
     </div>
