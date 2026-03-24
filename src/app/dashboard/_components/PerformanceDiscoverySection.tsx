@@ -4,6 +4,8 @@ import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import type { PlayerTrack } from "@/types/playerTrack";
+import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
 
 type Props = {
   performanceGenre: string;
@@ -14,7 +16,7 @@ type Props = {
   performanceError: string | null;
   performanceItems: any[];
 
-  perfQueue: any[];
+  perfQueue: PlayerTrack[];
   perfTrackMetaMap: any;
 
   routerPush: (href: string) => void;
@@ -96,144 +98,148 @@ export default function PerformanceDiscoverySection({
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {perfQueue.map((rowTrack: any, idx: number) => {
-            const trackId = rowTrack.id;
-            const releaseId = rowTrack.release_id ?? null;
-            const artistName =
-              (rowTrack as any)?.profiles?.display_name ?? "Unknown Artist";
-            const coverUrl = rowTrack.cover_url ?? null;
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
+          <div className="min-w-0 space-y-2">
+            {perfQueue.map((rowTrack: any, idx: number) => {
+              const trackId = rowTrack.id;
+              const releaseId = rowTrack.release_id ?? null;
+              const artistName =
+                (rowTrack as any)?.profiles?.display_name ?? "Unknown Artist";
+              const coverUrl = rowTrack.cover_url ?? null;
 
-            return (
-              <TrackRowBase
-                key={trackId ?? `${idx}`}
-                track={rowTrack as any}
-                index={idx}
-                tracks={perfQueue as any}
-                coverUrl={coverUrl}
-                coverSize="md"
-                // getQueue ENTFERNT (nur eine Queue-Quelle)
-                leadingSlot={idx + 1}
-                titleSlot={
-                  <div className="flex items-center min-w-0">
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onClick={() => {
-                        if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
-                      }}
-                      className="
-                        text-left text-[13px] font-semibold text-[#00FFC6] truncate
-                        hover:text-[#00E0B0] transition-colors
-                        focus:outline-none
-                      "
-                      title={formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
-                    >
-                      {formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
-                    </button>
-                  </div>
-                }
-                subtitleSlot={
-                  Array.isArray((rowTrack as any)?.artists) &&
-                  (rowTrack as any).artists.length > 0 ? (
-                    <div className="mt-1 text-left text-xs text-white/60 truncate">
-                      {(rowTrack as any).artists.map(
-                        (a: any, idx2: number, arr: any[]) => (
-                          <span key={a.id}>
-                            <button
-                              type="button"
-                              onPointerDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
-                              onClick={() =>
-                                routerPush(`/dashboard/artist/${String(a.id)}`)
-                              }
-                              className="
-                                hover:text-[#00FFC6] hover:underline underline-offset-2
-                                transition-colors
-                                focus:outline-none
-                              "
-                              title={String(a.display_name)}
-                            >
-                              {String(a.display_name)}
-                            </button>
-                            {idx2 < arr.length - 1 ? ", " : null}
-                          </span>
-                        )
-                      )}
+              return (
+                <TrackRowBase
+                  key={trackId ?? `${idx}`}
+                  track={rowTrack as any}
+                  index={idx}
+                  tracks={perfQueue as any}
+                  coverUrl={coverUrl}
+                  coverSize="md"
+                  leadingSlot={idx + 1}
+                  titleSlot={
+                    <div className="flex items-center min-w-0">
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onClick={() => {
+                          if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
+                        }}
+                        className="
+                          text-left text-[13px] font-semibold text-[#00FFC6] truncate
+                          hover:text-[#00E0B0] transition-colors
+                          focus:outline-none
+                        "
+                        title={formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
+                      >
+                        {formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
+                      </button>
                     </div>
-                  ) : rowTrack.artist_id ? (
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onClick={() =>
-                        routerPush(`/dashboard/artist/${rowTrack.artist_id}`)
-                      }
-                      className="
-                        mt-1 text-left text-xs text-white/60 truncate
-                        hover:text-[#00FFC6] hover:underline underline-offset-2
-                        transition-colors
-                        focus:outline-none
-                      "
-                      title={artistName}
-                    >
-                      {artistName}
-                    </button>
-                  ) : (
-                    <div className="mt-1 text-xs text-white/40 truncate">
-                      Unknown artist
-                    </div>
-                  )
-                }
-                metaSlot={
-                  (rowTrack as any).release_track_id ? (
-                    <TrackRatingInline
-                      readOnly={true}
-                      releaseTrackId={(rowTrack as any).release_track_id}
-                      trackId={(rowTrack as any).id}
-                      initialAvg={(rowTrack as any).rating_avg}
-                      initialCount={(rowTrack as any).rating_count}
-                      initialStreams={(rowTrack as any).stream_count}
-                      initialMyStars={null}
+                  }
+                  subtitleSlot={
+                    Array.isArray((rowTrack as any)?.artists) &&
+                    (rowTrack as any).artists.length > 0 ? (
+                      <div className="mt-1 text-left text-xs text-white/60 truncate">
+                        {(rowTrack as any).artists.map(
+                          (a: any, idx2: number, arr: any[]) => (
+                            <span key={a.id}>
+                              <button
+                                type="button"
+                                onPointerDown={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                                onClick={() =>
+                                  routerPush(`/dashboard/artist/${String(a.id)}`)
+                                }
+                                className="
+                                  hover:text-[#00FFC6] hover:underline underline-offset-2
+                                  transition-colors
+                                  focus:outline-none
+                                "
+                                title={String(a.display_name)}
+                              >
+                                {String(a.display_name)}
+                              </button>
+                              {idx2 < arr.length - 1 ? ", " : null}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    ) : rowTrack.artist_id ? (
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onClick={() =>
+                          routerPush(`/dashboard/artist/${rowTrack.artist_id}`)
+                        }
+                        className="
+                          mt-1 text-left text-xs text-white/60 truncate
+                          hover:text-[#00FFC6] hover:underline underline-offset-2
+                          transition-colors
+                          focus:outline-none
+                        "
+                        title={artistName}
+                      >
+                        {artistName}
+                      </button>
+                    ) : (
+                      <div className="mt-1 text-xs text-white/40 truncate">
+                        Unknown artist
+                      </div>
+                    )
+                  }
+                  metaSlot={
+                    (rowTrack as any).release_track_id ? (
+                      <TrackRatingInline
+                        readOnly={true}
+                        releaseTrackId={(rowTrack as any).release_track_id}
+                        trackId={(rowTrack as any).id}
+                        initialAvg={(rowTrack as any).rating_avg}
+                        initialCount={(rowTrack as any).rating_count}
+                        initialStreams={(rowTrack as any).stream_count}
+                        initialMyStars={null}
+                      />
+                    ) : (
+                      <span className="text-xs text-white/60">★</span>
+                    )
+                  }
+                  actionsSlot={
+                    <TrackOptionsTrigger
+                      track={rowTrack as any}
+                      showGoToArtist={true}
+                      showGoToRelease={true}
+                      releaseId={releaseId ?? undefined}
                     />
-                  ) : (
-                    <span className="text-xs text-white/60">★</span>
-                  )
-                }
-                actionsSlot={
-                  <TrackOptionsTrigger
-                    track={rowTrack as any}
-                    showGoToArtist={true}
-                    showGoToRelease={true}
-                    releaseId={releaseId ?? undefined}
-                  />
-                }
-                // coverOverlaySlot ENTFERNT (kein doppelter PlayOverlayButton)
-                bpmSlot={
-                  <span className="text-white/50 text-sm tabular-nums">
-                    {(rowTrack as any).bpm ?? "—"}
-                  </span>
-                }
-                keySlot={
-                  <span className="text-white/50 text-sm">
-                    {(rowTrack as any).key ?? "—"}
-                  </span>
-                }
-                genreSlot={
-                  <span className="text-white/50 text-sm truncate">
-                    {(perfTrackMetaMap as any)?.[trackId]?.genre ?? "—"}
-                  </span>
-                }
-              />
-            );
-          })}
+                  }
+                  bpmSlot={
+                    <span className="text-white/50 text-sm tabular-nums">
+                      {(rowTrack as any).bpm ?? "—"}
+                    </span>
+                  }
+                  keySlot={
+                    <span className="text-white/50 text-sm">
+                      {(rowTrack as any).key ?? "—"}
+                    </span>
+                  }
+                  genreSlot={
+                    <span className="text-white/50 text-sm truncate">
+                      {(perfTrackMetaMap as any)?.[trackId]?.genre ?? "—"}
+                    </span>
+                  }
+                />
+              );
+            })}
+          </div>
+
+          <div className="min-w-0 xl:sticky xl:top-4">
+            <HomeArtistSpotlightCard tracks={perfQueue} />
+          </div>
         </div>
       )}
     </>
