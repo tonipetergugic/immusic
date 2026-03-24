@@ -289,7 +289,7 @@ export default function TrackOptionsMenu({
             type="button"
             onClick={() => void handleItemClick(item.action)}
             role="menuitem"
-            className="w-full text-left px-3 py-2.5 text-sm text-white/80 rounded-xl border border-transparent transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+            className="w-full cursor-pointer text-left px-3 py-2.5 text-sm text-white/80 rounded-xl border border-transparent transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             {item.label}
           </button>

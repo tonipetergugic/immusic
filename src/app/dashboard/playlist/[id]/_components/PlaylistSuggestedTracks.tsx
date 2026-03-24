@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import CoverPlaceholder from "@/components/CoverPlaceholder";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import {
   fetchPerformanceDiscovery,
   type PerformanceDiscoveryItem,
@@ -23,6 +24,7 @@ type Props = {
 type TrackMetaRow = {
   id: string;
   genre: string | null;
+  version: string | null;
 };
 
 type ArtistRow = {
@@ -39,6 +41,7 @@ type ReleaseTrackRow = {
 type SuggestedTrack = {
   id: string;
   title: string;
+  version: string | null;
   artist_id: string;
   artist_name: string;
   cover_url: string | null;
@@ -100,7 +103,7 @@ export default function PlaylistSuggestedTracks({
           trackIds.length
             ? supabase
                 .from("tracks")
-                .select("id, genre")
+                .select("id, genre, version")
                 .in("id", trackIds)
                 .returns<TrackMetaRow[]>()
             : Promise.resolve({ data: [] as TrackMetaRow[] }),
@@ -122,8 +125,14 @@ export default function PlaylistSuggestedTracks({
 
         if (cancelled) return;
 
-        const genreMap = new Map(
-          (trackMetaRows ?? []).map((row) => [row.id, row.genre ?? null])
+        const trackMetaMap = new Map(
+          (trackMetaRows ?? []).map((row) => [
+            row.id,
+            {
+              genre: row.genre ?? null,
+              version: row.version ?? null,
+            },
+          ])
         );
 
         const artistMap = new Map(
@@ -148,7 +157,8 @@ export default function PlaylistSuggestedTracks({
                   .from("release_covers")
                   .getPublicUrl(item.release_cover_path).data.publicUrl ?? null
               : null,
-            genre: genreMap.get(item.track_id) ?? null,
+            version: trackMetaMap.get(item.track_id)?.version ?? null,
+            genre: trackMetaMap.get(item.track_id)?.genre ?? null,
             release_id: item.release_id ?? null,
             release_track_id:
               item.release_id
@@ -230,6 +240,8 @@ export default function PlaylistSuggestedTracks({
       const mergedPlayerTrack: PlayerTrack = {
         ...playerTrack,
         genre: playerTrack.genre ?? item.genre ?? null,
+        version: (playerTrack as any).version ?? item.version ?? null,
+        status: (playerTrack as any).status ?? "performance",
       };
 
       onTrackAdded(mergedPlayerTrack);
@@ -358,8 +370,10 @@ export default function PlaylistSuggestedTracks({
               artist_id: item.artist_id,
               cover_url: item.cover_url,
               genre: item.genre,
+              version: item.version,
               release_id: item.release_id,
               release_track_id: item.release_track_id,
+              status: "performance",
               profiles: {
                 display_name: item.artist_name,
               },
@@ -376,10 +390,12 @@ export default function PlaylistSuggestedTracks({
                 className="border-b-0 px-0 grid-cols-[40px_56px_minmax(0,1fr)_0px] lg:grid-cols-[40px_56px_minmax(0,1fr)_0px]"
                 titleSlot={
                   <span
-                    className="text-left text-[14px] font-semibold text-white truncate"
-                    title={item.title}
+                    className={`text-left text-[14px] font-semibold truncate ${
+                      track.status === "performance" ? "text-[#00FFC6]" : "text-white"
+                    }`}
+                    title={formatTrackTitle(item.title, item.version)}
                   >
-                    {item.title}
+                    {formatTrackTitle(item.title, item.version)}
                   </span>
                 }
                 subtitleSlot={

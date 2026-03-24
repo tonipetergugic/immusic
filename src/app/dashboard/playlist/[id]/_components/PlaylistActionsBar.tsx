@@ -161,12 +161,12 @@ export default function PlaylistActionsBar({
                       onEditDetails();
                     }}
                     className="
-          w-full px-3 py-2.5
-          flex items-center gap-2
-          text-sm text-white/90
-          hover:bg-white/5
-          transition
-        "
+  w-full cursor-pointer px-3 py-2.5
+  flex items-center gap-2
+  text-sm text-white/90
+  hover:bg-white/5
+  transition
+"
                   >
                     <Pencil size={16} className="text-white/70" />
                     <span>Edit playlist</span>
@@ -179,12 +179,12 @@ export default function PlaylistActionsBar({
                       await onTogglePublic();
                     }}
                     className="
-          w-full px-3 py-2.5
-          flex items-center gap-2
-          text-sm text-white/90
-          hover:bg-white/5
-          transition
-        "
+  w-full cursor-pointer px-3 py-2.5
+  flex items-center gap-2
+  text-sm text-white/90
+  hover:bg-white/5
+  transition
+"
                   >
                     {playlist.is_public ? (
                       <>
@@ -208,12 +208,12 @@ export default function PlaylistActionsBar({
                       onDeletePlaylist();
                     }}
                     className="
-          w-full px-3 py-2.5
-          flex items-center gap-2
-          text-sm text-red-300/90
-          hover:bg-red-500/10
-          transition
-        "
+  w-full cursor-pointer px-3 py-2.5
+  flex items-center gap-2
+  text-sm text-red-300/90
+  hover:bg-red-500/10
+  transition
+"
                   >
                     <Trash2 size={16} className="text-red-400" />
                     <span>Delete playlist</span>

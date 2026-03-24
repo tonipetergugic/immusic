@@ -7,6 +7,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { Playlist } from "@/types/database";
 import BackLink from "@/components/BackLink";
+import DeleteCoverModal from "@/components/DeleteCoverModal";
 import { Trash2 } from "lucide-react";
 import { useFitText } from "@/components/useFitText";
 
@@ -36,6 +37,7 @@ export default function PlaylistHeaderClient({
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [coverBusy, setCoverBusy] = useState(false);
+  const [coverDeleteOpen, setCoverDeleteOpen] = useState(false);
 
   async function replaceCover(file: File) {
     if (!isOwner) return;
@@ -94,15 +96,11 @@ export default function PlaylistHeaderClient({
   }
 
   async function deleteCover() {
-    if (!isOwner) return;
-    if (coverBusy) return;
-
-    const ok = window.confirm("Delete cover?");
-    if (!ok) return;
+    if (!isOwner) return false;
+    if (coverBusy) return false;
 
     setCoverBusy(true);
     try {
-      // load fresh cover_url (relative path) from DB to delete safely
       const { data: fresh, error: freshErr } = await supabase
         .from("playlists")
         .select("cover_url")
@@ -115,7 +113,6 @@ export default function PlaylistHeaderClient({
 
       const currentRel = fresh?.cover_url ?? null;
 
-      // 1) clear DB ref first (makes UI empty as soon as state refreshes)
       const { error: dbErr } = await supabase
         .from("playlists")
         .update({ cover_url: null })
@@ -123,12 +120,11 @@ export default function PlaylistHeaderClient({
 
       if (dbErr) {
         console.error("Cover DB clear failed:", dbErr);
-        return;
+        return false;
       }
 
       onCoverUpdated(null);
 
-      // 2) best-effort storage delete (only if we have a rel path)
       if (currentRel) {
         const { error: removeErr } = await supabase.storage
           .from("playlist-covers")
@@ -138,6 +134,8 @@ export default function PlaylistHeaderClient({
           console.error("Failed to remove cover from storage:", removeErr);
         }
       }
+
+      return true;
     } finally {
       setCoverBusy(false);
     }
@@ -316,10 +314,10 @@ export default function PlaylistHeaderClient({
               {isOwner && rawCover ? (
                 <button
                   type="button"
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    await deleteCover();
+                    setCoverDeleteOpen(true);
                   }}
                   className={[
                     "absolute bottom-3 right-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border cursor-pointer",
@@ -376,6 +374,18 @@ export default function PlaylistHeaderClient({
           </div>
         </div>
       </div>
+
+      <DeleteCoverModal
+        open={coverDeleteOpen}
+        busy={coverBusy}
+        onClose={() => setCoverDeleteOpen(false)}
+        onConfirm={async () => {
+          const success = await deleteCover();
+          if (success) {
+            setCoverDeleteOpen(false);
+          }
+        }}
+      />
     </div>
   );
 }
