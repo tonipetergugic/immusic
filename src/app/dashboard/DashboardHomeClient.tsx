@@ -1,7 +1,7 @@
 // /Users/tonipetergugic/immusic/src/app/dashboard/DashboardHomeClient.tsx
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { fetchPerformanceDiscovery } from "@/lib/discovery/fetchPerformanceDiscovery.client";
 import type { DevelopmentDiscoveryItem } from "@/lib/discovery/fetchDevelopmentDiscovery.client";
@@ -35,9 +35,10 @@ export default function DashboardHomeClient({
   const router = useRouter();
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
-  const [homeTab, setHomeTab] = useState<"releases" | "playlists" | "tracks">("releases");
+  const [homeTab, setHomeTab] = useState<HomeTabKey>("releases");
   const [devGenre, setDevGenre] = useState<string>("all");
   const [performanceGenre, setPerformanceGenre] = useState<string>("all");
+  const tabFocusRef = useRef<HomeTabKey | null>(null);
 
   const devCacheRef = useRef<Record<string, DevelopmentDiscoveryItem[]>>({});
   const devPromiseRef = useRef<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>({});
@@ -75,6 +76,17 @@ export default function DashboardHomeClient({
     lastArtistsSigRef,
   });
 
+  useEffect(() => {
+    if (!tabFocusRef.current) return;
+
+    const target = document.getElementById(`home-tab-${tabFocusRef.current}`);
+    if (target instanceof HTMLButtonElement) {
+      target.focus();
+    }
+
+    tabFocusRef.current = null;
+  }, [homeTab]);
+
   // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
   const playlistModule =
@@ -111,31 +123,87 @@ export default function DashboardHomeClient({
     }) as unknown as PlayerTrack[];
   }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
+  type HomeTabKey = "releases" | "playlists" | "tracks";
+  const HOME_TABS: { key: HomeTabKey; label: string }[] = [
+    { key: "releases", label: "Releases" },
+    { key: "playlists", label: "Playlists" },
+    { key: "tracks", label: "Tracks" },
+  ];
+  function getNextHomeTabKey(
+    current: HomeTabKey,
+    direction: "left" | "right"
+  ): HomeTabKey {
+    const currentIndex = HOME_TABS.findIndex((tab) => tab.key === current);
+    if (currentIndex === -1) return "releases";
+
+    if (direction === "right") {
+      return HOME_TABS[(currentIndex + 1) % HOME_TABS.length].key;
+    }
+
+    return HOME_TABS[(currentIndex - 1 + HOME_TABS.length) % HOME_TABS.length].key;
+  }
+
   const HomeTabs = (
-    <div className="border-b border-white/5">
-      <nav className="flex gap-6 text-sm">
-        {[
-          { key: "releases", label: "Releases" },
-          { key: "playlists", label: "Playlists" },
-          { key: "tracks", label: "Tracks" },
-        ].map((t) => {
+    <div className="relative border-b border-white/5 pb-1">
+      <div className="overflow-x-auto">
+        <nav
+          role="tablist"
+          aria-label="Home sections"
+          className="flex w-max min-w-full gap-6 text-sm whitespace-nowrap"
+        >
+        {HOME_TABS.map((t) => {
           const isActive = homeTab === t.key;
           return (
             <button
               key={t.key}
               type="button"
-              onClick={() => setHomeTab(t.key as any)}
-              className={`pb-3 transition-colors cursor-pointer ${
+              id={`home-tab-${t.key}`}
+              role="tab"
+              tabIndex={isActive ? 0 : -1}
+              aria-selected={isActive}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight") {
+                  e.preventDefault();
+                  const nextTab = getNextHomeTabKey(homeTab, "right");
+                  tabFocusRef.current = nextTab;
+                  setHomeTab(nextTab);
+                }
+
+                if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  const nextTab = getNextHomeTabKey(homeTab, "left");
+                  tabFocusRef.current = nextTab;
+                  setHomeTab(nextTab);
+                }
+
+                if (e.key === "Home") {
+                  e.preventDefault();
+                  const nextTab = HOME_TABS[0].key;
+                  tabFocusRef.current = nextTab;
+                  setHomeTab(nextTab);
+                }
+
+                if (e.key === "End") {
+                  e.preventDefault();
+                  const nextTab = HOME_TABS[HOME_TABS.length - 1].key;
+                  tabFocusRef.current = nextTab;
+                  setHomeTab(nextTab);
+                }
+              }}
+              onClick={() => setHomeTab(t.key)}
+              className={`py-2 pb-3 border-b-2 transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:text-white ${
                 isActive
-                  ? "text-white font-medium border-b-2 border-[#00FFC6]"
-                  : "text-neutral-400 hover:text-white"
+                  ? "text-white font-medium border-[#00FFC6]"
+                  : "text-neutral-400 border-transparent hover:text-white"
               }`}
             >
               {t.label}
             </button>
           );
         })}
-      </nav>
+        </nav>
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0E0E10] to-transparent" />
     </div>
   );
 
@@ -146,11 +214,14 @@ export default function DashboardHomeClient({
         setDiscoveryMode={setDiscoveryMode}
       />
 
-      {/* Development (EXAKT das bestehende Home) */}
-      {discoveryMode === "development" ? (
-        <div className="space-y-10 pb-[calc(env(safe-area-inset-bottom)+120px)]">
-          {HomeTabs}
+      {HomeTabs}
 
+      {discoveryMode === "development" ? (
+        <div
+          role="tabpanel"
+          aria-labelledby={`home-tab-${homeTab}`}
+          className="space-y-10 pt-2 pb-[calc(env(safe-area-inset-bottom)+120px)]"
+        >
           {homeTab === "releases" ? (
             <HomeReleasesSection
               title={releaseModule?.title ?? "Releases"}
@@ -186,10 +257,11 @@ export default function DashboardHomeClient({
           ) : null}
         </div>
       ) : (
-        /* Performance (minimal list from performance_discovery_candidates via API) */
-        <div className="space-y-8">
-          {HomeTabs}
-
+        <div
+          role="tabpanel"
+          aria-labelledby={`home-tab-${homeTab}`}
+          className="space-y-10 pt-2 pb-[calc(env(safe-area-inset-bottom)+120px)]"
+        >
           {homeTab === "releases" ? (
             <HomeReleasesSection
               title="Performance Releases"

@@ -1,5 +1,22 @@
 "use client";
 
+function setDiscoveryModePreservingScroll(
+  mode: "development" | "performance",
+  setDiscoveryMode: (mode: "development" | "performance") => void
+) {
+  const currentScrollY = window.scrollY;
+
+  setDiscoveryMode(mode);
+
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: currentScrollY, behavior: "auto" });
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: "auto" });
+    });
+  });
+}
+
 type Props = {
   discoveryMode: "development" | "performance";
   setDiscoveryMode: (mode: "development" | "performance") => void;
@@ -77,12 +94,12 @@ export default function DashboardHeroAndToggle({
             <div className="inline-flex rounded-full border border-[#00FFC622] bg-black/25 p-1 backdrop-blur shadow-[0_0_22px_rgba(0,255,198,0.10)]">
               <button
                 type="button"
-                onClick={() => setDiscoveryMode("development")}
+                onClick={() => setDiscoveryModePreservingScroll("development", setDiscoveryMode)}
                 className={[
-                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full border text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                   discoveryMode === "development"
-                    ? "bg-[#0B1614] text-white/90 border border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
-                    : "bg-transparent text-white/70 hover:text-white/90",
+                    ? "bg-[#0B1614] text-white/90 border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
+                    : "bg-transparent text-white/70 border-transparent hover:text-white/90",
                 ].join(" ")}
               >
                 Development
@@ -90,12 +107,12 @@ export default function DashboardHeroAndToggle({
 
               <button
                 type="button"
-                onClick={() => setDiscoveryMode("performance")}
+                onClick={() => setDiscoveryModePreservingScroll("performance", setDiscoveryMode)}
                 className={[
-                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full border text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                   discoveryMode === "performance"
-                    ? "bg-[#0B1614] text-white/90 border border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
-                    : "bg-transparent text-white/70 hover:text-white/90",
+                    ? "bg-[#0B1614] text-white/90 border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
+                    : "bg-transparent text-white/70 border-transparent hover:text-white/90",
                 ].join(" ")}
               >
                 Performance
