@@ -17,10 +17,9 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
           -mx-4 sm:-mx-6 lg:-mx-8
           px-4 sm:px-6 lg:px-8
           pt-10
-          pb-16
+          pb-12
         "
       >
-        {/* Layer 1: Base gradient */}
         <div
           aria-hidden="true"
           className="
@@ -32,7 +31,6 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
           "
         />
 
-        {/* Layer 2: Radial glow (subtle) */}
         <div
           aria-hidden="true"
           className="
@@ -41,7 +39,6 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
           "
         />
 
-        {/* Layer 3: Bottom fade */}
         <div
           aria-hidden="true"
           className="
@@ -54,38 +51,15 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
           "
         />
 
-        {/* Content layer */}
         <div className="relative z-10">
-          <header className="flex flex-col gap-2">
+          <header className="flex min-h-[154px] flex-col justify-start gap-2">
             <h1 className="text-3xl font-semibold tracking-tight text-white">
-  Your <span className="text-[#00FFC6]">Library</span>
-</h1>
+              Your <span className="text-[#00FFC6]">Library</span>
+            </h1>
             <p className="text-sm text-neutral-400">
               Collect your favourite playlists, tracks and artists in one place.
             </p>
           </header>
-
-          {/* Tabs (underline style like old Library) */}
-          <div className="mt-10 border-b border-white/5">
-            <nav className="flex gap-6 text-sm">
-              {tabs.map((tab) => {
-                const isActive = currentTab === tab.key;
-                return (
-                  <Link
-                    key={tab.key}
-                    href={`/dashboard/library?tab=${tab.key}`}
-                    className={`pb-3 transition-colors ${
-                      isActive
-                        ? "text-white font-medium border-b-2 border-[#00FFC6]"
-                        : "text-neutral-400 hover:text-white"
-                    }`}
-                  >
-                    {tab.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
         </div>
       </div>
     </div>

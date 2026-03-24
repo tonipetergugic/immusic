@@ -48,6 +48,94 @@ export async function loadLibraryV2Playlists({
   }));
 }
 
+export async function loadLibraryV2Releases({
+  supabase,
+  userId,
+}: {
+  supabase: SupabaseClient;
+  userId: string;
+}): Promise<
+  {
+    id: string;
+    title: string | null;
+    coverUrl: string | null;
+    releaseType: string | null;
+    releaseDate: string | null;
+    artistId: string | null;
+    artistName: string | null;
+  }[]
+> {
+  const { data: rows, error } = await supabase
+    .from("library_releases")
+    .select("release_id, saved_at")
+    .eq("user_id", userId)
+    .order("saved_at", { ascending: false });
+
+  if (error) {
+    console.error("LibraryV2: Failed to load library_releases:", error);
+    return [];
+  }
+
+  const releaseIds = Array.from(
+    new Set((rows ?? []).map((r: any) => r.release_id))
+  ).filter(Boolean);
+
+  if (releaseIds.length === 0) return [];
+
+  const { data: releases, error: releasesErr } = await supabase
+    .from("releases")
+    .select(
+      `
+      id,
+      title,
+      cover_path,
+      release_type,
+      release_date,
+      artist_id,
+      profiles:artist_id (
+        display_name
+      )
+      `
+    )
+    .in("id", releaseIds);
+
+  if (releasesErr) {
+    console.error("LibraryV2: Failed to load releases:", releasesErr);
+    return [];
+  }
+
+  const byId = new Map(
+    (releases ?? []).map((release: any) => [
+      String(release.id),
+      {
+        id: String(release.id),
+        title: release.title ?? null,
+        coverUrl: release.cover_path
+          ? supabase.storage
+              .from("release_covers")
+              .getPublicUrl(release.cover_path).data.publicUrl ?? null
+          : null,
+        releaseType: release.release_type ?? null,
+        releaseDate: release.release_date ?? null,
+        artistId: release.artist_id ?? null,
+        artistName: release.profiles?.display_name ?? null,
+      },
+    ])
+  );
+
+  return releaseIds
+    .map((id) => byId.get(String(id)) ?? null)
+    .filter(Boolean) as {
+    id: string;
+    title: string | null;
+    coverUrl: string | null;
+    releaseType: string | null;
+    releaseDate: string | null;
+    artistId: string | null;
+    artistName: string | null;
+  }[];
+}
+
 export async function loadLibraryV2Artists({
   supabase,
   userId,

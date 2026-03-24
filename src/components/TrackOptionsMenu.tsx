@@ -10,6 +10,7 @@ type TrackOptionsMenuProps = {
   track: PlayerTrack;
   onClose: () => void;
   onRemove?: () => void;
+  onLibraryRemoved?: () => void;
   onAddToPlaylist?: () => void;
   position: {
     top: number;
@@ -36,6 +37,7 @@ export default function TrackOptionsMenu({
   track,
   onClose,
   onRemove,
+  onLibraryRemoved,
   onAddToPlaylist,
   position,
   showGoToArtist = true,
@@ -188,8 +190,9 @@ export default function TrackOptionsMenu({
       }
 
       setIsSaved(false);
-      setToast("Removed from Library");
       setBusy(false);
+      onLibraryRemoved?.();
+      onClose();
       return;
     }
 

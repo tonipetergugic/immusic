@@ -141,7 +141,7 @@ export default function HomeArtistSpotlightCard({
   }
 
   return (
-    <aside className="overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(17,17,18,0.92),rgba(10,10,11,0.98))] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur">
+    <aside className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(17,17,18,0.92),rgba(10,10,11,0.98))] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(0,255,198,0.10),transparent_70%)]" />
 
       <div className="relative">

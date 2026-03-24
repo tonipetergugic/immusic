@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import BackLink from "@/components/BackLink";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
@@ -14,6 +15,31 @@ export default async function ReleaseDetailPage({
 }) {
   const supabase = await createSupabaseServerClient();
   const { id: releaseId } = await params;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const canSaveRelease = !!user?.id;
+
+  let initialSaved = false;
+  if (canSaveRelease) {
+    const { data: savedRow, error: savedErr } = await supabase
+      .from("library_releases")
+      .select("release_id")
+      .eq("user_id", user.id)
+      .eq("release_id", releaseId)
+      .maybeSingle();
+
+    if (savedErr) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to read library_releases:", savedErr);
+      }
+      initialSaved = false;
+    } else {
+      initialSaved = !!savedRow;
+    }
+  }
 
   // Release + Artist (profiles)
   const { data: release, error } = await supabase
@@ -260,6 +286,9 @@ export default async function ReleaseDetailPage({
         releaseCoverUrl={coverUrl}
         playerQueue={playerQueue}
         tracks={releaseTracks}
+        canSaveRelease={canSaveRelease}
+        currentUserId={user?.id ?? null}
+        initialSaved={initialSaved}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import AddToPlaylistModal from "@/components/AddToPlaylistModal";
 type TrackOptionsTriggerProps = {
   track: PlayerTrack;
   onRemove?: () => void;
+  onLibraryRemoved?: () => void;
   tracks?: PlayerTrack[];
   showGoToArtist?: boolean;
   showGoToRelease?: boolean;
@@ -23,6 +24,7 @@ const EDGE_GAP = 8;
 export default function TrackOptionsTrigger({
   track,
   onRemove,
+  onLibraryRemoved,
   showGoToArtist = true,
   showGoToRelease = true,
   releaseId = null,
@@ -131,6 +133,7 @@ export default function TrackOptionsTrigger({
               track={track}
               onClose={closeMenu}
               onRemove={onRemove}
+              onLibraryRemoved={onLibraryRemoved}
               onAddToPlaylist={() => setOpenAddModal(true)}
               position={menuPosition}
               showGoToArtist={showGoToArtist}

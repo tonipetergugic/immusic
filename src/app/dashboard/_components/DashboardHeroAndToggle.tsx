@@ -1,22 +1,5 @@
 "use client";
 
-function setDiscoveryModePreservingScroll(
-  mode: "development" | "performance",
-  setDiscoveryMode: (mode: "development" | "performance") => void
-) {
-  const currentScrollY = window.scrollY;
-
-  setDiscoveryMode(mode);
-
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: currentScrollY, behavior: "auto" });
-
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: currentScrollY, behavior: "auto" });
-    });
-  });
-}
-
 type Props = {
   discoveryMode: "development" | "performance";
   setDiscoveryMode: (mode: "development" | "performance") => void;
@@ -94,7 +77,7 @@ export default function DashboardHeroAndToggle({
             <div className="inline-flex rounded-full border border-[#00FFC622] bg-black/25 p-1 backdrop-blur shadow-[0_0_22px_rgba(0,255,198,0.10)]">
               <button
                 type="button"
-                onClick={() => setDiscoveryModePreservingScroll("development", setDiscoveryMode)}
+                onClick={() => setDiscoveryMode("development")}
                 className={[
                   "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full border text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                   discoveryMode === "development"
@@ -107,7 +90,7 @@ export default function DashboardHeroAndToggle({
 
               <button
                 type="button"
-                onClick={() => setDiscoveryModePreservingScroll("performance", setDiscoveryMode)}
+                onClick={() => setDiscoveryMode("performance")}
                 className={[
                   "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full border text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
                   discoveryMode === "performance"

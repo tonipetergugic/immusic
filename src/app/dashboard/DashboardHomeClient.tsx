@@ -22,6 +22,28 @@ import PerformanceDiscoverySection from "./_components/PerformanceDiscoverySecti
 import DashboardHeroAndToggle from "./_components/DashboardHeroAndToggle";
 import type { DashboardHomeClientProps } from "./_types/dashboardHome.types";
 
+type HomeTabKey = "releases" | "playlists" | "tracks";
+
+const HOME_TABS: { key: HomeTabKey; label: string }[] = [
+  { key: "releases", label: "Releases" },
+  { key: "playlists", label: "Playlists" },
+  { key: "tracks", label: "Tracks" },
+];
+
+function getNextHomeTabKey(
+  current: HomeTabKey,
+  direction: "left" | "right"
+): HomeTabKey {
+  const currentIndex = HOME_TABS.findIndex((tab) => tab.key === current);
+  if (currentIndex === -1) return "releases";
+
+  if (direction === "right") {
+    return HOME_TABS[(currentIndex + 1) % HOME_TABS.length].key;
+  }
+
+  return HOME_TABS[(currentIndex - 1 + HOME_TABS.length) % HOME_TABS.length].key;
+}
+
 export default function DashboardHomeClient({
   home,
   releasesById,
@@ -123,26 +145,6 @@ export default function DashboardHomeClient({
     }) as unknown as PlayerTrack[];
   }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
-  type HomeTabKey = "releases" | "playlists" | "tracks";
-  const HOME_TABS: { key: HomeTabKey; label: string }[] = [
-    { key: "releases", label: "Releases" },
-    { key: "playlists", label: "Playlists" },
-    { key: "tracks", label: "Tracks" },
-  ];
-  function getNextHomeTabKey(
-    current: HomeTabKey,
-    direction: "left" | "right"
-  ): HomeTabKey {
-    const currentIndex = HOME_TABS.findIndex((tab) => tab.key === current);
-    if (currentIndex === -1) return "releases";
-
-    if (direction === "right") {
-      return HOME_TABS[(currentIndex + 1) % HOME_TABS.length].key;
-    }
-
-    return HOME_TABS[(currentIndex - 1 + HOME_TABS.length) % HOME_TABS.length].key;
-  }
-
   const HomeTabs = (
     <div className="relative border-b border-white/5 pb-1">
       <div className="overflow-x-auto">
@@ -203,7 +205,7 @@ export default function DashboardHomeClient({
         })}
         </nav>
       </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0E0E10] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0E0E10] to-transparent lg:hidden" />
     </div>
   );
 

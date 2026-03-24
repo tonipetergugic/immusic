@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import TrackRowBase from "@/components/TrackRowBase";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
@@ -16,7 +17,7 @@ export type LibraryV2TracksPayload = {
 };
 
 export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) {
-  const trackData = payload.tracks;
+  const [trackData, setTrackData] = useState(payload.tracks);
   const releaseTrackIdByTrackId = payload.releaseTrackIdByTrackId;
   const ratingByReleaseTrackId = payload.ratingByReleaseTrackId;
   const myStarsByReleaseTrackId = payload.myStarsByReleaseTrackId;
@@ -86,7 +87,12 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                   }
                   actionsSlot={
                     <div onClick={(e) => e.stopPropagation()}>
-                      <TrackOptionsTrigger track={track as any} />
+                      <TrackOptionsTrigger
+                        track={track as any}
+                        onLibraryRemoved={() => {
+                          setTrackData((prev) => prev.filter((item) => String(item.id) !== String(track.id)));
+                        }}
+                      />
                     </div>
                   }
                 />
