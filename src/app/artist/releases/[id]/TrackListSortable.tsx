@@ -46,7 +46,13 @@ function SortableTrackItem({
   onReleaseModified?: () => void;
   eligibilityByTrackId?: Record<
     string,
-    { is_development: boolean; exposure_completed: boolean; rating_count: number }
+    {
+      track_status: string | null;
+      is_development: boolean;
+      exposure_completed: boolean;
+      rating_count: number;
+      avg_stars: number | null;
+    }
   >;
   onRefresh?: () => void;
   initialBoostEnabled: boolean;
@@ -65,21 +71,31 @@ function SortableTrackItem({
   };
 
   const e = eligibilityByTrackId?.[track.track_id];
-  const isDevOk = !!e?.is_development;
+  const trackStatus = e?.track_status ?? null;
+  const isPerformance = trackStatus === "performance";
+  const isDevOk = !!e?.is_development || isPerformance;
   const isExposureOk = !!e?.exposure_completed;
   const ratingCount = typeof e?.rating_count === "number" ? e.rating_count : 0;
+  const avgStars = typeof e?.avg_stars === "number" ? e.avg_stars : 0;
 
-  const isEligible = isDevOk && isExposureOk && ratingCount >= 3;
+  const isEligible =
+    isPerformance || (isDevOk && isExposureOk && ratingCount >= 3 && avgStars >= 3.0);
 
   const exposureTooltipText =
-    "Exposure missing: At least 20 listeners must hear this track to complete Exposure.";
+    "Exposure missing: At least 3 listeners must hear this track to complete Exposure.";
 
   const devLabel = isDevOk ? "Development ✓" : "Development ✕";
   const exposureLabel = isExposureOk ? "Exposure ✓" : "Exposure ✕";
   const ratingsLabel = `Ratings ${ratingCount}/3`;
+  const ratingsTooltipText =
+    ratingCount >= 3 && avgStars < 3.0 && !isPerformance
+      ? `This track has enough ratings, but the average rating is only ${avgStars.toFixed(2)}. A minimum average of 3.0 is required for Performance.`
+      : null;
 
   const nextStep =
-    isEligible
+    isPerformance
+      ? null
+      : isEligible
       ? null
       : !isDevOk
       ? (releasePublished ? { label: "Enable Development", href: null } : null)
@@ -87,6 +103,8 @@ function SortableTrackItem({
       ? { label: "Check Guaranteed Exposure", href: "/artist/dashboard" }
       : ratingCount < 3
       ? { label: "Collect more ratings (Development)", href: "/artist/dashboard" }
+      : avgStars < 3.0
+      ? { label: "Improve rating quality", href: "/artist/dashboard" }
       : null;
 
   return (
@@ -163,11 +181,22 @@ function SortableTrackItem({
                 <span>{exposureLabel}</span>
               )}
               <span className="mx-3 text-white/30">•</span>
-              <span>{ratingsLabel}</span>
+              {ratingsTooltipText ? (
+                <Tooltip label={ratingsTooltipText}>
+                  <span className="cursor-help">{ratingsLabel}</span>
+                </Tooltip>
+              ) : (
+                <span>{ratingsLabel}</span>
+              )}
             </div>
 
             <div className="inline-flex items-center justify-end gap-2">
-              {isEligible ? (
+              {isPerformance ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
+                  <span className="text-sm font-semibold text-[#00FFC6]">In Performance</span>
+                </>
+              ) : isEligible ? (
                 <>
                   <CheckCircle2 className="h-4 w-4 text-[#00FFC6]" />
                   <span className="text-sm font-semibold text-[#00FFC6]">Performance ready</span>
@@ -184,7 +213,7 @@ function SortableTrackItem({
           {/* Row 2: Next step (left) + Remove (right) */}
           <div className="grid grid-cols-[1fr_auto] items-center gap-4">
             <div>
-              {isEligible ? (
+              {!isPerformance && isEligible ? (
                 <div className="text-[11px] text-[#00FFC6]/80">
                   Performance ready.
                 </div>
@@ -255,7 +284,13 @@ type TrackListSortableProps = {
   onReleaseModified?: () => void;
   eligibilityByTrackId?: Record<
     string,
-    { is_development: boolean; exposure_completed: boolean; rating_count: number }
+    {
+      track_status: string | null;
+      is_development: boolean;
+      exposure_completed: boolean;
+      rating_count: number;
+      avg_stars: number | null;
+    }
   >;
   boostEnabledById: Record<string, boolean>;
   releaseStatus: "draft" | "published";

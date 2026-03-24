@@ -110,7 +110,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const { data: eligibilityRows, error: eligibilityError } = existingTrackIds.length
     ? await supabase
         .from("analytics_development_signals")
-        .select("track_id, is_development, exposure_completed, rating_count")
+        .select("track_id, track_status, is_development, exposure_completed, rating_count, avg_stars")
         .eq("artist_id", user.id)
         .in("track_id", existingTrackIds)
     : { data: [] as any[], error: null };
@@ -123,14 +123,22 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
     (
       acc: Record<
         string,
-        { is_development: boolean; exposure_completed: boolean; rating_count: number }
+        {
+          track_status: string | null;
+          is_development: boolean;
+          exposure_completed: boolean;
+          rating_count: number;
+          avg_stars: number | null;
+        }
       >,
       r: any
     ) => {
       acc[r.track_id] = {
+        track_status: typeof r.track_status === "string" ? r.track_status : null,
         is_development: !!r.is_development,
         exposure_completed: !!r.exposure_completed,
         rating_count: typeof r.rating_count === "number" ? r.rating_count : 0,
+        avg_stars: typeof r.avg_stars === "number" ? r.avg_stars : null,
       };
       return acc;
     },

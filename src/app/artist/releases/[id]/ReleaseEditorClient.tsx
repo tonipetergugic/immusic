@@ -35,7 +35,13 @@ type ReleaseEditorClientProps = {
   allTracksMetadataComplete: boolean;
   eligibilityByTrackId?: Record<
     string,
-    { is_development: boolean; exposure_completed: boolean; rating_count: number }
+    {
+      track_status: string | null;
+      is_development: boolean;
+      exposure_completed: boolean;
+      rating_count: number;
+      avg_stars: number | null;
+    }
   >;
   boostEnabledById: Record<string, boolean>;
 };
