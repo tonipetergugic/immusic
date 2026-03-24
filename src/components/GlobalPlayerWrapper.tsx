@@ -42,9 +42,11 @@ export default function GlobalPlayerWrapper({
     <PlayerProvider>
       {/* Global Notice */}
       {notice && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999]">
-          <div className="px-4 py-2 rounded-xl bg-black/70 border border-white/10 shadow-lg backdrop-blur-md">
-            <p className="text-[13px] text-white/85">{notice}</p>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none px-4">
+          <div className="w-full max-w-[560px] rounded-3xl border border-white/10 bg-[#0E0E10]/92 px-6 py-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_28px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl">
+            <p className="text-center text-[18px] font-medium leading-8 text-white/92">
+              {notice}
+            </p>
           </div>
         </div>
       )}
