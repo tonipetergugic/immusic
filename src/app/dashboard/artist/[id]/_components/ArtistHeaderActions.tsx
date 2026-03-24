@@ -52,16 +52,16 @@ export default function ArtistHeaderActions({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="
-          inline-flex items-center gap-2
-          h-10 px-4
-          rounded-full
-          bg-[#111112]
-          border border-white/10
-          text-white/90 text-sm font-semibold
-          hover:border-[#00FFC622]
-          hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-          transition-all
-        "
+  inline-flex cursor-pointer items-center gap-2
+  h-10 px-4
+  rounded-full
+  bg-[#111112]
+  border border-white/10
+  text-white/90 text-sm font-semibold
+  hover:border-[#00FFC622]
+  hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
+  transition-all
+"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -135,12 +135,12 @@ export default function ArtistHeaderActions({
                 type="button"
                 onClick={handleShare}
                 className="
-                  w-full flex items-center gap-3
-                  px-3 py-2 rounded-lg
-                  text-sm text-white/80
-                  hover:bg-white/5 hover:text-white
-                  transition-colors
-                "
+  w-full cursor-pointer flex items-center gap-3
+  px-3 py-2 rounded-lg
+  text-sm text-white/80
+  hover:bg-white/5 hover:text-white
+  transition-colors
+"
                 role="menuitem"
               >
                 <Share2 size={16} className="text-white/60" />

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { usePlayer } from "@/context/PlayerContext";
+import FollowArtistButton from "@/app/dashboard/artist/[id]/_components/_actions/FollowArtistButton";
 import type { PlayerTrack } from "@/types/playerTrack";
 
 type SpotlightProfile = {
@@ -36,6 +37,9 @@ export default function HomeArtistSpotlightCard({
   const [profile, setProfile] = useState<SpotlightProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+
+  const [canFollow, setCanFollow] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const spotlightTrack = useMemo(() => {
     if (!tracks.length) return null;
@@ -136,6 +140,62 @@ export default function HomeArtistSpotlightCard({
     };
   }, [spotlightArtistId, supabase]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFollowState() {
+      if (!spotlightArtistId) {
+        setCanFollow(false);
+        setIsFollowing(false);
+        return;
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (userError || !user) {
+        setCanFollow(false);
+        setIsFollowing(false);
+        return;
+      }
+
+      if (user.id === spotlightArtistId) {
+        setCanFollow(false);
+        setIsFollowing(false);
+        return;
+      }
+
+      setCanFollow(true);
+
+      const { data, error } = await supabase
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", user.id)
+        .eq("following_id", spotlightArtistId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("HomeArtistSpotlightCard follow state load error:", error);
+        setIsFollowing(false);
+        return;
+      }
+
+      setIsFollowing(!!data);
+    }
+
+    void loadFollowState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [spotlightArtistId, supabase]);
+
   if (!tracks.length || !spotlightTrack) {
     return null;
   }
@@ -208,6 +268,16 @@ export default function HomeArtistSpotlightCard({
                       ? "Currently playing on this page"
                       : "Featured from current development list"}
                   </div>
+
+                  {canFollow && spotlightArtistId ? (
+                    <div className="mt-4">
+                      <FollowArtistButton
+                        artistId={spotlightArtistId}
+                        isFollowing={isFollowing}
+                        onChange={setIsFollowing}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

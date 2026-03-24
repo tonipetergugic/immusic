@@ -52,6 +52,7 @@ type TechnicalPhaseOk = {
   wavBuf: any;
   audioHash: string | null;
   tmpWavPath: string;
+  durationSec: number;
   metrics: {
     integratedLufs: number;
     truePeakDb: number;
@@ -391,6 +392,7 @@ async function runTechnicalGatesAndPersistMetrics(params: {
     wavBuf,
     audioHash: (audioHash as string) ?? null,
     tmpWavPath,
+    durationSec,
     metrics: {
       integratedLufs,
       truePeakDb,
@@ -426,6 +428,7 @@ async function runApproveAndInsertTrack(params: {
   audioPath: string;
   tmpWavPath: string;
   audioHash: string | null;
+  durationSec: number;
   integratedLufs: number;
   truePeakDb: number;
   clippedSampleCount: number;
@@ -443,6 +446,7 @@ async function runApproveAndInsertTrack(params: {
     audioPath,
     tmpWavPath,
     audioHash,
+    durationSec,
     integratedLufs,
     truePeakDb,
     clippedSampleCount,
@@ -541,6 +545,7 @@ async function runApproveAndInsertTrack(params: {
     status: "approved",
     source_queue_id: queueId,
     audio_hash: finalAudioHash,
+    duration: Math.round(durationSec),
   });
   logStage("insert_track", elapsedMs(tInsert));
 
@@ -786,7 +791,7 @@ export async function runTrackCheckWorker(params: {
       return tech.response;
     }
 
-    const { audioPath, title, wavBuf, tmpWavPath: tmpWavPathFromTech } = tech;
+    const { audioPath, title, wavBuf, tmpWavPath: tmpWavPathFromTech, durationSec } = tech;
     let audioHash = tech.audioHash;
     const { integratedLufs, truePeakDb, clippedSampleCount, analyzerMetrics } = tech.metrics;
     tmpWavPath = tmpWavPathFromTech;
@@ -823,6 +828,7 @@ export async function runTrackCheckWorker(params: {
       audioPath,
       tmpWavPath: tmpWavPath!,
       audioHash,
+      durationSec,
       integratedLufs,
       truePeakDb,
       clippedSampleCount,

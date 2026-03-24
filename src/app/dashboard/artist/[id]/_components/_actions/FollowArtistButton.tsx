@@ -46,15 +46,15 @@ export default function FollowArtistButton({
       onClick={toggle}
       disabled={busy}
       className={`
-        inline-flex items-center justify-center
-        h-10 px-4 rounded-full
-        bg-transparent border border-white/10
-        text-[#B3B3B3] text-sm font-medium
-        hover:text-white hover:border-white/20
-        transition
-        disabled:opacity-60 disabled:cursor-wait
-        ${className ?? ""}
-      `.trim()}
+  inline-flex min-w-[120px] cursor-pointer items-center justify-center
+  h-10 px-4 rounded-full
+  bg-transparent border border-white/10
+  text-[#B3B3B3] text-sm font-medium
+  hover:text-white hover:border-white/20
+  transition
+  disabled:opacity-60 disabled:cursor-wait
+  ${className ?? ""}
+`.trim()}
     >
       {busy ? "..." : isFollowing ? "Following" : "Follow"}
     </button>

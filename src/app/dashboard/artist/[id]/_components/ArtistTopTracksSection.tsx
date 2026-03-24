@@ -71,6 +71,8 @@ export default function ArtistTopTracksSection({
         profiles: { display_name: primaryArtistName },
       });
 
+      (pt as any).status = t.status ?? null;
+
       // TrackOptionsMenu nutzt (track as any).release_id für "Go to Release"
       (pt as any).release_id = t.releaseId ?? null;
 
