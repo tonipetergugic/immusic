@@ -11,6 +11,7 @@ type TrackLike = {
   title?: string | null;
   version?: string | null;
   artist_id?: string | null;
+  status?: string | null;
   audio_url: string;            // MUSS serverseitig gesetzt sein
   cover_url?: string | null;    // darf null sein
   duration_seconds?: number | null;
@@ -54,6 +55,7 @@ export function toPlayerTrack(track: TrackLike | null | undefined): PlayerTrack 
     title: track.title ?? "Untitled Track",
     version: resultVersion,
     artist_id: track.artist_id ?? "",
+    status: track.status ?? null,
     audio_url: track.audio_url,
     cover_url: track.cover_url ?? null,
     duration_seconds: track.duration_seconds ?? null,

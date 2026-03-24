@@ -44,6 +44,7 @@ export function buildDevQueue(params: {
     return {
       id: trackId,
       artist_id: it.artist_id,
+      status: "development",
       title,
       version: (it as any)?.version ?? null,
       cover_url: coverUrl,
@@ -120,6 +121,7 @@ export function buildPerfQueue(params: {
     return {
       id: trackId,
       artist_id: artistId,
+      status: "performance",
       title,
       version: (meta as any)?.version ?? null,
       cover_url: coverUrl,

@@ -126,8 +126,8 @@ export default function PerformanceDiscoverySection({
                         if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                       }}
                       className="
-                        text-left text-[13px] font-semibold text-white truncate
-                        hover:text-[#00FFC6] transition-colors
+                        text-left text-[13px] font-semibold text-[#00FFC6] truncate
+                        hover:text-[#00E0B0] transition-colors
                         focus:outline-none
                       "
                       title={formatTrackTitle(rowTrack.title, (rowTrack as any).version)}

@@ -133,6 +133,7 @@ export default async function ArtistV2Page({
     owner_id: string | null;
     owner_name: string | null;
     collaborators: any; // jsonb array
+    track_status: string | null;
   };
 
   let topTracksResolved: TopTrackResolvedRow[] = [];
@@ -154,7 +155,8 @@ export default async function ArtistV2Page({
         cover_path,
         owner_id,
         owner_name,
-        collaborators
+        collaborators,
+        track_status
       `
       )
       .in("track_id", topTrackIds);
@@ -213,6 +215,7 @@ export default async function ArtistV2Page({
         coverUrl,
         artists,
         audioUrl,
+        status: d.track_status ?? null,
         bpm: d.bpm ?? null,
         key: d.key ?? null,
         genre: d.genre ?? null,

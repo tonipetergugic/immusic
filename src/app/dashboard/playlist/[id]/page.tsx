@@ -77,6 +77,7 @@ type PlaylistTrackRow = {
   track_id: string;
   title: string | null;
   artist_id: string | null;
+  track_status: string | null;
   release_id: string | null;
 
   audio_path: string | null;
@@ -205,6 +206,7 @@ export default async function PlaylistPage(
       track_id,
       title,
       artist_id,
+      track_status,
       release_id,
       audio_path,
       duration,
@@ -255,6 +257,7 @@ export default async function PlaylistPage(
       id: row.track_id,
       title: row.title ?? null,
       artist_id: row.artist_id ?? null,
+      status: row.track_status ?? null,
       audio_url,
       cover_url,
       duration_seconds: row.duration ?? null,

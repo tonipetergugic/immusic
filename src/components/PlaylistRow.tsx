@@ -90,11 +90,11 @@ function PlaylistRow({
               e.stopPropagation();
             }}
             onClick={goToTrack}
-            className="
-            text-left text-[13px] font-semibold text-white truncate cursor-pointer
-            hover:text-[#00FFC6] transition-colors
-            focus:outline-none
-          "
+            className={`text-left text-[13px] font-semibold truncate cursor-pointer transition-colors focus:outline-none ${
+              track.status === "performance"
+                ? "text-[#00FFC6] hover:text-[#00E0B0]"
+                : "text-white hover:text-[#00FFC6]"
+            }`}
             title={formatTrackTitle(track.title, (track as any).version)}
           >
             {formatTrackTitle(track.title, (track as any).version)}

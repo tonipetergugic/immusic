@@ -28,7 +28,15 @@ export default function ReleaseTrackRowClient({
   startIndex: number;
   playerQueue: PlayerTrack[];
   positionLabel: string;
-  track: { id: string; title: string | null; bpm: number | null; key: string | null; genre: string | null; version: string | null };
+  track: {
+    id: string;
+    title: string | null;
+    bpm: number | null;
+    key: string | null;
+    genre: string | null;
+    version: string | null;
+    status: string | null;
+  };
   artists: { id: string; display_name: string }[];
   ratingAvg: number | null;
   ratingCount: number | null;
@@ -51,6 +59,7 @@ export default function ReleaseTrackRowClient({
             id: track.id,
             title: track.title ?? null,
             artist_id: (artists?.[0]?.id ?? null) as any,
+            status: track.status ?? null,
             release_id: releaseId,
             bpm: track.bpm ?? null,
             key: track.key ?? null,
@@ -76,11 +85,11 @@ export default function ReleaseTrackRowClient({
               e.stopPropagation();
               onSelect();
             }}
-            className="
-            text-left text-[13px] font-semibold text-white truncate
-            hover:text-[#00FFC6] transition-colors
-            focus:outline-none cursor-pointer
-          "
+            className={`text-left text-[13px] font-semibold truncate transition-colors focus:outline-none cursor-pointer ${
+              track.status === "performance"
+                ? "text-[#00FFC6] hover:text-[#00E0B0]"
+                : "text-white hover:text-[#00FFC6]"
+            }`}
             title={formatTrackTitle(track.title, (track as any).version)}
           >
             {formatTrackTitle(track.title, (track as any).version)}

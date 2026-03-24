@@ -76,8 +76,8 @@ export type TopTrackDto = {
   }>;
 
   audioUrl: string;
-
-  bpm?: number | null;
+  status: string | null;
+  bpm: number | null;
   key?: string | null;
   genre?: string | null;
 

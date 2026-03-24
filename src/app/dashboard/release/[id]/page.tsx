@@ -69,6 +69,7 @@ export default async function ReleaseDetailPage({
         key,
         genre,
         version,
+        status,
         artist_id,
         artist:profiles!tracks_artist_id_fkey (
           id,
@@ -113,6 +114,7 @@ export default async function ReleaseDetailPage({
         id: String(t.id),
         title: String(t.title ?? "Untitled"),
         artist_id: String(t.artist_id ?? ""),
+        status: t.status ?? null,
         audio_url,
         cover_url: coverUrl ?? null,
         bpm: t.bpm ?? null,
@@ -136,6 +138,7 @@ export default async function ReleaseDetailPage({
     key: row.track?.key ?? null,
     genre: row.track?.genre ?? null,
     version: row.track?.version ?? null,
+    status: row.track?.status ?? null,
     duration: row.track?.duration ?? null,
     ratingAvg: row.track?.rating_avg ?? null,
     ratingCount: row.track?.rating_count ?? null,
