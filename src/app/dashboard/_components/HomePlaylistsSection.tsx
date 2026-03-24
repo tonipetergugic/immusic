@@ -11,6 +11,7 @@ type PlaylistLike = {
 
 type Props = {
   title: string;
+  subtitle?: string;
   emptyText?: string;
   playlistIds: string[];
   playlistsById: Record<string, PlaylistLike | undefined>;
@@ -20,6 +21,7 @@ type Props = {
 
 export default function HomePlaylistsSection({
   title,
+  subtitle,
   emptyText = "No playlists configured for Home yet.",
   playlistIds,
   playlistsById,
@@ -30,7 +32,12 @@ export default function HomePlaylistsSection({
 
   return (
     <div className={wrapperClassName}>
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <div>
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {subtitle ? (
+          <p className="mt-1 text-sm text-white/55">{subtitle}</p>
+        ) : null}
+      </div>
 
       {playlistIds.length === 0 ? (
         <p className="text-white/40">{emptyText}</p>

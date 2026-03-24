@@ -203,6 +203,7 @@ export default function DashboardHomeClient({
           {homeTab === "playlists" ? (
             <HomePlaylistsSection
               title="Performance Playlists"
+              subtitle="Selected performance playlists — featuring the strongest, newest, or highlighted playlists made only from performance tracks."
               playlistIds={performancePlaylistIds}
               playlistsById={playlistsById}
               showWhenEmpty={false}

@@ -147,39 +147,12 @@ export default async function AdminReleasesPage({
 
   const featuredIds = new Set((homeItems ?? []).map((r) => r.item_id));
 
-  // Performance mode release filter = ONLY releases where ALL tracks are performance-eligible
-  let performanceReleaseIds: string[] = [];
-
-  if (mode === "performance") {
-    const { data: perfReleaseRows, error: perfReleaseErr } = await supabase
-      .from("performance_discovery_eligible_releases")
-      .select("release_id");
-
-    if (perfReleaseErr) {
-      throw new Error(
-        `performance_discovery_eligible_releases query failed: ${perfReleaseErr.message} (${perfReleaseErr.code})`
-      );
-    }
-
-    performanceReleaseIds = (perfReleaseRows ?? [])
-      .map((r: any) => r.release_id)
-      .filter(Boolean);
-
-    // If none fully eligible -> show nothing (safe "no match")
-    if (performanceReleaseIds.length === 0) {
-      performanceReleaseIds = ["00000000-0000-0000-0000-000000000000"];
-    }
-  }
-
   const releasesQuery = supabase
     .from("releases")
     .select("id, title, status, release_date, cover_path, profiles:artist_id(display_name)")
     .order("created_at", { ascending: false });
 
-  const { data: releases, error: releasesError } =
-    mode === "performance"
-      ? await releasesQuery.in("id", performanceReleaseIds)
-      : await releasesQuery;
+  const { data: releases, error: releasesError } = await releasesQuery;
 
   if (releasesError) {
     throw new Error(
