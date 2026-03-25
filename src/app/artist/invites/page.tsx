@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { respondToInviteAction } from "./actions";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import TopbarBackButton from "@/components/TopbarBackButton";
+import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 type InviteRow = {
   id: string;
@@ -69,6 +70,8 @@ export default async function ArtistInvitesPage() {
             </p>
           </div>
         </div>
+
+        <ProfileSectionNav current="messages" />
 
         {invites.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-white/70">

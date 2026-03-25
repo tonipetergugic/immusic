@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
+import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -205,6 +206,8 @@ export default function AccountPage() {
             </p>
           </div>
         </div>
+
+        <ProfileSectionNav current="account" />
 
         {/* Email */}
         <div className="mt-2">

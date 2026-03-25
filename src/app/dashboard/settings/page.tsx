@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -44,6 +45,8 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
+
+        <ProfileSectionNav current="settings" />
 
         {/* Theme */}
         <div className="mt-2">

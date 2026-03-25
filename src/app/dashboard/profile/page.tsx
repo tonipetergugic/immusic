@@ -7,6 +7,7 @@ import { updateAvatar, deleteAvatar, updateDisplayName } from "@/app/(topbar)/pr
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
+import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -152,6 +153,8 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
+
+        <ProfileSectionNav current="profile" />
 
         {/* Avatar Upload */}
         <div className="relative w-52 h-52 mx-auto mb-14 group">
