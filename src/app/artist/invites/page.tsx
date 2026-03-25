@@ -44,24 +44,20 @@ export default async function ArtistInvitesPage() {
   }));
 
   return (
-    <div className="w-full text-white">
+    <div className="w-full max-w-[896px] mx-auto text-white">
       <div
         className="
         bg-[#0B0B0D]
         border border-[#1A1A1C]
         rounded-2xl
         p-8
+        lg:min-h-[720px]
         shadow-[0_20px_60px_rgba(0,0,0,0.6)]
       "
       >
         <div className="mb-8">
-          <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-            Inbox
-          </div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
-            Messages
-          </h1>
-          <p className="mt-1 text-sm text-white/60">
+          <h1 className="text-2xl font-semibold leading-tight text-white">Messages</h1>
+          <p className="mt-1 text-[#B3B3B3]">
             Personal notifications and collaboration requests.
           </p>
         </div>
@@ -73,10 +69,10 @@ export default async function ArtistInvitesPage() {
 
           <div className="min-w-0">
             {invites.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-white/70">
-            No new messages.
-          </div>
-        ) : (
+              <div className="py-6 text-sm text-[#B3B3B3]">
+                No new messages.
+              </div>
+            ) : (
           <div className="flex flex-col gap-3">
             {invites.map((inv) => (
               <div

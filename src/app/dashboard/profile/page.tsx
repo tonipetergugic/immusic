@@ -7,6 +7,7 @@ import { updateAvatar, deleteAvatar, updateDisplayName } from "@/app/(topbar)/pr
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
+import DeleteAvatarModal from "@/components/DeleteAvatarModal";
 
 export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [role, setRole] = useState<string | null>(null);
   const [viewerId, setViewerId] = useState<string | null>(null);
+  const [isDeleteAvatarModalOpen, setIsDeleteAvatarModalOpen] = useState(false);
 
   const supabase = createSupabaseBrowserClient();
 
@@ -114,13 +116,14 @@ export default function ProfilePage() {
   }, []);
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-[896px] mx-auto">
       <div
         className="
           bg-[#0B0B0D]
           border border-[#1A1A1C]
           rounded-2xl
           p-8
+          lg:min-h-[720px]
           shadow-[0_20px_60px_rgba(0,0,0,0.6)]
         "
       >
@@ -234,14 +237,12 @@ export default function ProfilePage() {
           {/* Delete icon */}
           {avatarUrl && (
             <button
-              onClick={async () => {
+              type="button"
+              onClick={() => {
                 if (loading) return;
-                setLoading(true);
-                await deleteAvatar();
-                setAvatarUrl(null);
-                window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: null } }));
-                setLoading(false);
+                setIsDeleteAvatarModalOpen(true);
               }}
+              aria-label="Delete avatar"
               className="
                 absolute top-1 right-1
                 p-1 rounded-full
@@ -249,6 +250,7 @@ export default function ProfilePage() {
                 hover:bg-red-500/40
                 transition
                 opacity-0 group-hover:opacity-100
+                cursor-pointer
               "
             >
               <Trash2 className="w-4 h-4 text-red-400" />
@@ -342,17 +344,6 @@ export default function ProfilePage() {
             {userEmail}
           </div>
 
-          <Link
-            href="/dashboard/account"
-            className="
-              inline-block mt-2
-              text-sm text-[#B3B3B3]
-              hover:text-[#00FFC6]
-              transition
-            "
-          >
-            Manage login & security →
-          </Link>
         </div>
 
         {/* Profile Link */}
@@ -372,6 +363,31 @@ export default function ProfilePage() {
             </Link>
           </div>
         ) : null}
+
+        <DeleteAvatarModal
+          open={isDeleteAvatarModalOpen}
+          busy={loading}
+          onClose={() => {
+            if (loading) return;
+            setIsDeleteAvatarModalOpen(false);
+          }}
+          onConfirm={async () => {
+            if (loading) return;
+
+            setLoading(true);
+
+            try {
+              await deleteAvatar();
+              setAvatarUrl(null);
+              window.dispatchEvent(
+                new CustomEvent("avatarUpdated", { detail: { avatar_url: null } })
+              );
+              setIsDeleteAvatarModalOpen(false);
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
           </div>
         </div>
       </div>

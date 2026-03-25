@@ -5,13 +5,14 @@ import ProfileSectionNav from "@/components/ProfileSectionNav";
 export default function SettingsPage() {
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-[896px] mx-auto">
       <div
         className="
         bg-[#0B0B0D]
         border border-[#1A1A1C]
         rounded-2xl
         p-8
+        lg:min-h-[720px]
         shadow-[0_20px_60px_rgba(0,0,0,0.6)]
       "
       >

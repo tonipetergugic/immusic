@@ -165,13 +165,14 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full max-w-[896px] mx-auto">
       <div
         className="
           bg-[#0B0B0D]
           border border-[#1A1A1C]
           rounded-2xl
           p-8
+          lg:min-h-[720px]
           shadow-[0_20px_60px_rgba(0,0,0,0.6)]
         "
       >
@@ -190,7 +191,8 @@ export default function AccountPage() {
 
           <div className="min-w-0">
             {/* Email */}
-            <div className="mt-2">
+          <div className="mt-2">
+
           <div className="text-sm text-[#B3B3B3] mb-2">Email</div>
 
           <div
@@ -201,7 +203,9 @@ export default function AccountPage() {
               px-4 py-4
             "
           >
-            <div className="text-sm text-[#B3B3B3]">Current email</div>
+            <div className="text-xs text-[#B3B3B3] uppercase tracking-[0.08em]">
+              Current email
+            </div>
             <div className="text-white/90 font-medium mt-1">
               {currentEmail || "—"}
             </div>
@@ -289,6 +293,7 @@ export default function AccountPage() {
                     bg-[#111113]
                     border border-[#1A1A1C]
                     text-[#B3B3B3] font-medium
+                    cursor-pointer
                     hover:border-[#00FFC6]
                     hover:text-[#00FFC6]
                     transition
@@ -333,7 +338,6 @@ export default function AccountPage() {
               px-4 py-4
             "
           >
-            <div className="text-white/90 font-medium">Security actions</div>
             <div className="text-sm text-[#B3B3B3] mt-1">
               Use this if you think your account was accessed on another device.
             </div>
@@ -367,6 +371,7 @@ export default function AccountPage() {
                   bg-[#111113]
                   border border-[#1A1A1C]
                   text-red-300 font-medium
+                  cursor-pointer
                   hover:border-red-400
                   hover:text-red-200
                   transition
@@ -406,7 +411,6 @@ export default function AccountPage() {
               px-4 py-4
             "
           >
-            <div className="text-white/90 font-medium">Delete account</div>
             <div className="text-sm text-[#B3B3B3] mt-1">
               This permanently deletes your account and all associated data. This action cannot be undone.
             </div>
@@ -427,6 +431,7 @@ export default function AccountPage() {
                   bg-[#111113]
                   border border-red-500/30
                   text-red-300 font-medium
+                  cursor-pointer
                   hover:border-red-400
                   hover:text-red-200
                   transition
@@ -435,9 +440,6 @@ export default function AccountPage() {
                 Delete account
               </button>
 
-              <span className="text-xs text-[#B3B3B3]">
-                You&apos;ll need to confirm.
-              </span>
             </div>
 
             {deleteInfo && (
