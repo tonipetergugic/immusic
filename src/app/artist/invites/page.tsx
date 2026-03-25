@@ -45,101 +45,111 @@ export default async function ArtistInvitesPage() {
 
   return (
     <div className="w-full text-white">
-      <div className="flex items-start justify-between gap-4 mb-8">
-        <TopbarBackButton />
+      <div
+        className="
+        bg-[#0B0B0D]
+        border border-[#1A1A1C]
+        rounded-2xl
+        p-8
+        shadow-[0_20px_60px_rgba(0,0,0,0.6)]
+      "
+      >
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <TopbarBackButton />
 
-        <div className="flex-1">
-          <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-            Inbox
-          </div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
-            Messages
-          </h1>
-          <p className="mt-1 text-sm text-white/60">
-            Personal notifications and collaboration requests.
-          </p>
-        </div>
-      </div>
-
-      {invites.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-white/70">
-          No new messages.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {invites.map((inv) => (
-            <div
-              key={inv.id}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-white/90">
-                    Track collaboration invite
-                  </div>
-                  <div className="mt-1 text-sm text-white/70">
-                    From{" "}
-                    <span className="text-white/90 font-medium">
-                      {inv.inviter_display_name ?? "Unknown artist"}
-                    </span>{" "}
-                    • Role{" "}
-                    <span className="text-white/90 font-medium">
-                      {inv.role === "CO_OWNER" ? "Co-owner" : "Featured"}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs text-white/50">
-                    Track:{" "}
-                    <span className="text-white/80">
-                      {formatTrackTitle(inv.track?.title, (inv.track as any)?.version)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <form
-                    action={async () => {
-                      "use server";
-                      await respondToInviteAction({
-                        inviteId: inv.id,
-                        action: "rejected",
-                      });
-                    }}
-                  >
-                    <button
-                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/[0.05]"
-                      type="submit"
-                    >
-                      Reject
-                    </button>
-                  </form>
-
-                  <form
-                    action={async () => {
-                      "use server";
-                      await respondToInviteAction({
-                        inviteId: inv.id,
-                        action: "accepted",
-                      });
-                    }}
-                  >
-                    <button
-                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60"
-                      type="submit"
-                    >
-                      Accept
-                    </button>
-                  </form>
-                </div>
-              </div>
-
-              <div className="mt-3 text-xs text-white/50">
-                Created: {new Date(inv.created_at).toLocaleString()} • Expires:{" "}
-                {new Date(inv.expires_at).toLocaleString()}
-              </div>
+          <div className="flex-1">
+            <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+              Inbox
             </div>
-          ))}
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+              Messages
+            </h1>
+            <p className="mt-1 text-sm text-white/60">
+              Personal notifications and collaboration requests.
+            </p>
+          </div>
         </div>
-      )}
+
+        {invites.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-white/70">
+            No new messages.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {invites.map((inv) => (
+              <div
+                key={inv.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white/90">
+                      Track collaboration invite
+                    </div>
+                    <div className="mt-1 text-sm text-white/70">
+                      From{" "}
+                      <span className="text-white/90 font-medium">
+                        {inv.inviter_display_name ?? "Unknown artist"}
+                      </span>{" "}
+                      • Role{" "}
+                      <span className="text-white/90 font-medium">
+                        {inv.role === "CO_OWNER" ? "Co-owner" : "Featured"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-white/50">
+                      Track:{" "}
+                      <span className="text-white/80">
+                        {formatTrackTitle(inv.track?.title, (inv.track as any)?.version)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <form
+                      action={async () => {
+                        "use server";
+                        await respondToInviteAction({
+                          inviteId: inv.id,
+                          action: "rejected",
+                        });
+                      }}
+                    >
+                      <button
+                        className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/[0.05]"
+                        type="submit"
+                      >
+                        Reject
+                      </button>
+                    </form>
+
+                    <form
+                      action={async () => {
+                        "use server";
+                        await respondToInviteAction({
+                          inviteId: inv.id,
+                          action: "accepted",
+                        });
+                      }}
+                    >
+                      <button
+                        className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60"
+                        type="submit"
+                      >
+                        Accept
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-xs text-white/50">
+                  Created: {new Date(inv.created_at).toLocaleString()} • Expires:{" "}
+                  {new Date(inv.expires_at).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
