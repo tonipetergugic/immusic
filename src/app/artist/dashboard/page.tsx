@@ -69,6 +69,13 @@ export default async function ArtistDashboardPage() {
     cover_path: string | null;
   };
 
+  type StatsRow = {
+    release_id: string;
+    stream_count: number | null;
+    rating_avg: number | null;
+    rating_count: number | null;
+  };
+
   const { data: topRatedRaw, error: topRatedError } = await supabase
     .from("artist_dashboard_release_tracks")
     .select("release_id, track_title, stream_count, rating_avg, rating_count, cover_path")
@@ -84,7 +91,12 @@ export default async function ArtistDashboardPage() {
     .order("stream_count", { ascending: false, nullsFirst: false })
     .limit(50);
 
-  const perfError = topRatedError ?? topStreamsError;
+  const { data: statsRaw, error: statsError } = await supabase
+    .from("artist_dashboard_release_tracks")
+    .select("release_id, stream_count, rating_avg, rating_count")
+    .eq("artist_id", user.id);
+
+  const perfError = topRatedError ?? topStreamsError ?? statsError;
 
   if (perfError) {
     throw perfError;
@@ -93,19 +105,21 @@ export default async function ArtistDashboardPage() {
   const topRatedRows = (topRatedRaw ?? []) as PerfRow[];
   const topStreamsRows = (topStreamsRaw ?? []) as PerfRow[];
 
-  const totalStreams = topStreamsRows.reduce(
+  const statsRows = (statsRaw ?? []) as StatsRow[];
+
+  const totalStreams = statsRows.reduce(
     (sum, row) => sum + (typeof row.stream_count === "number" ? row.stream_count : 0),
     0
   );
 
-  const totalTracks = topStreamsRows.length;
+  const totalTracks = statsRows.length;
   const totalReleases = Array.from(
-    new Set(topStreamsRows.map((row) => row.release_id).filter(Boolean))
+    new Set(statsRows.map((row) => row.release_id).filter(Boolean))
   ).length;
 
   const avgStreamsPerTrack = totalTracks > 0 ? totalStreams / totalTracks : 0;
 
-  const { weightedRatingSum, ratingCountSum } = topRatedRows.reduce(
+  const { weightedRatingSum, ratingCountSum } = statsRows.reduce(
     (acc, row) => {
       const count = typeof row.rating_count === "number" ? row.rating_count : 0;
       const avg = typeof row.rating_avg === "number" ? row.rating_avg : null;
@@ -120,7 +134,7 @@ export default async function ArtistDashboardPage() {
     { weightedRatingSum: 0, ratingCountSum: 0 }
   );
 
-  const totalRatingsCount = topRatedRows.reduce(
+  const totalRatingsCount = statsRows.reduce(
     (sum, row) => sum + (typeof row.rating_count === "number" ? row.rating_count : 0),
     0
   );
@@ -135,7 +149,8 @@ export default async function ArtistDashboardPage() {
 
   const performanceTracks = topStreamsRows
     .slice(0, 3)
-    .map((row) => ({
+    .map((row, index) => ({
+      key: `p-${row.release_id}-${row.track_title ?? "untitled"}-${index}`,
       title: row.track_title ?? "Untitled Track",
       streams: row.stream_count ?? 0,
       coverUrl: getCoverUrl(supabase, getReleaseCoverPath(row)),
@@ -144,7 +159,8 @@ export default async function ArtistDashboardPage() {
   const qualityTracks = topRatedRows
     .filter((row) => (row.rating_count ?? 0) > 0 && typeof row.rating_avg === "number")
     .slice(0, 3)
-    .map((row) => ({
+    .map((row, index) => ({
+      key: `q-${row.release_id}-${row.track_title ?? "untitled"}-${index}`,
       title: row.track_title ?? "Untitled Track",
       rating: row.rating_avg ?? 0,
       ratingCount: row.rating_count ?? 0,
@@ -236,7 +252,7 @@ export default async function ArtistDashboardPage() {
                 {qualityTracks.length > 0 ? (
                   qualityTracks.map((t) => (
                     <div
-                      key={`q-${t.title}`}
+                      key={t.key}
                       className="flex items-center gap-5 rounded-xl border border-white/5 bg-white/[0.02] px-5 py-4 transition hover:bg-white/[0.05] hover:border-white/10"
                     >
                       {t.coverUrl ? (
@@ -282,7 +298,7 @@ export default async function ArtistDashboardPage() {
                 {performanceTracks.length > 0 ? (
                   performanceTracks.map((t) => (
                     <div
-                      key={`p-${t.title}`}
+                      key={t.key}
                       className="flex items-center gap-5 rounded-xl border border-white/5 bg-white/[0.02] px-5 py-4 transition hover:bg-white/[0.05] hover:border-white/10"
                     >
                       {t.coverUrl ? (
