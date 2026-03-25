@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -27,18 +27,45 @@ export default function Topbar({
   avatarUrl: initialAvatarUrl = null,
   avatarUpdatedAt: initialAvatarUpdatedAt = null,
 }: TopbarProps) {
-  const [userEmail, setUserEmail] = useState<string | null>(initialUserEmail);
+  const userEmail = initialUserEmail;
   const [displayName, setDisplayName] = useState<string | null>(initialDisplayName);
-  const [role, setRole] = useState<string | null>(initialRole);
+  const role = initialRole;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     versionedUrl(initialAvatarUrl, initialAvatarUpdatedAt)
   );
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  const avatarButtonRef = useRef<HTMLButtonElement | null>(null);
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+
   const supabase = useMemo(() => {
     return createSupabaseBrowserClient();
   }, []);
+
+  const topbarTitle = useMemo(() => {
+    if (!pathname) return "Dashboard";
+
+    if (pathname.startsWith("/dashboard/profile")) return "Profile";
+    if (pathname.startsWith("/dashboard/account")) return "Account";
+    if (pathname.startsWith("/dashboard/settings")) return "Settings";
+    if (pathname.startsWith("/dashboard/admin")) return "Admin";
+    if (pathname.startsWith("/dashboard/library")) return "Library";
+    if (pathname.startsWith("/dashboard/search")) return "Search";
+    if (pathname.startsWith("/dashboard/create")) return "Create";
+    if (pathname.startsWith("/dashboard/playlist")) return "Playlist";
+    if (pathname.startsWith("/dashboard/artist/")) return "Artist";
+    if (pathname.startsWith("/artist/invites")) return "Messages";
+    if (pathname.startsWith("/artist")) return "Artist";
+    if (pathname.startsWith("/dashboard")) return "Dashboard";
+
+    return "ImMusic";
+  }, [pathname]);
+
+  const isProfilePage = pathname?.startsWith("/dashboard/profile");
+  const isAccountPage = pathname?.startsWith("/dashboard/account");
+  const isSettingsPage = pathname?.startsWith("/dashboard/settings");
+  const isMessagesPage = pathname?.startsWith("/artist/invites");
 
   useEffect(() => {
     if (role) {
@@ -92,14 +119,14 @@ export default function Topbar({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      const menu = document.getElementById("avatar-menu");
-      const avatar = document.getElementById("avatar-button");
+      const target = e.target as Node;
+
       if (
         isMenuOpen &&
-        menu &&
-        !menu.contains(e.target as Node) &&
-        avatar &&
-        !avatar.contains(e.target as Node)
+        avatarMenuRef.current &&
+        !avatarMenuRef.current.contains(target) &&
+        avatarButtonRef.current &&
+        !avatarButtonRef.current.contains(target)
       ) {
         setIsMenuOpen(false);
       }
@@ -119,7 +146,7 @@ export default function Topbar({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-      window.location.href = "/login";
+    window.location.href = "/login";
   };
 
   return (
@@ -136,13 +163,13 @@ export default function Topbar({
       "
     >
       <span className="text-white/90 font-semibold tracking-wide text-sm">
-        ImMusic Dashboard
+        ImMusic · {topbarTitle}
       </span>
 
       <div className="flex items-center gap-5">
 
         <button
-          id="avatar-button"
+          ref={avatarButtonRef}
           type="button"
           onClick={() => setIsMenuOpen((prev) => !prev)}
           aria-haspopup="menu"
@@ -171,7 +198,7 @@ export default function Topbar({
 
         {isMenuOpen && (
           <div
-            id="avatar-menu"
+            ref={avatarMenuRef}
             role="menu"
             className="
               absolute top-14 right-4 sm:right-6 lg:right-8 z-50
@@ -222,14 +249,17 @@ export default function Topbar({
 
             <div className="flex flex-col text-sm">
               <Link
-                href="/profile"
+                href="/dashboard/profile"
                 role="menuitem"
-                className="
+                className={`
                   flex items-center gap-2
-                  w-full px-3 py-2 rounded-lg
-                  text-[#B3B3B3]
-                  hover:bg-[#111113] hover:text-white transition
-                "
+                  w-full px-3 py-2 rounded-lg transition
+                  ${
+                    isProfilePage
+                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
+                      : "text-[#B3B3B3] hover:bg-[#111113] hover:text-white"
+                  }
+                `}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <User size={16} />
@@ -237,14 +267,17 @@ export default function Topbar({
               </Link>
 
               <Link
-                href="/account"
+                href="/dashboard/account"
                 role="menuitem"
-                className="
+                className={`
                   flex items-center gap-2
-                  w-full px-3 py-2 rounded-lg
-                  text-[#B3B3B3]
-                  hover:bg-[#111113] hover:text-white transition
-                "
+                  w-full px-3 py-2 rounded-lg transition
+                  ${
+                    isAccountPage
+                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
+                      : "text-[#B3B3B3] hover:bg-[#111113] hover:text-white"
+                  }
+                `}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <CreditCard size={16} />
@@ -252,14 +285,17 @@ export default function Topbar({
               </Link>
 
               <Link
-                href="/settings"
+                href="/dashboard/settings"
                 role="menuitem"
-                className="
+                className={`
                   flex items-center gap-2
-                  w-full px-3 py-2 rounded-lg
-                  text-[#B3B3B3]
-                  hover:bg-[#111113] hover:text-white transition
-                "
+                  w-full px-3 py-2 rounded-lg transition
+                  ${
+                    isSettingsPage
+                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
+                      : "text-[#B3B3B3] hover:bg-[#111113] hover:text-white"
+                  }
+                `}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Settings size={16} />
@@ -269,17 +305,21 @@ export default function Topbar({
               <Link
                 href="/artist/invites"
                 role="menuitem"
-                className="
+                className={`
                   flex items-center gap-3
-                  px-3 py-2
-                  rounded-lg
-                  text-sm text-white/80
-                  hover:bg-white/5
-                  transition
-                "
+                  px-3 py-2 rounded-lg text-sm transition
+                  ${
+                    isMessagesPage
+                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
+                      : "text-white/80 hover:bg-white/5"
+                  }
+                `}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <Mail size={16} className="text-white/70" />
+                <Mail
+                  size={16}
+                  className={isMessagesPage ? "text-[#00FFC6]" : "text-white/70"}
+                />
                 <span>Messages</span>
               </Link>
 
