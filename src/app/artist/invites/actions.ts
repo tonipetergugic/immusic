@@ -26,5 +26,6 @@ export async function respondToInviteAction(args: {
   }
 
   revalidatePath("/artist/invites");
+  revalidatePath("/dashboard/messages");
 }
 

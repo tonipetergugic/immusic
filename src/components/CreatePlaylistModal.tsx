@@ -4,6 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 export default function CreatePlaylistModal({
   isOpen,
   onClose,
@@ -40,7 +46,7 @@ export default function CreatePlaylistModal({
     } = await supabase.auth.getUser();
 
     if (!user) {
-      alert("You must be logged in.");
+      showNotice("You must be logged in.");
       setLoading(false);
       return;
     }
@@ -60,7 +66,7 @@ export default function CreatePlaylistModal({
 
     if (error) {
       console.error(error);
-      alert("Error creating playlist.");
+      showNotice("Error creating playlist.");
       return;
     }
 
