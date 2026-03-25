@@ -173,56 +173,52 @@ export default async function ArtistDashboardPage() {
               Last updated: {lastUpdatedLabel}
             </p>
           </div>
-          <div className="mt-8 mb-28 space-y-10">
-          {/* Row 1 – Performance + Credits */}
-          <div className="px-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-y-8 gap-x-10">
-            {/* Featured via typography */}
-            <Stat
-              label="Total Streams"
-              value={formatNumber(totalStreams)}
-              valueClassName="text-4xl md:text-5xl font-semibold text-white"
-            />
-
-            <Stat
-              label="Ø Streams / Track"
-              value={formatNumber(Math.round(avgStreamsPerTrack))}
-              valueClassName="text-4xl md:text-5xl font-semibold text-white"
-            />
-
-            <Stat
-              label="Releases"
-              value={formatNumber(totalReleases)}
-              valueClassName="text-4xl md:text-5xl font-semibold text-white"
-            />
-
-            <Stat
-              label="Tracks"
-              value={formatNumber(totalTracks)}
-              valueClassName="text-4xl md:text-5xl font-semibold text-white"
-            />
-
-            <Stat
-              label="Ø Rating"
-              value={avgRating.toFixed(2).replace(".", ",")}
-              valueClassName="text-4xl md:text-5xl font-semibold text-white"
-            />
-
-            <Stat
-              label="Ratings (Count)"
-              value={formatNumber(totalRatingsCount)}
-              valueClassName="text-4xl md:text-5xl font-semibold text-white"
-            />
-
-            <Tooltip label="Premium Credits are system energy. Boost can use them to increase visibility in Performance Discovery.">
-              <div>
+          <div className="mt-8 mb-16">
+            <div className="grid grid-cols-2 gap-y-8 gap-x-8 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="flex justify-center text-center">
                 <Stat
-                  label="Premium Credits"
-                  value={formatNumber(balance)}
-                  valueClassName="text-4xl md:text-5xl font-semibold text-[#00FFC6]"
+                  label="Total Streams"
+                  value={formatNumber(totalStreams)}
+                  valueClassName="text-4xl md:text-5xl font-semibold text-white"
                 />
               </div>
-            </Tooltip>
-          </div>
+
+              <div className="flex justify-center text-center">
+                <Stat
+                  label="Releases"
+                  value={formatNumber(totalReleases)}
+                  valueClassName="text-4xl md:text-5xl font-semibold text-white"
+                />
+              </div>
+
+              <div className="flex justify-center text-center">
+                <Stat
+                  label="Tracks"
+                  value={formatNumber(totalTracks)}
+                  valueClassName="text-4xl md:text-5xl font-semibold text-white"
+                />
+              </div>
+
+              <div className="flex justify-center text-center">
+                <Stat
+                  label="Ø Rating"
+                  value={avgRating.toFixed(2).replace(".", ",")}
+                  valueClassName="text-4xl md:text-5xl font-semibold text-white"
+                />
+              </div>
+
+              <div className="flex justify-center text-center">
+                <Tooltip label="Premium Credits are system energy. Boost can use them to increase visibility in Performance Discovery.">
+                  <div>
+                    <Stat
+                      label="Premium Credits"
+                      value={formatNumber(balance)}
+                      valueClassName="text-4xl md:text-5xl font-semibold text-[#00FFC6]"
+                    />
+                  </div>
+                </Tooltip>
+              </div>
+            </div>
           </div>
         </section>
 

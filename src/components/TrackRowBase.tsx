@@ -145,7 +145,7 @@ export default function TrackRowBase({
         <div className="flex items-center gap-2 min-w-0">
           {/* Mobile/Tablet: Now Playing Indicator (nur wenn aktuell & playing) */}
           {isCurrent && isPlaying ? (
-            <span aria-hidden="true" className="lg:hidden inline-flex items-end gap-[2px] h-[12px] shrink-0">
+            <span aria-hidden="true" className="inline-flex items-end gap-[2px] h-[12px] shrink-0">
               <span
                 className="w-[2px] h-[4px] bg-[#00FFC6]"
                 style={{ animation: "nowPlayingEq 0.9s ease-in-out infinite", transformOrigin: "bottom" }}
