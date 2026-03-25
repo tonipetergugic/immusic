@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function CreatePlaylistModal({
@@ -15,6 +16,7 @@ export default function CreatePlaylistModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   function handleClose() {
     if (loading) return;
@@ -62,8 +64,9 @@ export default function CreatePlaylistModal({
       return;
     }
 
-    onCreated();
     handleClose();
+    onCreated();
+    router.push(`/dashboard/playlist/${data.id}`);
   }
 
   return (

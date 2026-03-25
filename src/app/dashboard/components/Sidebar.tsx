@@ -137,7 +137,7 @@ export default function Sidebar({
       <CreatePlaylistModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onCreated={() => window.location.reload()}
+        onCreated={() => {}}
       />
     </div>
   );

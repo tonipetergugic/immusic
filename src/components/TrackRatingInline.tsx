@@ -117,6 +117,8 @@ function TrackRatingInline({
 
   const didInitialFetchRef = useRef<string | null>(null);
 
+  const [useTouchRatingModal, setUseTouchRatingModal] = useState(false);
+
   const effectiveMyStars = hydrated ? myStars : initialMyStars;
   const alreadyRated = effectiveMyStars !== null;
   const [tapInfoOpen, setTapInfoOpen] = useState(false);
@@ -223,6 +225,24 @@ function TrackRatingInline({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [releaseTrackId, readOnly, hasInitial]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px), (pointer: coarse)");
+
+    const update = () => {
+      setUseTouchRatingModal(media.matches);
+    };
+
+    update();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
 
   async function handleRate(stars: number) {
     if (readOnly) return;
@@ -376,41 +396,88 @@ function TrackRatingInline({
 
       {confirmOpenFor !== null ? (
         <div
-          className="fixed left-1/2 top-1/2 z-[96] w-[420px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-white/10 bg-[#0E0E10]/96 p-6 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-[96] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
+          onClick={() => setConfirmOpenFor(null)}
         >
-          <div className="text-[18px] font-semibold tracking-tight text-white">
-            Confirm rating
-          </div>
+          <div
+            className="w-full max-w-[460px] rounded-3xl border border-white/10 bg-[#0E0E10]/96 p-6 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[18px] font-semibold tracking-tight text-white">
+              {useTouchRatingModal ? "Rate track" : "Confirm rating"}
+            </div>
 
-          <div className="mt-2 max-w-[320px] text-[13px] leading-6 text-white/65">
-            Your rating is final. Please confirm before submitting.
-          </div>
+            <div className="mt-2 max-w-[340px] text-[13px] leading-6 text-white/65">
+              {useTouchRatingModal
+                ? "Choose your rating below. Your rating is final once you confirm."
+                : "Your rating is final. Please confirm before submitting."}
+            </div>
 
-          <div className="mt-5 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              className="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-3 text-[14px] font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.10] hover:text-white hover:shadow-[0_10px_30px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmOpenFor(null);
-              }}
-            >
-              Cancel
-            </button>
+            {useTouchRatingModal ? (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setConfirmOpenFor(n)}
+                    className={[
+                      "inline-flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl border text-[30px] transition-all",
+                      confirmOpenFor >= n
+                        ? "border-[#00FFC6]/35 bg-[#00FFC60D] text-[#00FFC6] shadow-[0_0_18px_rgba(0,255,198,0.10)]"
+                        : "border-white/10 bg-white/[0.04] text-white/35 hover:border-white/20 hover:text-white/70",
+                    ].join(" ")}
+                    aria-label={`Choose ${n} stars`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 flex items-center justify-center gap-1 text-[24px]">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <span
+                    key={n}
+                    className={
+                      confirmOpenFor >= n ? "text-[#00FFC6]" : "text-white/25"
+                    }
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+            )}
 
-            <button
-              type="button"
-              className="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-[#00FFC6]/30 bg-white/[0.03] px-6 py-3 text-[14px] font-bold text-[#00FFC6] shadow-[0_0_0_1px_rgba(0,255,198,0.05),0_0_22px_rgba(0,255,198,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#00E0B0]/45 hover:bg-white/[0.05] hover:text-[#00E0B0] hover:shadow-[0_0_0_1px_rgba(0,224,176,0.10),0_0_28px_rgba(0,255,198,0.16)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/25"
-              onClick={(e) => {
-                e.stopPropagation();
-                const stars = confirmOpenFor;
-                setConfirmOpenFor(null);
-                if (typeof stars === "number") void handleRate(stars);
-              }}
-            >
-              Rate
-            </button>
+            {useTouchRatingModal ? (
+              <div className="mt-4 text-center text-xs text-white/55">
+                {confirmOpenFor}/5 selected
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                className="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-3 text-[14px] font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.10] hover:text-white hover:shadow-[0_10px_30px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmOpenFor(null);
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-[#00FFC6]/30 bg-white/[0.03] px-6 py-3 text-[14px] font-bold text-[#00FFC6] shadow-[0_0_0_1px_rgba(0,255,198,0.05),0_0_22px_rgba(0,255,198,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#00E0B0]/45 hover:bg-white/[0.05] hover:text-[#00E0B0] hover:shadow-[0_0_0_1px_rgba(0,224,176,0.10),0_0_28px_rgba(0,255,198,0.16)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/25"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const stars = confirmOpenFor;
+                  setConfirmOpenFor(null);
+                  if (typeof stars === "number") void handleRate(stars);
+                }}
+              >
+                Rate
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
