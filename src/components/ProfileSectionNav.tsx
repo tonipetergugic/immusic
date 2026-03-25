@@ -29,7 +29,7 @@ const items = [
   {
     key: "messages",
     label: "Messages",
-    href: "/artist/invites",
+    href: "/dashboard/messages",
     icon: Mail,
   },
 ] as const;
@@ -38,8 +38,8 @@ export default function ProfileSectionNav({
   current,
 }: ProfileSectionNavProps) {
   return (
-    <div className="mb-8">
-      <div className="flex flex-col gap-2">
+    <nav aria-label="Profile sections" className="w-full">
+      <div className="flex flex-col gap-1">
         {items.map((item) => {
           const isActive = item.key === current;
           const Icon = item.icon;
@@ -49,24 +49,24 @@ export default function ProfileSectionNav({
               key={item.key}
               href={item.href}
               className={`
-                flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition cursor-pointer
+                flex items-center gap-3 rounded-md px-3 py-3 text-sm transition-colors cursor-pointer
                 ${
                   isActive
-                    ? "border border-[#00FFC633] bg-[#00FFC60D] text-[#00FFC6]"
-                    : "border border-[#1A1A1C] bg-[#111113] text-[#B3B3B3] hover:border-[#00FFC622] hover:text-white"
+                    ? "bg-[#161619] text-[#00FFC6]"
+                    : "text-white hover:bg-[#161619] hover:text-[#00FFC6]"
                 }
               `}
             >
               <Icon
-                size={16}
-                className={isActive ? "text-[#00FFC6]" : "text-[#B3B3B3]"}
+                size={18}
+                className={isActive ? "text-[#00FFC6]" : "text-white"}
               />
               <span>{item.label}</span>
             </Link>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }
 

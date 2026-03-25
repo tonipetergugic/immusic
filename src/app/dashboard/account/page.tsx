@@ -1,14 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { ArrowLeft } from "lucide-react";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 export default function AccountPage() {
-  const router = useRouter();
-
   const supabase = useMemo(() => {
     return createSupabaseBrowserClient();
   }, []);
@@ -180,37 +176,21 @@ export default function AccountPage() {
         "
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="
-              inline-flex items-center justify-center
-              w-10 h-10 rounded-xl
-              bg-[#111113]
-              border border-[#1A1A1C]
-              text-[#B3B3B3]
-              hover:border-[#00FFC6]
-              hover:text-[#00FFC6]
-              transition
-            "
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1">
-            <h1 className="text-2xl font-semibold leading-tight">Account</h1>
-            <p className="text-[#B3B3B3] mt-1">
-              Manage your email and security settings.
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold leading-tight">Account</h1>
+          <p className="text-[#B3B3B3] mt-1">
+            Manage your email and security settings.
+          </p>
         </div>
 
-        <ProfileSectionNav current="account" />
+        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
+          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
+            <ProfileSectionNav current="account" />
+          </aside>
 
-        {/* Email */}
-        <div className="mt-2">
+          <div className="min-w-0">
+            {/* Email */}
+            <div className="mt-2">
           <div className="text-sm text-[#B3B3B3] mb-2">Email</div>
 
           <div
@@ -583,7 +563,8 @@ export default function AccountPage() {
             </div>
           </div>
         )}
-
+          </div>
+        </div>
       </div>
     </div>
   );

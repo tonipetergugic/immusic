@@ -55,6 +55,7 @@ export default function Topbar({
     if (pathname.startsWith("/dashboard/create")) return "Create";
     if (pathname.startsWith("/dashboard/playlist")) return "Playlist";
     if (pathname.startsWith("/dashboard/artist/")) return "Artist";
+    if (pathname.startsWith("/dashboard/messages")) return "Messages";
     if (pathname.startsWith("/artist/invites")) return "Messages";
     if (pathname.startsWith("/artist/dashboard")) return "Artist Dashboard";
     if (pathname.startsWith("/artist/releases")) return "Releases";
@@ -73,7 +74,9 @@ export default function Topbar({
   const isProfilePage = pathname?.startsWith("/dashboard/profile");
   const isAccountPage = pathname?.startsWith("/dashboard/account");
   const isSettingsPage = pathname?.startsWith("/dashboard/settings");
-  const isMessagesPage = pathname?.startsWith("/artist/invites");
+  const isMessagesPage =
+    pathname?.startsWith("/dashboard/messages") ||
+    pathname?.startsWith("/artist/invites");
 
   useEffect(() => {
     if (role) {
@@ -312,7 +315,7 @@ export default function Topbar({
               </Link>
 
               <Link
-                href="/artist/invites"
+                href="/dashboard/messages"
                 role="menuitem"
                 className={`
                   flex items-center gap-3

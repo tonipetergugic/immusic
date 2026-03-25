@@ -4,13 +4,11 @@ import { useState, useEffect } from "react";
 import AvatarDropzone from "@/components/AvatarDropzone";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateAvatar, deleteAvatar, updateDisplayName } from "@/app/(topbar)/profile/actions";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -127,37 +125,21 @@ export default function ProfilePage() {
         "
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="
-              inline-flex items-center justify-center
-              w-10 h-10 rounded-xl
-              bg-[#111113]
-              border border-[#1A1A1C]
-              text-[#B3B3B3]
-              hover:border-[#00FFC6]
-              hover:text-[#00FFC6]
-              transition
-            "
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1">
-            <h1 className="text-2xl font-semibold leading-tight">Profile</h1>
-            <p className="text-[#B3B3B3] mt-1">
-              Change your display name and avatar.
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold leading-tight">Profile</h1>
+          <p className="text-[#B3B3B3] mt-1">
+            Change your display name and avatar.
+          </p>
         </div>
 
-        <ProfileSectionNav current="profile" />
+        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
+          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
+            <ProfileSectionNav current="profile" />
+          </aside>
 
-        {/* Avatar Upload */}
-        <div className="relative w-52 h-52 mx-auto mb-14 group">
+          <div className="min-w-0">
+            {/* Avatar Upload */}
+            <div className="relative w-52 h-52 mx-auto mb-14 group">
           <AvatarDropzone
             avatarUrl={avatarUrl}
             onFileSelected={async (file) => {
@@ -390,7 +372,8 @@ export default function ProfilePage() {
             </Link>
           </div>
         ) : null}
-
+          </div>
+        </div>
       </div>
     </div>
   );

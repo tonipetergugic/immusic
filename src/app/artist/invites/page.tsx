@@ -1,7 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { respondToInviteAction } from "./actions";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
-import TopbarBackButton from "@/components/TopbarBackButton";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
 
 type InviteRow = {
@@ -55,25 +54,25 @@ export default async function ArtistInvitesPage() {
         shadow-[0_20px_60px_rgba(0,0,0,0.6)]
       "
       >
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <TopbarBackButton />
-
-          <div className="flex-1">
-            <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-              Inbox
-            </div>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
-              Messages
-            </h1>
-            <p className="mt-1 text-sm text-white/60">
-              Personal notifications and collaboration requests.
-            </p>
+        <div className="mb-8">
+          <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+            Inbox
           </div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+            Messages
+          </h1>
+          <p className="mt-1 text-sm text-white/60">
+            Personal notifications and collaboration requests.
+          </p>
         </div>
 
-        <ProfileSectionNav current="messages" />
+        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
+          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
+            <ProfileSectionNav current="messages" />
+          </aside>
 
-        {invites.length === 0 ? (
+          <div className="min-w-0">
+            {invites.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-white/70">
             No new messages.
           </div>
@@ -151,7 +150,9 @@ export default async function ArtistInvitesPage() {
               </div>
             ))}
           </div>
-        )}
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
