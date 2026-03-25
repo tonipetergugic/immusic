@@ -56,7 +56,15 @@ export default function Topbar({
     if (pathname.startsWith("/dashboard/playlist")) return "Playlist";
     if (pathname.startsWith("/dashboard/artist/")) return "Artist";
     if (pathname.startsWith("/artist/invites")) return "Messages";
+    if (pathname.startsWith("/artist/dashboard")) return "Artist Dashboard";
+    if (pathname.startsWith("/artist/releases")) return "Releases";
+    if (pathname.startsWith("/artist/upload")) return "Upload";
+    if (pathname.startsWith("/artist/my-tracks")) return "My Tracks";
+    if (pathname.startsWith("/artist/analytics")) return "Analytics";
+    if (pathname.startsWith("/artist/profile")) return "Artist Profile";
+    if (pathname.startsWith("/artist/onboarding")) return "Onboarding";
     if (pathname.startsWith("/artist")) return "Artist";
+
     if (pathname.startsWith("/dashboard")) return "Dashboard";
 
     return "ImMusic";
@@ -162,8 +170,9 @@ export default function Topbar({
         z-40
       "
     >
-      <span className="text-white/90 font-semibold tracking-wide text-sm">
-        ImMusic · {topbarTitle}
+      <span className="font-semibold tracking-wide text-sm">
+        <span className="text-white/90">ImMusic</span>
+        <span className="text-[#00FFC6]"> · {topbarTitle}</span>
       </span>
 
       <div className="flex items-center gap-5">
@@ -332,7 +341,7 @@ export default function Topbar({
                 className="
                   flex items-center gap-2
                   w-full text-left px-3 py-2 rounded-lg
-                  text-red-400
+                  text-red-400 cursor-pointer
                   hover:bg-[#111113] hover:text-red-300 transition
                 "
               >
