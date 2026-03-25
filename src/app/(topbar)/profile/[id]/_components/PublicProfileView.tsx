@@ -114,15 +114,16 @@ export default function PublicProfileView({
         </div>
 
         {playlists.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
             {playlists.map((pl) => (
-              <PlaylistCard
-                key={pl.id}
-                id={pl.id}
-                title={pl.title}
-                description={pl.is_public ? "Public playlist" : "Private playlist"}
-                cover_url={pl.cover_url ?? null}
-              />
+              <div key={pl.id} className="shrink-0 w-[150px] snap-start">
+                <PlaylistCard
+                  id={pl.id}
+                  title={pl.title}
+                  description={pl.is_public ? "Public playlist" : "Private playlist"}
+                  cover_url={pl.cover_url ?? null}
+                />
+              </div>
             ))}
           </div>
         ) : (

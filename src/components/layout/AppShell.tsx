@@ -9,7 +9,8 @@ export default function AppShell({
   sidebar,
   header,
   children,
-  mainClassName = "flex-1 min-h-0 overflow-y-auto overflow-x-hidden",
+  mainClassName =
+    "flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]",
   innerClassName = "w-full max-w-[1200px] mx-auto px-3 pb-40 sm:px-4 lg:px-6 lg:pb-48",
 }: {
   sidebar?: ReactNode;

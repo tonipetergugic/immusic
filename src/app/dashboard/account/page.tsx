@@ -172,7 +172,7 @@ export default function AccountPage() {
           border border-[#1A1A1C]
           rounded-2xl
           p-8
-          lg:min-h-[720px]
+          lg:min-h-[980px]
           shadow-[0_20px_60px_rgba(0,0,0,0.6)]
         "
       >

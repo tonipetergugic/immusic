@@ -17,13 +17,8 @@ export function ReleasesSection({
 }) {
   if (releases.length === 0) {
     return (
-      <div className="rounded-xl border border-white/10 bg-[#111112] p-6">
-        <h3 className="text-sm font-semibold text-white/80">
-          No releases saved yet
-        </h3>
-        <p className="mt-1 text-sm text-white/50">
-          Saved albums, EPs and singles will appear here.
-        </p>
+      <div className="py-6">
+        <p className="text-sm text-white/60">No releases saved yet.</p>
       </div>
     );
   }

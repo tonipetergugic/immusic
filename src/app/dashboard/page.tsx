@@ -7,12 +7,31 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export default async function DashboardPage() {
   const { modules, itemsByModuleId } = await getHomeModules();
 
-  // Exclude releases that already have performance tracks (so Dev Home never shows them)
+  // Map ist nicht serialisierbar -> in plain object umwandeln
+  const obj: Record<string, any[]> = {};
+  for (const [k, v] of itemsByModuleId.entries()) obj[k] = v;
+
+  const releaseModule = modules.find((m: any) => m.module_type === "release") ?? null;
+  const releaseItems = releaseModule ? (obj[releaseModule.id] ?? []) : [];
+
+  const performanceReleaseModule =
+    modules.find((m: any) => m.module_type === "performance_release") ?? null;
+
+  const performanceReleaseItems = performanceReleaseModule
+    ? (obj[performanceReleaseModule.id] ?? [])
+    : [];
+
+  // Release-Regel:
+  // - Single-Track Release => performance nur wenn der einzige Track "performance" ist
+  // - Multi-Track Release => performance nur wenn alle Tracks "performance" sind
   const perfSupabase = await createSupabaseServerClient();
 
   const { data: perfRelRows, error: perfRelErr } = await perfSupabase
     .from("performance_discovery_candidates")
-    .select("release_id");
+    .select("release_id, score_v1, exposure_completed_at, track_id")
+    .order("score_v1", { ascending: false })
+    .order("exposure_completed_at", { ascending: true })
+    .order("track_id", { ascending: true });
 
   if (perfRelErr) {
     throw new Error(
@@ -20,18 +39,68 @@ export default async function DashboardPage() {
     );
   }
 
-  const performanceReleaseIdSet = new Set(
-    (perfRelRows ?? [])
-      .map((r: any) => r.release_id)
-      .filter(Boolean)
+  const candidatePerformanceReleaseIds = Array.from(
+    new Set(
+      (perfRelRows ?? [])
+        .map((r: any) => r.release_id)
+        .filter(Boolean)
+    )
   );
 
-  // Map ist nicht serialisierbar -> in plain object umwandeln
-  const obj: Record<string, any[]> = {};
-  for (const [k, v] of itemsByModuleId.entries()) obj[k] = v;
+  const highlightedPerformanceReleaseIds = Array.from(
+    new Set(
+      performanceReleaseItems
+        .filter((it: any) => it.item_type === "release")
+        .sort((a: any, b: any) => a.position - b.position)
+        .map((it: any) => it.item_id)
+        .filter(Boolean)
+    )
+  );
 
-  const releaseModule = modules.find((m: any) => m.module_type === "release") ?? null;
-  const releaseItems = releaseModule ? (obj[releaseModule.id] ?? []) : [];
+  const releaseIdsToInspect = Array.from(
+    new Set([...candidatePerformanceReleaseIds, ...highlightedPerformanceReleaseIds])
+  );
+
+  const { data: releaseTrackRows, error: releaseTrackErr } =
+    releaseIdsToInspect.length > 0
+      ? await perfSupabase
+          .from("tracks")
+          .select("release_id,status")
+          .in("release_id", releaseIdsToInspect)
+      : { data: [], error: null };
+
+  if (releaseTrackErr) {
+    throw new Error(
+      `tracks query failed: ${releaseTrackErr.message} (${releaseTrackErr.code})`
+    );
+  }
+
+  const trackStatusesByReleaseId: Record<string, string[]> = {};
+
+  for (const row of (releaseTrackRows ?? []) as any[]) {
+    const releaseId = typeof row.release_id === "string" ? row.release_id : null;
+    const status = typeof row.status === "string" ? row.status : null;
+
+    if (!releaseId || !status) continue;
+
+    if (!trackStatusesByReleaseId[releaseId]) {
+      trackStatusesByReleaseId[releaseId] = [];
+    }
+
+    trackStatusesByReleaseId[releaseId].push(status);
+  }
+
+  function isPerformanceHomeRelease(statuses: string[]) {
+    if (statuses.length === 0) return false;
+    if (statuses.length === 1) return statuses[0] === "performance";
+    return statuses.every((status) => status === "performance");
+  }
+
+  const performanceReleaseIdSet = new Set(
+    releaseIdsToInspect.filter((releaseId) =>
+      isPerformanceHomeRelease(trackStatusesByReleaseId[releaseId] ?? [])
+    )
+  );
 
   const highlightedReleaseId =
     releaseItems
@@ -44,9 +113,14 @@ export default async function DashboardPage() {
   const autoReleaseIds =
     autoReleaseLimit > 0
       ? (await getLatestHomeReleaseIds({
-          limit: autoReleaseLimit + performanceReleaseIdSet.size + (highlightedReleaseId ? 1 : 0),
+          limit:
+            autoReleaseLimit +
+            performanceReleaseIdSet.size +
+            (highlightedReleaseId ? 1 : 0),
           excludeIds: highlightedReleaseId ? [highlightedReleaseId] : [],
-        })).filter((id) => !performanceReleaseIdSet.has(id)).slice(0, autoReleaseLimit)
+        }))
+          .filter((id) => !performanceReleaseIdSet.has(id))
+          .slice(0, autoReleaseLimit)
       : [];
 
   const releaseIds = [
@@ -54,22 +128,16 @@ export default async function DashboardPage() {
     ...autoReleaseIds,
   ];
 
-  const performanceReleaseModule =
-    modules.find((m: any) => m.module_type === "performance_release") ?? null;
-
-  const performanceReleaseItems = performanceReleaseModule
-    ? (obj[performanceReleaseModule.id] ?? [])
-    : [];
+  const autoPerformanceReleaseIds = candidatePerformanceReleaseIds.filter((id) =>
+    performanceReleaseIdSet.has(id)
+  );
 
   const performanceReleaseIds = Array.from(
-    new Set(
-      performanceReleaseItems
-        .filter((it: any) => it.item_type === "release")
-        .sort((a: any, b: any) => a.position - b.position)
-        .slice(0, 10)
-        .map((it: any) => it.item_id)
-    )
-  );
+    new Set([
+      ...highlightedPerformanceReleaseIds.filter((id) => performanceReleaseIdSet.has(id)),
+      ...autoPerformanceReleaseIds,
+    ])
+  ).slice(0, 10);
 
   const allReleaseIds = Array.from(new Set([...releaseIds, ...performanceReleaseIds]));
   const releasesById = await getHomeReleases(allReleaseIds);
