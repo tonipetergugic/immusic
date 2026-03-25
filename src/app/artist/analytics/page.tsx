@@ -131,19 +131,7 @@ export default async function ArtistAnalyticsPage({
       listened_seconds: a.listened_seconds,
       ratings_count: a.ratings_count,
       rating_avg: a.ratings_count > 0 ? a.rating_sum / a.ratings_count : null,
-    }))
-    .sort((a, b) => {
-      if (trackSort === "listeners") return (b.unique_listeners ?? 0) - (a.unique_listeners ?? 0);
-      if (trackSort === "time") return (b.listened_seconds ?? 0) - (a.listened_seconds ?? 0);
-      if (trackSort === "rating") {
-        const ra = a.rating_avg === null ? -1 : Number(a.rating_avg);
-        const rb = b.rating_avg === null ? -1 : Number(b.rating_avg);
-        if (rb !== ra) return rb - ra;
-        return (b.ratings_count ?? 0) - (a.ratings_count ?? 0);
-      }
-      return (b.streams ?? 0) - (a.streams ?? 0);
-    })
-    .slice(0, 20);
+    }));
 
   // fetch titles for these track ids
   const ids = topAgg.map((r) => r.track_id);
@@ -177,6 +165,30 @@ export default async function ArtistAnalyticsPage({
       uniqByTrackId.set(tid, set);
     });
   }
+
+  const topAggWithListeners = topAgg.map((row) => ({
+    ...row,
+    unique_listeners: uniqByTrackId.get(row.track_id)?.size ?? 0,
+  }));
+
+  const sortedTopAgg = [...topAggWithListeners].sort((a, b) => {
+    if (trackSort === "listeners") {
+      return (b.unique_listeners ?? 0) - (a.unique_listeners ?? 0);
+    }
+    if (trackSort === "streams") {
+      return (b.streams ?? 0) - (a.streams ?? 0);
+    }
+    if (trackSort === "time") {
+      return (b.listened_seconds ?? 0) - (a.listened_seconds ?? 0);
+    }
+    if (trackSort === "rating") {
+      const ra = a.rating_avg === null ? -1 : Number(a.rating_avg);
+      const rb = b.rating_avg === null ? -1 : Number(b.rating_avg);
+      if (rb !== ra) return rb - ra;
+      return (b.ratings_count ?? 0) - (a.ratings_count ?? 0);
+    }
+    return (b.streams ?? 0) - (a.streams ?? 0);
+  });
 
   // resolve cover_path via tracks.release_id -> releases
   const coverPathByTrackId = new Map<string, string | null>();
@@ -244,12 +256,12 @@ export default async function ArtistAnalyticsPage({
     );
   }
 
-  const topTracks: TopTrackRow[] = topAgg.map((r) => ({
+  const topTracks: TopTrackRow[] = sortedTopAgg.slice(0, 20).map((r) => ({
     track_id: r.track_id,
     title: titleById.get(r.track_id) || "Unknown track",
     cover_url: toPublicCoverUrl(coverPathByTrackId.get(r.track_id) ?? null),
     streams: Number(r.streams ?? 0),
-    unique_listeners: uniqByTrackId.get(r.track_id)?.size ?? 0,
+    unique_listeners: Number(r.unique_listeners ?? 0),
     listened_seconds: Number(r.listened_seconds ?? 0),
     ratings_count: Number(r.ratings_count ?? 0),
     rating_avg: r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg),
@@ -258,7 +270,7 @@ export default async function ArtistAnalyticsPage({
   // Top rated tracks (range-based, derived from topAgg)
   const MIN_RATINGS = 3;
 
-  const topRatedAgg = topAgg
+  const topRatedAgg = topAggWithListeners
     .filter((r) => (r.ratings_count ?? 0) >= MIN_RATINGS && r.rating_avg !== null)
     .sort((a, b) => {
       const ra = Number(a.rating_avg ?? 0);

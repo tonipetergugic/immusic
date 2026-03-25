@@ -35,11 +35,11 @@ export async function getArtistAnalyticsSummary(params: {
   
   if (params.range === "7d") {
     const date = new Date(now);
-    date.setDate(date.getDate() - 7);
+    date.setDate(date.getDate() - 6);
     rangeStart = date.toISOString().split("T")[0];
   } else if (params.range === "28d") {
     const date = new Date(now);
-    date.setDate(date.getDate() - 28);
+    date.setDate(date.getDate() - 27);
     rangeStart = date.toISOString().split("T")[0];
   } else {
     // "all" - use a very old date
