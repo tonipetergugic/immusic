@@ -256,7 +256,7 @@ export default async function ArtistDashboardPage() {
                       </div>
 
                   <div className="shrink-0 text-right">
-                    <p className="text-base text-[#B3B3B3] whitespace-nowrap">
+                    <p className="text-[17px] font-medium text-white/85 whitespace-nowrap">
                       {t.rating.toFixed(2).replace(".", ",")} rating · {t.ratingCount} votes
                     </p>
                   </div>
@@ -302,7 +302,7 @@ export default async function ArtistDashboardPage() {
                       </div>
 
                   <div className="shrink-0 text-right">
-                    <p className="text-base text-[#B3B3B3] whitespace-nowrap">
+                    <p className="text-[17px] font-medium text-white/85 whitespace-nowrap">
                       {t.streams.toLocaleString("de-DE")} streams
                     </p>
                   </div>
