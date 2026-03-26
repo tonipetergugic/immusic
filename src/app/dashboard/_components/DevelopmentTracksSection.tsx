@@ -3,7 +3,6 @@
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
-import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import type { PlayerTrack } from "@/types/playerTrack";
 import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
 
@@ -235,34 +234,6 @@ export default function DevelopmentTracksSection({
                   coverUrl={coverUrl}
                   coverSize="md"
                   leadingSlot={idx + 1}
-                  titleSlot={
-                    <div className="flex items-center min-w-0">
-                      <button
-                        type="button"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        onClick={() => {
-                          if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
-                        }}
-                        className="
-                          text-left text-[13px] font-semibold text-white truncate
-                          hover:text-[#00FFC6] transition-colors cursor-pointer
-                          focus:outline-none
-                        "
-                        title={formatTrackTitle(
-                          (rowTrack as any).title,
-                          (rowTrack as any).version
-                        )}
-                      >
-                        {formatTrackTitle(
-                          (rowTrack as any).title,
-                          (rowTrack as any).version
-                        )}
-                      </button>
-                    </div>
-                  }
                   subtitleSlot={
                     Array.isArray((rowTrack as any)?.artists) &&
                     (rowTrack as any).artists.length > 0 ? (

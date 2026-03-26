@@ -38,6 +38,7 @@ export function usePerformanceDiscovery({
         genre: string | null;
         audio_path: string | null;
         version: string | null;
+        is_explicit: boolean | null;
       }
     >
   >({});
@@ -79,13 +80,20 @@ export function usePerformanceDiscovery({
           if (trackIds.length > 0) {
             const { data: tmeta, error: tmetaErr } = await supabase
               .from("tracks")
-              .select("id, title, bpm, key, genre, audio_path, version")
+              .select("id, title, bpm, key, genre, audio_path, version, is_explicit")
               .in("id", trackIds);
 
             if (!tmetaErr && tmeta) {
               const m: Record<
                 string,
-                { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null }
+                {
+                  bpm: number | null;
+                  key: string | null;
+                  genre: string | null;
+                  audio_path: string | null;
+                  version: string | null;
+                  is_explicit: boolean | null;
+                }
               > = {};
               for (const t of tmeta as any[]) {
                 if (!t?.id) continue;
@@ -95,6 +103,7 @@ export function usePerformanceDiscovery({
                   genre: t.genre ?? null,
                   audio_path: t.audio_path ?? null,
                   version: t.version ?? null,
+                  is_explicit: t.is_explicit ?? false,
                 };
               }
               if (!cancelled) setPerfTrackMetaMap(m);

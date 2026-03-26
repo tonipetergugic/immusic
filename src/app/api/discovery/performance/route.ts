@@ -31,6 +31,29 @@ export async function GET(req: Request) {
 
     const supabase = await createSupabaseServerClient();
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let hideExplicitTracks = false;
+
+    if (user) {
+      const { data: viewerProfile, error: viewerProfileErr } = await supabase
+        .from("profiles")
+        .select("hide_explicit_tracks")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (viewerProfileErr) {
+        return NextResponse.json(
+          { ok: false, error: viewerProfileErr.message, items: [] },
+          { status: 500, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+
+      hideExplicitTracks = !!viewerProfile?.hide_explicit_tracks;
+    }
+
     const baseCount = Math.floor(limit * 0.8);
     const boostCount = limit - baseCount;
 
@@ -86,6 +109,28 @@ export async function GET(req: Request) {
 
     const items = [...baseWithSource, ...boostWithSource];
 
+    const trackIds = items.map((item: any) => item.track_id).filter(Boolean);
+
+    const { data: tracks, error: tracksError } = trackIds.length
+      ? await supabase
+          .from("tracks")
+          .select("id,is_explicit")
+          .in("id", trackIds)
+      : { data: [], error: null };
+
+    if (tracksError) {
+      return NextResponse.json(
+        { ok: false, error: tracksError.message, items: [] },
+        { status: 500, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    const trackById = new Map<string, any>((tracks ?? []).map((track: any) => [track.id, track]));
+
+    const visibleItems = hideExplicitTracks
+      ? items.filter((item: any) => !trackById.get(item.track_id)?.is_explicit)
+      : items;
+
     return NextResponse.json(
       {
         ok: true,
@@ -95,7 +140,7 @@ export async function GET(req: Request) {
           baseCount,
           boostCount,
         },
-        items,
+        items: visibleItems,
       },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );

@@ -181,6 +181,52 @@ export async function updateDisplayName(newName: string) {
   return { success: true };
 }
 
+export async function updateHideExplicitTracks(hideExplicitTracks: boolean) {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {}
+        },
+        remove(name: string, options: any) {
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch {}
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error("Not authenticated");
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ hide_explicit_tracks: hideExplicitTracks })
+    .eq("id", user.id);
+
+  if (updateError) {
+    throw new Error("Failed to update explicit content preference");
+  }
+
+  return { success: true };
+}
+
 export async function followProfile(followingId: string) {
   if (!followingId) throw new Error("Missing followingId");
 

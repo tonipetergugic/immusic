@@ -20,6 +20,49 @@ export default async function ReleaseDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  let hideExplicitTracks = false;
+
+  if (user?.id) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("hide_explicit_tracks")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    hideExplicitTracks = !!profile?.hide_explicit_tracks;
+  }
+
+  if (hideExplicitTracks) {
+    const { data: explicitTracks, error: explicitTracksError } = await supabase
+      .from("tracks")
+      .select("id")
+      .eq("release_id", releaseId)
+      .eq("is_explicit", true)
+      .limit(1);
+
+    if (explicitTracksError) {
+      throw explicitTracksError;
+    }
+
+    if ((explicitTracks ?? []).length > 0) {
+      return (
+        <div className="text-white">
+          <div className="mb-3">
+            <BackLink />
+          </div>
+          <h1 className="text-xl font-semibold">Release not available</h1>
+          <p className="mt-2 text-sm text-white/60">
+            This release contains explicit content and is hidden by your settings.
+          </p>
+        </div>
+      );
+    }
+  }
+
   const canSaveRelease = !!user?.id;
 
   let initialSaved = false;

@@ -82,6 +82,45 @@ export async function loadLibraryV2Releases({
 
   if (releaseIds.length === 0) return [];
 
+  let hideExplicitTracks = false;
+
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("hide_explicit_tracks")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileErr) {
+    console.error("LibraryV2: Failed to load explicit preference for releases:", profileErr);
+  } else {
+    hideExplicitTracks = !!profile?.hide_explicit_tracks;
+  }
+
+  let visibleReleaseIds = releaseIds;
+
+  if (hideExplicitTracks) {
+    const { data: explicitRows, error: explicitErr } = await supabase
+      .from("tracks")
+      .select("release_id")
+      .in("release_id", releaseIds)
+      .eq("is_explicit", true);
+
+    if (explicitErr) {
+      console.error("LibraryV2: Failed to filter explicit releases:", explicitErr);
+    } else {
+      const blockedReleaseIds = new Set(
+        (explicitRows ?? [])
+          .map((row: any) => row.release_id)
+          .filter(Boolean)
+          .map((id: any) => String(id))
+      );
+
+      visibleReleaseIds = releaseIds.filter((id) => !blockedReleaseIds.has(String(id)));
+    }
+  }
+
+  if (visibleReleaseIds.length === 0) return [];
+
   const { data: releases, error: releasesErr } = await supabase
     .from("releases")
     .select(
@@ -97,7 +136,7 @@ export async function loadLibraryV2Releases({
       )
       `
     )
-    .in("id", releaseIds);
+    .in("id", visibleReleaseIds);
 
   if (releasesErr) {
     console.error("LibraryV2: Failed to load releases:", releasesErr);
@@ -123,7 +162,7 @@ export async function loadLibraryV2Releases({
     ])
   );
 
-  return releaseIds
+  return visibleReleaseIds
     .map((id) => byId.get(String(id)) ?? null)
     .filter(Boolean) as {
     id: string;
@@ -199,6 +238,7 @@ export async function loadLibraryV2Tracks({
         created_at,
         artist_id,
         status,
+        is_explicit,
         bpm,
         key,
         genre,
@@ -236,6 +276,20 @@ export async function loadLibraryV2Tracks({
     };
   }
 
+  let hideExplicitTracks = false;
+
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("hide_explicit_tracks")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileErr) {
+    console.error("LibraryV2: Failed to load explicit preference:", profileErr);
+  } else {
+    hideExplicitTracks = !!profile?.hide_explicit_tracks;
+  }
+
   const normalizedTracks =
     (savedRows ?? [])
       .map((row: any) => {
@@ -259,6 +313,7 @@ export async function loadLibraryV2Tracks({
           version: t.version ?? null,
           artist_id: t.artist_id ?? null,
           status: t.status ?? null,
+          is_explicit: t.is_explicit ?? false,
           audio_url,
           cover_url,
           bpm: t.bpm ?? null,
@@ -279,7 +334,11 @@ export async function loadLibraryV2Tracks({
   // Ensure unique keys by track.id
   const unique = Array.from(new Map((normalizedTracks as any[]).map((t) => [String(t.id), t])).values());
 
-  const safeUnique = (unique as any[]).filter((t) => {
+  const visibleUnique = hideExplicitTracks
+    ? (unique as any[]).filter((t) => !(t as any)?.is_explicit)
+    : (unique as any[]);
+
+  const safeUnique = visibleUnique.filter((t) => {
     const audioUrl = (t as any)?.audio_url;
     if (!audioUrl) {
       if (process.env.NODE_ENV !== "production") {

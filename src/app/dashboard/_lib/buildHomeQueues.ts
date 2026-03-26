@@ -47,6 +47,7 @@ export function buildDevQueue(params: {
       status: "development",
       title,
       version: (it as any)?.version ?? null,
+      is_explicit: !!(it as any)?.is_explicit,
       cover_url: coverUrl,
       audio_url: audioUrl,
       audio_path: it.audio_path ?? null,
@@ -72,7 +73,7 @@ export function buildPerfQueue(params: {
     string,
     { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }
   >;
-  perfTrackMetaMap: Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null }>;
+  perfTrackMetaMap: Record<string, { bpm: number | null; key: string | null; genre: string | null; audio_path: string | null; version: string | null; is_explicit?: boolean | null }>;
   supabase: any;
   trackArtistsMap: Record<string, ArtistMini[]>;
 }) {
@@ -124,6 +125,7 @@ export function buildPerfQueue(params: {
       status: "performance",
       title,
       version: (meta as any)?.version ?? null,
+      is_explicit: !!(meta as any)?.is_explicit,
       cover_url: coverUrl,
       audio_url: audioUrl,
       audio_path: audioPath,

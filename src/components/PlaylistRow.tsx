@@ -9,6 +9,7 @@ import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import { GripVertical } from "lucide-react";
+import ExplicitBadge from "@/components/ExplicitBadge";
 
 function PlaylistRow({
   track,
@@ -83,22 +84,26 @@ function PlaylistRow({
           </div>
         }
         titleSlot={
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={goToTrack}
-            className={`text-left text-[13px] font-semibold truncate cursor-pointer transition-colors focus:outline-none ${
-              track.status === "performance"
-                ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                : "text-white hover:text-[#00FFC6]"
-            }`}
-            title={formatTrackTitle(track.title, (track as any).version)}
-          >
-            {formatTrackTitle(track.title, (track as any).version)}
-          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={goToTrack}
+              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate cursor-pointer transition-colors focus:outline-none ${
+                track.status === "performance"
+                  ? "text-[#00FFC6] hover:text-[#00E0B0]"
+                  : "text-white hover:text-[#00FFC6]"
+              }`}
+              title={formatTrackTitle(track.title, (track as any).version)}
+            >
+              {formatTrackTitle(track.title, (track as any).version)}
+            </button>
+
+            {track.is_explicit ? <ExplicitBadge /> : null}
+          </div>
         }
         subtitleSlot={
           Array.isArray((track as any)?.artists) && (track as any).artists.length > 0 ? (

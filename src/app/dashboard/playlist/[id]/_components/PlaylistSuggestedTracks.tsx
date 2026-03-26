@@ -13,6 +13,7 @@ import {
 import TrackRowBase from "@/components/TrackRowBase";
 import AddToPlaylistModal from "@/components/AddToPlaylistModal";
 import type { PlayerTrack } from "@/types/playerTrack";
+import ExplicitBadge from "@/components/ExplicitBadge";
 
 type Props = {
   playlistId: string;
@@ -25,6 +26,7 @@ type TrackMetaRow = {
   id: string;
   genre: string | null;
   version: string | null;
+  is_explicit: boolean | null;
 };
 
 type ArtistRow = {
@@ -42,6 +44,7 @@ type SuggestedTrack = {
   id: string;
   title: string;
   version: string | null;
+  is_explicit: boolean;
   artist_id: string;
   artist_name: string;
   cover_url: string | null;
@@ -103,7 +106,7 @@ export default function PlaylistSuggestedTracks({
           trackIds.length
             ? supabase
                 .from("tracks")
-                .select("id, genre, version")
+                .select("id, genre, version, is_explicit")
                 .in("id", trackIds)
                 .returns<TrackMetaRow[]>()
             : Promise.resolve({ data: [] as TrackMetaRow[] }),
@@ -131,6 +134,7 @@ export default function PlaylistSuggestedTracks({
             {
               genre: row.genre ?? null,
               version: row.version ?? null,
+            is_explicit: row.is_explicit ?? null,
             },
           ])
         );
@@ -158,6 +162,7 @@ export default function PlaylistSuggestedTracks({
                   .getPublicUrl(item.release_cover_path).data.publicUrl ?? null
               : null,
             version: trackMetaMap.get(item.track_id)?.version ?? null,
+            is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
             genre: trackMetaMap.get(item.track_id)?.genre ?? null,
             release_id: item.release_id ?? null,
             release_track_id:
@@ -389,14 +394,20 @@ export default function PlaylistSuggestedTracks({
                 coverSize="sm"
                 className="border-b-0 px-0 grid-cols-[40px_56px_minmax(0,1fr)_0px] lg:grid-cols-[40px_56px_minmax(0,1fr)_0px]"
                 titleSlot={
-                  <span
-                    className={`text-left text-[14px] font-semibold truncate ${
-                      track.status === "performance" ? "text-[#00FFC6]" : "text-white"
-                    }`}
-                    title={formatTrackTitle(item.title, item.version)}
-                  >
-                    {formatTrackTitle(item.title, item.version)}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`min-w-0 flex-1 text-left text-[14px] font-semibold truncate ${
+                        track.status === "performance"
+                          ? "text-[#00FFC6]"
+                          : "text-white"
+                      }`}
+                      title={formatTrackTitle(item.title, item.version)}
+                    >
+                      {formatTrackTitle(item.title, item.version)}
+                    </span>
+
+                    {item.is_explicit ? <ExplicitBadge /> : null}
+                  </div>
                 }
                 subtitleSlot={
                   <span

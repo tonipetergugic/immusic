@@ -158,6 +158,22 @@ export default async function PlaylistPage(
     data: { user },
   } = await supabase.auth.getUser();
 
+  let hideExplicitTracks = false;
+
+  if (user?.id) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("hide_explicit_tracks")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Failed to load explicit preference for playlist page", profileError);
+    } else {
+      hideExplicitTracks = !!profile?.hide_explicit_tracks;
+    }
+  }
+
   const canSavePlaylist = !!user?.id;
 
   let initialSaved = false;
@@ -229,7 +245,34 @@ export default async function PlaylistPage(
     .order("position", { ascending: true })
     .returns<PlaylistTrackRow[]>();
 
-  const convertedTracks: PlayerTrack[] = (playlistTracks ?? []).flatMap((row) => {
+  let visiblePlaylistTracks = playlistTracks ?? [];
+
+  const playlistTrackIds = Array.from(
+    new Set(visiblePlaylistTracks.map((row) => row.track_id).filter(Boolean))
+  );
+
+  const { data: explicitRows, error: explicitError } = playlistTrackIds.length
+    ? await supabase
+        .from("tracks")
+        .select("id, is_explicit")
+        .in("id", playlistTrackIds)
+    : { data: [], error: null };
+
+  if (explicitError) {
+    console.error("Failed to load explicit flags for playlist tracks", explicitError);
+  }
+
+  const explicitByTrackId = new Map<string, boolean>(
+    (explicitRows ?? []).map((row: any) => [String(row.id), !!row.is_explicit])
+  );
+
+  if (hideExplicitTracks && visiblePlaylistTracks.length > 0) {
+    visiblePlaylistTracks = visiblePlaylistTracks.filter(
+      (row) => !explicitByTrackId.get(String(row.track_id))
+    );
+  }
+
+  const convertedTracks: PlayerTrack[] = visiblePlaylistTracks.flatMap((row) => {
     const cover_url =
       row.release_cover_path
         ? supabase.storage
@@ -258,6 +301,7 @@ export default async function PlaylistPage(
       title: row.title ?? null,
       artist_id: row.artist_id ?? null,
       status: row.track_status ?? null,
+      is_explicit: explicitByTrackId.get(String(row.track_id)) ?? false,
       audio_url,
       cover_url,
       duration_seconds: row.duration ?? null,

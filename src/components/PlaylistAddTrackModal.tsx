@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
+import ExplicitBadge from "@/components/ExplicitBadge";
 
 type PublishedTrackApiRow = {
   id: string;
@@ -13,6 +14,7 @@ type PublishedTrackApiRow = {
   artist_id: string | null;
   artist_name: string | null;
   cover_url: string | null;
+  is_explicit: boolean;
 };
 
 type TrackOption = {
@@ -147,7 +149,24 @@ export default function PlaylistAddTrackModal({
       setActionId(option.raw.id);
       setErrorMessage(null);
 
-      const nextPosition = (existingTrackIds?.length ?? 0) + 1;
+      const { data: lastRow, error: lastRowError } = await supabase
+        .from("playlist_tracks")
+        .select("position")
+        .eq("playlist_id", playlistId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastRowError) {
+        console.error("❌ Failed to load last playlist position:");
+        console.log("⛔ Full supabase error:", JSON.stringify(lastRowError, null, 2));
+        alert("POSITION LOAD ERROR — check console output");
+        setErrorMessage("Position konnte nicht geladen werden.");
+        setActionId(null);
+        return;
+      }
+
+      const nextPosition = (lastRow?.position ?? 0) + 1;
 
       const { data, error } = await supabase
         .from("playlist_tracks")
@@ -281,11 +300,14 @@ export default function PlaylistAddTrackModal({
                     />
                   </div>
 
-                  <div className="flex flex-1 flex-col">
-                    <span className="text-[16px] font-semibold text-white">
-                      {player?.title || raw.title || "Untitled Track"}
-                    </span>
-                    <span className="text-[13px] text-white/55">
+                  <div className="flex flex-1 flex-col min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="min-w-0 truncate text-[16px] font-semibold text-white">
+                        {player?.title || raw.title || "Untitled Track"}
+                      </span>
+                      {raw.is_explicit ? <ExplicitBadge /> : null}
+                    </div>
+                    <span className="text-[13px] text-white/55 truncate">
                       {player?.profiles?.display_name ?? raw.artist_name ?? "Unknown Artist"}
                     </span>
                   </div>

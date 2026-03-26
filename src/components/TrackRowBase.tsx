@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
+import ExplicitBadge from "@/components/ExplicitBadge";
 import { usePlayer } from "@/context/PlayerContext";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
@@ -165,16 +166,20 @@ export default function TrackRowBase({
             {titleSlot ? (
               titleSlot
             ) : (
-              <Link
-                href={to}
-                className={`text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${
-                  isCurrent || track.status === "performance"
-                    ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                    : "text-white hover:text-[#00FFC6]"
-                }`}
-              >
-                {formatTrackTitle(track.title, (track as any).version)}
-              </Link>
+              <div className="flex items-center gap-2 min-w-0">
+                <Link
+                  href={to}
+                  className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${
+                    isCurrent || track.status === "performance"
+                      ? "text-[#00FFC6] hover:text-[#00E0B0]"
+                      : "text-white hover:text-[#00FFC6]"
+                  }`}
+                >
+                  {formatTrackTitle(track.title, (track as any).version)}
+                </Link>
+
+                {track.is_explicit ? <ExplicitBadge /> : null}
+              </div>
             )}
           </div>
         </div>

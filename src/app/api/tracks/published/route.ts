@@ -6,6 +6,26 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let hideExplicitTracks = false;
+
+  if (user?.id) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("hide_explicit_tracks")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("published tracks route profile error:", profileError);
+    } else {
+      hideExplicitTracks = !!profile?.hide_explicit_tracks;
+    }
+  }
+
   const { data, error } = await supabase
     .from("tracks")
     .select(
@@ -16,6 +36,7 @@ export async function GET() {
       key,
       genre,
       artist_id,
+      is_explicit,
       releases:releases!tracks_release_id_fkey!inner (
         status,
         cover_path
@@ -33,8 +54,12 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to load tracks" }, { status: 500 });
   }
 
+  const rows = hideExplicitTracks
+    ? (data ?? []).filter((row: any) => !row?.is_explicit)
+    : (data ?? []);
+
   const tracks =
-    (data ?? []).map((row: any) => {
+    rows.map((row: any) => {
       const releaseObj = Array.isArray(row.releases) ? (row.releases[0] ?? null) : (row.releases ?? null);
       const artistObj = Array.isArray(row.artist_profile)
         ? (row.artist_profile[0] ?? null)
@@ -54,6 +79,7 @@ export async function GET() {
         artist_id: row.artist_id ?? null,
         artist_name: artistObj?.display_name ?? null,
         cover_url,
+        is_explicit: !!row.is_explicit,
       };
     }) ?? [];
 
