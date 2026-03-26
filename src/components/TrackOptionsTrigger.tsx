@@ -6,6 +6,7 @@ import { MoreVertical } from "lucide-react";
 import type { PlayerTrack } from "@/types/playerTrack";
 import TrackOptionsMenu from "@/components/TrackOptionsMenu";
 import AddToPlaylistModal from "@/components/AddToPlaylistModal";
+import ReportTrackModal from "@/components/ReportTrackModal";
 
 type TrackOptionsTriggerProps = {
   track: PlayerTrack;
@@ -39,6 +40,7 @@ export default function TrackOptionsTrigger({
   });
 
   const [openAddModal, setOpenAddModal] = useState(false);
+  const [openReportModal, setOpenReportModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -135,6 +137,7 @@ export default function TrackOptionsTrigger({
               onRemove={onRemove}
               onLibraryRemoved={onLibraryRemoved}
               onAddToPlaylist={() => setOpenAddModal(true)}
+              onReport={() => setOpenReportModal(true)}
               position={menuPosition}
               showGoToArtist={showGoToArtist}
               showGoToRelease={showGoToRelease}
@@ -148,6 +151,12 @@ export default function TrackOptionsTrigger({
       <AddToPlaylistModal
         open={openAddModal}
         onClose={() => setOpenAddModal(false)}
+        track={track}
+      />
+
+      <ReportTrackModal
+        open={openReportModal}
+        onClose={() => setOpenReportModal(false)}
         track={track}
       />
     </>

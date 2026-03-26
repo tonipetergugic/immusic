@@ -12,6 +12,7 @@ type TrackOptionsMenuProps = {
   onRemove?: () => void;
   onLibraryRemoved?: () => void;
   onAddToPlaylist?: () => void;
+  onReport?: () => void;
   position: {
     top: number;
     left: number;
@@ -29,6 +30,7 @@ type MenuAction =
   | "share"
   | "go_artist"
   | "go_release"
+  | "report"
   | "remove";
 
 type MenuItem = { label: string; action: MenuAction };
@@ -39,6 +41,7 @@ export default function TrackOptionsMenu({
   onRemove,
   onLibraryRemoved,
   onAddToPlaylist,
+  onReport,
   position,
   showGoToArtist = true,
   showGoToRelease = true,
@@ -124,6 +127,8 @@ export default function TrackOptionsMenu({
     if (showGoToRelease) {
       items.push({ label: "Go to Release Page", action: "go_release" });
     }
+
+    items.push({ label: "Report track", action: "report" });
 
     if (context === "playlist" && onRemove) {
       items.push({ label: "Remove from Playlist", action: "remove" });
@@ -250,6 +255,12 @@ export default function TrackOptionsMenu({
           return;
         }
         router.push(getArtistHref(artistId));
+        onClose();
+        return;
+      }
+
+      if (action === "report") {
+        onReport?.();
         onClose();
         return;
       }
