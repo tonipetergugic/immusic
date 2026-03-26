@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getArtistAnalyticsSummary, type AnalyticsRange } from "@/lib/analytics/getArtistAnalytics.server";
 import ArtistAnalyticsClient, {
   type Range,
@@ -47,6 +48,7 @@ export default async function ArtistAnalyticsPage({
   if (profile.role !== "artist" && profile.role !== "admin") redirect("/artist/onboarding");
 
   const artistId = profile.id;
+  const supabaseAdmin = getSupabaseAdmin();
 
   const awaitedSearchParams = (await searchParams) ?? {};
 
@@ -140,7 +142,7 @@ export default async function ArtistAnalyticsPage({
   const uniqByTrackId = new Map<string, Set<string>>();
 
   if (ids.length > 0) {
-    let vq = supabase
+    let vq = supabaseAdmin
       .from("valid_listen_events")
       .select("track_id, user_id")
       .in("track_id", ids);

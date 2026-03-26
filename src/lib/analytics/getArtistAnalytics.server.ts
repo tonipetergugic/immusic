@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type AnalyticsRange = "7d" | "28d" | "all";
 
@@ -27,6 +28,7 @@ export async function getArtistAnalyticsSummary(params: {
   range: AnalyticsRange;
 }): Promise<ArtistAnalyticsSummary> {
   const supabase = await createSupabaseServerClient();
+  const supabaseAdmin = getSupabaseAdmin();
 
   // Calculate date range
   const now = new Date();
@@ -61,7 +63,7 @@ export async function getArtistAnalyticsSummary(params: {
   let uniqueListenersTotal = 0;
 
   if (artistTrackIds.length > 0) {
-    const { data: uRows, error: uErr } = await supabase
+    const { data: uRows, error: uErr } = await supabaseAdmin
       .from("valid_listen_events")
       .select("user_id")
       .in("track_id", artistTrackIds)
