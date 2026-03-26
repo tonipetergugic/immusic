@@ -7,10 +7,7 @@ import AnalyticsHeader from "./AnalyticsHeader";
 import StatCard from "./StatCard";
 import WorldMapCard from "./WorldMapCard";
 import AnalyticsTabs from "./AnalyticsTabs";
-import AnalyticsDrawer from "./AnalyticsDrawer";
 import StreamsOverTimeChart from "./StreamsOverTimeChart";
-import ListenersOverTimeChart from "./ListenersOverTimeChart";
-import Tooltip from "@/components/Tooltip";
 
 type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 export type Range = "7d" | "28d" | "all";
@@ -111,7 +108,6 @@ export default function ArtistAnalyticsClient(props: {
     setActiveTab(tab);
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab.toLowerCase());
-    next.delete("detail");
     router.replace(`${pathname}?${next.toString()}`);
   };
 
@@ -142,12 +138,7 @@ export default function ArtistAnalyticsClient(props: {
     summary?.streams_over_time?.reduce((acc, p) => acc + (p.streams || 0), 0) ?? 0;
 
   const uniqueListenersTotal = props.summary?.unique_listeners_total ?? 0;
-
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTitle] = useState("Details");
-  const [drawerSubtitle] = useState<string | undefined>(undefined);
-  const [compareMode, setCompareMode] = useState(false);
-
+  
   return (
     <div className="space-y-6">
       <AnalyticsHeader activeRange={activeRange} onRangeChange={handleRangeChange} />
@@ -537,81 +528,6 @@ export default function ArtistAnalyticsClient(props: {
         </div>
       )}
 
-      <AnalyticsDrawer
-        open={drawerOpen}
-        title={drawerTitle}
-        subtitle={drawerSubtitle}
-        onClose={() => {
-          setDrawerOpen(false);
-          setCompareMode(false);
-          const next = new URLSearchParams(searchParams.toString());
-          next.delete("detail");
-          router.replace(`${pathname}?${next.toString()}`);
-        }}
-      >
-        <div className="space-y-5">
-          <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold">Range</p>
-                <p className="text-xs text-[#B3B3B3] mt-1">
-                  Server-rendered. No client fetch.
-                </p>
-              </div>
-              <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-black/20 text-[#00FFC6] tabular-nums">
-                {activeRange}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {(["7d","28d","all"] as Range[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => handleRangeChange(r)}
-                  className={`px-3 py-2 rounded-xl border text-sm ${
-                    activeRange === r
-                      ? "bg-white/10 border-white/20 text-white"
-                      : "bg-white/5 border-white/10 text-[#B3B3B3] hover:bg-white/10"
-                  }`}
-                >
-                  {r === "7d" ? "7 days" : r === "28d" ? "28 days" : "All"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold">Chart</p>
-                <p className="text-xs text-[#B3B3B3] mt-1">Bigger view</p>
-              </div>
-              <Tooltip label="Coming soon" placement="bottom">
-                <button
-                  type="button"
-                  onClick={() => setCompareMode((v) => !v)}
-                  className="text-xs px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10"
-                >
-                  {compareMode ? "Exit compare" : "Compare"}
-                </button>
-              </Tooltip>
-            </div>
-
-            {drawerTitle.toLowerCase().includes("streams") ? (
-              <div className="mt-4">
-                <StreamsOverTimeChart range={activeRange} points={summary.streams_over_time} />
-              </div>
-            ) : drawerTitle.toLowerCase().includes("listeners") ? (
-              <div className="mt-4">
-                <ListenersOverTimeChart range={activeRange} points={summary.listeners_over_time} />
-              </div>
-            ) : (
-              <div className="mt-4 h-64 rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent" />
-            )}
-          </div>
-        </div>
-      </AnalyticsDrawer>
     </div>
   );
 }
