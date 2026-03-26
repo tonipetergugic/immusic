@@ -360,7 +360,7 @@ export default async function ArtistAnalyticsPage({
     // Unique listeners per track in selected range (truth from valid_listen_events)
     const uniqByTrack = new Map<string, Set<string>>();
 
-    let vq2 = supabase
+    let vq2 = supabaseAdmin
       .from("valid_listen_events")
       .select("track_id, user_id")
       .in("track_id", trackIds);
