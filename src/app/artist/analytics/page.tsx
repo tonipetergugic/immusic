@@ -293,7 +293,7 @@ export default async function ArtistAnalyticsPage({
     rating_avg: r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg),
   }));
 
-  const { data: countryRows, error: countryError } = await supabase
+  const { data: countryRows, error: countryError } = await supabaseAdmin
     .from("artist_country_listeners_30d")
     .select("country_iso2, listeners_30d")
     .eq("artist_id", artistId)
