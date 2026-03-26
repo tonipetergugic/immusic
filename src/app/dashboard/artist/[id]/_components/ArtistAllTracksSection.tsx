@@ -7,6 +7,7 @@ import LibraryTrackArtists from "@/components/LibraryTrackArtists";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { TopTrackDto } from "../_types/artistPageDto";
+import ExplicitBadge from "@/components/ExplicitBadge";
 
 function Stars({
   avg,
@@ -68,6 +69,7 @@ export default function ArtistAllTracksSection({
         audio_url: t.audioUrl,
         cover_url: t.coverUrl ?? null,
         profiles: { display_name: primaryArtistName },
+        is_explicit: t.isExplicit,
       });
 
       (pt as any).release_id = t.releaseId ?? null;

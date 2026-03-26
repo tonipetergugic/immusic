@@ -21,6 +21,26 @@ export default async function ArtistV2Page({
 
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const viewerId = user?.id ?? null;
+
+  let hideExplicitTracks = false;
+
+  if (viewerId) {
+    const { data: viewerProfile, error: viewerProfileError } = await supabase
+      .from("profiles")
+      .select("hide_explicit_tracks")
+      .eq("id", viewerId)
+      .maybeSingle();
+
+    if (!viewerProfileError) {
+      hideExplicitTracks = !!viewerProfile?.hide_explicit_tracks;
+    }
+  }
+
   // A) Artist Core (Guard)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -45,20 +65,48 @@ export default async function ArtistV2Page({
     // Releases sind optionaler Content → fallback auf leeres Array.
   }
 
-  const releases = (releasesData ?? []).map((r) => {
-    const coverUrl = r.cover_path
-      ? supabase.storage.from("release_covers").getPublicUrl(r.cover_path).data
-          .publicUrl
-      : null;
+  const releaseIds = (releasesData ?? [])
+    .map((r) => String(r.id))
+    .filter(Boolean);
 
-    return {
-      id: r.id,
-      title: r.title ?? "Untitled",
-      coverUrl,
-      releaseType: r.release_type ?? null,
-      createdAt: r.created_at,
-    };
-  });
+  const { data: explicitReleaseRows, error: explicitReleaseError } =
+    releaseIds.length > 0
+      ? await supabase
+          .from("tracks")
+          .select("release_id")
+          .in("release_id", releaseIds)
+          .eq("is_explicit", true)
+      : { data: [], error: null };
+
+  if (explicitReleaseError) {
+    // optionaler Content → fallback ohne Filter
+  }
+
+  const explicitReleaseIds = new Set(
+    (explicitReleaseRows ?? [])
+      .map((row: any) => String(row.release_id ?? ""))
+      .filter(Boolean)
+  );
+
+  const releases = (releasesData ?? [])
+    .filter((r) =>
+      hideExplicitTracks ? !explicitReleaseIds.has(String(r.id)) : true
+    )
+    .map((r) => {
+      const coverUrl = r.cover_path
+        ? supabase.storage.from("release_covers").getPublicUrl(r.cover_path).data
+            .publicUrl
+        : null;
+
+      return {
+        id: r.id,
+        title: r.title ?? "Untitled",
+        coverUrl,
+        releaseType: r.release_type ?? null,
+        createdAt: r.created_at,
+        isExplicit: explicitReleaseIds.has(String(r.id)),
+      };
+    });
 
   // E) Playlists (public)
   const { data: playlistsData, error: playlistsError } = await supabase
@@ -118,6 +166,25 @@ export default async function ArtistV2Page({
       : [];
 
   const topTrackIds = topTracksRawApi.map((t) => t.track_id).filter(Boolean);
+
+  const { data: explicitTrackRows, error: explicitTrackError } =
+    topTrackIds.length > 0
+      ? await supabase
+          .from("tracks")
+          .select("id, is_explicit")
+          .in("id", topTrackIds)
+      : { data: [], error: null };
+
+  if (explicitTrackError) {
+    // Top tracks bleiben nutzbar, nur ohne explicit map fallback.
+  }
+
+  const explicitByTrackId = new Map<string, boolean>(
+    (explicitTrackRows ?? []).map((row: any) => [
+      String(row.id),
+      !!row.is_explicit,
+    ])
+  );
 
   type TopTrackResolvedRow = {
     track_id: string;
@@ -216,6 +283,7 @@ export default async function ArtistV2Page({
         artists,
         audioUrl,
         status: d.track_status ?? null,
+        isExplicit: explicitByTrackId.get(String(a.track_id)) ?? false,
         bpm: d.bpm ?? null,
         key: d.key ?? null,
         genre: d.genre ?? null,
@@ -230,15 +298,14 @@ export default async function ArtistV2Page({
     })
     .filter((x): x is TopTrackDto => x !== null);
 
-  const topTracks: TopTrackDto[] = rankedTracks.slice(0, 5);
-  const allTracks: TopTrackDto[] = rankedTracks.slice(5, 20);
+  const visibleRankedTracks = hideExplicitTracks
+    ? rankedTracks.filter((track) => !track.isExplicit)
+    : rankedTracks;
+
+  const topTracks: TopTrackDto[] = visibleRankedTracks.slice(0, 5);
+  const allTracks: TopTrackDto[] = visibleRankedTracks.slice(5, 20);
 
   // B) Viewer Context
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const viewerId = user?.id ?? null;
   const isSelf = !!viewerId && viewerId === artistId;
 
   const canFollow = !!viewerId && !isSelf;

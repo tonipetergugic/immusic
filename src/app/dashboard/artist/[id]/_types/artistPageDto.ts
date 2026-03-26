@@ -54,6 +54,7 @@ export type ReleaseCardDto = {
   coverUrl: string | null;
   releaseType: string | null;
   createdAt: string;
+  isExplicit: boolean;
 };
 
 export type PlaylistCardDto = {
@@ -77,6 +78,7 @@ export type TopTrackDto = {
 
   audioUrl: string;
   status: string | null;
+  isExplicit: boolean;
   bpm: number | null;
   key?: string | null;
   genre?: string | null;

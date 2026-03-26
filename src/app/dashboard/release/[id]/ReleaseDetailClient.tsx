@@ -21,6 +21,7 @@ type ReleaseDetailTrack = {
   genre: string | null;
   version: string | null;
   status: string | null;
+  is_explicit: boolean;
   duration: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
@@ -135,6 +136,7 @@ export default function ReleaseDetailClient({
                   genre: row.genre,
                   version: row.version,
                   status: row.status,
+                is_explicit: row.is_explicit,
                 }}
                 artists={row.artists}
                 ratingAvg={row.ratingAvg}

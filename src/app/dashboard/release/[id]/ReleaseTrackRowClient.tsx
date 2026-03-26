@@ -6,6 +6,7 @@ import TrackRowBase from "@/components/TrackRowBase";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import ExplicitBadge from "@/components/ExplicitBadge";
 
 export default function ReleaseTrackRowClient({
   releaseTrackId,
@@ -36,6 +37,7 @@ export default function ReleaseTrackRowClient({
     genre: string | null;
     version: string | null;
     status: string | null;
+    is_explicit: boolean;
   };
   artists: { id: string; display_name: string }[];
   ratingAvg: number | null;
@@ -75,25 +77,29 @@ export default function ReleaseTrackRowClient({
           </span>
         }
         titleSlot={
-          <button
-            type="button"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-            className={`text-left text-[13px] font-semibold truncate transition-colors focus:outline-none cursor-pointer ${
-              track.status === "performance"
-                ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                : "text-white hover:text-[#00FFC6]"
-            }`}
-            title={formatTrackTitle(track.title, (track as any).version)}
-          >
-            {formatTrackTitle(track.title, (track as any).version)}
-          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect();
+              }}
+              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none cursor-pointer ${
+                track.status === "performance"
+                  ? "text-[#00FFC6] hover:text-[#00E0B0]"
+                  : "text-white hover:text-[#00FFC6]"
+              }`}
+              title={formatTrackTitle(track.title, (track as any).version)}
+            >
+              {formatTrackTitle(track.title, (track as any).version)}
+            </button>
+
+            {track.is_explicit ? <ExplicitBadge /> : null}
+          </div>
         }
         subtitleSlot={
           Array.isArray(artists) && artists.length > 0 ? (
