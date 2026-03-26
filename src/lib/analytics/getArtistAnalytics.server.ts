@@ -81,7 +81,7 @@ export async function getArtistAnalyticsSummary(params: {
     uniqueListenersTotal = set.size;
   }
 
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await supabaseAdmin
     .from("analytics_artist_kpi_daily")
     .select("day, streams, listened_seconds, unique_listeners")
     .eq("artist_id", params.artistId)
@@ -93,17 +93,24 @@ export async function getArtistAnalyticsSummary(params: {
     throw error;
   }
 
-  const streamsOverTime =
-    rows?.map(r => ({
-      day: r.day,
-      streams: Number(r.streams),
-    })) ?? [];
+  type AnalyticsArtistKpiDailyRow = {
+    day: string;
+    streams: number | string | null;
+    listened_seconds: number | string | null;
+    unique_listeners: number | string | null;
+  };
 
-  const listenersOverTime =
-    rows?.map(r => ({
-      day: r.day,
-      listeners: Number(r.unique_listeners),
-    })) ?? [];
+  const typedRows = (rows ?? []) as AnalyticsArtistKpiDailyRow[];
+
+  const streamsOverTime = typedRows.map((r) => ({
+    day: r.day,
+    streams: Number(r.streams),
+  }));
+
+  const listenersOverTime = typedRows.map((r) => ({
+    day: r.day,
+    listeners: Number(r.unique_listeners),
+  }));
 
   return {
     range: params.range,
