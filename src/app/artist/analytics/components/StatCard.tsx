@@ -10,7 +10,7 @@ type StatCardProps = {
 export default function StatCard(props: StatCardProps) {
   const { label, value, helper } = props;
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+    <div className="px-2 py-1 md:px-3 md:py-2">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-wide text-[#B3B3B3]">

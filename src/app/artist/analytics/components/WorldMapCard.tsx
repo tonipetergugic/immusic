@@ -26,14 +26,11 @@ export default function WorldMapCard({
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <p className="text-sm font-semibold">Listener locations (30d)</p>
-          <p className="text-xs text-[#B3B3B3] mt-1">ISO2 • server-side</p>
+          <p className="text-[18px] font-semibold">Listener locations (30d)</p>
         </div>
       </div>
 
       <AudienceWorldMap items={items} />
-
-      <p className="text-xs text-[#B3B3B3] mt-4">Top locations (share of 30d listeners)</p>
 
       <div className="mt-4 space-y-2">
         {top.sorted.length === 0 && (

@@ -21,7 +21,7 @@ export default function AnalyticsTabs({
             onClick={() => {
               onChange(tab);
             }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+            className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition ${
               isActive
                 ? "border-[#00FFC6] text-white"
                 : "border-transparent text-[#B3B3B3] hover:text-white"

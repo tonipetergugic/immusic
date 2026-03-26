@@ -335,10 +335,20 @@ export default async function ArtistAnalyticsPage({
   let savesCount = 0;
 
   if (trackIds.length > 0) {
-    const { count, error: savesErr } = await supabase
+    let savesQuery = supabaseAdmin
       .from("library_tracks")
       .select("track_id", { count: "exact", head: true })
-      .in("track_id", trackIds);
+      .in("track_id", trackIds)
+      .neq("user_id", artistId);
+
+    if (days !== null) {
+      const from = new Date();
+      from.setDate(from.getDate() - (days - 1));
+      const fromISO = from.toISOString().slice(0, 10);
+      savesQuery = savesQuery.gte("created_at", `${fromISO}T00:00:00.000Z`);
+    }
+
+    const { count, error: savesErr } = await savesQuery;
 
     if (savesErr) throw new Error(savesErr.message);
     savesCount = count ?? 0;
@@ -392,10 +402,20 @@ export default async function ArtistAnalyticsPage({
 
     if (eligibleTrackIds.length > 0) {
       // Saves per track (current library state)
-      const { data: saveRows2, error: savesErr2 } = await supabase
+      let savesQuery2 = supabaseAdmin
         .from("library_tracks")
         .select("track_id")
-        .in("track_id", eligibleTrackIds);
+        .in("track_id", eligibleTrackIds)
+        .neq("user_id", artistId);
+
+      if (days !== null) {
+        const from = new Date();
+        from.setDate(from.getDate() - (days - 1));
+        const fromISO = from.toISOString().slice(0, 10);
+        savesQuery2 = savesQuery2.gte("created_at", `${fromISO}T00:00:00.000Z`);
+      }
+
+      const { data: saveRows2, error: savesErr2 } = await savesQuery2;
 
       if (savesErr2) throw new Error(savesErr2.message);
 

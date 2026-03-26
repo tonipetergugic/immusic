@@ -58,15 +58,9 @@ export default function StreamsOverTimeChart({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="mb-6">
         <div>
           <div className="text-lg font-semibold text-white">Streams over time</div>
-          <div className="mt-1 text-sm text-[#B3B3B3]">Server data · Range: {range}</div>
-        </div>
-
-        <div className="text-right">
-          <div className="text-xs text-[#B3B3B3]">Last point</div>
-          <div className="text-base font-semibold text-white">{formatNumber(last)}</div>
         </div>
       </div>
 

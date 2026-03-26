@@ -159,29 +159,21 @@ export default function ArtistAnalyticsClient(props: {
             <StatCard
               label="Streams"
               value={formatInt(liveStreamsTotal)}
-              delta="—"
-              helper="range total"
             />
 
             <StatCard
               label="Listeners"
               value={formatInt(uniqueListenersTotal)}
-              delta="—"
-              helper="unique in range"
             />
 
             <StatCard
               label="Track saves"
               value={formatInt(props.savesCount)}
-              delta="—"
-              helper="tracks in library"
             />
 
             <StatCard
               label="Followers"
               value={formatInt(props.followersCount)}
-              delta="—"
-              helper="total"
             />
 
             <StatCard
@@ -191,8 +183,6 @@ export default function ArtistAnalyticsClient(props: {
                   ? `${props.conversionPct.toFixed(1)}%`
                   : "—"
               }
-              delta="—"
-              helper="track saves / unique listeners"
             />
           </div>
 
@@ -228,7 +218,7 @@ export default function ArtistAnalyticsClient(props: {
               <select
                 value={trackSort}
                 onChange={(e) => handleTrackSortChange(e.target.value as "streams" | "listeners" | "rating" | "time")}
-                className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20"
+                className="cursor-pointer px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20"
               >
                 <option value="streams">Streams</option>
                 <option value="listeners">Unique listeners</option>
@@ -266,7 +256,7 @@ export default function ArtistAnalyticsClient(props: {
                       if (e.key === "Enter" || e.key === " ") setSelectedTrackId(t.track_id);
                     }}
                     className={[
-                      "px-4 md:px-5 py-3 flex items-center gap-4 transition",
+                      "cursor-pointer px-4 md:px-5 py-3 flex items-center gap-4 transition",
                       selectedTrackId === t.track_id ? "bg-white/10" : "hover:bg-white/5",
                     ].join(" ")}
                   >
@@ -288,13 +278,6 @@ export default function ArtistAnalyticsClient(props: {
 
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{t.title}</p>
-                        {(() => {
-                          return (
-                            <p className="text-xs text-[#B3B3B3]">
-                              Streams · Unique listeners
-                            </p>
-                          );
-                        })()}
                       </div>
                     </div>
 
@@ -319,16 +302,14 @@ export default function ArtistAnalyticsClient(props: {
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">Track details</p>
-                  {(() => {
-                    const r = getRangeLabel(activeRange);
-                    return <span className="text-xs text-[#B3B3B3]">{r.badge}</span>;
-                  })()}
                 </div>
 
                 {!selectedTrack ? (
-                  <p className="text-sm text-[#B3B3B3] mt-3">
-                    Select a track to see details.
-                  </p>
+                  <div className="mt-3 min-h-[88px]">
+                    <p className="text-sm text-[#B3B3B3]">
+                      Select a track to see details.
+                    </p>
+                  </div>
                 ) : (
                   <div className="mt-4 space-y-4">
                     <div className="flex items-center gap-3 min-w-0">
@@ -357,25 +338,27 @@ export default function ArtistAnalyticsClient(props: {
                       </div>
                     </div>
 
+                    <div className="h-px w-full bg-white/10" />
+
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="px-2 py-1">
                         <p className="text-xs text-[#B3B3B3]">Streams</p>
                         <p className="text-sm font-semibold tabular-nums">{formatInt(selectedTrack.streams)}</p>
                       </div>
 
-                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="px-2 py-1">
                         <p className="text-xs text-[#B3B3B3]">Unique listeners</p>
                         <p className="text-sm font-semibold tabular-nums">{formatInt(selectedTrack.unique_listeners)}</p>
                       </div>
 
-                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="px-2 py-1">
                         <p className="text-xs text-[#B3B3B3]">Listening time</p>
                         <p className="text-sm font-semibold tabular-nums">
                           {Math.round((selectedTrack.listened_seconds ?? 0) / 60)} min
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="px-2 py-1">
                         <p className="text-xs text-[#B3B3B3]">Avg rating</p>
                         <p className="text-sm font-semibold tabular-nums">
                           {selectedTrack.rating_avg === null ? "—" : selectedTrack.rating_avg.toFixed(2)}
@@ -434,12 +417,12 @@ export default function ArtistAnalyticsClient(props: {
         <div className="space-y-4">
           {/* Header like Track performance */}
           <div>
-            <div className="text-lg font-semibold">Conversion performance</div>
+            <div className="text-lg font-semibold">Save performance</div>
             <div className="text-sm text-muted-foreground">
               {(() => {
                 const r = getRangeLabel(activeRange);
                 const label = r.badge ?? r.subtitle ?? String(activeRange);
-                return <>Listener → save conversion ({label})</>;
+                return <>Saves vs listeners ({label})</>;
               })()}
             </div>
           </div>
@@ -449,7 +432,7 @@ export default function ArtistAnalyticsClient(props: {
             <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden xl:col-span-2">
               <div className="px-4 md:px-5 py-4 border-b border-white/10 flex items-center justify-between">
                 <div className="text-sm font-medium text-muted-foreground">
-                  Top converting tracks
+                  Top save ratio tracks
                 </div>
 
                 {/* column labels on desktop */}
@@ -489,9 +472,6 @@ export default function ArtistAnalyticsClient(props: {
 
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">{t.title}</p>
-                          <p className="text-xs text-[#B3B3B3]">
-                            Saves · Listeners
-                          </p>
                         </div>
                       </div>
 
@@ -523,36 +503,30 @@ export default function ArtistAnalyticsClient(props: {
             </div>
 
             {/* RIGHT: stacked cards */}
-            <div className="space-y-4 xl:col-span-1">
+            <div className="grid gap-4 xl:col-span-1 xl:h-full xl:grid-rows-2">
               {/* Conversion summary card */}
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+              <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
                 <div className="text-sm text-muted-foreground mb-1">
-                  Conversion rate
+                  Save ratio
                 </div>
                 <div className="text-3xl font-semibold">
                   {Number.isFinite(props.conversionPct)
                     ? `${props.conversionPct.toFixed(1)}%`
                     : "—"}
                 </div>
-                <div className="text-xs text-[#B3B3B3] mt-1">
-                  listener → save · selected range
-                </div>
 
                 <div className="mt-4 border-t border-white/5 pt-4">
                   <div className="text-sm text-muted-foreground mb-1">Saves</div>
                   <div className="text-2xl font-medium">{formatInt(props.savesCount)}</div>
-                  <div className="text-xs text-[#B3B3B3] mt-1">
-                    Current libraries across your tracks
-                  </div>
                 </div>
               </div>
 
               {/* How to read card */}
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-                <div className="text-sm font-medium text-muted-foreground mb-2">
+              <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
+                <div className="text-[18px] font-semibold text-white mb-2">
                   How to read this
                 </div>
-                <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                <ul className="text-[18px] text-[#B3B3B3] list-disc list-inside space-y-1">
                   <li>&lt; 5% → low save rate</li>
                   <li>5–10% → healthy save rate</li>
                   <li>&gt; 10% → very strong save rate</li>

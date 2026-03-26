@@ -43,7 +43,12 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
   return (
-    <div ref={containerRef} className="relative mt-4 h-[420px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
+    <div
+      ref={containerRef}
+      className={`relative mt-4 h-[520px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/20 ${
+        isDragging ? "cursor-grabbing" : "cursor-grab"
+      }`}
+    >
       {/* Tooltip (außerhalb SVG) */}
       {tip ? (
         <div
@@ -61,7 +66,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         <button
           type="button"
           onClick={() => setZoom((z) => clamp(z + 0.5, 1, 6))}
-          className="h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
+          className="cursor-pointer h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
           aria-label="Zoom in"
         >
           +
@@ -69,7 +74,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         <button
           type="button"
           onClick={() => setZoom((z) => clamp(z - 0.5, 1, 6))}
-          className="h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
+          className="cursor-pointer h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
           aria-label="Zoom out"
         >
           −
@@ -77,7 +82,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         <button
           type="button"
           onClick={() => setZoom(1)}
-          className="h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
+          className="cursor-pointer h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
           aria-label="Reset zoom"
         >
           ⟳
@@ -88,7 +93,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         projection="geoMercator"
         projectionConfig={{ scale: 130, center: [0, 20] }}
         width={1000}
-        height={420}
+        height={520}
         style={{ width: "100%", height: "100%" }}
       >
         <ZoomableGroup
