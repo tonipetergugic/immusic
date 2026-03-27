@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone", // required for future deployment (Railway, Docker, Cloud Run)
+  output: "standalone",
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -16,6 +16,12 @@ const nextConfig = {
   },
   experimental: {
     optimizeCss: true,
+  },
+  outputFileTracingIncludes: {
+    "/api/ai/track-check/process-next": [
+      "./node_modules/ffmpeg-static/**/*",
+      "./node_modules/ffprobe-static/**/*",
+    ],
   },
 };
 
