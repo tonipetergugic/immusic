@@ -129,15 +129,31 @@ export async function GET(req: Request) {
   const { data: releaseTracks, error: rtErr } = trackIds.length
     ? await supabase
         .from("release_tracks")
-        .select("id, track_id, release_id, stream_count, tracks!inner(rating_avg, rating_count)")
+        .select("id, track_id, release_id, tracks!inner(rating_avg, rating_count)")
         .in("track_id", trackIds)
     : { data: [], error: null };
 
   if (rtErr) debugWarnings.push(`release_tracks: ${rtErr.message}`);
 
+  const { data: lifetimeRows, error: lifetimeErr } = trackIds.length
+    ? await supabase
+        .from("analytics_track_lifetime")
+        .select("track_id, streams_lifetime")
+        .in("track_id", trackIds)
+    : { data: [], error: null };
+
+  if (lifetimeErr) debugWarnings.push(`analytics_track_lifetime: ${lifetimeErr.message}`);
+
   // Map: (track_id|release_id) -> release_track row (best match)
   const rtByTrackRelease = new Map<string, any>();
   const rtByTrack = new Map<string, any>();
+
+  const lifetimeStreamsByTrackId = new Map<string, number>(
+    (lifetimeRows ?? []).map((row: any) => [
+      String(row.track_id),
+      typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0,
+    ])
+  );
 
   (releaseTracks ?? []).forEach((rt: any) => {
     if (rt?.track_id) {
@@ -235,7 +251,7 @@ export async function GET(req: Request) {
     item.release_track_id = releaseTrackId;
     item.rating_avg = rt?.tracks?.rating_avg ?? null;
     item.rating_count = typeof rt?.tracks?.rating_count === "number" ? rt.tracks.rating_count : 0;
-    item.stream_count = typeof rt?.stream_count === "number" ? rt.stream_count : 0;
+    item.stream_count = lifetimeStreamsByTrackId.get(String(r.track_id)) ?? 0;
     item.my_stars = myStarsByTrackId.get(r.track_id) ?? null;
 
     if (debug) {

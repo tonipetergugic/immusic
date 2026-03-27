@@ -167,9 +167,8 @@ export async function POST(req: Request) {
       track_id: trackId,
       user_id: user.id,
       stars,
-      ...(releaseTrackId ? { release_track_id: releaseTrackId } : {}),
     })
-    .select("id, release_track_id, track_id, user_id, stars, created_at, updated_at")
+  .select("id, track_id, user_id, stars, created_at, updated_at")
     .limit(1);
 
   if (insertError) {
@@ -223,7 +222,7 @@ export async function GET(req: Request) {
   } else if (releaseTrackId) {
     const { data: rtRows, error: rtError } = await supabase
       .from("release_tracks")
-      .select("id, track_id, stream_count, tracks(id, status, rating_avg, rating_count)")
+      .select("id, track_id, tracks(id, artist_id, status, rating_avg, rating_count)")
       .eq("id", releaseTrackId)
       .limit(1);
 
@@ -238,9 +237,23 @@ export async function GET(req: Request) {
     trackStatus = ((rt as any).tracks?.status as string | null) ?? null;
     ratingAvg = ((rt as any).tracks?.rating_avg as number | null) ?? null;
     ratingCount = Number((rt as any).tracks?.rating_count ?? 0);
-    streamCount = Number((rt as any).stream_count ?? 0);
   } else {
     return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
+  }
+
+  if (trackId) {
+    const { data: lifetimeRows, error: lifetimeErr } = await supabase
+      .from("analytics_track_lifetime")
+      .select("streams_lifetime")
+      .eq("track_id", trackId)
+      .limit(1);
+
+    if (lifetimeErr) {
+      return err("INTERNAL_ERROR", "Failed to load track lifetime streams", 500);
+    }
+
+    const lifetimeRow = lifetimeRows && lifetimeRows.length > 0 ? lifetimeRows[0] : null;
+    streamCount = Number((lifetimeRow as any)?.streams_lifetime ?? 0);
   }
 
   let my_stars: number | null = null;

@@ -176,7 +176,6 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
   const { error } = await supabase.from("release_tracks").insert({
     release_id: releaseId,
     track_id: track.id,
-    track_title: track.title,
     position: nextPosition,
   });
 

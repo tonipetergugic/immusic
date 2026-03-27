@@ -36,7 +36,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const { data: rawTracks, error: rawTracksError } = await supabase
     .from("release_tracks")
-    .select("track_id, track_title, position, release_id")
+    .select("track_id, position, release_id")
     .eq("release_id", release.id)
     .order("position", { ascending: true });
 
@@ -47,7 +47,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const baseTracks =
     rawTracks?.map((t) => ({
       track_id: t.track_id,
-      track_title: t.track_title,
+      track_title: null as string | null,
       track_version: null as string | null, // filled from tracks table below
       position: t.position,
       release_id: t.release_id,
@@ -59,13 +59,21 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const { data: trackRows, error: trackErr } = existingTrackIds.length
     ? await supabase
         .from("tracks")
-        .select("id, version, bpm, key, genre")
+        .select("id, title, version, bpm, key, genre")
         .in("id", existingTrackIds)
     : { data: [] as any[], error: null };
 
   if (trackErr) {
     throw trackErr;
   }
+
+  const trackTitleById = (trackRows ?? []).reduce(
+    (acc: Record<string, string | null>, r: any) => {
+      acc[r.id] = (r.title ?? null) as string | null;
+      return acc;
+    },
+    {},
+  );
 
   const trackVersionById = (trackRows ?? []).reduce(
     (acc: Record<string, string | null>, r: any) => {
@@ -77,6 +85,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const initialTracks = baseTracks.map((t) => ({
     ...t,
+    track_title: trackTitleById[t.track_id] ?? "Untitled",
     track_version: trackVersionById[t.track_id] ?? null,
   }));
 

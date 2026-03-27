@@ -192,57 +192,121 @@ export default async function ArtistAnalyticsPage({
     return (b.streams ?? 0) - (a.streams ?? 0);
   });
 
-  // resolve cover_path via tracks.release_id -> releases
-  const coverPathByTrackId = new Map<string, string | null>();
-
-  if (ids.length) {
-    const { data: trackRows, error: trackRowsErr } = await supabase
-      .from("tracks")
-      .select("id, release_id")
-      .in("id", ids);
-
-    if (trackRowsErr) throw new Error(trackRowsErr.message);
-
-    const releaseIds = Array.from(
-      new Set(
-        (trackRows || [])
-          .map((r) => (r.release_id ? String(r.release_id) : null))
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-
-    const coverPathByReleaseId = new Map<string, string | null>();
-
-    if (releaseIds.length) {
-      const { data: relRows, error: relErr } = await supabase
-        .from("releases")
-        .select("id, cover_path")
-        .in("id", releaseIds);
-
-      if (relErr) throw new Error(relErr.message);
-
-      ((relRows || []) as ReleaseRow[]).forEach((r) => {
-        coverPathByReleaseId.set(
-          String(r.id),
-          r.cover_path ? String(r.cover_path) : null
-        );
-      });
-    }
-
-    (trackRows || []).forEach((r) => {
-      const trackId = String(r.id);
-      const releaseId = r.release_id ? String(r.release_id) : null;
-      const coverPath = releaseId ? (coverPathByReleaseId.get(releaseId) ?? null) : null;
-      coverPathByTrackId.set(trackId, coverPath);
-    });
-  }
-
   const toPublicCoverUrl = (p: string | null): string | null => {
     if (!p) return null;
     if (p.startsWith("http://") || p.startsWith("https://")) return p;
     const { data } = supabase.storage.from("release_covers").getPublicUrl(p);
     return data.publicUrl ?? null;
   };
+
+  const loadPublishedCoverPathByTrackIds = async (trackIds: string[]) => {
+    const coverPathByTrackId = new Map<string, string | null>();
+
+    if (!trackIds.length) return coverPathByTrackId;
+
+    const { data: releaseTrackRows, error: releaseTrackErr } = await supabase
+      .from("release_tracks")
+      .select(`
+      track_id,
+      release_id,
+      releases!inner (
+        id,
+        status,
+        cover_path,
+        published_at,
+        created_at
+      )
+    `)
+      .in("track_id", trackIds)
+      .eq("releases.status", "published");
+
+    if (releaseTrackErr) throw new Error(releaseTrackErr.message);
+
+    type PublishedReleasePickRow = {
+      track_id: string | null;
+      release_id: string | null;
+      releases:
+        | {
+            id: string | null;
+            status: string | null;
+            cover_path: string | null;
+            published_at: string | null;
+            created_at: string | null;
+          }
+        | {
+            id: string | null;
+            status: string | null;
+            cover_path: string | null;
+            published_at: string | null;
+            created_at: string | null;
+          }[]
+        | null;
+    };
+
+    const bestByTrackId = new Map<
+      string,
+      {
+        release_id: string;
+        cover_path: string | null;
+        published_at: string | null;
+        created_at: string | null;
+      }
+    >();
+
+    ((releaseTrackRows || []) as PublishedReleasePickRow[]).forEach((row) => {
+      const trackId = row.track_id ? String(row.track_id) : null;
+      if (!trackId) return;
+
+      const release = Array.isArray(row.releases) ? row.releases[0] : row.releases;
+      if (!release?.id) return;
+
+      const next = {
+        release_id: String(release.id),
+        cover_path: release.cover_path ? String(release.cover_path) : null,
+        published_at: release.published_at ? String(release.published_at) : null,
+        created_at: release.created_at ? String(release.created_at) : null,
+      };
+
+      const prev = bestByTrackId.get(trackId);
+
+      if (!prev) {
+        bestByTrackId.set(trackId, next);
+        return;
+      }
+
+      const nextPublished = next.published_at ?? "";
+      const prevPublished = prev.published_at ?? "";
+
+      if (nextPublished > prevPublished) {
+        bestByTrackId.set(trackId, next);
+        return;
+      }
+
+      if (nextPublished < prevPublished) return;
+
+      const nextCreated = next.created_at ?? "";
+      const prevCreated = prev.created_at ?? "";
+
+      if (nextCreated > prevCreated) {
+        bestByTrackId.set(trackId, next);
+        return;
+      }
+
+      if (nextCreated < prevCreated) return;
+
+      if (next.release_id > prev.release_id) {
+        bestByTrackId.set(trackId, next);
+      }
+    });
+
+    bestByTrackId.forEach((value, key) => {
+      coverPathByTrackId.set(key, value.cover_path);
+    });
+
+    return coverPathByTrackId;
+  };
+
+  const coverPathByTrackId = await loadPublishedCoverPathByTrackIds(ids);
 
   const titleById = new Map<string, string>();
 
@@ -439,48 +503,9 @@ export default async function ArtistAnalyticsPage({
         titleByEligibleId.set(String(t.id), String(t.title ?? "Unknown track"))
       );
 
-      // Cover urls for eligible tracks (tracks.release_id -> releases.cover_path)
-      const coverPathByEligibleTrackId = new Map<string, string | null>();
-
-      const { data: eligibleTrackRows, error: eligibleTrackRowsErr } = await supabase
-        .from("tracks")
-        .select("id, release_id")
-        .in("id", eligibleTrackIds);
-
-      if (eligibleTrackRowsErr) throw new Error(eligibleTrackRowsErr.message);
-
-      const relIds2 = Array.from(
-        new Set(
-          (eligibleTrackRows || [])
-            .map((r) => (r.release_id ? String(r.release_id) : null))
-            .filter((id): id is string => Boolean(id))
-        )
+      const coverPathByEligibleTrackId = await loadPublishedCoverPathByTrackIds(
+        eligibleTrackIds.map((id) => String(id))
       );
-
-      const coverPathByReleaseId2 = new Map<string, string | null>();
-
-      if (relIds2.length) {
-        const { data: rel2, error: rel2Err } = await supabase
-          .from("releases")
-          .select("id, cover_path")
-          .in("id", relIds2);
-
-        if (rel2Err) throw new Error(rel2Err.message);
-
-        ((rel2 || []) as ReleaseRow[]).forEach((r) => {
-          coverPathByReleaseId2.set(
-            String(r.id),
-            r.cover_path ? String(r.cover_path) : null
-          );
-        });
-      }
-
-      (eligibleTrackRows || []).forEach((r) => {
-        const tid = String(r.id);
-        const rid = r.release_id ? String(r.release_id) : null;
-        const cp = rid ? (coverPathByReleaseId2.get(rid) ?? null) : null;
-        coverPathByEligibleTrackId.set(tid, cp);
-      });
 
       const items = eligibleTrackIds
         .map((id) => {

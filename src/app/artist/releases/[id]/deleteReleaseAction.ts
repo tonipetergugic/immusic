@@ -36,20 +36,7 @@ export async function deleteReleaseAction(releaseId: string) {
     return { error: "Release can only be deleted while in draft or published." as const };
   }
 
-  // 2. Merke Tracks, für die dieses Release aktuell das Primary Release ist
-  const { data: affectedPrimaryTracks, error: affectedPrimaryTracksError } = await supabase
-    .from("tracks")
-    .select("id")
-    .eq("release_id", releaseId);
-
-  if (affectedPrimaryTracksError) {
-    console.error("Failed to load affected primary tracks:", affectedPrimaryTracksError);
-    return { error: "Failed to prepare release deletion." as const };
-  }
-
-  const affectedTrackIds = (affectedPrimaryTracks ?? []).map((row) => row.id).filter(Boolean);
-
-  // 3. Delete all release_tracks entries for this release
+  // 2. Delete all release_tracks entries for this release
   const { error: tracksError } = await supabase
     .from("release_tracks")
     .delete()
@@ -60,48 +47,7 @@ export async function deleteReleaseAction(releaseId: string) {
     return { error: "Failed to delete release tracks." as const };
   }
 
-  // 4. Fallback primary release setzen für betroffene Tracks
-  if (affectedTrackIds.length > 0) {
-    const { data: remainingRows, error: remainingRowsError } = await supabase
-      .from("release_tracks")
-      .select("track_id, release_id, position")
-      .in("track_id", affectedTrackIds)
-      .order("position", { ascending: true });
-
-    if (remainingRowsError) {
-      console.error("Failed to load fallback release tracks:", remainingRowsError);
-      return { error: "Failed to reassign primary release after deletion." as const };
-    }
-
-    const fallbackReleaseIdByTrackId = new Map<string, string | null>();
-
-    for (const row of remainingRows ?? []) {
-      if (!row.track_id) continue;
-      if (!fallbackReleaseIdByTrackId.has(row.track_id)) {
-        fallbackReleaseIdByTrackId.set(row.track_id, row.release_id ?? null);
-      }
-    }
-
-    for (const trackId of affectedTrackIds) {
-      const fallbackReleaseId = fallbackReleaseIdByTrackId.get(trackId) ?? null;
-
-      const { error: updateTrackError } = await supabase
-        .from("tracks")
-        .update({ release_id: fallbackReleaseId })
-        .eq("id", trackId);
-
-      if (updateTrackError) {
-        console.error("Failed to update track primary release:", {
-          trackId,
-          fallbackReleaseId,
-          error: updateTrackError,
-        });
-        return { error: "Failed to reassign primary release after deletion." as const };
-      }
-    }
-  }
-
-  // 5. Delete cover file (if exists)
+  // 3. Delete cover file (if exists)
   if (release.cover_path) {
     const { error: storageError } = await supabase.storage
       .from("release_covers")
@@ -113,7 +59,7 @@ export async function deleteReleaseAction(releaseId: string) {
     }
   }
 
-  // 6. Delete the release record
+  // 4. Delete the release record
   const { data: deletedRelease, error: deleteError } = await supabase
     .from("releases")
     .delete()
@@ -132,7 +78,7 @@ export async function deleteReleaseAction(releaseId: string) {
     return { error: "Release could not be deleted." as const };
   }
 
-  // 7. Redirect back to releases page
+  // 5. Redirect back to releases page
   redirect("/artist/releases");
 }
 

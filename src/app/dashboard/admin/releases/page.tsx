@@ -164,13 +164,13 @@ export default async function AdminReleasesPage({
 
   // Load track status per release to filter development vs performance releases
   const { data: tracksByRelease, error: tracksByReleaseErr } = await supabase
-    .from("tracks")
-    .select("release_id,status")
+    .from("release_tracks")
+    .select("release_id, tracks!inner(status)")
     .in("release_id", releaseIds);
 
   if (tracksByReleaseErr) {
     throw new Error(
-      `tracks query failed: ${tracksByReleaseErr.message} (${tracksByReleaseErr.code})`
+      `release_tracks query failed: ${tracksByReleaseErr.message} (${tracksByReleaseErr.code})`
     );
   }
 
@@ -178,9 +178,10 @@ export default async function AdminReleasesPage({
   const hasDevelopment = new Set<string>();
 
   for (const t of (tracksByRelease ?? []) as any[]) {
-    const rid = t.release_id as string | null;
-    const st = String(t.status ?? "");
-    if (!rid) continue;
+    const rid = typeof t.release_id === "string" ? t.release_id : null;
+    const trackRel = Array.isArray(t.tracks) ? t.tracks[0] : t.tracks;
+    const st = typeof trackRel?.status === "string" ? trackRel.status : "";
+    if (!rid || !st) continue;
 
     if (st === "performance") hasPerformance.add(rid);
     if (st === "development") hasDevelopment.add(rid);

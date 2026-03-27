@@ -38,10 +38,10 @@ export default async function ReleaseDetailPage({
 
   if (hideExplicitTracks) {
     const { data: explicitTracks, error: explicitTracksError } = await supabase
-      .from("tracks")
-      .select("id")
+      .from("release_tracks")
+      .select("id, tracks!inner(is_explicit)")
       .eq("release_id", releaseId)
-      .eq("is_explicit", true)
+      .eq("tracks.is_explicit", true)
       .limit(1);
 
     if (explicitTracksError) {

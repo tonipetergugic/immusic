@@ -21,7 +21,6 @@ export async function GET(
     .select(
       `
       position,
-      track_title,
       tracks:tracks!release_tracks_track_id_fkey (
         id,
         title,
@@ -84,7 +83,7 @@ export async function GET(
 
       return {
         id: t.id,
-        title: rt.track_title ?? t.title ?? "Untitled Track",
+        title: t.title ?? "Untitled Track",
         artist_id: t.artist_id ?? "",
         audio_url,
         cover_url,

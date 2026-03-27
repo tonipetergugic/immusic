@@ -37,10 +37,10 @@ async function filterBlockedReleaseIds(
   if (!hideExplicitTracks || releaseIds.length === 0) return releaseIds;
 
   const { data, error } = await supabase
-    .from("tracks")
-    .select("release_id")
+    .from("release_tracks")
+    .select("release_id, tracks!inner(is_explicit)")
     .in("release_id", releaseIds)
-    .eq("is_explicit", true);
+    .eq("tracks.is_explicit", true);
 
   if (error || !data) return releaseIds;
 

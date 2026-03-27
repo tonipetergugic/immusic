@@ -34,10 +34,6 @@ const PLAYLIST_TRACK_SELECT = `
   position,
   tracks:tracks!playlist_tracks_track_id_fkey (
     *,
-    releases:releases!tracks_release_id_fkey!inner (
-      status,
-      cover_path
-    ),
     artist:profiles!tracks_artist_id_fkey (
       display_name
     )

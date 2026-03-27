@@ -26,11 +26,6 @@ export async function GET(
       artist_id,
       bpm,
       key,
-      releases:releases!tracks_release_id_fkey(
-        id,
-        cover_path,
-        status
-      ),
       artist_profile:profiles!tracks_artist_id_fkey(
         display_name
       )
@@ -48,19 +43,73 @@ export async function GET(
     return NextResponse.json({ error: "Track not found" }, { status: 404 });
   }
 
-  const releaseObj = Array.isArray((data as any).releases)
-    ? ((data as any).releases[0] ?? null)
-    : ((data as any).releases ?? null);
-
   const artistObj = Array.isArray((data as any).artist_profile)
     ? ((data as any).artist_profile[0] ?? null)
     : ((data as any).artist_profile ?? null);
 
+  const { data: releaseTrackRows, error: releaseTrackErr } = await supabase
+    .from("release_tracks")
+    .select(
+      `
+      release_id,
+      releases:releases!release_tracks_release_id_fkey(
+        id,
+        cover_path,
+        status,
+        published_at,
+        created_at
+      )
+      `
+    )
+    .eq("track_id", id);
+
+  if (releaseTrackErr) {
+    console.error("track player route release_tracks error:", releaseTrackErr);
+    return NextResponse.json({ error: "Failed to load track release" }, { status: 500 });
+  }
+
+  const bestRelease = ((releaseTrackRows ?? []) as any[]).reduce((best, row) => {
+    const rel = Array.isArray(row?.releases) ? row.releases[0] ?? null : row?.releases ?? null;
+    if (!rel?.id) return best;
+
+    const next = {
+      id: String(rel.id),
+      cover_path: rel.cover_path ? String(rel.cover_path) : null,
+      status: rel.status ? String(rel.status) : null,
+      published_at: rel.published_at ? String(rel.published_at) : null,
+      created_at: rel.created_at ? String(rel.created_at) : null,
+    };
+
+    if (!best) return next;
+
+    const nextPublished = next.published_at ?? "";
+    const bestPublished = best.published_at ?? "";
+
+    if (nextPublished > bestPublished) return next;
+    if (nextPublished < bestPublished) return best;
+
+    const nextCreated = next.created_at ?? "";
+    const bestCreated = best.created_at ?? "";
+
+    if (nextCreated > bestCreated) return next;
+    if (nextCreated < bestCreated) return best;
+
+    if (next.id > best.id) return next;
+
+    return best;
+  }, null as null | {
+    id: string;
+    cover_path: string | null;
+    status: string | null;
+    published_at: string | null;
+    created_at: string | null;
+  });
+
   const cover_url =
-    releaseObj?.cover_path
+    bestRelease?.cover_path
       ? supabase.storage
           .from("release_covers")
-          .getPublicUrl(releaseObj.cover_path).data.publicUrl ?? null
+          .getPublicUrl(bestRelease.cover_path).data.publicUrl ?? null
       : null;
 
   const audio_url =

@@ -100,10 +100,10 @@ export async function loadLibraryV2Releases({
 
   if (hideExplicitTracks) {
     const { data: explicitRows, error: explicitErr } = await supabase
-      .from("tracks")
-      .select("release_id")
+      .from("release_tracks")
+      .select("release_id, tracks!inner(is_explicit)")
       .in("release_id", releaseIds)
-      .eq("is_explicit", true);
+      .eq("tracks.is_explicit", true);
 
     if (explicitErr) {
       console.error("LibraryV2: Failed to filter explicit releases:", explicitErr);
@@ -252,11 +252,11 @@ export async function loadLibraryV2Tracks({
         release_tracks:release_tracks!release_tracks_track_id_fkey(
           id,
           release_id,
-          stream_count
-        ),
-        releases:releases!tracks_release_id_fkey(
-          id,
-          cover_path
+          stream_count,
+          releases:releases!release_tracks_release_id_fkey(
+            id,
+            cover_path
+          )
         )
       )
       `
@@ -297,7 +297,7 @@ export async function loadLibraryV2Tracks({
         if (!t) return null;
 
         const rt = Array.isArray(t.release_tracks) ? t.release_tracks[0] ?? null : t.release_tracks ?? null;
-        const release = Array.isArray(t.releases) ? t.releases[0] ?? null : t.releases ?? null;
+        const release = Array.isArray(rt?.releases) ? rt.releases[0] ?? null : rt?.releases ?? null;
 
         const { data: audio } = supabase.storage.from("tracks").getPublicUrl(String(t.audio_path ?? ""));
         const audio_url = audio?.publicUrl ?? null;

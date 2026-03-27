@@ -126,11 +126,30 @@ export function usePerformanceDiscovery({
             }
           }
 
-          // B) release_track_id + stream_count from release_tracks, rating aggregates from tracks
+          // B) release_track_id from release_tracks, rating aggregates from tracks, stream_count from analytics_track_lifetime
+          const lifetimeStreamsByTrackId = new Map<string, number>();
+
+          if (trackIds.length > 0) {
+            const { data: lifetimeRows, error: lifetimeErr } = await supabase
+              .from("analytics_track_lifetime")
+              .select("track_id, streams_lifetime")
+              .in("track_id", trackIds);
+
+            if (!lifetimeErr && lifetimeRows) {
+              for (const row of lifetimeRows as any[]) {
+                if (!row?.track_id) continue;
+                lifetimeStreamsByTrackId.set(
+                  String(row.track_id),
+                  typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0
+                );
+              }
+            }
+          }
+
           if (trackIds.length > 0 && releaseIds.length > 0) {
             const { data: rts, error: rtsErr } = await supabase
               .from("release_tracks")
-              .select("id, track_id, release_id, stream_count, tracks!inner(rating_avg, rating_count)")
+              .select("id, track_id, release_id, tracks!inner(rating_avg, rating_count)")
               .in("track_id", trackIds)
               .in("release_id", releaseIds);
 
@@ -145,7 +164,7 @@ export function usePerformanceDiscovery({
                   release_track_id: rt.id,
                   rating_avg: rt.tracks?.rating_avg ?? null,
                   rating_count: rt.tracks?.rating_count ?? 0,
-                  stream_count: rt.stream_count ?? 0,
+                  stream_count: lifetimeStreamsByTrackId.get(String(rt.track_id)) ?? 0,
                 };
               }
               if (!cancelled) setPerfReleaseTrackMap(map);

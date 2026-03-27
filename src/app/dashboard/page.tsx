@@ -64,14 +64,14 @@ export default async function DashboardPage() {
   const { data: releaseTrackRows, error: releaseTrackErr } =
     releaseIdsToInspect.length > 0
       ? await perfSupabase
-          .from("tracks")
-          .select("release_id,status")
+          .from("release_tracks")
+          .select("release_id, tracks!inner(status)")
           .in("release_id", releaseIdsToInspect)
       : { data: [], error: null };
 
   if (releaseTrackErr) {
     throw new Error(
-      `tracks query failed: ${releaseTrackErr.message} (${releaseTrackErr.code})`
+      `release_tracks query failed: ${releaseTrackErr.message} (${releaseTrackErr.code})`
     );
   }
 
@@ -79,7 +79,8 @@ export default async function DashboardPage() {
 
   for (const row of (releaseTrackRows ?? []) as any[]) {
     const releaseId = typeof row.release_id === "string" ? row.release_id : null;
-    const status = typeof row.status === "string" ? row.status : null;
+    const trackRel = Array.isArray(row.tracks) ? row.tracks[0] : row.tracks;
+    const status = typeof trackRel?.status === "string" ? trackRel.status : null;
 
     if (!releaseId || !status) continue;
 
