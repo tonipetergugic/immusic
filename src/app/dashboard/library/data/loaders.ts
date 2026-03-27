@@ -252,7 +252,6 @@ export async function loadLibraryV2Tracks({
         release_tracks:release_tracks!release_tracks_track_id_fkey(
           id,
           release_id,
-          stream_count,
           releases:releases!release_tracks_release_id_fkey(
             id,
             cover_path
@@ -323,10 +322,10 @@ export async function loadLibraryV2Tracks({
           release_track_id: rt?.id ?? null,
           release_id: rt?.release_id ?? null,
 
-          // rating summary (track-based), streams still from release_tracks for now
+          // rating summary stays track-based; streams are resolved later from analytics_track_lifetime
           rating_avg: t.rating_avg ?? null,
           rating_count: t.rating_count ?? 0,
-          stream_count: rt?.stream_count ?? 0,
+          stream_count: 0,
         };
       })
       .filter(Boolean) ?? [];
@@ -352,25 +351,49 @@ export async function loadLibraryV2Tracks({
     return true;
   });
 
+  const trackIds = Array.from(
+    new Set(
+      (safeUnique as any[])
+        .map((t) => String((t as any)?.id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  let lifetimeStreamsByTrackId = new Map<string, number>();
+
+  if (trackIds.length > 0) {
+    const { data: lifetimeRows, error: lifetimeErr } = await supabase
+      .from("analytics_track_lifetime")
+      .select("track_id, streams_lifetime")
+      .in("track_id", trackIds);
+
+    if (lifetimeErr) {
+      console.error("LibraryV2: Failed to load analytics_track_lifetime:", lifetimeErr);
+    } else {
+      lifetimeStreamsByTrackId = new Map(
+        (lifetimeRows ?? []).map((row: any) => [
+          String(row.track_id),
+          typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0,
+        ])
+      );
+    }
+  }
+
   const releaseTrackIdByTrackId: Record<string, string> = {};
   const ratingByReleaseTrackId: Record<string, { avg: number | null; count: number; streams: number }> = {};
 
-  const trackIds: string[] = [];
-  const releaseTrackIds: string[] = [];
-
   for (const t of safeUnique as any[]) {
     const tid = String(t?.id ?? "");
-    if (tid) trackIds.push(tid);
+    if (!tid) continue;
 
-    if (t?.id && t?.release_track_id) {
+    if (t?.release_track_id) {
       const rid = String(t.release_track_id);
       releaseTrackIdByTrackId[tid] = rid;
-      releaseTrackIds.push(rid);
 
       ratingByReleaseTrackId[rid] = {
         avg: (t as any).rating_avg ?? null,
         count: (t as any).rating_count ?? 0,
-        streams: (t as any).stream_count ?? 0,
+        streams: lifetimeStreamsByTrackId.get(tid) ?? 0,
       };
     }
   }

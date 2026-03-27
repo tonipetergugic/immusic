@@ -125,7 +125,6 @@ export default async function ReleaseDetailPage({
       `
       id,
       position,
-      stream_count,
       track:tracks (
         id,
         title,
