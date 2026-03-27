@@ -158,6 +158,33 @@ export default async function ReleaseDetailPage({
     .eq("release_id", releaseId)
     .order("position", { ascending: true });
 
+  const trackIds = (items ?? [])
+    .map((row: any) => row?.track?.id)
+    .filter((value: unknown): value is string => typeof value === "string");
+
+  let lifetimeRows: { track_id: string; streams_lifetime: number | null }[] = [];
+
+  if (trackIds.length > 0) {
+    const { data: analyticsLifetimeRows, error: analyticsLifetimeError } =
+      await supabase
+        .from("analytics_track_lifetime")
+        .select("track_id, streams_lifetime")
+        .in("track_id", trackIds);
+
+    if (analyticsLifetimeError) {
+      throw analyticsLifetimeError;
+    }
+
+    lifetimeRows = analyticsLifetimeRows ?? [];
+  }
+
+  const lifetimeStreamsByTrackId = new Map(
+    lifetimeRows.map((row) => [
+      row.track_id,
+      typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0,
+    ])
+  );
+
   const artistName =
     (release as any)?.profiles?.display_name ?? "Unknown Artist";
 
@@ -214,7 +241,8 @@ export default async function ReleaseDetailPage({
     duration: row.track?.duration ?? null,
     ratingAvg: row.track?.rating_avg ?? null,
     ratingCount: row.track?.rating_count ?? null,
-    streamCount: row.stream_count ?? 0,
+    streamCount:
+      lifetimeStreamsByTrackId.get(String(row.track?.id ?? "")) ?? 0,
     artists: buildArtistsList(row),
   }));
 

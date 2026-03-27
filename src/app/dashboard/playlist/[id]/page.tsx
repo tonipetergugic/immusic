@@ -245,6 +245,33 @@ export default async function PlaylistPage(
     .order("position", { ascending: true })
     .returns<PlaylistTrackRow[]>();
 
+  const playlistLifetimeTrackIds = Array.from(
+    new Set((playlistTracks ?? []).map((row) => row.track_id).filter(Boolean))
+  );
+
+  let lifetimeRows: { track_id: string; streams_lifetime: number | null }[] = [];
+
+  if (playlistLifetimeTrackIds.length > 0) {
+    const { data: analyticsLifetimeRows, error: analyticsLifetimeError } =
+      await supabase
+        .from("analytics_track_lifetime")
+        .select("track_id, streams_lifetime")
+        .in("track_id", playlistLifetimeTrackIds);
+
+    if (analyticsLifetimeError) {
+      throw analyticsLifetimeError;
+    }
+
+    lifetimeRows = analyticsLifetimeRows ?? [];
+  }
+
+  const lifetimeStreamsByTrackId = new Map(
+    lifetimeRows.map((row) => [
+      row.track_id,
+      typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0,
+    ])
+  );
+
   let visiblePlaylistTracks = playlistTracks ?? [];
 
   const playlistTrackIds = Array.from(
@@ -347,7 +374,8 @@ export default async function PlaylistPage(
       release_track_id: row.release_track_id ?? null,
       rating_avg: row.rating_avg ?? null,
       rating_count: row.rating_count ?? 0,
-      stream_count: row.stream_count ?? 0,
+      stream_count:
+        lifetimeStreamsByTrackId.get(String(row.track_id ?? "")) ?? 0,
       track_collaborators: parseTrackCollaborators(row.track_collaborators),
       artist: null,
     }];
