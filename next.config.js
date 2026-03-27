@@ -19,8 +19,8 @@ const nextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/ai/track-check/process-next": [
-      "./node_modules/ffmpeg-static/**/*",
-      "./node_modules/ffprobe-static/**/*",
+      "./node_modules/ffmpeg-static/ffmpeg",
+      "./node_modules/ffprobe-static/bin/linux/x64/ffprobe",
     ],
   },
 };
