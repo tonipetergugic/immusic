@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { ffmpegPath } from "@/lib/audio/binaries";
 
 // --- True Peak Overs (timecoded) ---
 // We approximate true peak via high-rate resampling (ffmpeg resampler) and peak detection per window.
@@ -20,7 +21,7 @@ export async function ffmpegDetectTruePeakOvers(params: {
     const windowFrames = Math.max(1, Math.floor(windowSec * sampleRate));
 
     // Decode + resample up to high SR, keep stereo, output float32 PCM to pipe.
-    const ff = spawn("ffmpeg", [
+    const ff = spawn(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "error",
@@ -134,7 +135,7 @@ export async function ffmpegDetectPhaseCorrelation(params: {
   // Range ~ [-1..+1]. +1 = mono/identical, <0 indicates anti-phase risk.
   // Deterministic, no UI leak: we only persist server-side.
   return await new Promise<number>((resolve, reject) => {
-    const ff = spawn("ffmpeg", [
+    const ff = spawn(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "error",
@@ -234,7 +235,7 @@ export async function ffmpegDetectPhaseCorrelationBand(params: {
   // Pearson correlation coefficient between L and R channels, but only within a frequency band.
   // Deterministic, whole-file streaming PCM.
   return await new Promise<number>((resolve, reject) => {
-    const ff = spawn("ffmpeg", [
+    const ff = spawn(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "error",
@@ -359,7 +360,7 @@ export async function ffmpegDetectTransientPunchMetrics(params: {
     const windowFrames = Math.max(1, Math.floor(windowSec * sampleRate));
 
     // Downmix to mono to be genre-agnostic and stable.
-    const ff = spawn("ffmpeg", [
+    const ff = spawn(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "error",
@@ -535,7 +536,7 @@ export async function ffmpegDetectPhaseCorrelationEvents(params: {
     const sampleRate = 11025;
     const windowFrames = Math.max(1, Math.floor(windowSec * sampleRate));
 
-    const ff = spawn("ffmpeg", [
+    const ff = spawn(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "error",

@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { ffmpegPath } from "@/lib/audio/binaries";
 
 const execFileAsync = promisify(execFile);
 
@@ -13,7 +14,7 @@ export async function ffmpegDetectSilence(params: {
   const noiseDb = params.noiseDb ?? -50;
   const minSilenceSec = params.minSilenceSec ?? 0.5;
 
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -64,7 +65,7 @@ export async function ffmpegDetectDcOffsetAbsMean(params: {
   inPath: string;
 }): Promise<number> {
   // We parse ffmpeg astats output for "Mean" (per-channel). We take max(abs(meanL), abs(meanR)).
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -101,7 +102,7 @@ export async function ffmpegDetectTruePeakDbTp(params: {
   inPath: string;
 }): Promise<number> {
   // ffmpeg ebur128 prints summary lines to stderr. We parse "Peak:" lines and take the max.
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -138,7 +139,7 @@ export async function ffmpegDetectIntegratedLufs(params: {
   inPath: string;
 }): Promise<number> {
   // ebur128 prints a final summary with "I:  -XX.X LUFS" (format varies).
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -174,7 +175,7 @@ export async function ffmpegDetectMaxSamplePeakDbfs(params: {
   inPath: string;
 }): Promise<number> {
   // Sample peak (not true peak): parse ffmpeg astats "Peak level dB" and take the max (closest to 0).
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -212,7 +213,7 @@ export async function ffmpegDetectRmsLevelDbfs(params: {
 }): Promise<number> {
   // RMS level (dBFS): parse ffmpeg astats "RMS level dB" and take the max (closest to 0).
   // We intentionally use astats with reset=0 to consider the whole file.
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -250,7 +251,7 @@ export async function ffmpegDetectRmsDbfsWithPan(params: {
   panExpr: string; // e.g. "mono|c0=0.5*c0+0.5*c1"
 }): Promise<number> {
   // Deterministic RMS detection after panning to mono.
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -296,7 +297,7 @@ export async function ffmpegDetectBandRmsDbfs(params: {
 
   // Band-limited RMS via ffmpeg filters + astats (whole file, reset=0).
   // Deterministic: parse last "RMS level dB:" value.
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -339,7 +340,7 @@ export async function ffmpegDetectBandRmsDbfsWithPan(params: {
     return NaN;
   }
 
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -373,7 +374,7 @@ export async function ffmpegDetectClippedSampleCount(params: {
   inPath: string;
 }): Promise<number> {
   // Count clipped samples (sample-level clipping) via ffmpeg astats.
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -413,7 +414,7 @@ export async function ffmpegDetectTruePeakAndIntegratedLufs(params: {
   inPath: string;
 }): Promise<{ truePeakDbTp: number; integratedLufs: number }> {
   // loudnorm analysis prints JSON with input_i (LUFS) + input_tp (dBTP) for deterministic True Peak + Integrated LUFS
-  const { stderr } = await execFileAsync("ffmpeg", [
+  const { stderr } = await execFileAsync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "info",
@@ -456,7 +457,7 @@ export async function ffmpegDetectLoudnessRangeLu(params: {
   // Deterministic, whole-file.
   let stderr: string = "";
   try {
-    ({ stderr } = await execFileAsync("ffmpeg", [
+    ({ stderr } = await execFileAsync(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "info",
@@ -469,7 +470,7 @@ export async function ffmpegDetectLoudnessRangeLu(params: {
       "-",
     ]));
   } catch {
-    ({ stderr } = await execFileAsync("ffmpeg", [
+    ({ stderr } = await execFileAsync(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "info",
@@ -521,7 +522,7 @@ export async function ffmpegDetectShortTermLufsTimeline(params: {
 
   let stderr: string = "";
   try {
-    ({ stderr } = await execFileAsync("ffmpeg", [
+    ({ stderr } = await execFileAsync(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "verbose",
@@ -534,7 +535,7 @@ export async function ffmpegDetectShortTermLufsTimeline(params: {
       "-",
     ]));
   } catch {
-    ({ stderr } = await execFileAsync("ffmpeg", [
+    ({ stderr } = await execFileAsync(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "verbose",
@@ -626,7 +627,7 @@ export async function ffmpegDetectTruePeakOversEvents(params: {
   // We treat any peak > threshold as an over-segment.
   let stderr: string = "";
   try {
-    ({ stderr } = await execFileAsync("ffmpeg", [
+    ({ stderr } = await execFileAsync(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "info",
@@ -639,7 +640,7 @@ export async function ffmpegDetectTruePeakOversEvents(params: {
       "-",
     ]));
   } catch {
-    ({ stderr } = await execFileAsync("ffmpeg", [
+    ({ stderr } = await execFileAsync(ffmpegPath, [
       "-hide_banner",
       "-loglevel",
       "info",

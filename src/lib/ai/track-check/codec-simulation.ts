@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { extractPrivateMetricsFromTmpWav } from "@/lib/ai/track-check/feature-extraction";
 import { mapExtractToPrivateMetrics } from "@/lib/ai/track-check/metrics-mapping";
+import { ffmpegPath } from "@/lib/audio/binaries";
 
 const execFileAsync = promisify(execFile);
 
@@ -64,7 +65,7 @@ async function encodeMp3128ThenDecodeToWav(params: { inWavPath: string }): Promi
   const decodedWavPath = path.join(dir, "sim-128-decoded.wav");
 
   // Encode WAV -> MP3 128k (CBR)
-  await execFileAsync("ffmpeg", [
+  await execFileAsync(ffmpegPath, [
     "-y",
     "-hide_banner",
     "-loglevel",
@@ -80,7 +81,7 @@ async function encodeMp3128ThenDecodeToWav(params: { inWavPath: string }): Promi
   ]);
 
   // Decode MP3 -> WAV (PCM)
-  await execFileAsync("ffmpeg", [
+  await execFileAsync(ffmpegPath, [
     "-y",
     "-hide_banner",
     "-loglevel",
@@ -111,7 +112,7 @@ async function encodeAac128ThenDecodeToWav(params: { inWavPath: string }): Promi
   const decodedWavPath = path.join(dir, "sim-128-decoded.wav");
 
   // Encode WAV -> AAC 128k (LC-AAC in M4A container)
-  await execFileAsync("ffmpeg", [
+  await execFileAsync(ffmpegPath, [
     "-y",
     "-hide_banner",
     "-loglevel",
@@ -127,7 +128,7 @@ async function encodeAac128ThenDecodeToWav(params: { inWavPath: string }): Promi
   ]);
 
   // Decode AAC -> WAV (PCM)
-  await execFileAsync("ffmpeg", [
+  await execFileAsync(ffmpegPath, [
     "-y",
     "-hide_banner",
     "-loglevel",

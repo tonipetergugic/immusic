@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { writeFile, readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { ffmpegPath } from "@/lib/audio/binaries";
 
 const execFileAsync = promisify(execFile);
 
@@ -24,7 +25,7 @@ export async function transcodeWavFileToMp3_320(params: {
     `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`
   );
 
-  await execFileAsync("ffmpeg", [
+  await execFileAsync(ffmpegPath, [
     "-y",
     "-hide_banner",
     "-loglevel",
