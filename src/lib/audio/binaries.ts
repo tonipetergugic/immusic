@@ -12,25 +12,27 @@ const resolvedFfprobePath =
 const cwdFfmpegPath = path.join(process.cwd(), "node_modules/ffmpeg-static/ffmpeg");
 const cwdFfprobePath = path.join(process.cwd(), "node_modules/ffprobe-static/bin/linux/x64/ffprobe");
 
-console.error("binary resolution debug", {
-  processCwd: process.cwd(),
-  resolvedFfmpegPath,
-  resolvedFfprobePath,
-  cwdFfmpegPath,
-  cwdFfprobePath,
-  resolvedFfmpegExists: resolvedFfmpegPath ? fs.existsSync(resolvedFfmpegPath) : false,
-  resolvedFfprobeExists: resolvedFfprobePath ? fs.existsSync(resolvedFfprobePath) : false,
-  cwdFfmpegExists: fs.existsSync(cwdFfmpegPath),
-  cwdFfprobeExists: fs.existsSync(cwdFfprobePath),
-});
+const finalFfmpegPath =
+  resolvedFfmpegPath && fs.existsSync(resolvedFfmpegPath)
+    ? resolvedFfmpegPath
+    : fs.existsSync(cwdFfmpegPath)
+      ? cwdFfmpegPath
+      : null;
 
-if (!resolvedFfmpegPath) {
-  throw new Error("Missing ffmpeg-static binary");
+const finalFfprobePath =
+  resolvedFfprobePath && fs.existsSync(resolvedFfprobePath)
+    ? resolvedFfprobePath
+    : fs.existsSync(cwdFfprobePath)
+      ? cwdFfprobePath
+      : null;
+
+if (!finalFfmpegPath) {
+  throw new Error("Missing ffmpeg binary");
 }
 
-if (!resolvedFfprobePath) {
-  throw new Error("Missing ffprobe-static binary");
+if (!finalFfprobePath) {
+  throw new Error("Missing ffprobe binary");
 }
 
-export const ffmpegPath = resolvedFfmpegPath;
-export const ffprobePath = resolvedFfprobePath;
+export const ffmpegPath = finalFfmpegPath;
+export const ffprobePath = finalFfprobePath;
