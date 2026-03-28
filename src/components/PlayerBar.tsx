@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Shuffle,
+} from "lucide-react";
 
 function formatTime(seconds: number): string {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -19,9 +27,11 @@ export default function PlayerBar() {
     progress,
     duration,
     volume,
+    isShuffle,
     togglePlay,
     seek,
     setVolume,
+    toggleShuffle,
     playNext,
     playPrev,
   } = usePlayer();
@@ -111,16 +121,29 @@ export default function PlayerBar() {
 
         <div className="flex flex-col items-center gap-2 w-[40%]">
           <div className="flex items-center gap-4">
-            {/* Previous */}
+            <button
+              type="button"
+              onClick={toggleShuffle}
+              className={`transition-colors ${
+                isShuffle
+                  ? "text-[#00FFC6]"
+                  : "text-white/60 hover:text-[#00FFC6]"
+              }`}
+              aria-label={isShuffle ? "Disable shuffle" : "Enable shuffle"}
+              title={isShuffle ? "Shuffle on" : "Shuffle off"}
+            >
+              <Shuffle size={17} />
+            </button>
+
             <button
               type="button"
               onClick={playPrev}
               className="text-white/60 hover:text-[#00FFC6] transition-colors"
+              aria-label="Previous"
             >
               <SkipBack size={18} />
             </button>
 
-            {/* Play/Pause */}
             <button
               type="button"
               onClick={togglePlay}
@@ -133,15 +156,16 @@ export default function PlayerBar() {
                 hover:bg-[#00FFC6]/10
                 transition-all
               "
+              aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? <Pause size={18} /> : <Play size={18} />}
             </button>
 
-            {/* Next */}
             <button
               type="button"
               onClick={playNext}
               className="text-white/60 hover:text-[#00FFC6] transition-colors"
+              aria-label="Next"
             >
               <SkipForward size={18} />
             </button>
@@ -409,6 +433,20 @@ export default function PlayerBar() {
 
             {/* controls */}
             <div className="mt-2 flex items-center justify-center gap-7">
+              <button
+                type="button"
+                onClick={toggleShuffle}
+                className={`transition-colors ${
+                  isShuffle
+                    ? "text-[#00FFC6]"
+                    : "text-white/80 hover:text-[#00FFC6]"
+                }`}
+                aria-label={isShuffle ? "Disable shuffle" : "Enable shuffle"}
+                title={isShuffle ? "Shuffle on" : "Shuffle off"}
+              >
+                <Shuffle size={22} />
+              </button>
+
               <button
                 type="button"
                 onClick={playPrev}
