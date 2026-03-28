@@ -237,7 +237,7 @@ export default function PlaylistActionsBar({
               bg-transparent border border-[#2A2A2D]
               text-[#B3B3B3] text-sm font-medium
               hover:text-white hover:border-[#3A3A3D]
-              transition
+              transition cursor-pointer
               disabled:opacity-60 disabled:cursor-wait
               w-full sm:w-auto
             "

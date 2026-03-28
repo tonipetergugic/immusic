@@ -331,11 +331,9 @@ export default function PlaylistSuggestedTracks({
           ))}
         </div>
       ) : visibleItems.length === 0 ? (
-        <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
-          <p className="text-sm text-white/50">
-            No suggested tracks available right now.
-          </p>
-        </div>
+        <p className="text-sm text-white/50">
+          No suggested tracks available right now.
+        </p>
       ) : (
         <div className="space-y-3">
           {visibleItems.map((item, index) => {
