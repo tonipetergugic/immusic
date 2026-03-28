@@ -3,27 +3,37 @@ const path = require("node:path");
 const ffmpegStatic = require("ffmpeg-static");
 const ffprobeStatic = require("ffprobe-static");
 
+const isLinux = process.platform === "linux";
+const isDarwin = process.platform === "darwin";
+
 const resolvedFfmpegPath =
   typeof ffmpegStatic === "string" ? ffmpegStatic : ffmpegStatic?.path ?? null;
 
 const resolvedFfprobePath =
   typeof ffprobeStatic === "string" ? ffprobeStatic : ffprobeStatic?.path ?? null;
 
-const cwdFfmpegPath = path.join(process.cwd(), "node_modules/ffmpeg-static/ffmpeg");
-const cwdFfprobePath = path.join(process.cwd(), "node_modules/ffprobe-static/bin/linux/x64/ffprobe");
+// Vercel/Linux: traced package path is unreliable, but node_modules path exists.
+// Local macOS: use system binaries from PATH instead of linux package binaries.
+const linuxNodeModulesFfmpegPath = path.join(process.cwd(), "node_modules/ffmpeg-static/ffmpeg");
+const linuxNodeModulesFfprobePath = path.join(
+  process.cwd(),
+  "node_modules/ffprobe-static/bin/linux/x64/ffprobe"
+);
 
-const finalFfmpegPath =
-  resolvedFfmpegPath && fs.existsSync(resolvedFfmpegPath)
+const finalFfmpegPath = isDarwin
+  ? "ffmpeg"
+  : resolvedFfmpegPath && fs.existsSync(resolvedFfmpegPath)
     ? resolvedFfmpegPath
-    : fs.existsSync(cwdFfmpegPath)
-      ? cwdFfmpegPath
+    : isLinux && fs.existsSync(linuxNodeModulesFfmpegPath)
+      ? linuxNodeModulesFfmpegPath
       : null;
 
-const finalFfprobePath =
-  resolvedFfprobePath && fs.existsSync(resolvedFfprobePath)
+const finalFfprobePath = isDarwin
+  ? "ffprobe"
+  : resolvedFfprobePath && fs.existsSync(resolvedFfprobePath)
     ? resolvedFfprobePath
-    : fs.existsSync(cwdFfprobePath)
-      ? cwdFfprobePath
+    : isLinux && fs.existsSync(linuxNodeModulesFfprobePath)
+      ? linuxNodeModulesFfprobePath
       : null;
 
 if (!finalFfmpegPath) {
