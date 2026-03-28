@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
+import BackLink from "@/components/BackLink";
 
 export default function AccountPage() {
   const supabase = useMemo(() => {
@@ -172,10 +173,11 @@ export default function AccountPage() {
           border border-[#1A1A1C]
           rounded-2xl
           p-8
-          lg:min-h-[980px]
+          lg:min-h-[1040px]
           shadow-[0_20px_60px_rgba(0,0,0,0.6)]
         "
       >
+        <BackLink className="mb-6" />
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold leading-tight">Account</h1>

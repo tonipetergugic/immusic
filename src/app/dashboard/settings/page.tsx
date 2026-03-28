@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
+import BackLink from "@/components/BackLink";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateHideExplicitTracks } from "@/app/(topbar)/profile/actions";
 
@@ -74,10 +75,11 @@ export default function SettingsPage() {
         border border-[#1A1A1C]
         rounded-2xl
         p-8
-        lg:min-h-[980px]
+        lg:min-h-[1040px]
         shadow-[0_20px_60px_rgba(0,0,0,0.6)]
       "
       >
+        <BackLink className="mb-6" />
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold leading-tight">Settings</h1>

@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { respondToInviteAction } from "./actions";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import ProfileSectionNav from "@/components/ProfileSectionNav";
+import BackLink from "@/components/BackLink";
 
 type InviteRow = {
   id: string;
@@ -17,7 +18,13 @@ type InviteRow = {
   } | null;
 };
 
-export default async function ArtistInvitesPage() {
+type ArtistInvitesPageProps = {
+  showBackLink?: boolean;
+};
+
+export default async function ArtistInvitesPage({
+  showBackLink = false,
+}: ArtistInvitesPageProps) {
   const supabase = await createSupabaseServerClient();
 
   const { data: authData, error: authErr } = await supabase.auth.getUser();
@@ -51,10 +58,11 @@ export default async function ArtistInvitesPage() {
         border border-[#1A1A1C]
         rounded-2xl
         p-8
-        lg:min-h-[980px]
+        lg:min-h-[1040px]
         shadow-[0_20px_60px_rgba(0,0,0,0.6)]
       "
       >
+        {showBackLink ? <BackLink className="mb-6" /> : null}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold leading-tight text-white">Messages</h1>
           <p className="mt-1 text-[#B3B3B3]">
