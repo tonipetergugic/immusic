@@ -77,14 +77,14 @@ export default async function ArtistInvitesPage() {
             {invites.map((inv) => (
               <div
                 key={inv.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7"
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-6">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white/90">
-                      Track collaboration invite
-                    </div>
-                    <div className="mt-1 text-sm text-white/70">
+                    <h2 className="text-[18px] font-semibold text-white">
+                      Track <span className="text-[#00FFC6]">collaboration</span> invite
+                    </h2>
+                    <div className="mt-2 text-sm text-white/70">
                       From{" "}
                       <span className="text-white/90 font-medium">
                         {inv.inviter_display_name ?? "Unknown artist"}
@@ -94,15 +94,12 @@ export default async function ArtistInvitesPage() {
                         {inv.role === "CO_OWNER" ? "Co-owner" : "Featured"}
                       </span>
                     </div>
-                    <div className="mt-1 text-xs text-white/50">
-                      Track:{" "}
-                      <span className="text-white/80">
-                        {formatTrackTitle(inv.track?.title, (inv.track as any)?.version)}
-                      </span>
-                    </div>
+                    <p className="mt-2 text-[14px] text-white/65">
+                      Track: {formatTrackTitle(inv.track?.title, (inv.track as any)?.version)}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <form
                       action={async () => {
                         "use server";
@@ -113,7 +110,7 @@ export default async function ArtistInvitesPage() {
                       }}
                     >
                       <button
-                        className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/[0.05]"
+                        className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] px-5 text-sm font-semibold text-white/80 transition hover:bg-white/[0.05]"
                         type="submit"
                       >
                         Reject
@@ -130,7 +127,7 @@ export default async function ArtistInvitesPage() {
                       }}
                     >
                       <button
-                        className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60"
+                        className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-5 text-sm font-semibold text-white/90 transition hover:bg-white/[0.10] hover:border-[#00FFC6]/60"
                         type="submit"
                       >
                         Accept
@@ -139,7 +136,7 @@ export default async function ArtistInvitesPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 text-xs text-white/50">
+                <div className="mt-5 text-xs text-white/50">
                   Created: {new Date(inv.created_at).toLocaleString()} • Expires:{" "}
                   {new Date(inv.expires_at).toLocaleString()}
                 </div>

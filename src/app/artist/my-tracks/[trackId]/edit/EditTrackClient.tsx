@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteTrackAction,
@@ -67,6 +67,14 @@ export default function EditTrackClient({
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>(initialPendingInvites);
 
   const [acceptedCollabs, setAcceptedCollabs] = useState<AcceptedCollab[]>(initialAcceptedCollabs);
+
+  useEffect(() => {
+    setPendingInvites(initialPendingInvites);
+  }, [initialPendingInvites]);
+
+  useEffect(() => {
+    setAcceptedCollabs(initialAcceptedCollabs);
+  }, [initialAcceptedCollabs]);
 
   const runCollabSearch = async () => {
     const q = collabQuery.trim();
@@ -149,6 +157,12 @@ export default function EditTrackClient({
     } catch (e: any) {
       setCollabError(e?.message ?? "Failed to send invite.");
     }
+  };
+
+  const handleRefreshCollaborations = () => {
+    setCollabError(null);
+    setCollabSuccess(null);
+    router.refresh();
   };
 
   const handleDone = () => {
@@ -300,6 +314,7 @@ export default function EditTrackClient({
             collabSuccess={collabSuccess}
             collabResults={collabResults}
             onInvite={handleInviteCollaborator}
+            onRefresh={handleRefreshCollaborations}
             pendingInvites={pendingInvites}
             acceptedCollabs={acceptedCollabs}
           />

@@ -21,6 +21,7 @@ type CollaborationSectionProps = {
   onCollabRoleChange: (role: CollaborationRole) => void;
   collabLoading: boolean;
   onSearch: () => void;
+  onRefresh: () => void;
   collabError: string | null;
   collabSuccess: string | null;
   collabResults: CollabResult[];
@@ -36,6 +37,7 @@ export default function CollaborationSection({
   onCollabRoleChange,
   collabLoading,
   onSearch,
+  onRefresh,
   collabError,
   collabSuccess,
   collabResults,
@@ -52,6 +54,16 @@ export default function CollaborationSection({
         <div className="mt-1 text-sm text-white/45">
           Invite co-owners or featured artists for this track.
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-transparent px-4 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/40"
+        >
+          Refresh invites
+        </button>
       </div>
 
       <div className="mt-6 space-y-6">

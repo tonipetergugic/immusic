@@ -33,6 +33,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("profiles")
     .select("id,display_name")
+    .eq("role", "artist")
     .ilike("display_name", `%${q}%`)
     .limit(8);
 
