@@ -185,44 +185,146 @@ export default function PlaylistClient({
   async function handleTrackAdded(newPlayerTrack: PlayerTrack) {
     if (!isOwner) return;
 
-    const { data: rt, error: rtError } = await supabase
-      .from("release_tracks")
-      .select(
+    const [trackMetaResult, lifetimeResult, releaseTrackResult] = await Promise.all([
+      supabase
+        .from("tracks")
+        .select("id, rating_avg, rating_count")
+        .eq("id", newPlayerTrack.id)
+        .maybeSingle(),
+      supabase
+        .from("analytics_track_lifetime")
+        .select("track_id, streams_lifetime")
+        .eq("track_id", newPlayerTrack.id)
+        .maybeSingle(),
+      supabase
+        .from("release_tracks")
+        .select(
+          `
+        id,
+        track_id,
+        release_id,
+        releases!inner(
+          id,
+          status,
+          published_at,
+          created_at
+        )
         `
-      id,
-      stream_count,
-      track_id,
-      tracks!inner(rating_avg, rating_count),
-      releases!inner(status)
-    `
-      )
-      .eq("track_id", newPlayerTrack.id)
-      .eq("releases.status", "published")
-      .maybeSingle<{
-        id: string;
-        track_id: string;
-        stream_count: number | null;
-        tracks: {
-          rating_avg: number | null;
-          rating_count: number | null;
-        };
-        releases: { status: string };
-      }>();
+        )
+        .eq("track_id", newPlayerTrack.id)
+        .eq("releases.status", "published"),
+    ]);
 
-    if (rtError) {
-      console.error("Failed to load release_track for added track:", rtError);
-      setPlayerTracks((prev) => [...prev, newPlayerTrack]);
-      return;
+    if (trackMetaResult.error) {
+      console.error("Failed to load track ratings for added track:", trackMetaResult.error);
     }
+
+    if (lifetimeResult.error) {
+      console.error("Failed to load lifetime streams for added track:", lifetimeResult.error);
+    }
+
+    if (releaseTrackResult.error) {
+      console.error(
+        "Failed to load published release_tracks for added track:",
+        releaseTrackResult.error
+      );
+    }
+
+    const trackMeta = (trackMetaResult.data ?? null) as {
+      id: string;
+      rating_avg: number | null;
+      rating_count: number | null;
+    } | null;
+
+    const lifetimeRow = (lifetimeResult.data ?? null) as {
+      track_id: string;
+      streams_lifetime: number | null;
+    } | null;
+
+    const releaseTrackRows = (releaseTrackResult.data ?? []) as Array<{
+      id: string;
+      track_id: string;
+      release_id: string;
+      releases:
+        | {
+            id: string;
+            status: string | null;
+            published_at: string | null;
+            created_at: string | null;
+          }
+        | {
+            id: string;
+            status: string | null;
+            published_at: string | null;
+            created_at: string | null;
+          }[]
+        | null;
+    }>;
+
+    const bestReleaseTrack = releaseTrackRows.reduce(
+      (best, row) => {
+        const rel = Array.isArray(row.releases)
+          ? (row.releases[0] ?? null)
+          : (row.releases ?? null);
+
+        if (!rel?.id) return best;
+
+        const next = {
+          release_track_id: String(row.id),
+          release_id: String(row.release_id),
+          published_at: rel.published_at ? String(rel.published_at) : null,
+          created_at: rel.created_at ? String(rel.created_at) : null,
+        };
+
+        if (!best) return next;
+
+        const nextPublished = next.published_at ?? "";
+        const bestPublished = best.published_at ?? "";
+
+        if (nextPublished > bestPublished) return next;
+        if (nextPublished < bestPublished) return best;
+
+        const nextCreated = next.created_at ?? "";
+        const bestCreated = best.created_at ?? "";
+
+        if (nextCreated > bestCreated) return next;
+        if (nextCreated < bestCreated) return best;
+
+        if (next.release_track_id > best.release_track_id) return next;
+
+        return best;
+      },
+      null as
+        | null
+        | {
+            release_track_id: string;
+            release_id: string;
+            published_at: string | null;
+            created_at: string | null;
+          }
+    );
+
+    const fallbackStreamCount =
+      typeof (newPlayerTrack as any).stream_count === "number"
+        ? (newPlayerTrack as any).stream_count
+        : 0;
 
     const enriched: PlayerTrack = {
       ...newPlayerTrack,
-      release_track_id: rt?.id ?? null,
-      rating_avg: rt?.tracks?.rating_avg ?? null,
-      rating_count: rt?.tracks?.rating_count ?? 0,
-      ...(rt?.stream_count !== null && rt?.stream_count !== undefined
-        ? { stream_count: rt.stream_count }
-        : {}),
+      release_id: newPlayerTrack.release_id ?? bestReleaseTrack?.release_id ?? null,
+      release_track_id:
+        newPlayerTrack.release_track_id ?? bestReleaseTrack?.release_track_id ?? null,
+      rating_avg:
+        typeof trackMeta?.rating_avg === "number"
+          ? trackMeta.rating_avg
+          : newPlayerTrack.rating_avg ?? null,
+      rating_count:
+        typeof trackMeta?.rating_count === "number"
+          ? trackMeta.rating_count
+          : newPlayerTrack.rating_count ?? 0,
+      ...(typeof lifetimeRow?.streams_lifetime === "number"
+        ? { stream_count: lifetimeRow.streams_lifetime }
+        : { stream_count: fallbackStreamCount }),
     };
 
     setPlayerTracks((prev) => [...prev, enriched]);

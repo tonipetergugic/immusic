@@ -16,37 +16,6 @@ export async function GET(
 
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from("tracks")
-    .select(
-      `
-      id,
-      title,
-      audio_path,
-      artist_id,
-      bpm,
-      key,
-      artist_profile:profiles!tracks_artist_id_fkey(
-        display_name
-      )
-    `
-    )
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    console.error("track player route error:", error);
-    return NextResponse.json({ error: "Failed to load track" }, { status: 500 });
-  }
-
-  if (!data) {
-    return NextResponse.json({ error: "Track not found" }, { status: 404 });
-  }
-
-  const artistObj = Array.isArray((data as any).artist_profile)
-    ? ((data as any).artist_profile[0] ?? null)
-    : ((data as any).artist_profile ?? null);
-
   const { data: releaseTrackRows, error: releaseTrackErr } = await supabase
     .from("release_tracks")
     .select(
@@ -61,7 +30,8 @@ export async function GET(
       )
       `
     )
-    .eq("track_id", id);
+    .eq("track_id", id)
+    .eq("releases.status", "published");
 
   if (releaseTrackErr) {
     console.error("track player route release_tracks error:", releaseTrackErr);
@@ -105,8 +75,45 @@ export async function GET(
     created_at: string | null;
   });
 
+  if (!bestRelease?.id) {
+    return NextResponse.json({ error: "Track not available" }, { status: 404 });
+  }
+
+  const { data, error } = await supabase
+    .from("tracks")
+    .select(
+      `
+      id,
+      title,
+      audio_path,
+      artist_id,
+      bpm,
+      key,
+      genre,
+      is_explicit,
+      artist_profile:profiles!tracks_artist_id_fkey(
+        display_name
+      )
+    `
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("track player route error:", error);
+    return NextResponse.json({ error: "Failed to load track" }, { status: 500 });
+  }
+
+  if (!data) {
+    return NextResponse.json({ error: "Track not found" }, { status: 404 });
+  }
+
+  const artistObj = Array.isArray((data as any).artist_profile)
+    ? ((data as any).artist_profile[0] ?? null)
+    : ((data as any).artist_profile ?? null);
+
   const cover_url =
-    bestRelease?.cover_path
+    bestRelease.cover_path
       ? supabase.storage
           .from("release_covers")
           .getPublicUrl(bestRelease.cover_path).data.publicUrl ?? null
@@ -130,10 +137,13 @@ export async function GET(
     id: data.id,
     title: data.title ?? null,
     artist_id: data.artist_id ?? null,
+    status: "published",
+    is_explicit: data.is_explicit ?? false,
     audio_url,
     cover_url,
     bpm: data.bpm ?? null,
     key: data.key ?? null,
+    genre: data.genre ?? null,
     artist_profile: artistObj ?? null,
   });
 

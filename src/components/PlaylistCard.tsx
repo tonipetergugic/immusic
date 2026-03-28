@@ -2,9 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-
-import { usePlayer } from "@/context/PlayerContext";
 
 type PlaylistCardProps = {
   id: string;
@@ -23,31 +20,6 @@ export default function PlaylistCard({
 }: PlaylistCardProps) {
   const coverPublicUrl =
     typeof cover_url === "string" && /^https?:\/\//.test(cover_url) ? cover_url : null;
-  const { currentTrack } = usePlayer();
-  const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string>>(new Set());
-
-  const isCurrentFromThisPlaylist =
-    !!currentTrack?.id && playlistTrackIds.has(currentTrack.id);
-
-  async function getPlaylistQueue() {
-    const res = await fetch(`/api/playlists/${id}/queue`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to load playlist queue (${res.status})`);
-    }
-
-    const json = (await res.json()) as { queue?: any[] };
-
-    const queue = Array.isArray(json.queue) ? json.queue : [];
-
-    setPlaylistTrackIds(new Set(queue.map((t: any) => t.id).filter(Boolean)));
-
-    return { tracks: queue, index: 0 };
-  }
 
   return (
     <Link
