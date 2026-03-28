@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import BackLink from "@/components/BackLink";
+import AppSelect from "@/components/AppSelect";
 import ReleaseCoverUploader from "./ReleaseCoverUploader";
 const TrackListSortable = dynamic(() => import("./TrackListSortable"), {
   ssr: false,
@@ -14,6 +15,12 @@ import { publishReleaseAction } from "./publishReleaseAction";
 import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
 import DeleteReleaseModal from "@/components/DeleteReleaseModal";
 import { deleteReleaseAction } from "./deleteReleaseAction";
+
+const RELEASE_TYPE_ITEMS = [
+  { value: "single", label: "SINGLE" },
+  { value: "ep", label: "EP" },
+  { value: "album", label: "ALBUM" },
+];
 
 type Track = { track_id: string; track_title: string; position: number; release_id: string };
 type ReleaseStatus = "draft" | "published";
@@ -317,41 +324,39 @@ export default function ReleaseEditorClient({
                 ) : null}
 
                 <div className="mt-2 flex items-center gap-3 text-sm text-white/70">
-                  <select
-                    className="cursor-pointer bg-transparent p-0 text-sm font-semibold uppercase tracking-[0.16em] text-[#00FFC6] outline-none transition hover:text-[#00E0B0] disabled:cursor-not-allowed disabled:opacity-60"
-                    value={releaseType}
-                    disabled={isLocked || releaseTypePending}
-                    onChange={(e) => {
-                      if (isLocked || releaseTypePending) return;
+                  <div className="min-w-[132px]">
+                    <AppSelect
+                      value={releaseType}
+                      disabled={isLocked || releaseTypePending}
+                      items={RELEASE_TYPE_ITEMS}
+                      className="[&>button]:h-auto [&>button]:rounded-none [&>button]:border-0 [&>button]:bg-transparent [&>button]:p-0 [&>button]:text-sm [&>button]:font-semibold [&>button]:uppercase [&>button]:tracking-[0.16em] [&>button]:text-[#00FFC6] [&>button]:shadow-none [&>button]:hover:text-[#00E0B0] [&>button]:focus:ring-0 [&>button]:focus:border-transparent [&>button_svg]:text-[#00FFC6]/70"
+                      onChange={(nextType) => {
+                        if (isLocked || releaseTypePending) return;
 
-                      const nextType = e.target.value;
-                      setReleaseType(nextType);
+                        setReleaseType(nextType);
 
-                      if (nextType === savedReleaseType) return;
+                        if (nextType === savedReleaseType) return;
 
-                      setReleaseTypePending(true);
+                        setReleaseTypePending(true);
 
-                      startTransition(async () => {
-                        try {
-                          const result = await updateReleaseTypeAction(releaseId, nextType);
+                        startTransition(async () => {
+                          try {
+                            const result = await updateReleaseTypeAction(releaseId, nextType);
 
-                          if (!result?.error) {
-                            setSavedReleaseType(nextType);
-                            markAsDraft();
-                          } else {
-                            alert(result.error);
-                            setReleaseType(savedReleaseType);
+                            if (!result?.error) {
+                              setSavedReleaseType(nextType);
+                              markAsDraft();
+                            } else {
+                              alert(result.error);
+                              setReleaseType(savedReleaseType);
+                            }
+                          } finally {
+                            setReleaseTypePending(false);
                           }
-                        } finally {
-                          setReleaseTypePending(false);
-                        }
-                      });
-                    }}
-                  >
-                    <option value="single">SINGLE</option>
-                    <option value="ep">EP</option>
-                    <option value="album">ALBUM</option>
-                  </select>
+                        });
+                      }}
+                    />
+                  </div>
 
                   <span className="text-white/20">•</span>
 
@@ -367,11 +372,6 @@ export default function ReleaseEditorClient({
                   </div>
                 </div>
 
-                {releaseTypePending ? (
-                  <div className="mt-3 text-sm font-medium text-[#00FFC6]">
-                    Saving release type...
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>

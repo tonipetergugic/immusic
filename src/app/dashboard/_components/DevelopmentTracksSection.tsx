@@ -5,6 +5,7 @@ import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackRowBase from "@/components/TrackRowBase";
 import type { PlayerTrack } from "@/types/playerTrack";
 import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
+import AppSelect from "@/components/AppSelect";
 
 type DevItemLike = { genre?: string | null };
 type DevRowTrackLike = {
@@ -28,6 +29,49 @@ type Props = {
   routerPush: (href: string) => void;
 };
 
+const KNOWN_DEV_GENRES = [
+  "Trance",
+  "Progressive Trance",
+  "Uplifting Trance",
+  "Psytrance",
+  "Vocal Trance",
+  "Techno",
+  "Melodic Techno",
+  "Peak Time Techno",
+  "Minimal Techno",
+  "Industrial Techno",
+  "House",
+  "Deep House",
+  "Progressive House",
+  "Tech House",
+  "Afro House",
+  "EDM",
+  "Big Room",
+  "Drum & Bass",
+  "Dubstep",
+  "Bass House",
+  "Future Bass",
+  "Trap",
+  "Hardstyle",
+  "Hardcore",
+  "Rawstyle",
+  "Uptempo",
+  "Pop",
+  "Hip-Hop",
+  "Rap",
+  "R&B",
+  "Reggaeton",
+  "Rock",
+  "Alternative Rock",
+  "Metal",
+  "Pop Punk",
+  "Ambient",
+  "Cinematic",
+  "Lo-fi",
+  "Experimental",
+  "Other",
+] as const;
+
 export default function DevelopmentTracksSection({
   devGenre,
   setDevGenre,
@@ -37,6 +81,111 @@ export default function DevelopmentTracksSection({
   devQueue,
   routerPush,
 }: Props) {
+  const extraGenreItems = Array.from(
+    new Set(
+      (devItems ?? [])
+        .map((x: DevItemLike) => (x.genre ?? "").trim())
+        .filter((g) => g && !KNOWN_DEV_GENRES.includes(g as (typeof KNOWN_DEV_GENRES)[number]))
+    )
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((g) => ({
+      value: g,
+      label: g,
+    }));
+
+  const devGenreItems = [
+    { value: "all", label: "All genres" },
+    {
+      label: "Trance",
+      options: [
+        { value: "Trance", label: "Trance" },
+        { value: "Progressive Trance", label: "Progressive Trance" },
+        { value: "Uplifting Trance", label: "Uplifting Trance" },
+        { value: "Psytrance", label: "Psytrance" },
+        { value: "Vocal Trance", label: "Vocal Trance" },
+      ],
+    },
+    {
+      label: "Techno",
+      options: [
+        { value: "Techno", label: "Techno" },
+        { value: "Melodic Techno", label: "Melodic Techno" },
+        { value: "Peak Time Techno", label: "Peak Time Techno" },
+        { value: "Minimal Techno", label: "Minimal Techno" },
+        { value: "Industrial Techno", label: "Industrial Techno" },
+      ],
+    },
+    {
+      label: "House / EDM",
+      options: [
+        { value: "House", label: "House" },
+        { value: "Deep House", label: "Deep House" },
+        { value: "Progressive House", label: "Progressive House" },
+        { value: "Tech House", label: "Tech House" },
+        { value: "Afro House", label: "Afro House" },
+        { value: "EDM", label: "EDM" },
+        { value: "Big Room", label: "Big Room" },
+      ],
+    },
+    {
+      label: "Bass Music",
+      options: [
+        { value: "Drum & Bass", label: "Drum & Bass" },
+        { value: "Dubstep", label: "Dubstep" },
+        { value: "Bass House", label: "Bass House" },
+        { value: "Future Bass", label: "Future Bass" },
+        { value: "Trap", label: "Trap" },
+      ],
+    },
+    {
+      label: "Hard Dance",
+      options: [
+        { value: "Hardstyle", label: "Hardstyle" },
+        { value: "Hardcore", label: "Hardcore" },
+        { value: "Rawstyle", label: "Rawstyle" },
+        { value: "Uptempo", label: "Uptempo" },
+      ],
+    },
+    {
+      label: "Pop / Urban",
+      options: [
+        { value: "Pop", label: "Pop" },
+        { value: "Hip-Hop", label: "Hip-Hop" },
+        { value: "Rap", label: "Rap" },
+        { value: "R&B", label: "R&B" },
+        { value: "Reggaeton", label: "Reggaeton" },
+      ],
+    },
+    {
+      label: "Rock / Metal",
+      options: [
+        { value: "Rock", label: "Rock" },
+        { value: "Alternative Rock", label: "Alternative Rock" },
+        { value: "Metal", label: "Metal" },
+        { value: "Pop Punk", label: "Pop Punk" },
+      ],
+    },
+    {
+      label: "Other",
+      options: [
+        { value: "Ambient", label: "Ambient" },
+        { value: "Cinematic", label: "Cinematic" },
+        { value: "Lo-fi", label: "Lo-fi" },
+        { value: "Experimental", label: "Experimental" },
+        { value: "Other", label: "Other" },
+      ],
+    },
+    ...(extraGenreItems.length > 0
+      ? [
+          {
+            label: "More",
+            options: extraGenreItems,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -48,145 +197,13 @@ export default function DevelopmentTracksSection({
         </div>
 
         <div className="w-full md:w-[220px]">
-          <label className="sr-only" htmlFor="dev-genre">
-            Genre
-          </label>
-          <select
-            id="dev-genre"
+          <label className="sr-only">Genre</label>
+          <AppSelect
             value={devGenre}
-            onChange={(e) => setDevGenre(e.target.value)}
-            className="
-              w-full h-10 rounded-full px-4 text-sm
-              bg-black/25 border border-white/10
-              text-white/80
-              focus:outline-none focus:ring-2 focus:ring-[#00FFC655] cursor-pointer
-            "
-          >
-            <option value="all">All genres</option>
-
-            <optgroup label="Trance">
-              <option value="Trance">Trance</option>
-              <option value="Progressive Trance">Progressive Trance</option>
-              <option value="Uplifting Trance">Uplifting Trance</option>
-              <option value="Psytrance">Psytrance</option>
-              <option value="Vocal Trance">Vocal Trance</option>
-            </optgroup>
-
-            <optgroup label="Techno">
-              <option value="Techno">Techno</option>
-              <option value="Melodic Techno">Melodic Techno</option>
-              <option value="Peak Time Techno">Peak Time Techno</option>
-              <option value="Minimal Techno">Minimal Techno</option>
-              <option value="Industrial Techno">Industrial Techno</option>
-            </optgroup>
-
-            <optgroup label="House / EDM">
-              <option value="House">House</option>
-              <option value="Deep House">Deep House</option>
-              <option value="Progressive House">Progressive House</option>
-              <option value="Tech House">Tech House</option>
-              <option value="Afro House">Afro House</option>
-              <option value="EDM">EDM</option>
-              <option value="Big Room">Big Room</option>
-            </optgroup>
-
-            <optgroup label="Bass Music">
-              <option value="Drum & Bass">Drum & Bass</option>
-              <option value="Dubstep">Dubstep</option>
-              <option value="Bass House">Bass House</option>
-              <option value="Future Bass">Future Bass</option>
-              <option value="Trap">Trap</option>
-            </optgroup>
-
-            <optgroup label="Hard Dance">
-              <option value="Hardstyle">Hardstyle</option>
-              <option value="Hardcore">Hardcore</option>
-              <option value="Rawstyle">Rawstyle</option>
-              <option value="Uptempo">Uptempo</option>
-            </optgroup>
-
-            <optgroup label="Pop / Urban">
-              <option value="Pop">Pop</option>
-              <option value="Hip-Hop">Hip-Hop</option>
-              <option value="Rap">Rap</option>
-              <option value="R&B">R&B</option>
-              <option value="Reggaeton">Reggaeton</option>
-            </optgroup>
-
-            <optgroup label="Rock / Metal">
-              <option value="Rock">Rock</option>
-              <option value="Alternative Rock">Alternative Rock</option>
-              <option value="Metal">Metal</option>
-              <option value="Pop Punk">Pop Punk</option>
-            </optgroup>
-
-            <optgroup label="Other">
-              <option value="Ambient">Ambient</option>
-              <option value="Cinematic">Cinematic</option>
-              <option value="Lo-fi">Lo-fi</option>
-              <option value="Experimental">Experimental</option>
-              <option value="Other">Other</option>
-            </optgroup>
-
-            {Array.from(
-              new Set(
-                (devItems ?? [])
-                  .map((x: DevItemLike) => (x.genre ?? "").trim())
-                  .filter(
-                    (g) =>
-                      g &&
-                      ![
-                        "Trance",
-                        "Progressive Trance",
-                        "Uplifting Trance",
-                        "Psytrance",
-                        "Vocal Trance",
-                        "Techno",
-                        "Melodic Techno",
-                        "Peak Time Techno",
-                        "Minimal Techno",
-                        "Industrial Techno",
-                        "House",
-                        "Deep House",
-                        "Progressive House",
-                        "Tech House",
-                        "Afro House",
-                        "EDM",
-                        "Big Room",
-                        "Drum & Bass",
-                        "Dubstep",
-                        "Bass House",
-                        "Future Bass",
-                        "Trap",
-                        "Hardstyle",
-                        "Hardcore",
-                        "Rawstyle",
-                        "Uptempo",
-                        "Pop",
-                        "Hip-Hop",
-                        "Rap",
-                        "R&B",
-                        "Reggaeton",
-                        "Rock",
-                        "Alternative Rock",
-                        "Metal",
-                        "Pop Punk",
-                        "Ambient",
-                        "Cinematic",
-                        "Lo-fi",
-                        "Experimental",
-                        "Other",
-                      ].includes(g)
-                  )
-              )
-            )
-              .sort((a, b) => a.localeCompare(b))
-              .map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-          </select>
+            onChange={setDevGenre}
+            items={devGenreItems}
+            className="[&>button]:h-10 [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-sm [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55"
+          />
         </div>
       </div>
 

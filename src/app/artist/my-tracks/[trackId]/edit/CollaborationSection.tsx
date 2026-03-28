@@ -7,6 +7,13 @@ import type {
   PendingInvite,
 } from "./types";
 
+import AppSelect from "@/components/AppSelect";
+
+const COLLAB_ROLE_ITEMS = [
+  { value: "CO_OWNER", label: "Co-owner" },
+  { value: "FEATURED", label: "Featured" },
+] as const;
+
 type CollaborationSectionProps = {
   collabQuery: string;
   onCollabQueryChange: (value: string) => void;
@@ -58,14 +65,12 @@ export default function CollaborationSection({
           />
 
           <div className="grid grid-cols-[1fr_auto] gap-3">
-            <select
-              className="h-[52px] rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+            <AppSelect
               value={collabRole}
-              onChange={(e) => onCollabRoleChange(e.target.value as CollaborationRole)}
-            >
-              <option value="CO_OWNER">Co-owner</option>
-              <option value="FEATURED">Featured</option>
-            </select>
+              onChange={(value) => onCollabRoleChange(value as CollaborationRole)}
+              items={COLLAB_ROLE_ITEMS as unknown as { value: string; label: string }[]}
+              className="min-w-0"
+            />
 
             <button
               type="button"

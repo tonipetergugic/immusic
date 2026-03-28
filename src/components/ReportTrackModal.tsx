@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
+import AppSelect from "@/components/AppSelect";
 
 type ReportReason =
   | "wrong_ownership"
@@ -127,18 +128,13 @@ export default function ReportTrackModal({
             <label className="block text-sm font-medium text-white">
               Reason
             </label>
-            <select
+            <AppSelect
               value={reason}
-              onChange={(e) => setReason(e.target.value as ReportReason)}
+              onChange={(value) => setReason(value as ReportReason)}
               disabled={loading}
-              className="w-full cursor-pointer rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-[#00FFC6]/60 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {REPORT_REASONS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+              items={REPORT_REASONS}
+              className="[&>button]:h-[48px] [&>button]:w-full [&>button]:rounded-xl [&>button]:border-white/10 [&>button]:bg-black/30 [&>button]:px-4 [&>button]:py-3 [&>button]:text-sm [&>button]:text-white [&>button]:focus:border-[#00FFC6]/60 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
+            />
           </div>
 
           <div className="space-y-2">

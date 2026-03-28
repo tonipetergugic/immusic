@@ -8,6 +8,14 @@ import StatCard from "./StatCard";
 import WorldMapCard from "./WorldMapCard";
 import AnalyticsTabs from "./AnalyticsTabs";
 import StreamsOverTimeChart from "./StreamsOverTimeChart";
+import AppSelect from "@/components/AppSelect";
+
+const TRACK_SORT_ITEMS = [
+  { value: "streams", label: "Streams" },
+  { value: "listeners", label: "Unique listeners" },
+  { value: "rating", label: "Avg rating" },
+  { value: "time", label: "Listening time" },
+];
 
 type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 export type Range = "7d" | "28d" | "all";
@@ -206,16 +214,16 @@ export default function ArtistAnalyticsClient(props: {
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm text-[#B3B3B3] shrink-0">Sort:</label>
-              <select
-                value={trackSort}
-                onChange={(e) => handleTrackSortChange(e.target.value as "streams" | "listeners" | "rating" | "time")}
-                className="cursor-pointer px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20"
-              >
-                <option value="streams">Streams</option>
-                <option value="listeners">Unique listeners</option>
-                <option value="rating">Avg rating</option>
-                <option value="time">Listening time</option>
-              </select>
+              <div className="w-[210px]">
+                <AppSelect
+                  value={trackSort}
+                  onChange={(value) =>
+                    handleTrackSortChange(value as "streams" | "listeners" | "rating" | "time")
+                  }
+                  items={TRACK_SORT_ITEMS}
+                  className="[&>button]:h-[42px] [&>button]:rounded-xl [&>button]:border-white/10 [&>button]:bg-white/5 [&>button]:px-3 [&>button]:py-2 [&>button]:text-sm [&>button]:text-white [&>button]:hover:bg-white/10 [&>button]:focus:ring-1 [&>button]:focus:ring-white/20 [&>button_svg]:text-white/55"
+                />
+              </div>
             </div>
           </div>
 

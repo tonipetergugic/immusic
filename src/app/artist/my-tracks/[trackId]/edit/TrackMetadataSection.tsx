@@ -1,6 +1,103 @@
 "use client";
 
+import AppSelect from "@/components/AppSelect";
 import type { TrackVersionOption } from "./trackMetadataOptions";
+
+const BPM_ITEMS = Array.from({ length: 121 }, (_, index) => {
+  const bpm = String(index + 60);
+  return { value: bpm, label: bpm };
+});
+
+const GENRE_ITEMS = [
+  {
+    label: "Trance",
+    options: [
+      { value: "Trance", label: "Trance" },
+      { value: "Progressive Trance", label: "Progressive Trance" },
+      { value: "Uplifting Trance", label: "Uplifting Trance" },
+      { value: "Psytrance", label: "Psytrance" },
+      { value: "Vocal Trance", label: "Vocal Trance" },
+      { value: "Hard Trance", label: "Hard Trance" },
+      { value: "Tech Trance", label: "Tech Trance" },
+    ],
+  },
+  {
+    label: "Techno",
+    options: [
+      { value: "Techno", label: "Techno" },
+      { value: "Melodic Techno", label: "Melodic Techno" },
+      { value: "Peak Time Techno", label: "Peak Time Techno" },
+      { value: "Industrial Techno", label: "Industrial Techno" },
+      { value: "Hard Techno", label: "Hard Techno" },
+    ],
+  },
+  {
+    label: "House / EDM",
+    options: [
+      { value: "House", label: "House" },
+      { value: "Deep House", label: "Deep House" },
+      { value: "Progressive House", label: "Progressive House" },
+      { value: "Tech House", label: "Tech House" },
+      { value: "Afro House", label: "Afro House" },
+      { value: "Future House", label: "Future House" },
+      { value: "EDM", label: "EDM" },
+      { value: "Big Room", label: "Big Room" },
+      { value: "Electro House", label: "Electro House" },
+      { value: "Festival EDM", label: "Festival EDM" },
+    ],
+  },
+  {
+    label: "Bass Music",
+    options: [
+      { value: "Drum & Bass", label: "Drum & Bass" },
+      { value: "Liquid Drum & Bass", label: "Liquid Drum & Bass" },
+      { value: "Neurofunk", label: "Neurofunk" },
+      { value: "Dubstep", label: "Dubstep" },
+      { value: "Melodic Dubstep", label: "Melodic Dubstep" },
+      { value: "Future Bass", label: "Future Bass" },
+    ],
+  },
+  {
+    label: "Hard Dance",
+    options: [
+      { value: "Hardstyle", label: "Hardstyle" },
+      { value: "Rawstyle", label: "Rawstyle" },
+      { value: "Hardcore", label: "Hardcore" },
+      { value: "Uptempo Hardcore", label: "Uptempo Hardcore" },
+    ],
+  },
+  {
+    label: "Pop / Urban",
+    options: [
+      { value: "Pop", label: "Pop" },
+      { value: "Dance Pop", label: "Dance Pop" },
+      { value: "Indie Pop", label: "Indie Pop" },
+      { value: "Hip-Hop", label: "Hip-Hop" },
+      { value: "Trap", label: "Trap" },
+      { value: "Drill", label: "Drill" },
+      { value: "R&B", label: "R&B" },
+      { value: "Soul", label: "Soul" },
+    ],
+  },
+  {
+    label: "Rock / Metal",
+    options: [
+      { value: "Rock", label: "Rock" },
+      { value: "Alternative Rock", label: "Alternative Rock" },
+      { value: "Indie Rock", label: "Indie Rock" },
+      { value: "Metal", label: "Metal" },
+    ],
+  },
+  {
+    label: "Other",
+    options: [
+      { value: "Ambient", label: "Ambient" },
+      { value: "Cinematic", label: "Cinematic" },
+      { value: "LoFi", label: "LoFi" },
+      { value: "Other", label: "Other" },
+    ],
+  },
+];
 
 type TrackMetadataSectionProps = {
   newTitle: string;
@@ -47,6 +144,16 @@ export default function TrackMetadataSection({
   onLyricsChange,
   onOpenLyricsModal,
 }: TrackMetadataSectionProps) {
+  const keyItems = Array.from(allowedKeys).map((key) => ({
+    value: key,
+    label: key,
+  }));
+
+  const versionItems = trackVersionOptions.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }));
+
   return (
     <section className="min-w-0 rounded-[28px] border border-white/10 bg-white/[0.03] p-6">
       <div>
@@ -78,22 +185,14 @@ export default function TrackMetadataSection({
             <label className="text-xs uppercase tracking-[0.12em] text-white/60">
               BPM
             </label>
-            <input
-              inputMode="numeric"
-              type="text"
-              className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+
+            <AppSelect
               value={newBpm}
-              list="bpm-suggestions"
-              maxLength={3}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/[^\d]/g, "");
-                if (raw.length <= 3) {
-                  onBpmChange(raw);
-                }
-              }}
-              onBlur={onBpmBlur}
+              onChange={onBpmChange}
+              items={BPM_ITEMS}
               placeholder="Typical range: 60–180"
             />
+
             {newBpm !== "" &&
               (() => {
                 const n = Number.parseInt(newBpm, 10);
@@ -113,19 +212,12 @@ export default function TrackMetadataSection({
             <label className="text-xs uppercase tracking-[0.12em] text-white/60">
               Key
             </label>
-            <input
-              type="text"
-              className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+
+            <AppSelect
               value={newKey}
-              list="key-suggestions"
-              maxLength={3}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\s+/g, "");
-                if (v === "" || allowedKeys.has(v)) {
-                  onKeyChange(v);
-                }
-              }}
-              placeholder="e.g. Dm"
+              onChange={onKeyChange}
+              items={keyItems}
+              placeholder="Select key"
             />
           </div>
         </div>
@@ -135,106 +227,26 @@ export default function TrackMetadataSection({
             <label className="text-xs uppercase tracking-[0.12em] text-white/60">
               Version
             </label>
-            <select
-              className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
-              value={newVersion}
-              onChange={(e) => onVersionChange(e.target.value)}
-            >
-              <option value="" className="text-white/60">
-                None
-              </option>
 
-              {trackVersionOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <AppSelect
+              value={newVersion}
+              onChange={onVersionChange}
+              items={versionItems}
+              placeholder="None"
+            />
           </div>
 
           <div className="flex flex-col gap-2">
             <label className="text-xs uppercase tracking-[0.12em] text-white/60">
               Genre
             </label>
-            <select
-              className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+
+            <AppSelect
               value={newGenre}
-              onChange={(e) => onGenreChange(e.target.value)}
-            >
-              <option value="">Select genre</option>
-
-              <optgroup label="Trance">
-                <option value="Trance">Trance</option>
-                <option value="Progressive Trance">Progressive Trance</option>
-                <option value="Uplifting Trance">Uplifting Trance</option>
-                <option value="Psytrance">Psytrance</option>
-                <option value="Vocal Trance">Vocal Trance</option>
-                <option value="Hard Trance">Hard Trance</option>
-                <option value="Tech Trance">Tech Trance</option>
-              </optgroup>
-
-              <optgroup label="Techno">
-                <option value="Techno">Techno</option>
-                <option value="Melodic Techno">Melodic Techno</option>
-                <option value="Peak Time Techno">Peak Time Techno</option>
-                <option value="Industrial Techno">Industrial Techno</option>
-                <option value="Hard Techno">Hard Techno</option>
-              </optgroup>
-
-              <optgroup label="House / EDM">
-                <option value="House">House</option>
-                <option value="Deep House">Deep House</option>
-                <option value="Progressive House">Progressive House</option>
-                <option value="Tech House">Tech House</option>
-                <option value="Afro House">Afro House</option>
-                <option value="Future House">Future House</option>
-                <option value="EDM">EDM</option>
-                <option value="Big Room">Big Room</option>
-                <option value="Electro House">Electro House</option>
-                <option value="Festival EDM">Festival EDM</option>
-              </optgroup>
-
-              <optgroup label="Bass Music">
-                <option value="Drum & Bass">Drum & Bass</option>
-                <option value="Liquid Drum & Bass">Liquid Drum & Bass</option>
-                <option value="Neurofunk">Neurofunk</option>
-                <option value="Dubstep">Dubstep</option>
-                <option value="Melodic Dubstep">Melodic Dubstep</option>
-                <option value="Future Bass">Future Bass</option>
-              </optgroup>
-
-              <optgroup label="Hard Dance">
-                <option value="Hardstyle">Hardstyle</option>
-                <option value="Rawstyle">Rawstyle</option>
-                <option value="Hardcore">Hardcore</option>
-                <option value="Uptempo Hardcore">Uptempo Hardcore</option>
-              </optgroup>
-
-              <optgroup label="Pop / Urban">
-                <option value="Pop">Pop</option>
-                <option value="Dance Pop">Dance Pop</option>
-                <option value="Indie Pop">Indie Pop</option>
-                <option value="Hip-Hop">Hip-Hop</option>
-                <option value="Trap">Trap</option>
-                <option value="Drill">Drill</option>
-                <option value="R&B">R&B</option>
-                <option value="Soul">Soul</option>
-              </optgroup>
-
-              <optgroup label="Rock / Metal">
-                <option value="Rock">Rock</option>
-                <option value="Alternative Rock">Alternative Rock</option>
-                <option value="Indie Rock">Indie Rock</option>
-                <option value="Metal">Metal</option>
-              </optgroup>
-
-              <optgroup label="Other">
-                <option value="Ambient">Ambient</option>
-                <option value="Cinematic">Cinematic</option>
-                <option value="LoFi">LoFi</option>
-                <option value="Other">Other</option>
-              </optgroup>
-            </select>
+              onChange={onGenreChange}
+              items={GENRE_ITEMS}
+              placeholder="Select genre"
+            />
           </div>
         </div>
 

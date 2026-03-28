@@ -7,6 +7,7 @@ import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import type { PlayerTrack } from "@/types/playerTrack";
 import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
 import ExplicitBadge from "@/components/ExplicitBadge";
+import AppSelect from "@/components/AppSelect";
 
 type Props = {
   performanceGenre: string;
@@ -34,6 +35,14 @@ export default function PerformanceDiscoverySection({
   perfTrackMetaMap,
   routerPush,
 }: Props) {
+  const performanceGenreItems = [
+    { value: "all", label: "All genres" },
+    ...performanceGenreOptions.map((g) => ({
+      value: g.toLowerCase(),
+      label: g,
+    })),
+  ];
+
   return (
     <>
       {/* Performance Discovery (text must sit above tracks, not above releases) */}
@@ -47,27 +56,13 @@ export default function PerformanceDiscoverySection({
           </div>
 
           <div className="w-full md:w-[220px]">
-            <label className="sr-only" htmlFor="perf-genre">
-              Genre
-            </label>
-            <select
-              id="perf-genre"
+            <label className="sr-only">Genre</label>
+            <AppSelect
               value={performanceGenre}
-              onChange={(e) => setPerformanceGenre(e.target.value)}
-              className="
-                w-full h-10 rounded-full px-4 text-sm
-                bg-black/25 border border-white/10
-                text-white/80
-                focus:outline-none focus:ring-2 focus:ring-[#00FFC655]
-              "
-            >
-              <option value="all">All genres</option>
-              {performanceGenreOptions.map((g) => (
-                <option key={g} value={g.toLowerCase()}>
-                  {g}
-                </option>
-              ))}
-            </select>
+              onChange={setPerformanceGenre}
+              items={performanceGenreItems}
+              className="[&>button]:h-10 [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-sm [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55"
+            />
           </div>
         </div>
       </div>

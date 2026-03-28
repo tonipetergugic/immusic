@@ -2,6 +2,102 @@
 
 import { useEffect, useState } from "react"
 import { mapConsultantMetrics } from "@/lib/ai/consultant/mapConsultantMetrics"
+import AppSelect from "@/components/AppSelect"
+
+const CONSULTANT_GENRE_ITEMS = [
+  {
+    label: "Trance",
+    options: [
+      { value: "Trance", label: "Trance" },
+      { value: "Progressive Trance", label: "Progressive Trance" },
+      { value: "Uplifting Trance", label: "Uplifting Trance" },
+      { value: "Psytrance", label: "Psytrance" },
+      { value: "Hard Trance", label: "Hard Trance" },
+    ],
+  },
+  {
+    label: "Techno",
+    options: [
+      { value: "Techno", label: "Techno" },
+      { value: "Melodic Techno", label: "Melodic Techno" },
+      { value: "Peak Time Techno", label: "Peak Time Techno" },
+      { value: "Industrial Techno", label: "Industrial Techno" },
+      { value: "Hard Techno", label: "Hard Techno" },
+    ],
+  },
+  {
+    label: "House / EDM",
+    options: [
+      { value: "House", label: "House" },
+      { value: "Deep House", label: "Deep House" },
+      { value: "Progressive House", label: "Progressive House" },
+      { value: "Tech House", label: "Tech House" },
+      { value: "Afro House", label: "Afro House" },
+      { value: "Future House", label: "Future House" },
+      { value: "EDM", label: "EDM" },
+      { value: "Big Room", label: "Big Room" },
+      { value: "Electro House", label: "Electro House" },
+      { value: "Festival EDM", label: "Festival EDM" },
+    ],
+  },
+  {
+    label: "Bass Music",
+    options: [
+      { value: "Drum & Bass", label: "Drum & Bass" },
+      { value: "Liquid Drum & Bass", label: "Liquid Drum & Bass" },
+      { value: "Neurofunk", label: "Neurofunk" },
+      { value: "Dubstep", label: "Dubstep" },
+      { value: "Melodic Dubstep", label: "Melodic Dubstep" },
+      { value: "Future Bass", label: "Future Bass" },
+    ],
+  },
+  {
+    label: "Hard Dance",
+    options: [
+      { value: "Hardstyle", label: "Hardstyle" },
+      { value: "Rawstyle", label: "Rawstyle" },
+      { value: "Hardcore", label: "Hardcore" },
+      { value: "Uptempo Hardcore", label: "Uptempo Hardcore" },
+    ],
+  },
+  {
+    label: "Pop / Urban",
+    options: [
+      { value: "Pop", label: "Pop" },
+      { value: "Dance Pop", label: "Dance Pop" },
+      { value: "Indie Pop", label: "Indie Pop" },
+      { value: "Hip-Hop", label: "Hip-Hop" },
+      { value: "Trap", label: "Trap" },
+      { value: "Drill", label: "Drill" },
+      { value: "R&B", label: "R&B" },
+      { value: "Soul", label: "Soul" },
+    ],
+  },
+  {
+    label: "Rock / Metal",
+    options: [
+      { value: "Rock", label: "Rock" },
+      { value: "Alternative Rock", label: "Alternative Rock" },
+      { value: "Indie Rock", label: "Indie Rock" },
+      { value: "Metal", label: "Metal" },
+    ],
+  },
+  {
+    label: "Other",
+    options: [
+      { value: "Ambient", label: "Ambient" },
+      { value: "Cinematic", label: "Cinematic" },
+      { value: "LoFi", label: "LoFi" },
+      { value: "Other", label: "Other" },
+    ],
+  },
+]
+
+const CONSULTANT_TARGET_ITEMS = [
+  { value: "balanced", label: "Balanced" },
+  { value: "club", label: "Club" },
+  { value: "streaming", label: "Streaming" },
+]
 
 type Props = {
   lufs: number | null
@@ -139,94 +235,26 @@ export default function AiConsultantCard({
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <div className="space-y-2">
                   <div className="text-base font-semibold text-white/85">Genre</div>
-                  <select
-                    value={genre}
-                    onChange={(e) => setGenre(e.target.value)}
-                    className="h-13 min-w-[280px] cursor-pointer rounded-2xl border border-white/15 bg-black/50 px-4 text-base text-white outline-none transition focus:border-[#00FFC6]/50"
-                  >
-                    <optgroup label="Trance">
-                      <option value="Trance">Trance</option>
-                      <option value="Progressive Trance">Progressive Trance</option>
-                      <option value="Uplifting Trance">Uplifting Trance</option>
-                      <option value="Psytrance">Psytrance</option>
-                      <option value="Hard Trance">Hard Trance</option>
-                    </optgroup>
-
-                    <optgroup label="Techno">
-                      <option value="Techno">Techno</option>
-                      <option value="Melodic Techno">Melodic Techno</option>
-                      <option value="Peak Time Techno">Peak Time Techno</option>
-                      <option value="Industrial Techno">Industrial Techno</option>
-                      <option value="Hard Techno">Hard Techno</option>
-                    </optgroup>
-
-                    <optgroup label="House / EDM">
-                      <option value="House">House</option>
-                      <option value="Deep House">Deep House</option>
-                      <option value="Progressive House">Progressive House</option>
-                      <option value="Tech House">Tech House</option>
-                      <option value="Afro House">Afro House</option>
-                      <option value="Future House">Future House</option>
-                      <option value="EDM">EDM</option>
-                      <option value="Big Room">Big Room</option>
-                      <option value="Electro House">Electro House</option>
-                      <option value="Festival EDM">Festival EDM</option>
-                    </optgroup>
-
-                    <optgroup label="Bass Music">
-                      <option value="Drum & Bass">Drum & Bass</option>
-                      <option value="Liquid Drum & Bass">Liquid Drum & Bass</option>
-                      <option value="Neurofunk">Neurofunk</option>
-                      <option value="Dubstep">Dubstep</option>
-                      <option value="Melodic Dubstep">Melodic Dubstep</option>
-                      <option value="Future Bass">Future Bass</option>
-                    </optgroup>
-
-                    <optgroup label="Hard Dance">
-                      <option value="Hardstyle">Hardstyle</option>
-                      <option value="Rawstyle">Rawstyle</option>
-                      <option value="Hardcore">Hardcore</option>
-                      <option value="Uptempo Hardcore">Uptempo Hardcore</option>
-                    </optgroup>
-
-                    <optgroup label="Pop / Urban">
-                      <option value="Pop">Pop</option>
-                      <option value="Dance Pop">Dance Pop</option>
-                      <option value="Indie Pop">Indie Pop</option>
-                      <option value="Hip-Hop">Hip-Hop</option>
-                      <option value="Trap">Trap</option>
-                      <option value="Drill">Drill</option>
-                      <option value="R&B">R&B</option>
-                      <option value="Soul">Soul</option>
-                    </optgroup>
-
-                    <optgroup label="Rock / Metal">
-                      <option value="Rock">Rock</option>
-                      <option value="Alternative Rock">Alternative Rock</option>
-                      <option value="Indie Rock">Indie Rock</option>
-                      <option value="Metal">Metal</option>
-                    </optgroup>
-
-                    <optgroup label="Other">
-                      <option value="Ambient">Ambient</option>
-                      <option value="Cinematic">Cinematic</option>
-                      <option value="LoFi">LoFi</option>
-                      <option value="Other">Other</option>
-                    </optgroup>
-                  </select>
+                  <div className="min-w-[280px]">
+                    <AppSelect
+                      value={genre}
+                      onChange={setGenre}
+                      items={CONSULTANT_GENRE_ITEMS}
+                      className="[&>button]:h-13 [&>button]:min-w-[280px] [&>button]:rounded-2xl [&>button]:border-white/15 [&>button]:bg-black/50 [&>button]:px-4 [&>button]:text-base [&>button]:text-white [&>button]:focus:border-[#00FFC6]/50 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="text-base font-semibold text-white/85">Target</div>
-                  <select
-                    value={goal}
-                    onChange={(e) => setGoal(e.target.value as any)}
-                    className="h-13 min-w-[200px] cursor-pointer rounded-2xl border border-white/15 bg-black/50 px-4 text-base text-white outline-none transition focus:border-[#00FFC6]/50"
-                  >
-                    <option value="balanced">Balanced</option>
-                    <option value="club">Club</option>
-                    <option value="streaming">Streaming</option>
-                  </select>
+                  <div className="min-w-[200px]">
+                    <AppSelect
+                      value={goal}
+                      onChange={(value) => setGoal(value as any)}
+                      items={CONSULTANT_TARGET_ITEMS}
+                      className="[&>button]:h-13 [&>button]:min-w-[200px] [&>button]:rounded-2xl [&>button]:border-white/15 [&>button]:bg-black/50 [&>button]:px-4 [&>button]:text-base [&>button]:text-white [&>button]:focus:border-[#00FFC6]/50 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
+                    />
+                  </div>
                 </div>
               </div>
 
