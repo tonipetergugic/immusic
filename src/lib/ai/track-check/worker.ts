@@ -576,7 +576,7 @@ async function runApproveAndInsertTrack(params: {
       }
 
       await markQueueApproved({
-        supabase,
+        admin,
         userId,
         queueId,
         audio_path: mp3Path,
@@ -617,7 +617,7 @@ async function runApproveAndInsertTrack(params: {
   }
 
   await markQueueApproved({
-    supabase,
+    admin,
     userId,
     queueId,
     audio_path: mp3Path,

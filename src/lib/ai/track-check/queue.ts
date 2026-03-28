@@ -26,12 +26,12 @@ export async function markQueueRejected(params: {
 }
 
 export async function markQueueApproved(params: {
-  supabase: any;
+  admin: any;
   userId: string;
   queueId: string;
   audio_path: string;
 }) {
-  const { error } = await params.supabase
+  const { error } = await params.admin
     .from("tracks_ai_queue")
     .update({
       status: "approved",
