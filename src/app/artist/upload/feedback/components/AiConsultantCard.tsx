@@ -210,8 +210,6 @@ export default function AiConsultantCard({
       return
     }
 
-    console.log("AI CONSULTANT RESPONSE:", data)
-
     setExplanation(data.explanation)
 
     setLoading(false)

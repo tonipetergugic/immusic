@@ -154,9 +154,7 @@ export default function PlaylistAddTrackModal({
         .maybeSingle();
 
       if (lastRowError) {
-        console.error("❌ Failed to load last playlist position:");
-        console.log("⛔ Full supabase error:", JSON.stringify(lastRowError, null, 2));
-        alert("POSITION LOAD ERROR — check console output");
+        console.error("Failed to load last playlist position:", lastRowError);
         setErrorMessage("Position konnte nicht geladen werden.");
         setActionId(null);
         return;
@@ -175,9 +173,7 @@ export default function PlaylistAddTrackModal({
         .single();
 
       if (error) {
-        console.error("❌ Failed to add track to playlist:");
-        console.log("⛔ Full supabase error:", JSON.stringify(error, null, 2));
-        alert("INSERT ERROR — check console output");
+        console.error("Failed to add track to playlist:", error);
         setErrorMessage("Track konnte nicht hinzugefügt werden.");
         setActionId(null);
         return;
