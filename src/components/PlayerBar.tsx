@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePlayer } from "@/context/PlayerContext";
 import {
   Play,
@@ -11,6 +12,8 @@ import {
   VolumeX,
   Shuffle,
 } from "lucide-react";
+import TrackRatingInline from "@/components/TrackRatingInline";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 function formatTime(seconds: number): string {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -35,6 +38,8 @@ export default function PlayerBar() {
     playNext,
     playPrev,
   } = usePlayer();
+
+  const router = useRouter();
 
   const [isMuted, setIsMuted] = useState(false);
   const [lastVolumeBeforeMute, setLastVolumeBeforeMute] = useState(1);
@@ -67,6 +72,19 @@ export default function PlayerBar() {
       setVolume(0);
     }
   };
+
+  function goToTrack() {
+    const releaseId = currentTrack?.release_id ?? null;
+    if (!releaseId) return;
+    setMobileExpanded(false);
+    router.push(`/dashboard/release/${releaseId}`);
+  }
+
+  function goToArtist() {
+    if (!currentTrack?.artist_id) return;
+    setMobileExpanded(false);
+    router.push(`/dashboard/artist/${currentTrack.artist_id}`);
+  }
 
   if (!currentTrack) {
     return (
@@ -398,18 +416,81 @@ export default function PlayerBar() {
               </div>
             </div>
 
-            {/* title/artist */}
-            <div className="mt-5 text-center">
-              <div className="text-white/95 text-xl font-semibold truncate">
-                {currentTrack.title}
-              </div>
-              <div className="mt-1 text-white/60 text-sm truncate">
-                {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
+            <div className="relative z-10 -mt-12 px-3">
+              <div
+                className="
+                  rounded-2xl
+                  border border-white/10
+                  bg-black/55
+                  backdrop-blur-md
+                  px-4 py-4
+                  text-center
+                  shadow-[0_12px_40px_rgba(0,0,0,0.45)]
+                "
+              >
+                {currentTrack.release_id ? (
+                  <button
+                    type="button"
+                    onClick={goToTrack}
+                    className="
+                      block w-full
+                      text-[20px] font-semibold leading-tight text-white/95
+                      truncate cursor-pointer
+                      hover:text-[#00FFC6]
+                      transition-colors
+                    "
+                    title={formatTrackTitle(currentTrack.title, currentTrack.version)}
+                  >
+                    {formatTrackTitle(currentTrack.title, currentTrack.version)}
+                  </button>
+                ) : (
+                  <div
+                    className="text-[20px] font-semibold leading-tight text-white/95 truncate"
+                    title={formatTrackTitle(currentTrack.title, currentTrack.version)}
+                  >
+                    {formatTrackTitle(currentTrack.title, currentTrack.version)}
+                  </div>
+                )}
+
+                {currentTrack?.profiles?.display_name ? (
+                  <button
+                    type="button"
+                    onClick={goToArtist}
+                    className="
+                      mt-2 block w-full
+                      text-[16px] text-white/70
+                      truncate cursor-pointer
+                      hover:text-[#00FFC6] hover:underline underline-offset-2
+                      transition-colors
+                    "
+                    title={currentTrack.profiles.display_name}
+                  >
+                    {currentTrack.profiles.display_name}
+                  </button>
+                ) : (
+                  <div className="mt-2 text-[16px] text-white/50 truncate">
+                    Unknown Artist
+                  </div>
+                )}
+
+                {currentTrack.release_track_id ? (
+                  <div className="mt-4 flex justify-center">
+                    <TrackRatingInline
+                      releaseTrackId={currentTrack.release_track_id}
+                      trackId={currentTrack.id}
+                      initialAvg={currentTrack.rating_avg ?? null}
+                      initialCount={currentTrack.rating_count ?? 0}
+                      initialStreams={(currentTrack as any).stream_count ?? 0}
+                      initialMyStars={currentTrack.my_stars ?? null}
+                      showStreamsOnDesktopOnly={false}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
 
             {/* seek */}
-            <div className="mt-6">
+            <div className="mt-5">
               <input
                 type="range"
                 min={0}
@@ -432,29 +513,31 @@ export default function PlayerBar() {
             </div>
 
             {/* controls */}
-            <div className="mt-2 flex items-center justify-center gap-7">
-              <button
-                type="button"
-                onClick={toggleShuffle}
-                className={`transition-colors ${
-                  isShuffle
-                    ? "text-[#00FFC6]"
-                    : "text-white/80 hover:text-[#00FFC6]"
-                }`}
-                aria-label={isShuffle ? "Disable shuffle" : "Enable shuffle"}
-                title={isShuffle ? "Shuffle on" : "Shuffle off"}
-              >
-                <Shuffle size={22} />
-              </button>
+            <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center">
+              <div className="flex items-center justify-end gap-7 pr-4">
+                <button
+                  type="button"
+                  onClick={toggleShuffle}
+                  className={`transition-colors ${
+                    isShuffle
+                      ? "text-[#00FFC6]"
+                      : "text-white/80 hover:text-[#00FFC6]"
+                  }`}
+                  aria-label={isShuffle ? "Disable shuffle" : "Enable shuffle"}
+                  title={isShuffle ? "Shuffle on" : "Shuffle off"}
+                >
+                  <Shuffle size={22} />
+                </button>
 
-              <button
-                type="button"
-                onClick={playPrev}
-                className="text-white/80 hover:text-[#00FFC6] transition-colors"
-                aria-label="Previous"
-              >
-                <SkipBack size={26} />
-              </button>
+                <button
+                  type="button"
+                  onClick={playPrev}
+                  className="text-white/80 hover:text-[#00FFC6] transition-colors"
+                  aria-label="Previous"
+                >
+                  <SkipBack size={26} />
+                </button>
+              </div>
 
               <button
                 type="button"
@@ -467,20 +550,25 @@ export default function PlayerBar() {
                   hover:text-[#00FFC6]
                   hover:bg-[#00FFC6]/10
                   transition-all
+                  justify-self-center
                 "
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause size={26} /> : <Play size={26} />}
               </button>
 
-              <button
-                type="button"
-                onClick={playNext}
-                className="text-white/80 hover:text-[#00FFC6] transition-colors"
-                aria-label="Next"
-              >
-                <SkipForward size={26} />
-              </button>
+              <div className="flex items-center justify-start gap-7 pl-4">
+                <button
+                  type="button"
+                  onClick={playNext}
+                  className="text-white/80 hover:text-[#00FFC6] transition-colors"
+                  aria-label="Next"
+                >
+                  <SkipForward size={26} />
+                </button>
+
+                <div className="w-[22px] h-[22px] opacity-0 pointer-events-none" />
+              </div>
             </div>
 
             {/* volume */}

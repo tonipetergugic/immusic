@@ -456,7 +456,7 @@ function TrackRatingInline({
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
-                className="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] px-6 py-3 text-[14px] font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.10] hover:text-white hover:shadow-[0_10px_30px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                className="inline-flex min-w-[112px] sm:min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] px-5 sm:px-6 py-2.5 sm:py-3 text-[14px] font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.10] hover:text-white hover:shadow-[0_10px_30px_rgba(0,0,0,0.28)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                 onClick={(e) => {
                   e.stopPropagation();
                   setConfirmOpenFor(null);
@@ -467,7 +467,7 @@ function TrackRatingInline({
 
               <button
                 type="button"
-                className="inline-flex min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-[#00FFC6]/30 bg-white/[0.03] px-6 py-3 text-[14px] font-bold text-[#00FFC6] shadow-[0_0_0_1px_rgba(0,255,198,0.05),0_0_22px_rgba(0,255,198,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#00E0B0]/45 hover:bg-white/[0.05] hover:text-[#00E0B0] hover:shadow-[0_0_0_1px_rgba(0,224,176,0.10),0_0_28px_rgba(0,255,198,0.16)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/25"
+                className="inline-flex min-w-[112px] sm:min-w-[132px] cursor-pointer items-center justify-center rounded-2xl border border-[#00FFC6]/30 bg-white/[0.03] px-5 sm:px-6 py-2.5 sm:py-3 text-[14px] font-bold text-[#00FFC6] shadow-[0_0_0_1px_rgba(0,255,198,0.05),0_0_22px_rgba(0,255,198,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#00E0B0]/45 hover:bg-white/[0.05] hover:text-[#00E0B0] hover:shadow-[0_0_0_1px_rgba(0,224,176,0.10),0_0_28px_rgba(0,255,198,0.16)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/25"
                 onClick={(e) => {
                   e.stopPropagation();
                   const stars = confirmOpenFor;
