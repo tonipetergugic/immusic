@@ -1,4 +1,3 @@
-// /Users/tonipetergugic/immusic/src/app/dashboard/DashboardHomeClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
@@ -109,12 +108,10 @@ export default function DashboardHomeClient({
     tabFocusRef.current = null;
   }, [homeTab]);
 
-  // Releases section (from home_modules + home_module_items)
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
   const playlistModule =
     home.modules.find((m) => m.module_type === "playlist") ?? null;
 
-  // Performance Genre Filter
   const performanceGenreOptions = getPerformanceGenreOptions(
     performanceItems,
     perfTrackMetaMap

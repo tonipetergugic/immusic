@@ -11,7 +11,6 @@ export default function DashboardHeroAndToggle({
 }: Props) {
   return (
     <>
-      {/* Ambient Hero (UI-only) */}
       <div
         className="
           relative overflow-hidden
@@ -21,7 +20,6 @@ export default function DashboardHeroAndToggle({
           pb-12
         "
       >
-        {/* Layer 1: Grundgradient */}
         <div
           aria-hidden="true"
           className="
@@ -33,7 +31,6 @@ export default function DashboardHeroAndToggle({
           "
         />
 
-        {/* Layer 2: Radial Glow (oben rechts, subtil) */}
         <div
           aria-hidden="true"
           className="
@@ -42,7 +39,6 @@ export default function DashboardHeroAndToggle({
           "
         />
 
-        {/* Layer 3: LANGER Bottom-Fade in Home-Background */}
         <div
           aria-hidden="true"
           className="
@@ -55,7 +51,6 @@ export default function DashboardHeroAndToggle({
           "
         />
 
-        {/* Content layer */}
         <div className="relative z-10">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
@@ -72,7 +67,6 @@ export default function DashboardHeroAndToggle({
             </div>
           </div>
 
-          {/* Discovery Toggle */}
           <div className="mt-6 flex items-center justify-center">
             <div className="inline-flex rounded-full border border-[#00FFC622] bg-black/25 p-1 backdrop-blur shadow-[0_0_22px_rgba(0,255,198,0.10)]">
               <button

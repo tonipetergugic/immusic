@@ -45,7 +45,6 @@ export default function PerformanceDiscoverySection({
 
   return (
     <>
-      {/* Performance Discovery (text must sit above tracks, not above releases) */}
       <div className="space-y-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
@@ -84,13 +83,17 @@ export default function PerformanceDiscoverySection({
         </div>
       ) : performanceError ? (
         <p className="text-red-400 text-sm">{performanceError}</p>
-      ) : (performanceItems ?? []).length === 0 ? (
+      ) : (perfQueue ?? []).length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-[#111112] p-6">
           <h3 className="text-sm font-semibold text-white/80">
-            No performance tracks yet
+            {(performanceItems ?? []).length === 0
+              ? "No performance tracks yet"
+              : "No tracks match this genre"}
           </h3>
           <p className="mt-1 text-sm text-white/50">
-            Tracks appear here once they have verified listener activity and ratings.
+            {(performanceItems ?? []).length === 0
+              ? "Tracks appear here once they have verified listener activity and ratings."
+              : "Try another genre or switch back to all genres."}
           </p>
         </div>
       ) : (

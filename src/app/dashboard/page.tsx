@@ -7,7 +7,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export default async function DashboardPage() {
   const { modules, itemsByModuleId } = await getHomeModules();
 
-  // Map ist nicht serialisierbar -> in plain object umwandeln
   const obj: Record<string, any[]> = {};
   for (const [k, v] of itemsByModuleId.entries()) obj[k] = v;
 
@@ -21,9 +20,6 @@ export default async function DashboardPage() {
     ? (obj[performanceReleaseModule.id] ?? [])
     : [];
 
-  // Release-Regel:
-  // - Single-Track Release => performance nur wenn der einzige Track "performance" ist
-  // - Multi-Track Release => performance nur wenn alle Tracks "performance" sind
   const perfSupabase = await createSupabaseServerClient();
 
   const { data: perfRelRows, error: perfRelErr } = await perfSupabase
@@ -214,17 +210,14 @@ export default async function DashboardPage() {
     ...autoPerformancePlaylistIds,
   ];
 
-  // Dev Home must not show playlists that appear in Performance Home
   const performancePlaylistIdSet = new Set(performancePlaylistIds);
   const devPlaylistIds = playlistIds
     .filter((id) => !performancePlaylistIdSet.has(id))
     .slice(0, 10);
 
-  // load all playlist cards (dev + perf) in one query
   const allPlaylistIds = Array.from(new Set([...devPlaylistIds, ...performancePlaylistIds]));
   const playlistsById = await getHomePlaylists(allPlaylistIds);
 
-  // Ensure dev home only renders playlists that passed visibility filters (e.g. is_public=true)
   const devPlaylistIdsFiltered = devPlaylistIds.filter((id) => !!(playlistsById as any)?.[id]);
 
   return (
