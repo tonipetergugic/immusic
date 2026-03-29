@@ -5,8 +5,6 @@ export default function LandingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Root <body> bleibt overflow-hidden (für App).
-  // Landing bekommt eigenen Scroll-Container.
   return (
     <AppShell
       mainClassName="flex-1 overflow-y-auto overflow-x-hidden"

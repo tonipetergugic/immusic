@@ -56,28 +56,23 @@ function LandingCard({
 export default async function HomePage() {
   const user = await getUser();
 
-  // Wenn eingeloggt → Dashboard
   if (user) {
     redirect("/dashboard");
   }
 
-  // Wenn nicht eingeloggt → Landingpage
   return (
     <main className="relative min-h-[calc(100dvh-6rem)] overflow-x-hidden">
-      {/* Background image layer */}
       <div
         className="absolute inset-0 bg-center bg-cover xl:bg-[length:100%_auto] xl:bg-top xl:bg-no-repeat"
         style={{ backgroundImage: "url(/landing/hero-bg.png)" }}
         aria-hidden="true"
       />
 
-      {/* Dark overlay for readability */}
       <div
         className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/70 to-black/85"
         aria-hidden="true"
       />
 
-      {/* Subtle brand glow */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -87,7 +82,6 @@ export default async function HomePage() {
         aria-hidden="true"
       />
 
-      {/* Content */}
       <div className="relative px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
         <div className="mx-auto flex max-w-5xl flex-col items-center text-center">
           <div className="flex flex-col items-center">
