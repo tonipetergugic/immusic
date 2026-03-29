@@ -5,6 +5,12 @@ import { createPortal } from "react-dom";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 type PlaylistRow = {
   id: string;
   title: string | null;
@@ -50,7 +56,7 @@ export default function AddToPlaylistModal({
 
       if (userErr || !user) {
         setLoading(false);
-        alert("Not authenticated.");
+        showNotice("You must be logged in.");
         onClose();
         return;
       }
@@ -101,7 +107,7 @@ export default function AddToPlaylistModal({
 
   const addToPlaylist = async (playlistId: string) => {
     if (!trackId) {
-      alert("Track ID is missing. Cannot add to playlist.");
+      showNotice("Track could not be added.");
       return;
     }
     if (busyId) return;
@@ -116,7 +122,7 @@ export default function AddToPlaylistModal({
       .maybeSingle();
 
     if (existing) {
-      alert("Track is already in this playlist.");
+      showNotice("Track is already in this playlist.");
       setBusyId(null);
       return;
     }
@@ -142,12 +148,12 @@ export default function AddToPlaylistModal({
 
     if (insertErr) {
       console.error("Failed to add track to playlist:", insertErr);
-      alert("Could not add track to playlist. Check console.");
+      showNotice("Could not add track to playlist.");
       setBusyId(null);
       return;
     }
 
-    alert("Added to playlist.");
+    showNotice("Added to playlist.");
     setBusyId(null);
     onClose();
   };

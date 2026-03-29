@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { followProfile, unfollowProfile } from "@/app/(topbar)/profile/actions";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 export default function FollowArtistButton({
   artistId,
   isFollowing,
@@ -31,8 +37,8 @@ export default function FollowArtistButton({
         onChange(true);
       }
     } catch (e: any) {
-      console.log("FollowArtistButton toggle error", e);
-      alert(e?.message ?? "Something went wrong");
+      console.error("FollowArtistButton toggle error:", e);
+      showNotice(e?.message ?? "Something went wrong.");
     } finally {
       setBusy(false);
     }
