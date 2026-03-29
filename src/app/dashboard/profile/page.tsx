@@ -10,6 +10,12 @@ import ProfileSectionNav from "@/components/ProfileSectionNav";
 import DeleteAvatarModal from "@/components/DeleteAvatarModal";
 import BackLink from "@/components/BackLink";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,7 +43,7 @@ export default function ProfilePage() {
         .list(prefix, { limit: 100, offset: 0 });
 
       if (listErr) {
-        console.log("[cleanup] list failed:", listErr);
+        console.error("[cleanup] list failed:", listErr);
         return;
       }
 
@@ -50,13 +56,13 @@ export default function ProfilePage() {
 
       const { error: delErr } = await supabase.storage.from(bucket).remove(toDelete);
       if (delErr) {
-        console.log("[cleanup] remove failed:", delErr);
+        console.error("[cleanup] remove failed:", delErr);
         return;
       }
 
-      console.log(`[cleanup] removed ${toDelete.length} old file(s) from ${bucket}/${prefix}`);
+      console.info(`[cleanup] removed ${toDelete.length} old file(s) from ${bucket}/${prefix}`);
     } catch (e) {
-      console.log("[cleanup] unexpected error:", e);
+      console.error("[cleanup] unexpected error:", e);
     }
   }
 
@@ -103,7 +109,7 @@ export default function ProfilePage() {
           }
         }
       } catch (err) {
-        console.log("loadAvatar error", err);
+        console.error("loadAvatar error:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -157,9 +163,8 @@ export default function ProfilePage() {
                 data: { user },
               } = await supabase.auth.getUser();
 
-              if (!user) {
-                alert("Not authenticated.");
-                setLoading(false);
+              if (!user?.id) {
+                showNotice("You must be logged in.");
                 return;
               }
 
@@ -175,8 +180,8 @@ export default function ProfilePage() {
                 });
 
               if (uploadError) {
-                console.log(uploadError);
-                alert("Upload failed");
+                console.error("Avatar upload error:", uploadError);
+                showNotice("Upload failed.");
                 setLoading(false);
                 return;
               }

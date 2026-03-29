@@ -48,7 +48,7 @@ export async function updateAvatar(avatarUrl: string) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.log("SERVER ACTION — updateAvatar: Unauthorized", userError);
+    console.error("SERVER ACTION — updateAvatar: Unauthorized", userError);
     throw new Error("Not authenticated");
   }
 
@@ -59,7 +59,7 @@ export async function updateAvatar(avatarUrl: string) {
     .eq("id", user.id);
 
   if (updateError) {
-    console.log("SERVER ACTION — updateAvatar: Update failed", updateError);
+    console.error("SERVER ACTION — updateAvatar: Update failed", updateError);
     throw new Error("Failed to update avatar");
   }
 
@@ -101,7 +101,7 @@ export async function deleteAvatar() {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.log("SERVER ACTION — deleteAvatar: Unauthorized", userError);
+    console.error("SERVER ACTION — deleteAvatar: Unauthorized", userError);
     throw new Error("Not authenticated");
   }
 
@@ -111,7 +111,7 @@ export async function deleteAvatar() {
     .remove([`${user.id}/avatar.png`]);
 
   if (deleteError) {
-    console.log("SERVER ACTION — deleteAvatar: Delete failed", deleteError);
+    console.error("SERVER ACTION — deleteAvatar: Delete failed", deleteError);
     throw new Error("Failed to delete avatar file");
   }
 
@@ -122,7 +122,7 @@ export async function deleteAvatar() {
     .eq("id", user.id);
 
   if (updateError) {
-    console.log("SERVER ACTION — deleteAvatar: DB update failed", updateError);
+    console.error("SERVER ACTION — deleteAvatar: DB update failed", updateError);
     throw new Error("Failed to clear avatar_url");
   }
 

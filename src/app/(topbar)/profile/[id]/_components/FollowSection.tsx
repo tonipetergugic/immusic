@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import FollowersModal from "@/components/FollowersModal";
 import { followProfile, unfollowProfile } from "../../actions";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 export default function FollowSection({
   profileId,
   canFollow,
@@ -50,7 +56,7 @@ export default function FollowSection({
       setViewerFollowingIds(new Set((json?.viewerFollowingIds ?? []) as string[]));
       setModalProfiles((json?.profiles ?? []) as any);
     } catch (e) {
-      console.log("openList error", e);
+      console.error("openList error:", e);
       setViewerId(null);
       setViewerFollowingIds(new Set());
       setModalProfiles([]);
@@ -81,7 +87,7 @@ export default function FollowSection({
         await followProfile(targetId);
       }
     } catch (e) {
-      console.log("toggleFollowInModal error", e);
+      console.error("toggleFollowInModal error:", e);
       setViewerFollowingIds(prev);
     } finally {
       setToggleBusyIds((cur) => {
@@ -116,7 +122,7 @@ export default function FollowSection({
       // rollback
       setFollowing(was);
       setFollowerCount(prevCount);
-      alert(e?.message ?? "Something went wrong");
+      showNotice(e?.message ?? "Something went wrong.");
     } finally {
       setBusy(false);
     }

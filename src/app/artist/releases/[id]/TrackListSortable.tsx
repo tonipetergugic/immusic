@@ -22,6 +22,12 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import Tooltip from "@/components/Tooltip";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 type Track = {
   track_id: string;
   track_title: string;
@@ -250,7 +256,7 @@ function SortableTrackItem({
                   const res = await removeTrackFromReleaseAction(track.release_id, track.track_id);
 
                   if (res && "error" in res) {
-                    alert(res.error);
+                    showNotice(res.error ?? "Failed to update track order.");
                     onRefresh?.();
                     return;
                   }
@@ -355,14 +361,14 @@ export default function TrackListSortable({
 
       if (res && "error" in res) {
         setTracks(previousTracks);
-        alert(res.error);
+        showNotice(res.error ?? "Failed to update track order.");
         return;
       }
 
       onReleaseModified?.();
     } catch {
       setTracks(previousTracks);
-      alert("Failed to save track order.");
+      showNotice("Failed to save track order.");
     } finally {
       setReorderPending(false);
     }

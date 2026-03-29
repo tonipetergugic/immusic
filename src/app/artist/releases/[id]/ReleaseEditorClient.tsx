@@ -16,6 +16,12 @@ import { updateReleaseStatusAction } from "./updateReleaseStatusAction";
 import DeleteReleaseModal from "@/components/DeleteReleaseModal";
 import { deleteReleaseAction } from "./deleteReleaseAction";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 const RELEASE_TYPE_ITEMS = [
   { value: "single", label: "SINGLE" },
   { value: "ep", label: "EP" },
@@ -95,7 +101,7 @@ export default function ReleaseEditorClient({
       if (res?.success) {
         setStatus("draft");
       } else if (res?.error) {
-        alert(res.error);
+        showNotice(res.error);
       }
     });
   }, [releaseId, startTransition, status]);
@@ -116,7 +122,7 @@ export default function ReleaseEditorClient({
         setStatus("published");
         setPublishModalOpen(false);
       } else {
-        alert(res?.error ?? "Failed to publish.");
+        showNotice(res?.error ?? "Failed to publish.");
       }
     });
   }, [canPublish, releaseId, startTransition]);
@@ -289,7 +295,7 @@ export default function ReleaseEditorClient({
                               setSavedTitle(trimmed);
                               markAsDraft();
                             } else {
-                              alert(result.error);
+                              showNotice(result.error);
                             }
                           } finally {
                             setTitlePending(false);
@@ -347,7 +353,7 @@ export default function ReleaseEditorClient({
                               setSavedReleaseType(nextType);
                               markAsDraft();
                             } else {
-                              alert(result.error);
+                              showNotice(result.error);
                               setReleaseType(savedReleaseType);
                             }
                           } finally {
@@ -452,7 +458,7 @@ export default function ReleaseEditorClient({
             const result = await deleteReleaseAction(releaseId);
 
             if (result?.error) {
-              alert(result.error);
+              showNotice(result.error);
             }
           });
         }}

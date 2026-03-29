@@ -2,6 +2,12 @@
 
 import { useState, DragEvent, useEffect } from "react";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 export default function AvatarDropzone({
   onFileSelected,
   avatarUrl,
@@ -22,7 +28,7 @@ export default function AvatarDropzone({
     const file = files[0];
 
     if (!file.type.startsWith("image/")) {
-      alert("Only image files are allowed.");
+      showNotice("Only image files are allowed.");
       return;
     }
 

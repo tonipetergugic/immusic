@@ -6,6 +6,12 @@ import { Search } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addTrackToReleaseAction } from "./actions";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 type ReleaseTrack = { track_id: string; track_title: string; position: number; release_id: string };
 
 type AddTrackModalProps = {
@@ -156,7 +162,7 @@ export default function AddTrackModal({
                       const result = await addTrackToReleaseAction(releaseId, t.id);
 
                       if (result?.error) {
-                        alert(result.error);
+                        showNotice(result.error);
                         return;
                       }
 

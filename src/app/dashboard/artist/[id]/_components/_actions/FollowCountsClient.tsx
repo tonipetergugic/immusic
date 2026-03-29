@@ -60,7 +60,7 @@ export default function FollowCountsClient({
       .eq("follower_id", uid);
 
     if (error) {
-      console.log("refreshViewerFollowingIds error", error);
+      console.error("refreshViewerFollowingIds error:", error);
       setViewerFollowingIds(new Set());
       return;
     }
@@ -112,7 +112,7 @@ export default function FollowCountsClient({
         if (error) throw error;
       }
     } catch (err) {
-      console.log("toggleFollow error", err);
+      console.error("toggleFollow error:", err);
       // rollback
       setViewerFollowingIds(prev);
       setLocalFollowingCount(prevFollowingCountSnapshot);
@@ -182,7 +182,7 @@ export default function FollowCountsClient({
         setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
       }
     } catch (err) {
-      console.log("openFollowList error", err);
+      console.error("openFollowList error:", err);
       setModalProfiles([]);
     } finally {
       setModalLoading(false);

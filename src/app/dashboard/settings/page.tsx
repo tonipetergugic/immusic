@@ -6,6 +6,12 @@ import BackLink from "@/components/BackLink";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateHideExplicitTracks } from "@/app/(topbar)/profile/actions";
 
+function showNotice(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("immusic:notice", { detail: { message } })
+  );
+}
+
 export default function SettingsPage() {
   const [hideExplicitTracks, setHideExplicitTracks] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
@@ -37,7 +43,7 @@ export default function SettingsPage() {
           setHideExplicitTracks(!!profile?.hide_explicit_tracks);
         }
       } catch (error) {
-        console.log("loadPreferences error", error);
+        console.error("loadPreferences error:", error);
       } finally {
         if (isMounted) setPreferencesLoaded(true);
       }
@@ -59,9 +65,9 @@ export default function SettingsPage() {
     try {
       await updateHideExplicitTracks(nextValue);
     } catch (error) {
-      console.log("updateHideExplicitTracks error", error);
+      console.error("updateHideExplicitTracks error:", error);
       setHideExplicitTracks(previousValue);
-      alert("Failed to update explicit content preference.");
+      showNotice("Failed to update explicit content preference.");
     } finally {
       setSavingExplicitPreference(false);
     }
