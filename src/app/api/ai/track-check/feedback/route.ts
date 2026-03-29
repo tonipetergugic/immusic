@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { writeFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/payload";
-import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 
 export const dynamic = "force-dynamic";
 
@@ -226,11 +225,8 @@ export async function GET(request: Request) {
         });
         didRefresh = true;
       }
-    } catch (e) {
+    } catch {
       // best-effort: never break API response
-      if (AI_DEBUG) {
-        console.log("[AI-CHECK][feedback] best-effort refresh failed", { queueId, err: String(e) });
-      }
     }
   }
 

@@ -1,5 +1,4 @@
 import { asAdminClient } from "@/lib/ai/track-check/admin";
-import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 import type { TrackCheckDecision } from "@/lib/ai/track-check/types";
 import { buildFeedbackPayloadV2Mvp, type FeedbackPayloadV2 } from "@/lib/ai/feedbackPayloadV2";
 
@@ -25,11 +24,6 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
 
   const queueAudioHash = queueRow?.audio_hash ?? null;
   if (queueErr || !queueAudioHash) {
-    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] abort: queue hash missing", {
-      queueId,
-      queueErr: queueErr ? String((queueErr as any).message ?? queueErr) : null,
-      queueAudioHash,
-    });
     return;
   }
 
@@ -91,13 +85,6 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
     .maybeSingle();
 
   if (mErr || !mRow) {
-    if (AI_DEBUG) console.log("[PAYLOAD DEBUG] abort: private metrics missing", {
-      queueId,
-      userId,
-      queueAudioHash,
-      mErr: mErr ? String((mErr as any).message ?? mErr) : null,
-      found: Boolean(mRow),
-    });
     return;
   }
 

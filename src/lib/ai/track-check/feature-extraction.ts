@@ -15,7 +15,6 @@ import {
   type TransientPunchMetrics,
 } from "@/lib/audio/ingestTools";
 import { ffmpegDetectShortTermLufsTimeline } from "@/lib/audio/ingest/ffmpeg-stderr-analysis";
-import { AI_DEBUG } from "@/lib/ai/track-check/debug";
 
 type ExtractOk = {
   ok: true;
@@ -262,21 +261,6 @@ export async function extractPrivateMetricsFromTmpWav(params: {
 
     truePeakDbEffective =
       Number.isFinite(maxOverDbTp) ? Math.max(truePeakDb, maxOverDbTp) : truePeakDb;
-
-    if (AI_DEBUG) {
-      console.log("[AI-CHECK] LUFS:", integratedLufs);
-      console.log("[AI-CHECK] TruePeak:", truePeakDb);
-      console.log("[AI-CHECK] LRA (LU):", lraLu);
-
-      console.log("[AI-CHECK] RMS dBFS:", rmsDbfs);
-      console.log("[AI-CHECK] Crest dB:", crestFactorDb);
-
-      console.log("[AI-CHECK] PhaseCorr:", phaseCorrelation);
-      console.log("[AI-CHECK] Mid RMS dBFS:", midRmsDbfs);
-      console.log("[AI-CHECK] Side RMS dBFS:", sideRmsDbfs);
-      console.log("[AI-CHECK] Mid/Side Energy Ratio:", midSideEnergyRatio);
-      console.log("[AI-CHECK] Stereo Width Index:", stereoWidthIndex);
-    }
 
     return {
       ok: true,

@@ -761,15 +761,9 @@ export async function runTrackCheckWorker(params: {
   const queueId = pendingItem.id as string;
 
   // --- PERF BASELINE (console only) ---
-  const timings: Record<string, number> = {};
   const tTotal = nowNs();
-  const PERF_ON = process.env.AI_CHECK_TIMING === "1";
 
-  function logStage(stage: string, ms: number) {
-    timings[stage] = ms;
-    if (!PERF_ON) return;
-    console.log(`[AI-CHECK] queue=${queueId} stage=${stage} ms=${ms.toFixed(1)}`);
-  }
+  function logStage(_stage: string, _ms: number) {}
   // --- PERF BASELINE (console only) ---
 
   let tmpWavPath: string | null = null;
@@ -849,11 +843,7 @@ export async function runTrackCheckWorker(params: {
     });
   } finally {
     try {
-      const totalMs = elapsedMs(tTotal);
-      logStage("total", totalMs);
-      if (PERF_ON) {
-        console.log(`[AI-CHECK] queue=${queueId} timings=${JSON.stringify(timings)}`);
-      }
+      logStage("total", elapsedMs(tTotal));
     } catch {}
 
     try {
