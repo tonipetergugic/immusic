@@ -3,18 +3,42 @@ import { getHomeModules } from "@/lib/supabase/getHomeModules";
 import { getHomeReleases, getLatestHomeReleaseIds } from "@/lib/supabase/getHomeReleases";
 import { getHomePlaylists, getLatestHomePlaylistIds } from "@/lib/supabase/getHomePlaylists";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { HomeItem, HomeModule } from "./_types/dashboardHome.types";
+
+type PerformanceCandidateRow = {
+  release_id: string | null;
+  score_v1: number | null;
+  exposure_completed_at: string | null;
+  track_id: string | null;
+};
+
+type ReleaseTrackStatusRow = {
+  release_id: string | null;
+  tracks:
+    | { status: string | null }
+    | { status: string | null }[]
+    | null;
+};
+
+type PerformancePlaylistRow = {
+  playlist_id: string | null;
+};
 
 export default async function DashboardPage() {
-  const { modules, itemsByModuleId } = await getHomeModules();
+  const { modules: rawModules, itemsByModuleId } = await getHomeModules();
 
-  const obj: Record<string, any[]> = {};
-  for (const [k, v] of itemsByModuleId.entries()) obj[k] = v;
+  const modules = rawModules as HomeModule[];
 
-  const releaseModule = modules.find((m: any) => m.module_type === "release") ?? null;
+  const obj: Record<string, HomeItem[]> = {};
+  for (const [k, v] of itemsByModuleId.entries()) {
+    obj[k] = v as HomeItem[];
+  }
+
+  const releaseModule = modules.find((m) => m.module_type === "release") ?? null;
   const releaseItems = releaseModule ? (obj[releaseModule.id] ?? []) : [];
 
   const performanceReleaseModule =
-    modules.find((m: any) => m.module_type === "performance_release") ?? null;
+    modules.find((m) => m.module_type === "performance_release") ?? null;
 
   const performanceReleaseItems = performanceReleaseModule
     ? (obj[performanceReleaseModule.id] ?? [])
@@ -35,21 +59,23 @@ export default async function DashboardPage() {
     );
   }
 
+  const performanceCandidateRows = (perfRelRows ?? []) as PerformanceCandidateRow[];
+
   const candidatePerformanceReleaseIds = Array.from(
     new Set(
-      (perfRelRows ?? [])
-        .map((r: any) => r.release_id)
-        .filter(Boolean)
+      performanceCandidateRows
+        .map((r) => r.release_id)
+        .filter((releaseId): releaseId is string => Boolean(releaseId))
     )
   );
 
   const highlightedPerformanceReleaseIds = Array.from(
     new Set(
       performanceReleaseItems
-        .filter((it: any) => it.item_type === "release")
-        .sort((a: any, b: any) => a.position - b.position)
-        .map((it: any) => it.item_id)
-        .filter(Boolean)
+        .filter((it) => it.item_type === "release")
+        .sort((a, b) => a.position - b.position)
+        .map((it) => it.item_id)
+        .filter((id): id is string => Boolean(id))
     )
   );
 
@@ -71,9 +97,11 @@ export default async function DashboardPage() {
     );
   }
 
+  const typedReleaseTrackRows = (releaseTrackRows ?? []) as ReleaseTrackStatusRow[];
+
   const trackStatusesByReleaseId: Record<string, string[]> = {};
 
-  for (const row of (releaseTrackRows ?? []) as any[]) {
+  for (const row of typedReleaseTrackRows) {
     const releaseId = typeof row.release_id === "string" ? row.release_id : null;
     const trackRel = Array.isArray(row.tracks) ? row.tracks[0] : row.tracks;
     const status = typeof trackRel?.status === "string" ? trackRel.status : null;
@@ -101,10 +129,10 @@ export default async function DashboardPage() {
 
   const highlightedReleaseId =
     releaseItems
-      .filter((it: any) => it.item_type === "release")
-      .sort((a: any, b: any) => a.position - b.position)
-      .map((it: any) => it.item_id)
-      .find((id: any) => id && !performanceReleaseIdSet.has(id)) ?? null;
+      .filter((it) => it.item_type === "release")
+      .sort((a, b) => a.position - b.position)
+      .map((it) => it.item_id)
+      .find((id): id is string => Boolean(id) && !performanceReleaseIdSet.has(id)) ?? null;
 
   const autoReleaseLimit = Math.max(0, 10 - (highlightedReleaseId ? 1 : 0));
   const autoReleaseIds =
@@ -139,15 +167,15 @@ export default async function DashboardPage() {
   const allReleaseIds = Array.from(new Set([...releaseIds, ...performanceReleaseIds]));
   const releasesById = await getHomeReleases(allReleaseIds);
 
-  const playlistModule = modules.find((m: any) => m.module_type === "playlist") ?? null;
+  const playlistModule = modules.find((m) => m.module_type === "playlist") ?? null;
   const playlistItems = playlistModule ? (obj[playlistModule.id] ?? []) : [];
 
   const highlightedPlaylistId =
     playlistItems
-      .filter((it: any) => it.item_type === "playlist")
-      .sort((a: any, b: any) => a.position - b.position)
-      .map((it: any) => it.item_id)
-      .find(Boolean) ?? null;
+      .filter((it) => it.item_type === "playlist")
+      .sort((a, b) => a.position - b.position)
+      .map((it) => it.item_id)
+      .find((id): id is string => Boolean(id)) ?? null;
 
   const playlistAutoLimit = Math.max(0, 10 - (highlightedPlaylistId ? 1 : 0));
   const autoPlaylistIds =
@@ -164,7 +192,7 @@ export default async function DashboardPage() {
   ];
 
   const performancePlaylistModule =
-    modules.find((m: any) => m.module_type === "performance_playlist") ?? null;
+    modules.find((m) => m.module_type === "performance_playlist") ?? null;
 
   const performancePlaylistItems = performancePlaylistModule
     ? (obj[performancePlaylistModule.id] ?? [])
@@ -172,10 +200,10 @@ export default async function DashboardPage() {
 
   const highlightedPerformancePlaylistId =
     performancePlaylistItems
-      .filter((it: any) => it.item_type === "playlist")
-      .sort((a: any, b: any) => a.position - b.position)
-      .map((it: any) => it.item_id)
-      .find(Boolean) ?? null;
+      .filter((it) => it.item_type === "playlist")
+      .sort((a, b) => a.position - b.position)
+      .map((it) => it.item_id)
+      .find((id): id is string => Boolean(id)) ?? null;
 
   const performancePlaylistAutoLimit = Math.max(
     0,
@@ -197,11 +225,16 @@ export default async function DashboardPage() {
     );
   }
 
+  const typedPerformancePlaylistRows =
+    (performancePlaylistRows ?? []) as PerformancePlaylistRow[];
+
   const autoPerformancePlaylistIds = Array.from(
     new Set(
-      (performancePlaylistRows ?? [])
-        .map((r: any) => r.playlist_id)
-        .filter((id: any) => Boolean(id) && id !== highlightedPerformancePlaylistId)
+      typedPerformancePlaylistRows
+        .map((r) => r.playlist_id)
+        .filter(
+          (id): id is string => Boolean(id) && id !== highlightedPerformancePlaylistId
+        )
     )
   ).slice(0, performancePlaylistAutoLimit);
 
@@ -218,7 +251,7 @@ export default async function DashboardPage() {
   const allPlaylistIds = Array.from(new Set([...devPlaylistIds, ...performancePlaylistIds]));
   const playlistsById = await getHomePlaylists(allPlaylistIds);
 
-  const devPlaylistIdsFiltered = devPlaylistIds.filter((id) => !!(playlistsById as any)?.[id]);
+  const devPlaylistIdsFiltered = devPlaylistIds.filter((id) => Boolean(playlistsById[id]));
 
   return (
     <DashboardHomeClient

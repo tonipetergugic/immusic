@@ -1,11 +1,54 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PerformanceDiscoveryItem } from "@/lib/discovery/fetchPerformanceDiscovery.client";
+
+type TrackMetaRow = {
+  id: string;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  audio_path: string | null;
+  version: string | null;
+  is_explicit: boolean | null;
+};
+
+type ProfileRow = {
+  id: string;
+  display_name: string | null;
+};
+
+type LifetimeRow = {
+  track_id: string;
+  streams_lifetime: number | null;
+};
+
+type ReleaseTrackAggregateRow = {
+  id: string;
+  track_id: string;
+  release_id: string;
+  tracks:
+    | {
+        rating_avg: number | null;
+        rating_count: number | null;
+      }
+    | {
+        rating_avg: number | null;
+        rating_count: number | null;
+      }[]
+    | null;
+};
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
 
 type Params = {
   discoveryMode: "development" | "performance";
-  supabase: any;
-  fetchPerformanceDiscovery: (limit: number) => Promise<any[]>;
+  supabase: SupabaseClient;
+  fetchPerformanceDiscovery: (limit: number) => Promise<PerformanceDiscoveryItem[]>;
 };
 
 export function usePerformanceDiscovery({
@@ -13,7 +56,7 @@ export function usePerformanceDiscovery({
   supabase,
   fetchPerformanceDiscovery,
 }: Params) {
-  const [performanceItems, setPerformanceItems] = useState<any[]>([]);
+  const [performanceItems, setPerformanceItems] = useState<PerformanceDiscoveryItem[]>([]);
   const [performanceLoading, setPerformanceLoading] = useState(false);
   const [performanceError, setPerformanceError] = useState<string | null>(null);
 
@@ -43,7 +86,7 @@ export function usePerformanceDiscovery({
     >
   >({});
 
-  const perfCacheRef = useRef<any[] | null>(null);
+  const perfCacheRef = useRef<PerformanceDiscoveryItem[] | null>(null);
 
   useEffect(() => {
     if (discoveryMode !== "performance") return;
@@ -72,9 +115,29 @@ export function usePerformanceDiscovery({
         if (!cancelled) setPerformanceItems(items);
 
         try {
-          const artistIds = Array.from(new Set((items ?? []).map((x: any) => x.artist_id).filter(Boolean))) as string[];
-          const trackIds = Array.from(new Set((items ?? []).map((x: any) => x.track_id).filter(Boolean))) as string[];
-          const releaseIds = Array.from(new Set((items ?? []).map((x: any) => x.release_id).filter(Boolean))) as string[];
+          const artistIds = Array.from(
+            new Set(
+              (items ?? [])
+                .map((x) => x.artist_id)
+                .filter((id): id is string => Boolean(id))
+            )
+          );
+
+          const trackIds = Array.from(
+            new Set(
+              (items ?? [])
+                .map((x) => x.track_id)
+                .filter((id): id is string => Boolean(id))
+            )
+          );
+
+          const releaseIds = Array.from(
+            new Set(
+              (items ?? [])
+                .map((x) => x.release_id)
+                .filter((id): id is string => Boolean(id))
+            )
+          );
 
           // D) Track meta (bpm/key/genre)
           if (trackIds.length > 0) {
@@ -95,7 +158,7 @@ export function usePerformanceDiscovery({
                   is_explicit: boolean | null;
                 }
               > = {};
-              for (const t of tmeta as any[]) {
+              for (const t of (tmeta ?? []) as TrackMetaRow[]) {
                 if (!t?.id) continue;
                 m[t.id] = {
                   bpm: t.bpm ?? null,
@@ -119,7 +182,7 @@ export function usePerformanceDiscovery({
 
             if (!profErr && profs) {
               const map: Record<string, string> = {};
-              for (const r of profs as any[]) {
+              for (const r of (profs ?? []) as ProfileRow[]) {
                 if (r?.id) map[r.id] = r.display_name ?? "Unknown Artist";
               }
               if (!cancelled) setPerfArtistMap(map);
@@ -136,7 +199,7 @@ export function usePerformanceDiscovery({
               .in("track_id", trackIds);
 
             if (!lifetimeErr && lifetimeRows) {
-              for (const row of lifetimeRows as any[]) {
+              for (const row of (lifetimeRows ?? []) as LifetimeRow[]) {
                 if (!row?.track_id) continue;
                 lifetimeStreamsByTrackId.set(
                   String(row.track_id),
@@ -158,12 +221,17 @@ export function usePerformanceDiscovery({
                 string,
                 { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }
               > = {};
-              for (const rt of rts as any[]) {
+              for (const rt of (rts ?? []) as ReleaseTrackAggregateRow[]) {
+                const ratingSource = Array.isArray(rt.tracks)
+                  ? (rt.tracks[0] ?? null)
+                  : (rt.tracks ?? null);
+
                 const key = `${rt.release_id}:${rt.track_id}`;
+
                 map[key] = {
                   release_track_id: rt.id,
-                  rating_avg: rt.tracks?.rating_avg ?? null,
-                  rating_count: rt.tracks?.rating_count ?? 0,
+                  rating_avg: ratingSource?.rating_avg ?? null,
+                  rating_count: ratingSource?.rating_count ?? 0,
                   stream_count: lifetimeStreamsByTrackId.get(String(rt.track_id)) ?? 0,
                 };
               }
@@ -173,8 +241,10 @@ export function usePerformanceDiscovery({
         } catch (e) {
           // ignore (UI fallback)
         }
-      } catch (err: any) {
-        if (!cancelled) setPerformanceError(err?.message ?? "Failed to load performance candidates");
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setPerformanceError(getErrorMessage(err, "Failed to load performance candidates"));
+        }
       } finally {
         if (!cancelled) setPerformanceLoading(false);
       }

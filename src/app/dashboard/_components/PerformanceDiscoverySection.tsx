@@ -9,6 +9,21 @@ import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
 import ExplicitBadge from "@/components/ExplicitBadge";
 import AppSelect from "@/components/AppSelect";
 
+type PerformanceItemLike = unknown;
+
+type PerfTrackMetaMap = Record<
+  string,
+  {
+    genre: string | null;
+  }
+>;
+
+type PerfQueueTrack = PlayerTrack & {
+  release_id?: string | null;
+  release_track_id?: string | null;
+  stream_count?: number | null;
+};
+
 type Props = {
   performanceGenre: string;
   setPerformanceGenre: (value: string) => void;
@@ -16,10 +31,10 @@ type Props = {
 
   performanceLoading: boolean;
   performanceError: string | null;
-  performanceItems: any[];
+  performanceItems: PerformanceItemLike[];
 
-  perfQueue: PlayerTrack[];
-  perfTrackMetaMap: any;
+  perfQueue: PerfQueueTrack[];
+  perfTrackMetaMap: PerfTrackMetaMap;
 
   routerPush: (href: string) => void;
 };
@@ -84,34 +99,38 @@ export default function PerformanceDiscoverySection({
       ) : performanceError ? (
         <p className="text-red-400 text-sm">{performanceError}</p>
       ) : (perfQueue ?? []).length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-[#111112] p-6">
-          <h3 className="text-sm font-semibold text-white/80">
-            {(performanceItems ?? []).length === 0
-              ? "No performance tracks yet"
-              : "No tracks match this genre"}
-          </h3>
-          <p className="mt-1 text-sm text-white/50">
-            {(performanceItems ?? []).length === 0
-              ? "Tracks appear here once they have verified listener activity and ratings."
-              : "Try another genre or switch back to all genres."}
-          </p>
-        </div>
+        (performanceItems ?? []).length === 0 ? (
+          <div className="pt-3">
+            <h3 className="text-sm font-semibold text-white/80">
+              No performance tracks yet
+            </h3>
+          </div>
+        ) : (
+          <div className="pt-3">
+            <h3 className="text-sm font-semibold text-white/80">
+              No tracks match this genre
+            </h3>
+            <p className="mt-1 text-sm text-white/50">
+              Try another genre or switch back to all genres.
+            </p>
+          </div>
+        )
       ) : (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
           <div className="min-w-0 space-y-2">
-            {perfQueue.map((rowTrack: any, idx: number) => {
+            {perfQueue.map((rowTrack, idx) => {
               const trackId = rowTrack.id;
               const releaseId = rowTrack.release_id ?? null;
-              const artistName =
-                (rowTrack as any)?.profiles?.display_name ?? "Unknown Artist";
+              const artistName = rowTrack.profiles?.display_name ?? "Unknown Artist";
               const coverUrl = rowTrack.cover_url ?? null;
+              const artists = rowTrack.artists ?? [];
 
               return (
                 <TrackRowBase
                   key={trackId ?? `${idx}`}
-                  track={rowTrack as any}
+                  track={rowTrack}
                   index={idx}
-                  tracks={perfQueue as any}
+                  tracks={perfQueue}
                   coverUrl={coverUrl}
                   coverSize="md"
                   leadingSlot={idx + 1}
@@ -131,43 +150,38 @@ export default function PerformanceDiscoverySection({
                           hover:text-[#00E0B0] transition-colors
                           focus:outline-none
                         "
-                        title={formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
+                        title={formatTrackTitle(rowTrack.title, rowTrack.version)}
                       >
-                        {formatTrackTitle(rowTrack.title, (rowTrack as any).version)}
+                        {formatTrackTitle(rowTrack.title, rowTrack.version)}
                       </button>
 
-                      {(rowTrack as any).is_explicit ? <ExplicitBadge /> : null}
+                      {rowTrack.is_explicit ? <ExplicitBadge /> : null}
                     </div>
                   }
                   subtitleSlot={
-                    Array.isArray((rowTrack as any)?.artists) &&
-                    (rowTrack as any).artists.length > 0 ? (
+                    artists.length > 0 ? (
                       <div className="mt-1 text-left text-xs text-white/60 truncate">
-                        {(rowTrack as any).artists.map(
-                          (a: any, idx2: number, arr: any[]) => (
-                            <span key={a.id}>
-                              <button
-                                type="button"
-                                onPointerDown={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }}
-                                onClick={() =>
-                                  routerPush(`/dashboard/artist/${String(a.id)}`)
-                                }
-                                className="
-                                  hover:text-[#00FFC6] hover:underline underline-offset-2
-                                  transition-colors
-                                  focus:outline-none
-                                "
-                                title={String(a.display_name)}
-                              >
-                                {String(a.display_name)}
-                              </button>
-                              {idx2 < arr.length - 1 ? ", " : null}
-                            </span>
-                          )
-                        )}
+                        {artists.map((artistItem, idx2) => (
+                          <span key={artistItem.id}>
+                            <button
+                              type="button"
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onClick={() => routerPush(`/dashboard/artist/${artistItem.id}`)}
+                              className="
+                                hover:text-[#00FFC6] hover:underline underline-offset-2
+                                transition-colors
+                                focus:outline-none
+                              "
+                              title={artistItem.display_name}
+                            >
+                              {artistItem.display_name}
+                            </button>
+                            {idx2 < artists.length - 1 ? ", " : null}
+                          </span>
+                        ))}
                       </div>
                     ) : rowTrack.artist_id ? (
                       <button
@@ -176,9 +190,7 @@ export default function PerformanceDiscoverySection({
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        onClick={() =>
-                          routerPush(`/dashboard/artist/${rowTrack.artist_id}`)
-                        }
+                        onClick={() => routerPush(`/dashboard/artist/${rowTrack.artist_id}`)}
                         className="
                           mt-1 text-left text-xs text-white/60 truncate
                           hover:text-[#00FFC6] hover:underline underline-offset-2
@@ -196,14 +208,14 @@ export default function PerformanceDiscoverySection({
                     )
                   }
                   metaSlot={
-                    (rowTrack as any).release_track_id ? (
+                    rowTrack.release_track_id ? (
                       <TrackRatingInline
                         readOnly={true}
-                        releaseTrackId={(rowTrack as any).release_track_id}
-                        trackId={(rowTrack as any).id}
-                        initialAvg={(rowTrack as any).rating_avg}
-                        initialCount={(rowTrack as any).rating_count}
-                        initialStreams={(rowTrack as any).stream_count}
+                        releaseTrackId={rowTrack.release_track_id}
+                        trackId={rowTrack.id}
+                        initialAvg={rowTrack.rating_avg}
+                        initialCount={rowTrack.rating_count ?? undefined}
+                        initialStreams={rowTrack.stream_count ?? 0}
                         initialMyStars={null}
                       />
                     ) : (
@@ -212,7 +224,7 @@ export default function PerformanceDiscoverySection({
                   }
                   actionsSlot={
                     <TrackOptionsTrigger
-                      track={rowTrack as any}
+                      track={rowTrack}
                       showGoToArtist={true}
                       showGoToRelease={true}
                       releaseId={releaseId ?? undefined}
@@ -220,17 +232,17 @@ export default function PerformanceDiscoverySection({
                   }
                   bpmSlot={
                     <span className="text-white/50 text-sm tabular-nums">
-                      {(rowTrack as any).bpm ?? "—"}
+                      {rowTrack.bpm ?? "—"}
                     </span>
                   }
                   keySlot={
                     <span className="text-white/50 text-sm">
-                      {(rowTrack as any).key ?? "—"}
+                      {rowTrack.key ?? "—"}
                     </span>
                   }
                   genreSlot={
                     <span className="text-white/50 text-sm truncate">
-                      {(perfTrackMetaMap as any)?.[trackId]?.genre ?? "—"}
+                      {perfTrackMetaMap?.[trackId]?.genre ?? "—"}
                     </span>
                   }
                 />

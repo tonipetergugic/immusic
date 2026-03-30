@@ -1,15 +1,36 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, type MutableRefObject } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Artist = { id: string; display_name: string };
 
+type DiscoverySourceItem = {
+  track_id?: string | null;
+};
+
+type CollaboratorRow = {
+  track_id: string | null;
+  role: string | null;
+  position: number | null;
+  profiles:
+    | {
+        id: string | null;
+        display_name: string | null;
+      }
+    | {
+        id: string | null;
+        display_name: string | null;
+      }[]
+    | null;
+};
+
 type Params = {
   discoveryMode: "development" | "performance";
-  devItems: any[];
-  performanceItems: any[];
-  supabase: any;
-  lastArtistsSigRef: React.MutableRefObject<string>;
+  devItems: DiscoverySourceItem[];
+  performanceItems: DiscoverySourceItem[];
+  supabase: SupabaseClient;
+  lastArtistsSigRef: MutableRefObject<string>;
 };
 
 export function useTrackArtistsMap({
@@ -22,8 +43,16 @@ export function useTrackArtistsMap({
   const [trackArtistsMap, setTrackArtistsMap] = useState<Record<string, Artist[]>>({});
 
   useEffect(() => {
-    const sourceItems = discoveryMode === "performance" ? (performanceItems ?? []) : (devItems ?? []);
-    const trackIds = Array.from(new Set(sourceItems.map((x: any) => x?.track_id).filter(Boolean))) as string[];
+    const sourceItems =
+      discoveryMode === "performance" ? performanceItems ?? [] : devItems ?? [];
+
+    const trackIds = Array.from(
+      new Set(
+        sourceItems
+          .map((item) => item.track_id)
+          .filter((trackId): trackId is string => Boolean(trackId))
+      )
+    );
     if (trackIds.length === 0) return;
 
     const sig = `${discoveryMode}:${[...trackIds].sort().join("|")}`;
@@ -55,17 +84,20 @@ export function useTrackArtistsMap({
 
         const map: Record<string, Artist[]> = {};
 
-        for (const row of data as any[]) {
-          const trackId = row?.track_id;
-          const p = row?.profiles;
-          if (!trackId || !p?.id) continue;
+        for (const row of (data ?? []) as CollaboratorRow[]) {
+          const trackId = row.track_id;
+          const profile = Array.isArray(row.profiles)
+            ? (row.profiles[0] ?? null)
+            : (row.profiles ?? null);
+
+          if (!trackId || !profile?.id) continue;
 
           if (!map[trackId]) map[trackId] = [];
 
-          if (!map[trackId].some((a) => a.id === String(p.id))) {
+          if (!map[trackId].some((artist) => artist.id === String(profile.id))) {
             map[trackId].push({
-              id: String(p.id),
-              display_name: String(p.display_name ?? "Unknown Artist"),
+              id: String(profile.id),
+              display_name: String(profile.display_name ?? "Unknown Artist"),
             });
           }
         }

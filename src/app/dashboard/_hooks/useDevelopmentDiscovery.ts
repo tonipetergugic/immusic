@@ -1,14 +1,30 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, type MutableRefObject } from "react";
+import type {
+  DevelopmentDiscoveryItem,
+  DevelopmentDiscoveryResponse,
+} from "@/lib/discovery/fetchDevelopmentDiscovery.client";
 
-export type DevelopmentDiscoveryItem = any;
+type ErrorResponse = {
+  ok: false;
+  error: string;
+  details?: string;
+};
+
+function getErrorMessage(
+  err: unknown,
+  fallback: string
+): string {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
 
 type Params = {
   discoveryMode: "development" | "performance";
   devGenre: string;
-  devCacheRef: React.MutableRefObject<Record<string, DevelopmentDiscoveryItem[]>>;
-  devPromiseRef: React.MutableRefObject<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>;
+  devCacheRef: MutableRefObject<Record<string, DevelopmentDiscoveryItem[]>>;
+  devPromiseRef: MutableRefObject<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>;
 };
 
 export function useDevelopmentDiscovery({ discoveryMode, devGenre, devCacheRef, devPromiseRef }: Params) {
@@ -41,8 +57,10 @@ export function useDevelopmentDiscovery({ discoveryMode, devGenre, devCacheRef, 
             setDevItems(items);
           }
         })
-        .catch((err: any) => {
-          if (!cancelled) setDevError(err?.message ?? "Failed to load development tracks");
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setDevError(getErrorMessage(err, "Failed to load development tracks"));
+          }
         })
         .finally(() => {
           if (!cancelled) setDevLoading(false);
@@ -68,17 +86,18 @@ export function useDevelopmentDiscovery({ discoveryMode, devGenre, devCacheRef, 
             credentials: "include",
           });
 
-          const data = await r.json();
+          const data = (await r.json()) as DevelopmentDiscoveryResponse | ErrorResponse;
 
-          if (!r.ok || !data?.ok) {
+          if (!r.ok || !("ok" in data) || data.ok === false) {
+            const err = data as ErrorResponse;
             throw new Error(
-              data?.details
-                ? `${data?.error}: ${data?.details}`
-                : data?.error ?? "dev_discovery_error"
+              err.details
+                ? `${err.error}: ${err.details}`
+                : err.error ?? "dev_discovery_error"
             );
           }
 
-          return (data.items ?? []) as DevelopmentDiscoveryItem[];
+          return data.items ?? [];
         })();
 
         devPromiseRef.current[cacheKey] = p;
@@ -90,8 +109,10 @@ export function useDevelopmentDiscovery({ discoveryMode, devGenre, devCacheRef, 
         if (!cancelled) {
           setDevItems(nextItems);
         }
-      } catch (err: any) {
-        if (!cancelled) setDevError(err?.message ?? "Failed to load development tracks");
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setDevError(getErrorMessage(err, "Failed to load development tracks"));
+        }
       } finally {
         devPromiseRef.current[cacheKey] = null;
         if (!cancelled) setDevLoading(false);

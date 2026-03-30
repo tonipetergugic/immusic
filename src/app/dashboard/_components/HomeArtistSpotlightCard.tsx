@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { Instagram, Facebook, Twitter, Music2 } from "lucide-react";
+import {
+  Instagram,
+  Facebook,
+  Twitter,
+  Music2,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -24,6 +30,7 @@ type SpotlightProfile = {
 type SocialLink = {
   label: string;
   href: string;
+  icon: LucideIcon;
 };
 
 export default function HomeArtistSpotlightCard({
@@ -82,10 +89,18 @@ export default function HomeArtistSpotlightCard({
   const socialLinks = useMemo(() => {
     const items: SocialLink[] = [];
 
-    if (profile?.instagram) items.push({ label: "Instagram", href: profile.instagram });
-    if (profile?.tiktok) items.push({ label: "TikTok", href: profile.tiktok });
-    if (profile?.facebook) items.push({ label: "Facebook", href: profile.facebook });
-    if (profile?.x) items.push({ label: "X", href: profile.x });
+    if (profile?.instagram) {
+      items.push({ label: "Instagram", href: profile.instagram, icon: Instagram });
+    }
+    if (profile?.tiktok) {
+      items.push({ label: "TikTok", href: profile.tiktok, icon: Music2 });
+    }
+    if (profile?.facebook) {
+      items.push({ label: "Facebook", href: profile.facebook, icon: Facebook });
+    }
+    if (profile?.x) {
+      items.push({ label: "X", href: profile.x, icon: Twitter });
+    }
 
     return items;
   }, [profile?.instagram, profile?.tiktok, profile?.facebook, profile?.x]);
@@ -304,57 +319,23 @@ export default function HomeArtistSpotlightCard({
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-4">
-                      {profile?.instagram ? (
-                        <a
-                          href={profile.instagram}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          aria-label="Instagram"
-                          className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
-                        >
-                          <Instagram size={18} />
-                          Instagram
-                        </a>
-                      ) : null}
+                      {socialLinks.map((social) => {
+                        const Icon = social.icon;
 
-                      {profile?.tiktok ? (
-                        <a
-                          href={profile.tiktok}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          aria-label="TikTok"
-                          className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
-                        >
-                          <Music2 size={18} />
-                          TikTok
-                        </a>
-                      ) : null}
-
-                      {profile?.facebook ? (
-                        <a
-                          href={profile.facebook}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          aria-label="Facebook"
-                          className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
-                        >
-                          <Facebook size={18} />
-                          Facebook
-                        </a>
-                      ) : null}
-
-                      {profile?.x ? (
-                        <a
-                          href={profile.x}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          aria-label="X"
-                          className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
-                        >
-                          <Twitter size={18} />
-                          X
-                        </a>
-                      ) : null}
+                        return (
+                          <a
+                            key={social.label}
+                            href={social.href}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            aria-label={social.label}
+                            className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
+                          >
+                            <Icon size={18} />
+                            {social.label}
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 </>
