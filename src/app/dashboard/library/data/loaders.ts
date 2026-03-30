@@ -12,6 +12,14 @@ type LibraryPlaylistRow = {
   is_public: boolean;
 };
 
+type LibraryOwnPlaylistRow = {
+  id: string | null;
+};
+
+type LibrarySavedPlaylistRow = {
+  playlist_id: string | null;
+};
+
 export async function loadLibraryV2Playlists({
   supabase,
   userId,
@@ -33,9 +41,18 @@ export async function loadLibraryV2Playlists({
 
   if (savedErr) console.error("LibraryV2: Failed to load saved playlists:", savedErr);
 
-  const playlistIds = Array.from(
-    new Set([...(ownPlaylists ?? []).map((p) => p.id), ...(savedPlaylists ?? []).map((p) => p.playlist_id)])
-  );
+  const ownPlaylistRows: LibraryOwnPlaylistRow[] = ownPlaylists ?? [];
+  const savedPlaylistRows: LibrarySavedPlaylistRow[] = savedPlaylists ?? [];
+
+  const ownPlaylistIds = ownPlaylistRows
+    .map((playlist) => playlist.id)
+    .filter((playlistId): playlistId is string => Boolean(playlistId));
+
+  const savedPlaylistIds = savedPlaylistRows
+    .map((playlist) => playlist.playlist_id)
+    .filter((playlistId): playlistId is string => Boolean(playlistId));
+
+  const playlistIds = Array.from(new Set([...ownPlaylistIds, ...savedPlaylistIds]));
 
   if (playlistIds.length === 0) return [];
 
@@ -50,17 +67,15 @@ export async function loadLibraryV2Playlists({
     return [];
   }
 
-  const normalizedPlaylists: Playlist[] = ((playlistsData ?? []) as LibraryPlaylistRow[]).map(
-    (playlist) => ({
-      ...playlist,
-      cover_url: buildPlaylistCoverUrlServer({
-        supabase,
-        cover_path: playlist.cover_url ?? null,
-      }),
-    })
-  );
+  const playlistRows: LibraryPlaylistRow[] = playlistsData ?? [];
 
-  return normalizedPlaylists;
+  return playlistRows.map((playlist) => ({
+    ...playlist,
+    cover_url: buildPlaylistCoverUrlServer({
+      supabase,
+      cover_path: playlist.cover_url ?? null,
+    }),
+  }));
 }
 
 type LibraryArtistSavedRow = {
@@ -84,9 +99,11 @@ export async function loadLibraryV2Artists({
     return [];
   }
 
+  const artistRows: LibraryArtistSavedRow[] = rows ?? [];
+
   const artistIds = Array.from(
     new Set(
-      ((rows ?? []) as LibraryArtistSavedRow[])
+      artistRows
         .map((row) => row.artist_id)
         .filter((artistId): artistId is string => Boolean(artistId))
     )
@@ -105,6 +122,5 @@ export async function loadLibraryV2Artists({
     return [];
   }
 
-  const normalizedProfiles: Profile[] = profiles ?? [];
-  return normalizedProfiles;
+  return profiles ?? [];
 }
