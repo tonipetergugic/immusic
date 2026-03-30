@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import TrackRowBase from "@/components/TrackRowBase";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
+import LibraryTrackArtists from "@/components/LibraryTrackArtists";
 import type { PlayerTrack } from "@/types/playerTrack";
 
 export type LibraryV2TracksPayload = {
@@ -15,8 +16,14 @@ export type LibraryV2TracksPayload = {
   windowOpenByTrackId: Record<string, boolean | null>;
 };
 
+type LibraryTrack = PlayerTrack & {
+  profiles?: {
+    display_name?: string | null;
+  };
+};
+
 export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) {
-  const [trackData, setTrackData] = useState(payload.tracks);
+  const [trackData, setTrackData] = useState<LibraryTrack[]>(payload.tracks as LibraryTrack[]);
   const releaseTrackIdByTrackId = payload.releaseTrackIdByTrackId;
   const ratingByReleaseTrackId = payload.ratingByReleaseTrackId;
   const myStarsByReleaseTrackId = payload.myStarsByReleaseTrackId;
@@ -26,7 +33,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
   const summary = useMemo(() => {
     const artistCount = new Set(
       trackData
-        .map((track) => String((track as any)?.artist_id ?? ""))
+        .map((track) => String(track.artist_id ?? ""))
         .filter(Boolean)
     ).size;
 
@@ -61,26 +68,11 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                   coverSize="sm"
                   leadingSlot={<span className="text-white/50 text-[11px] tabular-nums">{index + 1}</span>}
                   subtitleSlot={
-                    (track as any)?.artist_id ? (
-                      <button
-                        type="button"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        onClick={() =>
-                          window.location.assign(`/dashboard/artist/${String((track as any).artist_id)}`)
-                        }
-                        className="mt-1 text-left text-xs text-white/60 truncate hover:text-[#00FFC6] hover:underline underline-offset-2 transition-colors cursor-pointer focus:outline-none"
-                        title={String((track as any)?.profiles?.display_name ?? "Unknown Artist")}
-                      >
-                        {(track as any)?.profiles?.display_name ?? "Unknown Artist"}
-                      </button>
-                    ) : (
-                      <div className="mt-1 text-left text-xs text-white/60 truncate">
-                        {(track as any)?.profiles?.display_name ?? "Unknown Artist"}
-                      </div>
-                    )
+                    <LibraryTrackArtists
+                      artists={track.artists}
+                      fallbackArtistId={track.artist_id ?? null}
+                      fallbackDisplayName={track.profiles?.display_name ?? "Unknown Artist"}
+                    />
                   }
                   metaSlot={
                     releaseTrackIdByTrackId[String(track.id)] ? (() => {
@@ -124,7 +116,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                   actionsSlot={
                     <div onClick={(e) => e.stopPropagation()}>
                       <TrackOptionsTrigger
-                        track={track as any}
+                        track={track}
                         onLibraryRemoved={() => {
                           setTrackData((prev) => prev.filter((item) => String(item.id) !== String(track.id)));
                         }}

@@ -210,6 +210,90 @@ export async function loadLibraryV2Artists({
   return (profiles ?? []) as any;
 }
 
+type LibraryTrackProfileRow = {
+  id: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+type LibraryReleaseRow = {
+  id: string | null;
+  cover_path: string | null;
+};
+
+type LibraryReleaseTrackRow = {
+  id: string | null;
+  release_id: string | null;
+  releases: LibraryReleaseRow | LibraryReleaseRow[] | null;
+};
+
+type LibraryTrackSourceRow = {
+  id: string | null;
+  title: string | null;
+  version: string | null;
+  audio_path: string | null;
+  created_at: string | null;
+  artist_id: string | null;
+  status: string | null;
+  is_explicit: boolean | null;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  rating_avg: number | null;
+  rating_count: number | null;
+  profiles: LibraryTrackProfileRow | LibraryTrackProfileRow[] | null;
+  release_tracks: LibraryReleaseTrackRow | LibraryReleaseTrackRow[] | null;
+};
+
+type LibraryTrackSavedRow = {
+  track_id: string | null;
+  created_at: string | null;
+  tracks: LibraryTrackSourceRow | LibraryTrackSourceRow[] | null;
+};
+
+type LibraryTrackNormalized = {
+  id: string;
+  title: string | null;
+  version: string | null;
+  artist_id: string | null;
+  status: string | null;
+  is_explicit: boolean;
+  audio_url: string | null;
+  cover_url: string | null;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  profiles: LibraryTrackProfileRow | LibraryTrackProfileRow[] | null;
+  release_track_id: string | null;
+  release_id: string | null;
+  rating_avg: number | null;
+  rating_count: number;
+  stream_count: number;
+};
+
+type AnalyticsTrackLifetimeRow = {
+  track_id: string | null;
+  streams_lifetime: number | null;
+};
+
+type MyTrackRatingRow = {
+  track_id: string | null;
+  stars: number | null;
+  created_at: string | null;
+};
+
+type TrackListenStateRow = {
+  track_id: string | null;
+  can_rate: boolean | null;
+  listened_seconds: number | null;
+};
+
+type RatingsWindowTrackRow = {
+  track_id: string | null;
+  window_open: boolean | null;
+  in_window: boolean | null;
+};
+
 export async function loadLibraryV2Tracks({
   supabase,
   userId,
@@ -290,74 +374,80 @@ export async function loadLibraryV2Tracks({
   }
 
   const normalizedTracks =
-    (savedRows ?? [])
-      .map((row: any) => {
-        const t = row.tracks;
-        if (!t) return null;
+    ((savedRows ?? []) as LibraryTrackSavedRow[])
+      .map((row): LibraryTrackNormalized | null => {
+        const trackSource = Array.isArray(row.tracks)
+          ? (row.tracks[0] ?? null)
+          : (row.tracks ?? null);
 
-        const rt = Array.isArray(t.release_tracks) ? t.release_tracks[0] ?? null : t.release_tracks ?? null;
-        const release = Array.isArray(rt?.releases) ? rt.releases[0] ?? null : rt?.releases ?? null;
+        if (!trackSource?.id) return null;
 
-        const { data: audio } = supabase.storage.from("tracks").getPublicUrl(String(t.audio_path ?? ""));
+        const releaseTrack = Array.isArray(trackSource.release_tracks)
+          ? (trackSource.release_tracks[0] ?? null)
+          : (trackSource.release_tracks ?? null);
+
+        const release = Array.isArray(releaseTrack?.releases)
+          ? (releaseTrack.releases[0] ?? null)
+          : (releaseTrack?.releases ?? null);
+
+        const { data: audio } = supabase.storage
+          .from("tracks")
+          .getPublicUrl(String(trackSource.audio_path ?? ""));
+
         const audio_url = audio?.publicUrl ?? null;
 
         const cover_url = release?.cover_path
-          ? supabase.storage.from("release_covers").getPublicUrl(release.cover_path).data.publicUrl ?? null
+          ? supabase.storage
+              .from("release_covers")
+              .getPublicUrl(release.cover_path).data.publicUrl ?? null
           : null;
 
-        // Do NOT throw in v2 – keep it resilient.
         return {
-          id: t.id,
-          title: t.title ?? null,
-          version: t.version ?? null,
-          artist_id: t.artist_id ?? null,
-          status: t.status ?? null,
-          is_explicit: t.is_explicit ?? false,
+          id: String(trackSource.id),
+          title: trackSource.title ?? null,
+          version: trackSource.version ?? null,
+          artist_id: trackSource.artist_id ?? null,
+          status: trackSource.status ?? null,
+          is_explicit: trackSource.is_explicit ?? false,
           audio_url,
           cover_url,
-          bpm: t.bpm ?? null,
-          key: t.key ?? null,
-          genre: t.genre ?? null,
-          profiles: t.profiles ?? null,
-          release_track_id: rt?.id ?? null,
-          release_id: rt?.release_id ?? null,
-
-          // rating summary stays track-based; streams are resolved later from analytics_track_lifetime
-          rating_avg: t.rating_avg ?? null,
-          rating_count: t.rating_count ?? 0,
+          bpm: trackSource.bpm ?? null,
+          key: trackSource.key ?? null,
+          genre: trackSource.genre ?? null,
+          profiles: trackSource.profiles ?? null,
+          release_track_id: releaseTrack?.id ? String(releaseTrack.id) : null,
+          release_id: releaseTrack?.release_id ? String(releaseTrack.release_id) : null,
+          rating_avg: trackSource.rating_avg ?? null,
+          rating_count: trackSource.rating_count ?? 0,
           stream_count: 0,
         };
       })
-      .filter(Boolean) ?? [];
+      .filter((track): track is LibraryTrackNormalized => Boolean(track));
 
-  // Ensure unique keys by track.id
-  const unique = Array.from(new Map((normalizedTracks as any[]).map((t) => [String(t.id), t])).values());
+  const unique = Array.from(
+    new Map(normalizedTracks.map((track) => [String(track.id), track])).values()
+  );
 
   const visibleUnique = hideExplicitTracks
-    ? (unique as any[]).filter((t) => !(t as any)?.is_explicit)
-    : (unique as any[]);
+    ? unique.filter((track) => !track.is_explicit)
+    : unique;
 
-  const safeUnique = visibleUnique.filter((t) => {
-    const audioUrl = (t as any)?.audio_url;
-    if (!audioUrl) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("LibraryV2: skipping track with missing audio_url/audio_path", {
-          trackId: (t as any)?.id ?? null,
-          userId,
-        });
+  const safeUnique = visibleUnique.filter(
+    (track): track is LibraryTrackNormalized & { audio_url: string } => {
+      if (!track.audio_url) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("LibraryV2: skipping track with missing audio_url/audio_path", {
+            trackId: track.id ?? null,
+            userId,
+          });
+        }
+        return false;
       }
-      return false;
+      return true;
     }
-    return true;
-  });
-
-  const trackIds = Array.from(
-    new Set(
-      (safeUnique as any[])
-        .map((t) => String((t as any)?.id ?? ""))
-        .filter(Boolean)
-    )
   );
+
+  const trackIds = Array.from(new Set(safeUnique.map((track) => String(track.id)).filter(Boolean)));
 
   let lifetimeStreamsByTrackId = new Map<string, number>();
 
@@ -371,7 +461,7 @@ export async function loadLibraryV2Tracks({
       console.error("LibraryV2: Failed to load analytics_track_lifetime:", lifetimeErr);
     } else {
       lifetimeStreamsByTrackId = new Map(
-        (lifetimeRows ?? []).map((row: any) => [
+        ((lifetimeRows ?? []) as AnalyticsTrackLifetimeRow[]).map((row) => [
           String(row.track_id),
           typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0,
         ])
@@ -382,18 +472,18 @@ export async function loadLibraryV2Tracks({
   const releaseTrackIdByTrackId: Record<string, string> = {};
   const ratingByReleaseTrackId: Record<string, { avg: number | null; count: number; streams: number }> = {};
 
-  for (const t of safeUnique as any[]) {
-    const tid = String(t?.id ?? "");
-    if (!tid) continue;
+  for (const track of safeUnique) {
+    const trackId = String(track.id ?? "");
+    if (!trackId) continue;
 
-    if (t?.release_track_id) {
-      const rid = String(t.release_track_id);
-      releaseTrackIdByTrackId[tid] = rid;
+    if (track.release_track_id) {
+      const releaseTrackId = String(track.release_track_id);
+      releaseTrackIdByTrackId[trackId] = releaseTrackId;
 
-      ratingByReleaseTrackId[rid] = {
-        avg: (t as any).rating_avg ?? null,
-        count: (t as any).rating_count ?? 0,
-        streams: lifetimeStreamsByTrackId.get(tid) ?? 0,
+      ratingByReleaseTrackId[releaseTrackId] = {
+        avg: track.rating_avg ?? null,
+        count: track.rating_count ?? 0,
+        streams: lifetimeStreamsByTrackId.get(trackId) ?? 0,
       };
     }
   }
@@ -411,12 +501,11 @@ export async function loadLibraryV2Tracks({
     if (myErr) {
       console.error("LibraryV2: Failed to load my track_ratings (batch):", myErr);
     } else {
-      for (const r of myRows ?? []) {
-        const tid = String((r as any).track_id ?? "");
-        if (!tid) continue;
-        // first wins due to sort desc
-        if (myStarsByReleaseTrackId[tid] === undefined) {
-          myStarsByReleaseTrackId[tid] = (r as any).stars ?? null;
+      for (const row of (myRows ?? []) as MyTrackRatingRow[]) {
+        const trackId = String(row.track_id ?? "");
+        if (!trackId) continue;
+        if (myStarsByReleaseTrackId[trackId] === undefined) {
+          myStarsByReleaseTrackId[trackId] = row.stars ?? null;
         }
       }
     }
@@ -434,12 +523,13 @@ export async function loadLibraryV2Tracks({
     if (lsErr) {
       console.error("LibraryV2: Failed to load track_listen_state (batch):", lsErr);
     } else {
-      for (const r of lsRows ?? []) {
-        const tid = String((r as any).track_id ?? "");
-        if (!tid) continue;
-        eligibilityByTrackId[tid] = {
-          can_rate: (r as any).can_rate ?? null,
-          listened_seconds: (r as any).listened_seconds ?? null,
+      for (const row of (lsRows ?? []) as TrackListenStateRow[]) {
+        const trackId = String(row.track_id ?? "");
+        if (!trackId) continue;
+
+        eligibilityByTrackId[trackId] = {
+          can_rate: row.can_rate ?? null,
+          listened_seconds: row.listened_seconds ?? null,
         };
       }
     }
@@ -457,18 +547,18 @@ export async function loadLibraryV2Tracks({
     if (winErr) {
       console.error("LibraryV2: Failed to load ratings_window_tracks (batch):", winErr);
     } else {
-      for (const r of winRows ?? []) {
-        const tid = String((r as any).track_id ?? "");
-        if (!tid) continue;
-        const inWindow = Boolean((r as any).in_window);
-        const windowOpen = Boolean((r as any).window_open);
-        // match eligibility API intention: must be in window AND open
-        windowOpenByTrackId[tid] = inWindow && windowOpen;
+      for (const row of (winRows ?? []) as RatingsWindowTrackRow[]) {
+        const trackId = String(row.track_id ?? "");
+        if (!trackId) continue;
+
+        const inWindow = Boolean(row.in_window);
+        const windowOpen = Boolean(row.window_open);
+        windowOpenByTrackId[trackId] = inWindow && windowOpen;
       }
     }
   }
 
-  const tracks = toPlayerTrackList(safeUnique as any);
+  const tracks = toPlayerTrackList(safeUnique);
 
   return {
     tracks,

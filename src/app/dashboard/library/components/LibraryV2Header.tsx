@@ -1,13 +1,5 @@
 import Link from "next/link";
 
-type TabKey = "playlists" | "tracks" | "artists";
-
-const tabs: { key: TabKey; label: string }[] = [
-  { key: "playlists", label: "Playlists" },
-  { key: "tracks", label: "Tracks" },
-  { key: "artists", label: "Artists" },
-];
-
 export function LibraryV2Header({ currentTab }: { currentTab: string }) {
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +49,7 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
               Your <span className="text-[#00FFC6]">Library</span>
             </h1>
             <p className="text-sm text-neutral-400">
-              Collect your favourite playlists, tracks and artists in one place.
+              Collect your favourite playlists, tracks, artists and releases in one place.
             </p>
           </header>
         </div>

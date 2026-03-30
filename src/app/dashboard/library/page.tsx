@@ -69,47 +69,28 @@ export default async function LibraryV2Page(props: Props) {
 
   if (!user) redirect("/login");
 
+  let content: React.ReactNode = null;
+
   // Load ONLY what we need per tab (cost control)
   if (currentTab === "releases") {
     const releases = await loadLibraryV2Releases({ supabase, userId: user.id });
-    return (
-      <div className="w-full space-y-6">
-        <LibraryV2Header currentTab={currentTab} />
-        <LibraryTabs currentTab={currentTab} />
-        <ReleasesSection releases={releases} />
-      </div>
-    );
-  }
-
-  if (currentTab === "playlists") {
+    content = <ReleasesSection releases={releases} />;
+  } else if (currentTab === "playlists") {
     const playlists = await loadLibraryV2Playlists({ supabase, userId: user.id });
-    return (
-      <div className="w-full space-y-6">
-        <LibraryV2Header currentTab={currentTab} />
-        <LibraryTabs currentTab={currentTab} />
-        <PlaylistsSection playlists={playlists} />
-      </div>
-    );
-  }
-
-  if (currentTab === "tracks") {
+    content = <PlaylistsSection playlists={playlists} />;
+  } else if (currentTab === "tracks") {
     const tracksPayload = await loadLibraryV2Tracks({ supabase, userId: user.id });
-    return (
-      <div className="w-full space-y-6">
-        <LibraryV2Header currentTab={currentTab} />
-        <LibraryTabs currentTab={currentTab} />
-        <TracksSection payload={tracksPayload} />
-      </div>
-    );
+    content = <TracksSection payload={tracksPayload} />;
+  } else {
+    const artists = await loadLibraryV2Artists({ supabase, userId: user.id });
+    content = <ArtistsSection artists={artists} />;
   }
 
-  // artists
-  const artists = await loadLibraryV2Artists({ supabase, userId: user.id });
   return (
     <div className="w-full space-y-6">
       <LibraryV2Header currentTab={currentTab} />
       <LibraryTabs currentTab={currentTab} />
-      <ArtistsSection artists={artists} />
+      {content}
     </div>
   );
 }
