@@ -16,14 +16,8 @@ export type LibraryV2TracksPayload = {
   windowOpenByTrackId: Record<string, boolean | null>;
 };
 
-type LibraryTrack = PlayerTrack & {
-  profiles?: {
-    display_name?: string | null;
-  };
-};
-
 export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) {
-  const [trackData, setTrackData] = useState<LibraryTrack[]>(payload.tracks as LibraryTrack[]);
+  const [trackData, setTrackData] = useState<PlayerTrack[]>(payload.tracks);
   const releaseTrackIdByTrackId = payload.releaseTrackIdByTrackId;
   const ratingByReleaseTrackId = payload.ratingByReleaseTrackId;
   const myStarsByReleaseTrackId = payload.myStarsByReleaseTrackId;
