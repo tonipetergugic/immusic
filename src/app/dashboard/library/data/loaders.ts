@@ -48,23 +48,46 @@ export async function loadLibraryV2Playlists({
   }));
 }
 
+type LibraryReleaseListItem = {
+  id: string;
+  title: string | null;
+  coverUrl: string | null;
+  releaseType: string | null;
+  releaseDate: string | null;
+  artistId: string | null;
+  artistName: string | null;
+};
+
+type LibraryReleaseSavedRow = {
+  release_id: string | null;
+  saved_at: string | null;
+};
+
+type LibraryExplicitReleaseRow = {
+  release_id: string | null;
+};
+
+type LibraryReleaseProfileRow = {
+  display_name: string | null;
+};
+
+type LibraryReleaseSourceRow = {
+  id: string | null;
+  title: string | null;
+  cover_path: string | null;
+  release_type: string | null;
+  release_date: string | null;
+  artist_id: string | null;
+  profiles: LibraryReleaseProfileRow | LibraryReleaseProfileRow[] | null;
+};
+
 export async function loadLibraryV2Releases({
   supabase,
   userId,
 }: {
   supabase: SupabaseClient;
   userId: string;
-}): Promise<
-  {
-    id: string;
-    title: string | null;
-    coverUrl: string | null;
-    releaseType: string | null;
-    releaseDate: string | null;
-    artistId: string | null;
-    artistName: string | null;
-  }[]
-> {
+}): Promise<LibraryReleaseListItem[]> {
   const { data: rows, error } = await supabase
     .from("library_releases")
     .select("release_id, saved_at")
@@ -77,8 +100,12 @@ export async function loadLibraryV2Releases({
   }
 
   const releaseIds = Array.from(
-    new Set((rows ?? []).map((r: any) => r.release_id))
-  ).filter(Boolean);
+    new Set(
+      ((rows ?? []) as LibraryReleaseSavedRow[])
+        .map((row) => row.release_id)
+        .filter((releaseId): releaseId is string => Boolean(releaseId))
+    )
+  );
 
   if (releaseIds.length === 0) return [];
 
@@ -109,10 +136,10 @@ export async function loadLibraryV2Releases({
       console.error("LibraryV2: Failed to filter explicit releases:", explicitErr);
     } else {
       const blockedReleaseIds = new Set(
-        (explicitRows ?? [])
-          .map((row: any) => row.release_id)
-          .filter(Boolean)
-          .map((id: any) => String(id))
+        ((explicitRows ?? []) as LibraryExplicitReleaseRow[])
+          .map((row) => row.release_id)
+          .filter((releaseId): releaseId is string => Boolean(releaseId))
+          .map((releaseId) => String(releaseId))
       );
 
       visibleReleaseIds = releaseIds.filter((id) => !blockedReleaseIds.has(String(id)));
@@ -144,36 +171,39 @@ export async function loadLibraryV2Releases({
   }
 
   const byId = new Map(
-    (releases ?? []).map((release: any) => [
-      String(release.id),
-      {
-        id: String(release.id),
-        title: release.title ?? null,
-        coverUrl: release.cover_path
-          ? supabase.storage
-              .from("release_covers")
-              .getPublicUrl(release.cover_path).data.publicUrl ?? null
-          : null,
-        releaseType: release.release_type ?? null,
-        releaseDate: release.release_date ?? null,
-        artistId: release.artist_id ?? null,
-        artistName: release.profiles?.display_name ?? null,
-      },
-    ])
+    ((releases ?? []) as LibraryReleaseSourceRow[])
+      .filter((release): release is LibraryReleaseSourceRow & { id: string } => Boolean(release.id))
+      .map((release) => {
+        const profile = Array.isArray(release.profiles)
+          ? (release.profiles[0] ?? null)
+          : (release.profiles ?? null);
+
+        const item: LibraryReleaseListItem = {
+          id: String(release.id),
+          title: release.title ?? null,
+          coverUrl: release.cover_path
+            ? supabase.storage
+                .from("release_covers")
+                .getPublicUrl(release.cover_path).data.publicUrl ?? null
+            : null,
+          releaseType: release.release_type ?? null,
+          releaseDate: release.release_date ?? null,
+          artistId: release.artist_id ?? null,
+          artistName: profile?.display_name ?? null,
+        };
+
+        return [String(release.id), item] as const;
+      })
   );
 
   return visibleReleaseIds
     .map((id) => byId.get(String(id)) ?? null)
-    .filter(Boolean) as {
-    id: string;
-    title: string | null;
-    coverUrl: string | null;
-    releaseType: string | null;
-    releaseDate: string | null;
-    artistId: string | null;
-    artistName: string | null;
-  }[];
+    .filter((release): release is LibraryReleaseListItem => Boolean(release));
 }
+
+type LibraryArtistSavedRow = {
+  artist_id: string | null;
+};
 
 export async function loadLibraryV2Artists({
   supabase,
@@ -192,7 +222,13 @@ export async function loadLibraryV2Artists({
     return [];
   }
 
-  const artistIds = Array.from(new Set((rows ?? []).map((r: any) => r.artist_id))).filter(Boolean);
+  const artistIds = Array.from(
+    new Set(
+      ((rows ?? []) as LibraryArtistSavedRow[])
+        .map((row) => row.artist_id)
+        .filter((artistId): artistId is string => Boolean(artistId))
+    )
+  );
 
   if (artistIds.length === 0) return [];
 
@@ -207,7 +243,7 @@ export async function loadLibraryV2Artists({
     return [];
   }
 
-  return (profiles ?? []) as any;
+  return (profiles ?? []) as Profile[];
 }
 
 type LibraryTrackProfileRow = {

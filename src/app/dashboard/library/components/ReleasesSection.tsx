@@ -5,7 +5,6 @@ type LibraryReleaseItem = {
   title: string | null;
   coverUrl: string | null;
   releaseType: string | null;
-  releaseDate: string | null;
   artistId: string | null;
   artistName: string | null;
 };
