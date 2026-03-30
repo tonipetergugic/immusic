@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { getArtistHref } from "@/lib/routes";
+import {
+  Plus,
+  BookmarkPlus,
+  BookmarkMinus,
+  Share2,
+  User,
+  ExternalLink,
+  Flag,
+  Trash2,
+} from "lucide-react";
 
 type TrackOptionsMenuProps = {
   track: PlayerTrack;
@@ -33,7 +43,11 @@ type MenuAction =
   | "report"
   | "remove";
 
-type MenuItem = { label: string; action: MenuAction };
+type MenuItem = {
+  label: string;
+  action: MenuAction;
+  icon: ReactNode;
+};
 
 export default function TrackOptionsMenu({
   track,
@@ -112,26 +126,55 @@ export default function TrackOptionsMenu({
 
   const menuItems: MenuItem[] = useMemo(() => {
     const items: MenuItem[] = [
-      { label: "Add to playlist", action: "add_to_playlist" },
+      {
+        label: "Add to playlist",
+        action: "add_to_playlist",
+        icon: <Plus className="h-4 w-4 shrink-0" />,
+      },
       {
         label: isSaved ? "Remove from Library" : "Save to Library",
         action: "toggle_library",
+        icon: isSaved ? (
+          <BookmarkMinus className="h-4 w-4 shrink-0" />
+        ) : (
+          <BookmarkPlus className="h-4 w-4 shrink-0" />
+        ),
       },
-      { label: "Share release", action: "share" },
+      {
+        label: "Share release",
+        action: "share",
+        icon: <Share2 className="h-4 w-4 shrink-0" />,
+      },
     ];
 
     if (showGoToArtist) {
-      items.push({ label: "Go to Artist", action: "go_artist" });
+      items.push({
+        label: "Go to Artist",
+        action: "go_artist",
+        icon: <User className="h-4 w-4 shrink-0" />,
+      });
     }
 
     if (showGoToRelease) {
-      items.push({ label: "Go to Release Page", action: "go_release" });
+      items.push({
+        label: "Go to Release Page",
+        action: "go_release",
+        icon: <ExternalLink className="h-4 w-4 shrink-0" />,
+      });
     }
 
-    items.push({ label: "Report track", action: "report" });
+    items.push({
+      label: "Report track",
+      action: "report",
+      icon: <Flag className="h-4 w-4 shrink-0" />,
+    });
 
     if (context === "playlist" && onRemove) {
-      items.push({ label: "Remove from Playlist", action: "remove" });
+      items.push({
+        label: "Remove from Playlist",
+        action: "remove",
+        icon: <Trash2 className="h-4 w-4 shrink-0" />,
+      });
     }
 
     return items;
@@ -302,7 +345,10 @@ export default function TrackOptionsMenu({
             role="menuitem"
             className="w-full cursor-pointer text-left px-3 py-2.5 text-sm text-white/80 rounded-xl border border-transparent transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
-            {item.label}
+            <span className="flex items-center gap-3">
+              <span className="text-white/65">{item.icon}</span>
+              <span>{item.label}</span>
+            </span>
           </button>
         ))}
       </div>
