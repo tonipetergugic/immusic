@@ -139,7 +139,6 @@ export function usePerformanceDiscovery({
             )
           );
 
-          // D) Track meta (bpm/key/genre)
           if (trackIds.length > 0) {
             const { data: tmeta, error: tmetaErr } = await supabase
               .from("tracks")
@@ -173,7 +172,6 @@ export function usePerformanceDiscovery({
             }
           }
 
-          // A) Artist display names
           if (artistIds.length > 0) {
             const { data: profs, error: profErr } = await supabase
               .from("profiles")
@@ -189,7 +187,6 @@ export function usePerformanceDiscovery({
             }
           }
 
-          // B) release_track_id from release_tracks, rating aggregates from tracks, stream_count from analytics_track_lifetime
           const lifetimeStreamsByTrackId = new Map<string, number>();
 
           if (trackIds.length > 0) {
@@ -239,7 +236,6 @@ export function usePerformanceDiscovery({
             }
           }
         } catch (e) {
-          // ignore (UI fallback)
         }
       } catch (err: unknown) {
         if (!cancelled) {
@@ -266,3 +262,4 @@ export function usePerformanceDiscovery({
     perfTrackMetaMap,
   };
 }
+

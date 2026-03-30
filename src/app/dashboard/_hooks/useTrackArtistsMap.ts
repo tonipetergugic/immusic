@@ -104,7 +104,6 @@ export function useTrackArtistsMap({
 
         if (!cancelled) setTrackArtistsMap(map);
       } catch {
-        // ignore: UI fallback to single artist
       }
     }
 
