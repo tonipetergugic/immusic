@@ -11,8 +11,8 @@ import { ArtistsSection } from "./components/ArtistsSection";
 import {
   loadLibraryV2Artists,
   loadLibraryV2Playlists,
-  loadLibraryV2Releases,
 } from "./data/loaders";
+import { loadLibraryV2Releases } from "./data/releasesLoader";
 import { loadLibraryV2Tracks } from "./data/tracksLoader";
 
 export const metadata: Metadata = { title: "Library | ImMusic" };
