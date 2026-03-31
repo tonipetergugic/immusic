@@ -250,6 +250,8 @@ export default async function ReleaseDetailPage({
     (sum, row) => sum + (getTrack(row)?.duration ?? 0),
     0
   );
+  const formattedReleaseDate = formatReleaseDate(release.release_date);
+  const formattedDuration = formatTotalDuration(totalSeconds);
 
   // Build Player queue SERVER-side (no client fetch)
   const playerQueue = validItems.reduce<PlayerTrack[]>((acc, row) => {
@@ -392,17 +394,23 @@ export default async function ReleaseDetailPage({
               </h1>
 
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
-                  <Link
-                    href={`/dashboard/artist/${release.artist_id}`}
-                    className="text-white font-semibold text-base md:text-lg hover:text-[#00FFC6] transition-colors cursor-pointer"
-                  >
-                    {artistName}
-                  </Link>
+                  {release.artist_id ? (
+                    <Link
+                      href={`/dashboard/artist/${release.artist_id}`}
+                      className="text-white font-semibold text-base md:text-lg hover:text-[#00FFC6] transition-colors cursor-pointer"
+                    >
+                      {artistName}
+                    </Link>
+                  ) : (
+                    <span className="text-white font-semibold text-base md:text-lg">
+                      {artistName}
+                    </span>
+                  )}
 
-                  {formatReleaseDate(release.release_date) ? (
+                  {formattedReleaseDate ? (
                     <>
                       <span className="text-white/40">•</span>
-                      <span>Released {formatReleaseDate(release.release_date)}</span>
+                      <span>Released {formattedReleaseDate}</span>
                     </>
                   ) : null}
 
@@ -411,10 +419,10 @@ export default async function ReleaseDetailPage({
                     {trackCount} {trackCount === 1 ? "track" : "tracks"}
                   </span>
 
-                  {formatTotalDuration(totalSeconds) ? (
+                  {formattedDuration ? (
                     <>
                       <span className="text-white/40">•</span>
-                      <span>{formatTotalDuration(totalSeconds)}</span>
+                      <span>{formattedDuration}</span>
                     </>
                   ) : null}
               </div>
