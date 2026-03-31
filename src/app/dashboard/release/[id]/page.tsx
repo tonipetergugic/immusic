@@ -8,11 +8,6 @@ import type { PlayerTrack } from "@/types/playerTrack";
 import { formatReleaseDate, formatTotalDuration } from "./_lib/format";
 import { buildArtistsList } from "./_lib/artists";
 
-type ReleaseProfile =
-  | { display_name: string | null }
-  | { display_name: string | null }[]
-  | null;
-
 type ReleaseTrackRelation = {
   id: string;
   title: string | null;

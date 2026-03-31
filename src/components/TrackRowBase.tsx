@@ -75,7 +75,7 @@ export default function TrackRowBase({
   coverUrl,
   coverSize = "md",
 }: TrackRowBaseProps) {
-  const releaseId = (track as any)?.release_id ?? null;
+  const releaseId = track.release_id ?? null;
   const to = href ?? (releaseId ? `/dashboard/release/${releaseId}` : "#");
 
   const coverBox = coverSize === "sm" ? "w-12 h-12" : "w-16 h-16";
@@ -175,7 +175,7 @@ export default function TrackRowBase({
                       : "text-white hover:text-[#00FFC6]"
                   }`}
                 >
-                  {formatTrackTitle(track.title, (track as any).version)}
+                  {formatTrackTitle(track.title, track.version ?? null)}
                 </Link>
 
                 {track.is_explicit ? <ExplicitBadge /> : null}
