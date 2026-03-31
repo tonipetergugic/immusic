@@ -176,14 +176,18 @@ export default function PlaylistHeaderClient({
     0
   );
 
+  const totalHours = Math.floor(totalDurationSeconds / 3600);
+  const totalMinutes = Math.floor((totalDurationSeconds % 3600) / 60);
+  const remainingSeconds = totalDurationSeconds % 60;
+
   const totalDurationLabel =
-    totalDurationSeconds >= 3600
-      ? `${Math.floor(totalDurationSeconds / 3600)}:${String(
-          Math.floor((totalDurationSeconds % 3600) / 60)
-        ).padStart(2, "0")}:${String(totalDurationSeconds % 60).padStart(2, "0")}`
-      : `${Math.floor(totalDurationSeconds / 60)}:${String(
-          totalDurationSeconds % 60
-        ).padStart(2, "0")}`;
+    totalHours > 0
+      ? `about ${totalHours} hr ${totalMinutes} min`
+      : totalMinutes > 0
+        ? `about ${totalMinutes} min`
+        : remainingSeconds > 0
+          ? `about ${remainingSeconds} sec`
+          : "0 min";
 
   const rawCover = playlist.cover_url ?? null;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
@@ -21,7 +22,7 @@ function PlaylistRow({
   track: PlayerTrack;
   tracks: PlayerTrack[];
   onDelete?: () => void;
-  user: any | null;
+  user: User | null;
   dragHandleProps?: {
     listeners?: Record<string, any>;
     setActivatorNodeRef: (node: HTMLButtonElement | null) => void;

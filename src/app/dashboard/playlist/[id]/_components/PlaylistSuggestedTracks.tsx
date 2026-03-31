@@ -197,7 +197,7 @@ export default function PlaylistSuggestedTracks({
     return () => {
       cancelled = true;
     };
-  }, [existingTrackIds, supabase]);
+  }, [playlistId, supabase]);
 
   const visibleItems = useMemo(() => {
     const excluded = new Set(existingTrackIds);

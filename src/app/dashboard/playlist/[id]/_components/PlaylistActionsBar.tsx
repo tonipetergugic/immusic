@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Lock, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+import { Globe, Lock, MoreHorizontal, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import type { Playlist } from "@/types/database";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 
@@ -29,7 +30,7 @@ export default function PlaylistActionsBar({
 }: {
   isOwner: boolean;
   playlist: Playlist;
-  user: any | null;
+  user: User | null;
 
   isSavedToLibrary: boolean;
   saveBusy: boolean;
@@ -84,16 +85,17 @@ export default function PlaylistActionsBar({
           <button
             type="button"
             disabled
+            aria-label="Play unavailable"
             className="
-              inline-flex items-center gap-2
-              px-5 h-10
-              rounded-full
-              border border-[#00FFC6]/25
-              text-[#00FFC6]/40
+              pointer-events-auto
+              rounded-full border border-[#00FFC622] bg-black/35
+              flex items-center justify-center
+              w-20 h-20
               cursor-not-allowed
+              shadow-[0_0_18px_rgba(0,255,198,0.12)]
             "
           >
-            <span>Play</span>
+            <Play className="w-8 h-8 text-[#00FFC6]/35" />
           </button>
         )}
 

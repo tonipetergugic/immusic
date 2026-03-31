@@ -259,7 +259,7 @@ export default function PlaylistAddTrackModal({
           />
         </div>
 
-        <div className="max-h-[440px] space-y-3 overflow-y-auto pr-1">
+        <div className="min-h-[320px] max-h-[440px] space-y-3 overflow-y-auto pr-1">
           {isLoading && (
             <p className="text-sm text-white/60">Lade veröffentlichte Tracks...</p>
           )}

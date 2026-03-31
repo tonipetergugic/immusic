@@ -31,15 +31,17 @@ export async function reorderPlaylistTracksAction(
   if (pErr || !playlist) return { ok: false, error: "Playlist not found" };
   if (playlist.created_by !== user.id) return { ok: false, error: "Forbidden" };
 
-  // Persist positions
-  for (const row of newOrder) {
-    const { error } = await supabase
-      .from("playlist_tracks")
-      .update({ position: row.position })
-      .eq("playlist_id", playlistId)
-      .eq("track_id", row.track_id);
+  const { error: reorderError } = await supabase.rpc(
+    "reorder_playlist_tracks_atomic",
+    {
+      p_playlist_id: playlistId,
+      p_new_order: newOrder,
+    }
+  );
 
-    if (error) return { ok: false, error: error.message };
+  if (reorderError) {
+    console.error("Failed to reorder playlist tracks atomically:", reorderError);
+    return { ok: false, error: reorderError.message };
   }
 
   revalidatePath(`/dashboard/playlist/${playlistId}`);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import PlaylistHeaderClient from "./PlaylistHeaderClient";
 import { reorderPlaylistTracksAction } from "./actions";
@@ -43,7 +44,7 @@ export default function PlaylistClient({
 }: {
   playlist: Playlist;
   initialPlayerTracks: PlayerTrack[];
-  user: any | null;
+  user: User | null;
   initialSaved: boolean;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);

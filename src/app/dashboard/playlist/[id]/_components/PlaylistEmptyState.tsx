@@ -37,7 +37,7 @@ export default function PlaylistEmptyState({
               text-[#00FFC6] text-sm font-semibold
               hover:border-[#00FFC666]
               hover:bg-[#00FFC60F]
-              transition
+              transition cursor-pointer
             "
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

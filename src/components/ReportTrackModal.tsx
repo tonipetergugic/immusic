@@ -164,7 +164,7 @@ export default function ReportTrackModal({
               type="button"
               onClick={() => void handleSubmit()}
               disabled={loading}
-              className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-4 py-2.5 text-sm font-semibold text-[#CFFFF4] transition hover:bg-[#00FFC6]/14 hover:border-[#00FFC6]/45 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-w-[170px] cursor-pointer items-center justify-center rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-4 py-2.5 text-sm font-semibold text-[#CFFFF4] transition hover:bg-[#00FFC6]/14 hover:border-[#00FFC6]/45 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Submitting..." : "Submit report"}
             </button>

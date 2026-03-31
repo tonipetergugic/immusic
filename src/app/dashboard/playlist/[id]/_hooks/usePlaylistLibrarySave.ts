@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export function usePlaylistLibrarySave({
   supabase,
@@ -9,7 +10,7 @@ export function usePlaylistLibrarySave({
   playlistId,
   initialSaved,
 }: {
-  supabase: any;
+  supabase: SupabaseClient;
   userId: string | null;
   isOwner: boolean;
   playlistId: string;

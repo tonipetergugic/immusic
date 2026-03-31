@@ -1,5 +1,6 @@
 "use client";
 
+import type { User } from "@supabase/supabase-js";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
   DndContext,
@@ -26,7 +27,7 @@ export default function PlaylistTrackList({
   onDeleteTrack,
 }: {
   isOwner: boolean;
-  user: any | null;
+  user: User | null;
   tracks: PlayerTrack[];
   onDragEnd: (e: DragEndEvent) => void;
   onDeleteTrack: (trackId: string) => void;
@@ -45,7 +46,7 @@ export default function PlaylistTrackList({
   }: {
     track: PlayerTrack;
     tracks: PlayerTrack[];
-    user: any | null;
+    user: User | null;
     onDelete?: () => void;
   }) {
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform } = useSortable({
