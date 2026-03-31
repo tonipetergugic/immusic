@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Image from "next/image";
+import Link from "next/link";
 import BackLink from "@/components/BackLink";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import ReleaseDetailClient from "./ReleaseDetailClient";
@@ -159,7 +160,7 @@ export default async function ReleaseDetailPage({
     : null;
 
   // Tracklist: release_tracks -> tracks
-  const { data: items } = await supabase
+  const { data: items, error: itemsError } = await supabase
     .from("release_tracks")
     .select(
       `
@@ -197,12 +198,26 @@ export default async function ReleaseDetailPage({
     .eq("release_id", releaseId)
     .order("position", { ascending: true });
 
+  if (itemsError) {
+    throw itemsError;
+  }
+
   const typedItems = (items ?? []) as ReleaseTrackItem[];
   function getTrack(row: ReleaseTrackItem): ReleaseTrackRelation | null {
     return Array.isArray(row.track) ? row.track[0] ?? null : row.track;
   }
+  function hasValidTrack(
+    row: ReleaseTrackItem
+  ): row is ReleaseTrackItem & {
+    track: ReleaseTrackRelation | ReleaseTrackRelation[];
+  } {
+    const track = getTrack(row);
+    return !!track?.id;
+  }
 
-  const trackIds = typedItems
+  const validItems = typedItems.filter(hasValidTrack);
+
+  const trackIds = validItems
     .map((row) => getTrack(row)?.id)
     .filter((value): value is string => typeof value === "string");
 
@@ -235,14 +250,14 @@ export default async function ReleaseDetailPage({
 
   const artistName = releaseProfile?.display_name ?? "Unknown Artist";
 
-  const trackCount = typedItems.length;
-  const totalSeconds = typedItems.reduce(
+  const trackCount = validItems.length;
+  const totalSeconds = validItems.reduce(
     (sum, row) => sum + (getTrack(row)?.duration ?? 0),
     0
   );
 
   // Build Player queue SERVER-side (no client fetch)
-  const playerQueue = typedItems.reduce<PlayerTrack[]>((acc, row) => {
+  const playerQueue = validItems.reduce<PlayerTrack[]>((acc, row) => {
     const t = getTrack(row);
     if (!t?.id || !t.audio_path) return acc;
 
@@ -275,7 +290,7 @@ export default async function ReleaseDetailPage({
     return acc;
   }, []);
 
-  const releaseTracks = typedItems.map((row) => {
+  const releaseTracks = validItems.map((row) => {
     const t = getTrack(row);
 
     return {
@@ -382,12 +397,12 @@ export default async function ReleaseDetailPage({
               </h1>
 
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
-                  <a
+                  <Link
                     href={`/dashboard/artist/${release.artist_id}`}
                     className="text-white font-semibold text-base md:text-lg hover:text-[#00FFC6] transition-colors cursor-pointer"
                   >
                     {artistName}
-                  </a>
+                  </Link>
 
                   {formatReleaseDate(release.release_date) ? (
                     <>
