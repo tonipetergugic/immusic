@@ -7,7 +7,13 @@ import LibraryTrackArtists from "@/components/LibraryTrackArtists";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { TopTrackDto } from "../_types/artistPageDto";
-import ExplicitBadge from "@/components/ExplicitBadge";
+
+type ArtistTopPlayerTrack = PlayerTrack & {
+  status?: string | null;
+  release_id?: string | null;
+  rating_avg?: number | null;
+  rating_count?: number | null;
+};
 
 function Stars({
   avg,
@@ -71,16 +77,16 @@ export default function ArtistTopTracksSection({
         cover_url: t.coverUrl ?? null,
         profiles: { display_name: primaryArtistName },
         is_explicit: t.isExplicit,
-      });
+      }) as ArtistTopPlayerTrack;
 
-      (pt as any).status = t.status ?? null;
+      pt.status = t.status ?? null;
 
-      // TrackOptionsMenu nutzt (track as any).release_id für "Go to Release"
-      (pt as any).release_id = t.releaseId ?? null;
+      // TrackOptionsMenu nutzt track.release_id für "Go to Release"
+      pt.release_id = t.releaseId ?? null;
 
       // Optional back-compat fields (harmless)
-      (pt as any).rating_avg = t.stats30d.ratingAvg;
-      (pt as any).rating_count = t.stats30d.ratingsCount;
+      pt.rating_avg = t.stats30d.ratingAvg;
+      pt.rating_count = t.stats30d.ratingsCount;
 
       return pt;
     });

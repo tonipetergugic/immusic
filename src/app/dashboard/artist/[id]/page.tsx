@@ -4,6 +4,40 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ArtistClient from "./ArtistClient";
 import type { ArtistPageDto, TopTrackDto } from "./_types/artistPageDto";
 
+type ArtistProfileRow = {
+  id: string;
+  display_name: string | null;
+  bio: string | null;
+  city: string | null;
+  country: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  facebook: string | null;
+  x: string | null;
+  banner_url: string | null;
+  banner_pos_y: number | null;
+  avatar_url: string | null;
+  updated_at: string | null;
+};
+
+type ExplicitReleaseRow = {
+  release_id: string | null;
+  tracks:
+    | { is_explicit: boolean | null }
+    | { is_explicit: boolean | null }[]
+    | null;
+};
+
+type ExplicitTrackRow = {
+  id: string | null;
+  is_explicit: boolean | null;
+};
+
+type ArtistCollaboratorRow = {
+  artist_id: string | null;
+  display_name: string | null;
+};
+
 export default async function ArtistV2Page({
   params,
 }: {
@@ -52,6 +86,8 @@ export default async function ArtistV2Page({
 
   if (profileError || !profile) return notFound();
 
+  const artistProfile = profile as ArtistProfileRow;
+
   // D) Releases (published)
   const { data: releasesData, error: releasesError } = await supabase
     .from("releases")
@@ -83,8 +119,8 @@ export default async function ArtistV2Page({
   }
 
   const explicitReleaseIds = new Set(
-    (explicitReleaseRows ?? [])
-      .map((row: any) => String(row.release_id ?? ""))
+    ((explicitReleaseRows ?? []) as ExplicitReleaseRow[])
+      .map((row) => String(row.release_id ?? ""))
       .filter(Boolean)
   );
 
@@ -180,7 +216,7 @@ export default async function ArtistV2Page({
   }
 
   const explicitByTrackId = new Map<string, boolean>(
-    (explicitTrackRows ?? []).map((row: any) => [
+    ((explicitTrackRows ?? []) as ExplicitTrackRow[]).map((row) => [
       String(row.id),
       !!row.is_explicit,
     ])
@@ -199,7 +235,7 @@ export default async function ArtistV2Page({
     cover_path: string | null;
     owner_id: string | null;
     owner_name: string | null;
-    collaborators: any; // jsonb array
+    collaborators: ArtistCollaboratorRow[] | null;
     track_status: string | null;
   };
 
@@ -255,13 +291,15 @@ export default async function ArtistV2Page({
 
       const ownerId = String(d.owner_id ?? "");
       const ownerName = String(
-        d.owner_name ?? profile.display_name ?? "Unknown Artist"
+        d.owner_name ?? artistProfile.display_name ?? "Unknown Artist"
       );
 
       const artists: Array<{ id: string; displayName: string }> = [];
       if (ownerId) artists.push({ id: ownerId, displayName: ownerName });
 
-      const collabArr = Array.isArray(d.collaborators) ? d.collaborators : [];
+      const collabArr: ArtistCollaboratorRow[] = Array.isArray(d.collaborators)
+        ? d.collaborators
+        : [];
       for (const c of collabArr) {
         const cid = String(c?.artist_id ?? "");
         const cname = String(c?.display_name ?? "Unknown Artist");
@@ -320,7 +358,7 @@ export default async function ArtistV2Page({
           .eq("follower_id", viewerId!)
           .eq("following_id", artistId)
           .maybeSingle()
-      : Promise.resolve({ data: null, error: null } as any),
+      : Promise.resolve({ data: null, error: null }),
 
     canSave
       ? supabase
@@ -329,7 +367,7 @@ export default async function ArtistV2Page({
           .eq("user_id", viewerId!)
           .eq("artist_id", artistId)
           .maybeSingle()
-      : Promise.resolve({ data: null, error: null } as any),
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const isFollowing =
@@ -355,26 +393,26 @@ export default async function ArtistV2Page({
 
   const dto: ArtistPageDto = {
     artist: {
-      id: profile.id,
-      displayName: profile.display_name ?? "Unknown Artist",
-      bio: profile.bio ?? null,
-      city: (profile as any).city ?? null,
-      country: (profile as any).country ?? null,
-      bannerUrl: (profile as any).banner_url ?? null,
-      bannerPosY: (profile as any).banner_pos_y ?? 50,
+      id: artistProfile.id,
+      displayName: artistProfile.display_name ?? "Unknown Artist",
+      bio: artistProfile.bio ?? null,
+      city: artistProfile.city ?? null,
+      country: artistProfile.country ?? null,
+      bannerUrl: artistProfile.banner_url ?? null,
+      bannerPosY: artistProfile.banner_pos_y ?? 50,
       avatarUrl: (() => {
-        const base = (profile as any).avatar_url ?? null;
-        const updatedAt = (profile as any).updated_at ?? null;
+        const base = artistProfile.avatar_url ?? null;
+        const updatedAt = artistProfile.updated_at ?? null;
         if (!base) return null;
         if (!updatedAt) return base;
         const sep = String(base).includes("?") ? "&" : "?";
         return `${base}${sep}v=${encodeURIComponent(String(updatedAt))}`;
       })(),
       socials: {
-        instagram: profile.instagram ?? null,
-        tiktok: profile.tiktok ?? null,
-        facebook: profile.facebook ?? null,
-        x: profile.x ?? null,
+        instagram: artistProfile.instagram ?? null,
+        tiktok: artistProfile.tiktok ?? null,
+        facebook: artistProfile.facebook ?? null,
+        x: artistProfile.x ?? null,
       },
     },
     viewer: {
