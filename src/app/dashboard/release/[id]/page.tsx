@@ -290,7 +290,6 @@ export default async function ReleaseDetailPage({
       version: t?.version ?? null,
       status: t?.status ?? null,
       is_explicit: t?.is_explicit ?? false,
-      duration: t?.duration ?? null,
       ratingAvg: t?.rating_avg ?? null,
       ratingCount: t?.rating_count ?? null,
       streamCount: lifetimeStreamsByTrackId.get(String(t?.id ?? "")) ?? 0,

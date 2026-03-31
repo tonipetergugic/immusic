@@ -18,7 +18,6 @@ export default function ReleaseTrackRowClient({
   artists,
   ratingAvg,
   ratingCount,
-  duration,
   streamCount,
   releaseCoverUrl,
   isActive,
@@ -42,7 +41,6 @@ export default function ReleaseTrackRowClient({
   artists: { id: string; display_name: string }[];
   ratingAvg: number | null;
   ratingCount: number | null;
-  duration: number | null;
   streamCount: number;
   releaseCoverUrl: string | null;
   isActive: boolean;

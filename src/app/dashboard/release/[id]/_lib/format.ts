@@ -1,11 +1,15 @@
 export function formatTotalDuration(sec: number): string | null {
   if (!sec || sec <= 0) return null;
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  const mm = String(m).padStart(h > 0 ? 2 : 1, "0");
-  const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+
+  const totalMinutes = Math.round(sec / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours <= 0) {
+    return `about ${totalMinutes} min`;
+  }
+
+  return `about ${hours} h ${String(minutes).padStart(2, "0")} min`;
 }
 
 export function formatReleaseDate(d: unknown): string | null {

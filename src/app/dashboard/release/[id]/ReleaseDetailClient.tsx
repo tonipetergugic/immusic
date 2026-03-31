@@ -22,7 +22,6 @@ type ReleaseDetailTrack = {
   version: string | null;
   status: string | null;
   is_explicit: boolean;
-  duration: number | null;
   ratingAvg: number | null;
   ratingCount: number | null;
   streamCount: number;
@@ -142,7 +141,6 @@ export default function ReleaseDetailClient({
                 ratingAvg={row.ratingAvg}
                 ratingCount={row.ratingCount}
                 streamCount={row.streamCount}
-                duration={row.duration}
                 releaseCoverUrl={releaseCoverUrl}
                 isActive={row.trackId === selectedTrack?.trackId}
                 onSelect={() => setSelectedTrackId(row.trackId)}
