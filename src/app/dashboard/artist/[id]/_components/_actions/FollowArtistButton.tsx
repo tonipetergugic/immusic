@@ -37,9 +37,11 @@ export default function FollowArtistButton({
         await followProfile(artistId);
         onChange(true);
       }
-    } catch (e: any) {
-      console.error("FollowArtistButton toggle error:", e);
-      showNotice(e?.message ?? "Something went wrong.");
+    } catch (error: unknown) {
+      console.error("FollowArtistButton toggle error:", error);
+      showNotice(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
     } finally {
       setBusy(false);
     }

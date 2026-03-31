@@ -5,6 +5,18 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import FollowersModal from "@/components/FollowersModal";
 
+type FollowRow = {
+  follower_id?: string | null;
+  following_id?: string | null;
+};
+
+type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+};
+
 export default function FollowCountsClient({
   profileId,
   followerCount,
@@ -25,9 +37,7 @@ export default function FollowCountsClient({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("Followers");
-  const [modalProfiles, setModalProfiles] = useState<
-    { id: string; display_name: string | null; avatar_url: string | null; role: string | null }[]
-  >([]);
+  const [modalProfiles, setModalProfiles] = useState<ProfileRow[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [viewerFollowingIds, setViewerFollowingIds] = useState<Set<string>>(new Set());
@@ -65,7 +75,9 @@ export default function FollowCountsClient({
       return;
     }
 
-    const ids = (data ?? []).map((r: any) => r.following_id).filter(Boolean);
+    const ids = (data ?? [])
+      .map((r) => r.following_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
     setViewerFollowingIds(new Set(ids));
   }
 
@@ -142,7 +154,9 @@ export default function FollowCountsClient({
 
         if (error) throw error;
 
-        const ids = (rows ?? []).map((r: any) => r.follower_id).filter(Boolean);
+        const ids = ((rows ?? []) as FollowRow[])
+          .map((r) => r.follower_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0);
         if (ids.length === 0) {
           setModalProfiles([]);
           return;
@@ -155,8 +169,17 @@ export default function FollowCountsClient({
 
         if (pErr) throw pErr;
 
-        const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
-        setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
+        const typedProfiles: ProfileRow[] = Array.isArray(profs)
+          ? (profs as ProfileRow[])
+          : [];
+
+        const map = new Map<string, ProfileRow>(
+          typedProfiles.map((p) => [p.id, p])
+        );
+
+        setModalProfiles(
+          ids.map((id) => map.get(id)).filter((p): p is ProfileRow => !!p)
+        );
       } else {
         const { data: rows, error } = await supabase
           .from("follows")
@@ -165,7 +188,9 @@ export default function FollowCountsClient({
 
         if (error) throw error;
 
-        const ids = (rows ?? []).map((r: any) => r.following_id).filter(Boolean);
+        const ids = ((rows ?? []) as FollowRow[])
+          .map((r) => r.following_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0);
         if (ids.length === 0) {
           setModalProfiles([]);
           return;
@@ -178,8 +203,17 @@ export default function FollowCountsClient({
 
         if (pErr) throw pErr;
 
-        const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
-        setModalProfiles(ids.map((id: string) => map.get(id)).filter(Boolean));
+        const typedProfiles: ProfileRow[] = Array.isArray(profs)
+          ? (profs as ProfileRow[])
+          : [];
+
+        const map = new Map<string, ProfileRow>(
+          typedProfiles.map((p) => [p.id, p])
+        );
+
+        setModalProfiles(
+          ids.map((id) => map.get(id)).filter((p): p is ProfileRow => !!p)
+        );
       }
     } catch (err) {
       console.error("openFollowList error:", err);
