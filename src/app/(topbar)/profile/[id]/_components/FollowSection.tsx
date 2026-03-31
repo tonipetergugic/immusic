@@ -134,7 +134,7 @@ export default function FollowSection({
         <button
           type="button"
           onClick={() => openList("followers")}
-          className="hover:text-white transition"
+          className="cursor-pointer hover:text-white transition"
         >
           <span className="text-white/90 font-semibold tabular-nums">
             {followerCount}
@@ -145,7 +145,7 @@ export default function FollowSection({
         <button
           type="button"
           onClick={() => openList("following")}
-          className="hover:text-white transition"
+          className="cursor-pointer hover:text-white transition"
         >
           <span className="text-white/90 font-semibold tabular-nums">
             {followingCountInitial}

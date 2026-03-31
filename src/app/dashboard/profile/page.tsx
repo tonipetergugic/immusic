@@ -279,44 +279,42 @@ export default function ProfilePage() {
             placeholder="Enter your display name..."
           />
 
-          {/* Save button only visible if changed */}
-          {displayName !== initialName && (
-            <button
-              onClick={async () => {
-                setNameSaving(true);
+          <button
+            onClick={async () => {
+              setNameSaving(true);
 
-                await updateDisplayName(displayName);
+              await updateDisplayName(displayName);
 
-                // Dispatch custom event so Topbar updates immediately
-                window.dispatchEvent(
-                  new CustomEvent("displayNameUpdated", { detail: displayName })
-                );
+              // Dispatch custom event so Topbar updates immediately
+              window.dispatchEvent(
+                new CustomEvent("displayNameUpdated", { detail: displayName })
+              );
 
-                setInitialName(displayName);
-                setNameSaving(false);
-              }}
-              className="
-                mt-4 mx-auto
-                inline-flex items-center justify-center
-                w-[220px]
-                rounded-lg
-                px-5 py-2.5
-                bg-[#111113]
-                border border-[#1A1A1C]
-                text-[#B3B3B3] font-medium
-                hover:border-[#00FFC6]
-                hover:text-[#00FFC6]
-                transition
-                disabled:opacity-40
-                disabled:cursor-not-allowed
-                disabled:hover:border-[#1A1A1C]
-                disabled:hover:text-[#B3B3B3]
-              "
-              disabled={nameSaving}
-            >
-              {nameSaving ? "Saving..." : "Save changes"}
-            </button>
-          )}
+              setInitialName(displayName);
+              setNameSaving(false);
+            }}
+            className="
+              mt-4 mx-auto
+              inline-flex items-center justify-center
+              w-[220px]
+              rounded-lg
+              px-5 py-2.5
+              bg-[#111113]
+              border border-[#1A1A1C]
+              text-[#B3B3B3] font-medium
+              cursor-pointer
+              hover:border-[#00FFC6]
+              hover:text-[#00FFC6]
+              transition
+              disabled:opacity-40
+              disabled:cursor-not-allowed
+              disabled:hover:border-[#1A1A1C]
+              disabled:hover:text-[#B3B3B3]
+            "
+            disabled={nameSaving || displayName === initialName}
+          >
+            {nameSaving ? "Saving..." : "Save changes"}
+          </button>
         </div>
 
         {/* Email info */}

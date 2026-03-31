@@ -127,9 +127,7 @@ export default function PublicProfileView({
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-            <p className="text-neutral-400 text-sm">No playlists yet.</p>
-          </div>
+          <p className="text-sm text-neutral-400">No playlists yet.</p>
         )}
       </div>
     </div>

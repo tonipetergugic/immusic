@@ -19,7 +19,7 @@ export default function ProfileSectionLayout({
   showBackLink = true,
 }: ProfileSectionLayoutProps) {
   return (
-    <div className="w-full max-w-[896px] mx-auto">
+    <div className="w-full max-w-[896px] mx-auto text-white">
       <div
         className="
           bg-[#0B0B0D]
