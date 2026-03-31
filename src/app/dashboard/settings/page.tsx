@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ProfileSectionNav from "@/components/ProfileSectionNav";
-import BackLink from "@/components/BackLink";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateHideExplicitTracks } from "@/app/(topbar)/profile/actions";
+import ProfileSectionLayout from "@/components/ProfileSectionLayout";
 
 function showNotice(message: string) {
   window.dispatchEvent(
@@ -74,32 +73,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="w-full max-w-[896px] mx-auto">
-      <div
-        className="
-        bg-[#0B0B0D]
-        border border-[#1A1A1C]
-        rounded-2xl
-        p-8
-        lg:min-h-[1040px]
-        shadow-[0_20px_60px_rgba(0,0,0,0.6)]
-      "
-      >
-        <BackLink className="mb-6" />
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold leading-tight">Settings</h1>
-          <p className="text-[#B3B3B3] mt-1">
-            Adjust your preferences and application settings.
-          </p>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
-          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
-            <ProfileSectionNav current="settings" />
-          </aside>
-
-          <div className="min-w-0">
+    <ProfileSectionLayout
+      title="Settings"
+      description="Adjust your preferences and application settings."
+      current="settings"
+    >
             {/* Content preferences */}
             <div className="mt-2">
               <div className="text-sm text-[#B3B3B3] mb-2">Content</div>
@@ -194,9 +172,6 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </ProfileSectionLayout>
   );
 }

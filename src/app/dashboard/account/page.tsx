@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import ProfileSectionNav from "@/components/ProfileSectionNav";
-import BackLink from "@/components/BackLink";
+import ProfileSectionLayout from "@/components/ProfileSectionLayout";
 
 export default function AccountPage() {
   const supabase = useMemo(() => {
@@ -166,32 +165,11 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="w-full max-w-[896px] mx-auto">
-      <div
-        className="
-          bg-[#0B0B0D]
-          border border-[#1A1A1C]
-          rounded-2xl
-          p-8
-          lg:min-h-[1040px]
-          shadow-[0_20px_60px_rgba(0,0,0,0.6)]
-        "
-      >
-        <BackLink className="mb-6" />
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold leading-tight">Account</h1>
-          <p className="text-[#B3B3B3] mt-1">
-            Manage your email and security settings.
-          </p>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
-          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
-            <ProfileSectionNav current="account" />
-          </aside>
-
-          <div className="min-w-0">
+    <ProfileSectionLayout
+      title="Account"
+      description="Manage your email and security settings."
+      current="account"
+    >
             {/* Email */}
           <div className="mt-2">
 
@@ -567,9 +545,6 @@ export default function AccountPage() {
             </div>
           </div>
         )}
-          </div>
-        </div>
-      </div>
-    </div>
+    </ProfileSectionLayout>
   );
 }

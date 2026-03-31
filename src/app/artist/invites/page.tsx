@@ -1,8 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { respondToInviteAction } from "./actions";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
-import ProfileSectionNav from "@/components/ProfileSectionNav";
-import BackLink from "@/components/BackLink";
+import ProfileSectionLayout from "@/components/ProfileSectionLayout";
 
 type InviteRow = {
   id: string;
@@ -51,31 +50,12 @@ export default async function ArtistInvitesPage({
   }));
 
   return (
-    <div className="w-full max-w-[896px] mx-auto text-white">
-      <div
-        className="
-        bg-[#0B0B0D]
-        border border-[#1A1A1C]
-        rounded-2xl
-        p-8
-        lg:min-h-[1040px]
-        shadow-[0_20px_60px_rgba(0,0,0,0.6)]
-      "
-      >
-        {showBackLink ? <BackLink className="mb-6" /> : null}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold leading-tight text-white">Messages</h1>
-          <p className="mt-1 text-[#B3B3B3]">
-            Personal notifications and collaboration requests.
-          </p>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
-          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
-            <ProfileSectionNav current="messages" />
-          </aside>
-
-          <div className="min-w-0">
+    <ProfileSectionLayout
+      title="Messages"
+      description="Personal notifications and collaboration requests."
+      current="messages"
+      showBackLink={showBackLink}
+    >
             {invites.length === 0 ? (
               <div className="py-6 text-sm text-[#B3B3B3]">
                 No new messages.
@@ -152,10 +132,7 @@ export default async function ArtistInvitesPage({
             ))}
           </div>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+    </ProfileSectionLayout>
   );
 }
 
