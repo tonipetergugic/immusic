@@ -1,38 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { User, CreditCard, Settings, Mail } from "lucide-react";
+import { profileSectionItems, type ProfileSectionKey } from "@/components/profileSectionItems";
 
 type ProfileSectionNavProps = {
-  current: "profile" | "account" | "settings" | "messages";
+  current: ProfileSectionKey;
 };
-
-const items = [
-  {
-    key: "profile",
-    label: "Profile",
-    href: "/dashboard/profile",
-    icon: User,
-  },
-  {
-    key: "account",
-    label: "Account",
-    href: "/dashboard/account",
-    icon: CreditCard,
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
-  {
-    key: "messages",
-    label: "Messages",
-    href: "/dashboard/messages",
-    icon: Mail,
-  },
-] as const;
 
 export default function ProfileSectionNav({
   current,
@@ -40,7 +13,7 @@ export default function ProfileSectionNav({
   return (
     <nav aria-label="Profile sections" className="w-full">
       <div className="flex flex-col gap-1">
-        {items.map((item) => {
+        {profileSectionItems.map((item) => {
           const isActive = item.key === current;
           const Icon = item.icon;
 

@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, CreditCard, Settings, LogOut, Shield, Mail } from "lucide-react";
+import TopbarProfileMenu from "./TopbarProfileMenu";
+import type { ProfileSectionKey } from "@/components/profileSectionItems";
 
 function versionedUrl(base: string | null, updatedAt: string | null | undefined) {
   if (!base) return null;
@@ -71,12 +72,17 @@ export default function Topbar({
     return "ImMusic";
   }, [pathname]);
 
-  const isProfilePage = pathname?.startsWith("/dashboard/profile");
-  const isAccountPage = pathname?.startsWith("/dashboard/account");
-  const isSettingsPage = pathname?.startsWith("/dashboard/settings");
-  const isMessagesPage =
-    pathname?.startsWith("/dashboard/messages") ||
-    pathname?.startsWith("/artist/invites");
+  const activeSection: ProfileSectionKey | null =
+    pathname?.startsWith("/dashboard/profile")
+      ? "profile"
+      : pathname?.startsWith("/dashboard/account")
+        ? "account"
+        : pathname?.startsWith("/dashboard/settings")
+          ? "settings"
+          : pathname?.startsWith("/dashboard/messages") ||
+              pathname?.startsWith("/artist/invites")
+            ? "messages"
+            : null;
 
   useEffect(() => {
     if (role) {
@@ -209,150 +215,16 @@ export default function Topbar({
         </button>
 
         {isMenuOpen && (
-          <div
-            ref={avatarMenuRef}
-            role="menu"
-            className="
-              absolute top-14 right-4 sm:right-6 lg:right-8 z-50
-              w-64
-              bg-[#0B0B0D] border border-[#1A1A1C]
-              rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.55)]
-              p-2
-            "
-          >
-            <div className="px-2 py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-[#1A1A1C] border border-[#00FFC622] flex items-center justify-center">
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-sm text-[#00FFC6] font-medium">
-                      {(displayName ?? userEmail ?? "?").charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-white/90 font-medium truncate">
-                      {displayName ?? "Your Profile"}
-                    </span>
-
-                    {role === "admin" && (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-[2px] rounded-full border border-[#00FFC622] text-[#00FFC6]/90 bg-[#00FFC608]">
-                        <Shield size={12} />
-                        Admin
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-[#B3B3B3] truncate">
-                    {userEmail ?? ""}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="my-2 h-px bg-[#1A1A1C]" />
-
-            <div className="flex flex-col text-sm">
-              <Link
-                href="/dashboard/profile"
-                role="menuitem"
-                className={`
-                  flex items-center gap-2
-                  w-full px-3 py-2 rounded-lg transition
-                  ${
-                    isProfilePage
-                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
-                      : "text-[#B3B3B3] hover:bg-[#111113] hover:text-white"
-                  }
-                `}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <User size={16} />
-                Profile
-              </Link>
-
-              <Link
-                href="/dashboard/account"
-                role="menuitem"
-                className={`
-                  flex items-center gap-2
-                  w-full px-3 py-2 rounded-lg transition
-                  ${
-                    isAccountPage
-                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
-                      : "text-[#B3B3B3] hover:bg-[#111113] hover:text-white"
-                  }
-                `}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <CreditCard size={16} />
-                Account
-              </Link>
-
-              <Link
-                href="/dashboard/settings"
-                role="menuitem"
-                className={`
-                  flex items-center gap-2
-                  w-full px-3 py-2 rounded-lg transition
-                  ${
-                    isSettingsPage
-                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
-                      : "text-[#B3B3B3] hover:bg-[#111113] hover:text-white"
-                  }
-                `}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Settings size={16} />
-                Settings
-              </Link>
-
-              <Link
-                href="/dashboard/messages"
-                role="menuitem"
-                className={`
-                  flex items-center gap-3
-                  px-3 py-2 rounded-lg text-sm transition
-                  ${
-                    isMessagesPage
-                      ? "bg-[#00FFC60D] text-[#00FFC6] border border-[#00FFC622]"
-                      : "text-white/80 hover:bg-white/5"
-                  }
-                `}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Mail
-                  size={16}
-                  className={isMessagesPage ? "text-[#00FFC6]" : "text-white/70"}
-                />
-                <span>Messages</span>
-              </Link>
-
-              <div className="my-2 h-px bg-[#1A1A1C]" />
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={handleLogout}
-                className="
-                  flex items-center gap-2
-                  w-full text-left px-3 py-2 rounded-lg
-                  text-red-400 cursor-pointer
-                  hover:bg-[#111113] hover:text-red-300 transition
-                "
-              >
-                <LogOut size={16} />
-                Logout
-              </button>
-            </div>
-          </div>
+          <TopbarProfileMenu
+            avatarMenuRef={avatarMenuRef}
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            userEmail={userEmail}
+            role={role}
+            activeSection={activeSection}
+            onClose={() => setIsMenuOpen(false)}
+            onLogout={handleLogout}
+          />
         )}
 
         <span className="hidden md:inline text-white/85 text-sm font-light">
