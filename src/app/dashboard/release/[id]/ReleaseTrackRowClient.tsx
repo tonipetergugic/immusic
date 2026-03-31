@@ -42,13 +42,30 @@ export default function ReleaseTrackRowClient({
   artists: { id: string; display_name: string }[];
   ratingAvg: number | null;
   ratingCount: number | null;
-  duration: string | null;
+  duration: number | null;
   streamCount: number;
   releaseCoverUrl: string | null;
   isActive: boolean;
   onSelect: () => void;
 }) {
   const router = useRouter();
+  const rowTrack: PlayerTrack = {
+    id: track.id,
+    title: track.title ?? "Untitled",
+    version: track.version ?? null,
+    artist_id: artists?.[0]?.id ?? "",
+    status: track.status ?? null,
+    is_explicit: track.is_explicit,
+    cover_url: releaseCoverUrl ?? null,
+    audio_url: "",
+    bpm: track.bpm ?? null,
+    key: track.key ?? null,
+    genre: track.genre ?? null,
+    release_id: releaseId,
+    profiles: artists?.[0]?.display_name
+      ? { display_name: artists[0].display_name }
+      : undefined,
+  };
 
   return (
     <div
@@ -56,18 +73,7 @@ export default function ReleaseTrackRowClient({
       className="cursor-pointer hover:bg-white/[0.04] transition-colors"
     >
       <TrackRowBase
-        track={
-          {
-            id: track.id,
-            title: track.title ?? null,
-            artist_id: (artists?.[0]?.id ?? null) as any,
-            status: track.status ?? null,
-            release_id: releaseId,
-            bpm: track.bpm ?? null,
-            key: track.key ?? null,
-            cover_url: releaseCoverUrl ?? null,
-          } as any
-        }
+        track={rowTrack}
         index={startIndex}
         tracks={playerQueue}
         coverSize="md"
@@ -93,9 +99,9 @@ export default function ReleaseTrackRowClient({
                   ? "text-[#00FFC6] hover:text-[#00E0B0]"
                   : "text-white hover:text-[#00FFC6]"
               }`}
-              title={formatTrackTitle(track.title, (track as any).version)}
+              title={formatTrackTitle(track.title, track.version)}
             >
-              {formatTrackTitle(track.title, (track as any).version)}
+              {formatTrackTitle(track.title, track.version)}
             </button>
 
             {track.is_explicit ? <ExplicitBadge /> : null}
@@ -141,7 +147,7 @@ export default function ReleaseTrackRowClient({
             initialAvg={ratingAvg ?? null}
             initialCount={ratingCount ?? 0}
             initialStreams={streamCount ?? 0}
-            initialMyStars={(null as any)}
+            initialMyStars={null}
             showStreamsOnDesktopOnly={true}
           />
         }
@@ -151,12 +157,7 @@ export default function ReleaseTrackRowClient({
         actionsSlot={
           <div onClick={(e) => e.stopPropagation()}>
             <TrackOptionsTrigger
-              track={{
-                ...(track as any),
-                id: track.id,
-                artist_id: (artists?.[0]?.id ?? null),
-                release_id: releaseId,
-              }}
+              track={rowTrack}
               releaseId={releaseId}
               showGoToRelease={false}
             />

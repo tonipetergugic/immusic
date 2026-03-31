@@ -10,7 +10,7 @@ export function formatTotalDuration(sec: number): string | null {
 
 export function formatReleaseDate(d: unknown): string | null {
   if (!d) return null;
-  const dt = new Date(d as any);
+  const dt = new Date(d instanceof Date ? d : String(d));
   if (Number.isNaN(dt.getTime())) return null;
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",

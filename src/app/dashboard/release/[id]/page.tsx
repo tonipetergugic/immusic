@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import BackLink from "@/components/BackLink";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
@@ -7,6 +6,47 @@ import ReleaseDetailClient from "./ReleaseDetailClient";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatReleaseDate, formatTotalDuration } from "./_lib/format";
 import { buildArtistsList } from "./_lib/artists";
+
+type ReleaseProfile =
+  | { display_name: string | null }
+  | { display_name: string | null }[]
+  | null;
+
+type ReleaseTrackRelation = {
+  id: string;
+  title: string | null;
+  lyrics: string | null;
+  audio_path: string | null;
+  duration: number | null;
+  rating_avg: number | null;
+  rating_count: number | null;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  version: string | null;
+  status: string | null;
+  is_explicit: boolean;
+  artist_id: string | null;
+  artist:
+    | { id: string; display_name: string | null }
+    | { id: string; display_name: string | null }[]
+    | null;
+  track_collaborators:
+    | {
+        role: string | null;
+        profiles:
+          | { id: string; display_name: string | null }
+          | { id: string; display_name: string | null }[]
+          | null;
+      }[]
+    | null;
+};
+
+type ReleaseTrackItem = {
+  id: string;
+  position: number | null;
+  track: ReleaseTrackRelation | ReleaseTrackRelation[] | null;
+};
 
 export default async function ReleaseDetailPage({
   params,
@@ -157,9 +197,14 @@ export default async function ReleaseDetailPage({
     .eq("release_id", releaseId)
     .order("position", { ascending: true });
 
-  const trackIds = (items ?? [])
-    .map((row: any) => row?.track?.id)
-    .filter((value: unknown): value is string => typeof value === "string");
+  const typedItems = (items ?? []) as ReleaseTrackItem[];
+  function getTrack(row: ReleaseTrackItem): ReleaseTrackRelation | null {
+    return Array.isArray(row.track) ? row.track[0] ?? null : row.track;
+  }
+
+  const trackIds = typedItems
+    .map((row) => getTrack(row)?.id)
+    .filter((value): value is string => typeof value === "string");
 
   let lifetimeRows: { track_id: string; streams_lifetime: number | null }[] = [];
 
@@ -184,66 +229,81 @@ export default async function ReleaseDetailPage({
     ])
   );
 
-  const artistName =
-    (release as any)?.profiles?.display_name ?? "Unknown Artist";
+  const releaseProfile = Array.isArray(release.profiles)
+    ? release.profiles[0] ?? null
+    : release.profiles;
 
-  const trackCount = items?.length ?? 0;
-  const totalSeconds = (items ?? []).reduce(
-    (sum: number, row: any) => sum + (row?.track?.duration ?? 0),
+  const artistName = releaseProfile?.display_name ?? "Unknown Artist";
+
+  const trackCount = typedItems.length;
+  const totalSeconds = typedItems.reduce(
+    (sum, row) => sum + (getTrack(row)?.duration ?? 0),
     0
   );
 
   // Build Player queue SERVER-side (no client fetch)
-  const playerQueue: PlayerTrack[] = (items ?? [])
-    .map((row: any) => {
-      const t = row?.track;
-      if (!t?.id || !t?.audio_path) return null;
+  const playerQueue = typedItems.reduce<PlayerTrack[]>((acc, row) => {
+    const t = getTrack(row);
+    if (!t?.id || !t.audio_path) return acc;
 
-      const { data: audioPublic } = supabase.storage
-        .from("tracks")
-        .getPublicUrl(t.audio_path);
+    const { data: audioPublic } = supabase.storage
+      .from("tracks")
+      .getPublicUrl(t.audio_path);
 
-      const audio_url = audioPublic?.publicUrl ?? null;
-      if (!audio_url) return null;
+    const audio_url = audioPublic?.publicUrl ?? null;
+    if (!audio_url) return acc;
 
-      return {
-        id: String(t.id),
-        title: String(t.title ?? "Untitled"),
-        artist_id: String(t.artist_id ?? ""),
-        status: t.status ?? null,
-        is_explicit: t.is_explicit ?? false,
-        audio_url,
-        cover_url: coverUrl ?? null,
-        bpm: t.bpm ?? null,
-        key: t.key ?? null,
-        profiles: t.artist?.display_name
-          ? { display_name: String(t.artist.display_name) }
-          : undefined,
-        release_id: String(releaseId),
-        release_track_id: row?.id ? String(row.id) : null,
-      } as PlayerTrack;
-    })
-    .filter(Boolean) as PlayerTrack[];
+    const artistProfile = Array.isArray(t.artist) ? t.artist[0] : t.artist;
 
-  const releaseTracks = (items ?? []).map((row: any) => ({
-    releaseTrackId: String(row.id),
-    trackId: String(row.track?.id ?? ""),
-    positionLabel: String(row.position ?? ""),
-    title: row.track?.title ?? null,
-    lyrics: row.track?.lyrics ?? null,
-    bpm: row.track?.bpm ?? null,
-    key: row.track?.key ?? null,
-    genre: row.track?.genre ?? null,
-    version: row.track?.version ?? null,
-    status: row.track?.status ?? null,
-    is_explicit: row.track?.is_explicit ?? false,
-    duration: row.track?.duration ?? null,
-    ratingAvg: row.track?.rating_avg ?? null,
-    ratingCount: row.track?.rating_count ?? null,
-    streamCount:
-      lifetimeStreamsByTrackId.get(String(row.track?.id ?? "")) ?? 0,
-    artists: buildArtistsList(row),
-  }));
+    acc.push({
+      id: String(t.id),
+      title: String(t.title ?? "Untitled"),
+      artist_id: String(t.artist_id ?? ""),
+      status: t.status ?? null,
+      is_explicit: t.is_explicit ?? false,
+      audio_url,
+      cover_url: coverUrl ?? null,
+      bpm: t.bpm ?? null,
+      key: t.key ?? null,
+      profiles: artistProfile?.display_name
+        ? { display_name: String(artistProfile.display_name) }
+        : undefined,
+      release_id: String(releaseId),
+      release_track_id: String(row.id),
+    });
+
+    return acc;
+  }, []);
+
+  const releaseTracks = typedItems.map((row) => {
+    const t = getTrack(row);
+
+    return {
+      releaseTrackId: String(row.id),
+      trackId: String(t?.id ?? ""),
+      positionLabel: String(row.position ?? ""),
+      title: t?.title ?? null,
+      lyrics: t?.lyrics ?? null,
+      bpm: t?.bpm ?? null,
+      key: t?.key ?? null,
+      genre: t?.genre ?? null,
+      version: t?.version ?? null,
+      status: t?.status ?? null,
+      is_explicit: t?.is_explicit ?? false,
+      duration: t?.duration ?? null,
+      ratingAvg: t?.rating_avg ?? null,
+      ratingCount: t?.rating_count ?? null,
+      streamCount: lifetimeStreamsByTrackId.get(String(t?.id ?? "")) ?? 0,
+      artists: buildArtistsList({
+        track: t
+          ? {
+              artist: t.artist ?? null,
+              track_collaborators: t.track_collaborators ?? null,
+            }
+          : null,
+      }),
+    };
+  });
 
   return (
     <div className="text-white">

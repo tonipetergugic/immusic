@@ -22,7 +22,7 @@ type ReleaseDetailTrack = {
   version: string | null;
   status: string | null;
   is_explicit: boolean;
-  duration: string | null;
+  duration: number | null;
   ratingAvg: number | null;
   ratingCount: number | null;
   streamCount: number;
@@ -56,37 +56,37 @@ export default function ReleaseDetailClient({
 
     setSaveBusy(true);
 
-    if (isSavedToLibrary) {
-      const { error } = await supabase
-        .from("library_releases")
-        .delete()
-        .eq("user_id", currentUserId)
-        .eq("release_id", releaseId);
+    try {
+      if (isSavedToLibrary) {
+        const { error } = await supabase
+          .from("library_releases")
+          .delete()
+          .eq("user_id", currentUserId)
+          .eq("release_id", releaseId);
 
-      if (error) {
-        console.error("Failed to remove release from library:", error);
-        setSaveBusy(false);
+        if (error) {
+          console.error("Failed to remove release from library:", error);
+          return;
+        }
+
+        setIsSavedToLibrary(false);
         return;
       }
 
-      setIsSavedToLibrary(false);
+      const { error } = await supabase.from("library_releases").insert({
+        user_id: currentUserId,
+        release_id: releaseId,
+      });
+
+      if (error) {
+        console.error("Failed to save release to library:", error);
+        return;
+      }
+
+      setIsSavedToLibrary(true);
+    } finally {
       setSaveBusy(false);
-      return;
     }
-
-    const { error } = await supabase.from("library_releases").insert({
-      user_id: currentUserId,
-      release_id: releaseId,
-    });
-
-    if (error) {
-      console.error("Failed to save release to library:", error);
-      setSaveBusy(false);
-      return;
-    }
-
-    setIsSavedToLibrary(true);
-    setSaveBusy(false);
   }
 
   const selectedTrack = useMemo(() => {
