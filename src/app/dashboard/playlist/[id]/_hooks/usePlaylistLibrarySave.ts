@@ -26,37 +26,37 @@ export function usePlaylistLibrarySave({
 
     setSaveBusy(true);
 
-    if (isSavedToLibrary) {
-      const { error } = await supabase
-        .from("library_playlists")
-        .delete()
-        .eq("user_id", userId)
-        .eq("playlist_id", playlistId);
+    try {
+      if (isSavedToLibrary) {
+        const { error } = await supabase
+          .from("library_playlists")
+          .delete()
+          .eq("user_id", userId)
+          .eq("playlist_id", playlistId);
 
-      if (error) {
-        console.error("Failed to remove from library_playlists:", error);
-        setSaveBusy(false);
+        if (error) {
+          console.error("Failed to remove from library_playlists:", error);
+          return;
+        }
+
+        setIsSavedToLibrary(false);
         return;
       }
 
-      setIsSavedToLibrary(false);
+      const { error } = await supabase.from("library_playlists").insert({
+        user_id: userId,
+        playlist_id: playlistId,
+      });
+
+      if (error) {
+        console.error("Failed to insert into library_playlists:", error);
+        return;
+      }
+
+      setIsSavedToLibrary(true);
+    } finally {
       setSaveBusy(false);
-      return;
     }
-
-    const { error } = await supabase.from("library_playlists").insert({
-      user_id: userId,
-      playlist_id: playlistId,
-    });
-
-    if (error) {
-      console.error("Failed to insert into library_playlists:", error);
-      setSaveBusy(false);
-      return;
-    }
-
-    setIsSavedToLibrary(true);
-    setSaveBusy(false);
   }
 
   return {

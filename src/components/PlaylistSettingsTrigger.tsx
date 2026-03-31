@@ -4,6 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { Settings, ChevronDown } from "lucide-react";
 import PlaylistSettingsMenu from "./PlaylistSettingsMenu";
 
+type PlaylistSettingsTriggerPlaylist = {
+  is_public: boolean;
+};
+
 export default function PlaylistSettingsTrigger({
   playlist,
   onTogglePublic,
@@ -11,7 +15,7 @@ export default function PlaylistSettingsTrigger({
   onEditDetails,
   isOwner,
 }: {
-  playlist: any;
+  playlist: PlaylistSettingsTriggerPlaylist;
   onTogglePublic: () => Promise<void>;
   onDeletePlaylist: () => void;
   onEditDetails: () => void;

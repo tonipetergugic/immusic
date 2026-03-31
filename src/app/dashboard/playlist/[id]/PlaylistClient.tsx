@@ -16,6 +16,10 @@ import { usePlaylistDnD } from "./_hooks/usePlaylistDnD";
 import type { Playlist } from "@/types/database";
 import type { PlayerTrack } from "@/types/playerTrack";
 
+type PlaylistClientTrack = PlayerTrack & {
+  stream_count?: number | null;
+};
+
 /**
  * ⚠️ ARCHITECTURE GUARD – READ BEFORE CHANGING ⚠️
  *
@@ -43,7 +47,7 @@ export default function PlaylistClient({
   initialSaved,
 }: {
   playlist: Playlist;
-  initialPlayerTracks: PlayerTrack[];
+  initialPlayerTracks: PlaylistClientTrack[];
   user: User | null;
   initialSaved: boolean;
 }) {
@@ -53,7 +57,7 @@ export default function PlaylistClient({
   const [isClient, setIsClient] = useState(false);
 
   const [localPlaylist, setLocalPlaylist] = useState(playlist);
-  const [playerTracks, setPlayerTracks] = useState<PlayerTrack[]>(initialPlayerTracks);
+  const [playerTracks, setPlayerTracks] = useState<PlaylistClientTrack[]>(initialPlayerTracks);
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -183,7 +187,7 @@ export default function PlaylistClient({
     setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
-  async function handleTrackAdded(newPlayerTrack: PlayerTrack) {
+  async function handleTrackAdded(newPlayerTrack: PlaylistClientTrack) {
     if (!isOwner) return;
 
     const [trackMetaResult, lifetimeResult, releaseTrackResult] = await Promise.all([
@@ -306,8 +310,8 @@ export default function PlaylistClient({
     );
 
     const fallbackStreamCount =
-      typeof (newPlayerTrack as any).stream_count === "number"
-        ? (newPlayerTrack as any).stream_count
+      typeof newPlayerTrack.stream_count === "number"
+        ? newPlayerTrack.stream_count
         : 0;
 
     const enriched: PlayerTrack = {
@@ -340,10 +344,6 @@ export default function PlaylistClient({
       <PlaylistHeaderClient
         playlist={{ ...localPlaylist, cover_url: playlistCoverPublicUrl }}
         playerTracks={playerTracks}
-        onEditCover={() => {
-          // Cover click should NOT open the details modal anymore.
-          // Title/description editing stays in the actions bar modal.
-        }}
         onCoverUpdated={(newRelPathOrNull) => {
           setLocalPlaylist((prev) => ({
             ...prev,

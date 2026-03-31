@@ -56,6 +56,27 @@ type SuggestedTrack = {
   streams_30d: number;
 };
 
+function buildSuggestedPlayerTrack(item: SuggestedTrack): PlayerTrack {
+  return {
+    id: item.id,
+    title: item.title,
+    version: item.version ?? null,
+    artist_id: item.artist_id,
+    status: "performance",
+    is_explicit: item.is_explicit,
+    cover_url: item.cover_url ?? null,
+    audio_url: "",
+    genre: item.genre ?? null,
+    profiles: {
+      display_name: item.artist_name,
+    },
+    release_id: item.release_id ?? null,
+    release_track_id: item.release_track_id ?? null,
+    rating_avg: item.rating_avg,
+    rating_count: item.rating_count,
+  };
+}
+
 export default function PlaylistSuggestedTracks({
   playlistId,
   existingTrackIds,
@@ -245,8 +266,8 @@ export default function PlaylistSuggestedTracks({
       const mergedPlayerTrack: PlayerTrack = {
         ...playerTrack,
         genre: playerTrack.genre ?? item.genre ?? null,
-        version: (playerTrack as any).version ?? item.version ?? null,
-        status: (playerTrack as any).status ?? "performance",
+        version: playerTrack.version ?? item.version ?? null,
+        status: playerTrack.status ?? "performance",
       };
 
       onTrackAdded(mergedPlayerTrack);
@@ -367,20 +388,7 @@ export default function PlaylistSuggestedTracks({
               };
             }
 
-            const track = {
-              id: item.id,
-              title: item.title,
-              artist_id: item.artist_id,
-              cover_url: item.cover_url,
-              genre: item.genre,
-              version: item.version,
-              release_id: item.release_id,
-              release_track_id: item.release_track_id,
-              status: "performance",
-              profiles: {
-                display_name: item.artist_name,
-              },
-            } as any;
+            const track = buildSuggestedPlayerTrack(item);
 
             return (
               <TrackRowBase
@@ -423,13 +431,7 @@ export default function PlaylistSuggestedTracks({
                       if (isOwner) {
                         void handleAdd(item);
                       } else {
-                        setModalTrack({
-                          id: item.id,
-                          title: item.title,
-                          artist_id: item.artist_id,
-                          cover_url: item.cover_url,
-                          genre: item.genre,
-                        } as PlayerTrack);
+                        setModalTrack(buildSuggestedPlayerTrack(item));
                       }
                     }}
                     disabled={isBusy}

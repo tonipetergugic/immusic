@@ -22,6 +22,18 @@ type TrackOption = {
   player: PlayerTrack | null;
 };
 
+type PlaylistTrackInsertArtistRow = {
+  display_name: string | null;
+};
+
+type PlaylistTrackInsertTrackRow = {
+  id: string;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  artist?: PlaylistTrackInsertArtistRow | PlaylistTrackInsertArtistRow[] | null;
+};
+
 type PlaylistAddTrackModalProps = {
   playlistId: string;
   open: boolean;
@@ -181,7 +193,14 @@ export default function PlaylistAddTrackModal({
 
       if (data?.tracks) {
         try {
-          const trackRecord = data.tracks as any;
+          const trackRecord: PlaylistTrackInsertTrackRow | null = Array.isArray(data.tracks)
+            ? (data.tracks[0] ?? null)
+            : (data.tracks ?? null);
+
+          if (!trackRecord?.id) {
+            throw new Error("Invalid inserted track payload");
+          }
+
           const res = await fetch(`/api/tracks/${trackRecord.id}/player`, {
             method: "GET",
             cache: "no-store",

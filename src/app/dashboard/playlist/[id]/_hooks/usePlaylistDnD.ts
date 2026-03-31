@@ -21,15 +21,6 @@ export function usePlaylistDnD({
     payload: { track_id: string; position: number }[]
   ) => Promise<{ ok: boolean; error?: string }>;
 }) {
-  function moveBothStates(activeId: string, overId: string) {
-    setPlayerTracks((prev) => {
-      const oldIndex = prev.findIndex((t) => t.id === activeId);
-      const newIndex = prev.findIndex((t) => t.id === overId);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      return arrayMove(prev, oldIndex, newIndex);
-    });
-  }
-
   async function onDragEnd(e: DragEndEvent) {
     if (!isOwner) return;
 
@@ -38,17 +29,20 @@ export function usePlaylistDnD({
 
     if (!activeId || !overId || activeId === overId) return;
 
-    // 1) Optimistic UI
-    moveBothStates(activeId, overId);
-
-    // 2) Persist positions based on NEW playerTracks order
     const snapshot = [...playerTracks];
     const oldIndex = snapshot.findIndex((t) => t.id === activeId);
     const newIndex = snapshot.findIndex((t) => t.id === overId);
+
     if (oldIndex === -1 || newIndex === -1) return;
 
     const next = arrayMove(snapshot, oldIndex, newIndex);
-    const payload = next.map((t, idx) => ({ track_id: t.id, position: idx + 1 }));
+
+    setPlayerTracks(next);
+
+    const payload = next.map((track, index) => ({
+      track_id: track.id,
+      position: index + 1,
+    }));
 
     const res = await reorderPlaylistTracksAction(playlistId, payload);
 

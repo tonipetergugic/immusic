@@ -46,9 +46,7 @@ export default function PlaylistModals({
       <DeletePlaylistModal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={async () => {
-          await onDeletePlaylist();
-        }}
+        onConfirm={onDeletePlaylist}
       />
 
       <PlaylistDetailsModal

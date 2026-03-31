@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -12,6 +13,21 @@ import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import { GripVertical } from "lucide-react";
 import ExplicitBadge from "@/components/ExplicitBadge";
 
+type PlaylistRowArtist = {
+  id: string;
+  display_name: string | null;
+};
+
+type PlaylistRowTrack = PlayerTrack & {
+  release_id?: string | null;
+  version?: string | null;
+  artists?: PlaylistRowArtist[];
+  rating_avg?: number | null;
+  rating_count?: number | null;
+  stream_count?: number | null;
+  my_stars?: number | null;
+};
+
 function PlaylistRow({
   track,
   onDelete,
@@ -19,12 +35,12 @@ function PlaylistRow({
   user,
   dragHandleProps,
 }: {
-  track: PlayerTrack;
-  tracks: PlayerTrack[];
+  track: PlaylistRowTrack;
+  tracks: PlaylistRowTrack[];
   onDelete?: () => void;
   user: User | null;
   dragHandleProps?: {
-    listeners?: Record<string, any>;
+    listeners?: DraggableSyntheticListeners;
     setActivatorNodeRef: (node: HTMLButtonElement | null) => void;
   };
 }) {
@@ -35,7 +51,7 @@ function PlaylistRow({
   function goToTrack(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    const releaseId = (track as any)?.release_id ?? null;
+    const releaseId = track.release_id ?? null;
     if (releaseId) router.push(`/dashboard/release/${releaseId}`);
   }
 
@@ -98,37 +114,37 @@ function PlaylistRow({
                   ? "text-[#00FFC6] hover:text-[#00E0B0]"
                   : "text-white hover:text-[#00FFC6]"
               }`}
-              title={formatTrackTitle(track.title, (track as any).version)}
+              title={formatTrackTitle(track.title, track.version)}
             >
-              {formatTrackTitle(track.title, (track as any).version)}
+              {formatTrackTitle(track.title, track.version)}
             </button>
 
             {track.is_explicit ? <ExplicitBadge /> : null}
           </div>
         }
         subtitleSlot={
-          Array.isArray((track as any)?.artists) && (track as any).artists.length > 0 ? (
+          Array.isArray(track.artists) && track.artists.length > 0 ? (
             <div className="mt-1 text-left text-xs text-white/60 truncate">
-              {(track as any).artists.map((a: any, idx: number) => (
-                <span key={a.id}>
+              {track.artists.map((artist, idx) => (
+                <span key={artist.id}>
                   <button
                     type="button"
                     onPointerDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    onClick={(e) => goToArtistId(String(a.id), e)}
+                    onClick={(e) => goToArtistId(String(artist.id), e)}
                     className="
                       cursor-pointer
                       hover:text-[#00FFC6] hover:underline underline-offset-2
                       transition-colors
                       focus:outline-none
                     "
-                    title={String(a.display_name)}
+                    title={String(artist.display_name)}
                   >
-                    {String(a.display_name)}
+                    {String(artist.display_name)}
                   </button>
-                  {idx < (track as any).artists.length - 1 ? ", " : null}
+                  {idx < (track.artists?.length ?? 0) - 1 ? ", " : null}
                 </span>
               ))}
             </div>
@@ -159,10 +175,10 @@ function PlaylistRow({
             <TrackRatingInline
               releaseTrackId={track.release_track_id}
               trackId={track.id}
-              initialAvg={(track as any).rating_avg ?? null}
-              initialCount={(track as any).rating_count ?? 0}
-              initialStreams={(track as any).stream_count ?? 0}
-              initialMyStars={(track as any).my_stars ?? null}
+              initialAvg={track.rating_avg ?? null}
+              initialCount={track.rating_count ?? 0}
+              initialStreams={track.stream_count ?? 0}
+              initialMyStars={track.my_stars ?? null}
               showStreamsOnDesktopOnly={true}
             />
           ) : (

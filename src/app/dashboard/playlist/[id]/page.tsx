@@ -100,6 +100,11 @@ type PlaylistTrackRow = {
   track_collaborators: unknown;
 };
 
+type ExplicitTrackRow = {
+  id: string;
+  is_explicit: boolean | null;
+};
+
 type CollabArtist = { id: string; display_name: string };
 
 type TrackCollaboratorVM = {
@@ -289,8 +294,10 @@ export default async function PlaylistPage(
     console.error("Failed to load explicit flags for playlist tracks", explicitError);
   }
 
+  const explicitTrackRows: ExplicitTrackRow[] = explicitRows ?? [];
+
   const explicitByTrackId = new Map<string, boolean>(
-    (explicitRows ?? []).map((row: any) => [String(row.id), !!row.is_explicit])
+    explicitTrackRows.map((row) => [String(row.id), !!row.is_explicit])
   );
 
   if (hideExplicitTracks && visiblePlaylistTracks.length > 0) {

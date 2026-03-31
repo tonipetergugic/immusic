@@ -22,13 +22,11 @@ type PlaylistOwnerJoin = {
 export default function PlaylistHeaderClient({
   playlist,
   playerTracks,
-  onEditCover,
   onCoverUpdated,
   isOwner,
 }: {
   playlist: Playlist & PlaylistOwnerJoin;
   playerTracks: PlayerTrack[];
-  onEditCover: () => void;
   onCoverUpdated: (newRelPathOrNull: string | null) => void;
   isOwner: boolean;
 }) {

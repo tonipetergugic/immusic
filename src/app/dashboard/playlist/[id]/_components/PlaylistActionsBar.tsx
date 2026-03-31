@@ -4,15 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Globe, Lock, MoreHorizontal, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import type { Playlist } from "@/types/database";
+import type { PlayerTrack } from "@/types/playerTrack";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
-
-type PlayerTrack = {
-  id: string;
-  title: string;
-  artist_id: string;
-  cover_url: string | null;
-  audio_url: string;
-};
 
 export default function PlaylistActionsBar({
   isOwner,

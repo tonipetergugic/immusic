@@ -1,7 +1,10 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import type { DragEndEvent } from "@dnd-kit/core";
+import type {
+  DragEndEvent,
+  DraggableSyntheticListeners,
+} from "@dnd-kit/core";
 import {
   DndContext,
   closestCenter,
@@ -58,7 +61,7 @@ export default function PlaylistTrackList({
       transition: undefined,
     };
 
-    const safeListeners = (listeners ?? {}) as Record<string, any>;
+    const safeListeners: DraggableSyntheticListeners = listeners;
 
     return (
       <div ref={setNodeRef} style={style} className="w-full" {...attributes}>

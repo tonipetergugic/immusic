@@ -1,12 +1,16 @@
 "use client";
 
+type PlaylistSettingsMenuPlaylist = {
+  is_public: boolean;
+};
+
 export default function PlaylistSettingsMenu({
   playlist,
   onTogglePublic,
   onEditDetails,
   onDeletePlaylist,
 }: {
-  playlist: any;
+  playlist: PlaylistSettingsMenuPlaylist;
   onTogglePublic: () => void | Promise<void>;
   onEditDetails: () => void;
   onDeletePlaylist: () => void;
