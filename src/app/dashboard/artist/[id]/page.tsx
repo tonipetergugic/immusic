@@ -38,6 +38,10 @@ type ArtistCollaboratorRow = {
   display_name: string | null;
 };
 
+type TrackCollaboratorLinkRow = {
+  track_id: string | null;
+};
+
 export default async function ArtistV2Page({
   params,
 }: {
@@ -201,14 +205,36 @@ export default async function ArtistV2Page({
       ? (topTracksRaw as TopTracksRow[])
       : [];
 
-  const topTrackIds = topTracksRawApi.map((t) => t.track_id).filter(Boolean);
+  const analyticsTrackIds = topTracksRawApi
+    .map((t) => String(t.track_id ?? ""))
+    .filter(Boolean);
+
+  const { data: collaboratorTrackRows, error: collaboratorTrackRowsError } =
+    await supabase
+      .from("track_collaborators")
+      .select("track_id")
+      .eq("profile_id", artistId);
+
+  if (collaboratorTrackRowsError) {
+    // collaborator tracks sind optionaler Zusatzcontent → fallback ohne collab merge.
+  }
+
+  const collaboratorTrackIds = (
+    (collaboratorTrackRows ?? []) as TrackCollaboratorLinkRow[]
+  )
+    .map((row) => String(row.track_id ?? ""))
+    .filter(Boolean);
+
+  const artistTrackIds = Array.from(
+    new Set([...analyticsTrackIds, ...collaboratorTrackIds])
+  );
 
   const { data: explicitTrackRows, error: explicitTrackError } =
-    topTrackIds.length > 0
+    artistTrackIds.length > 0
       ? await supabase
           .from("tracks")
           .select("id, is_explicit")
-          .in("id", topTrackIds)
+          .in("id", artistTrackIds)
       : { data: [], error: null };
 
   if (explicitTrackError) {
@@ -241,7 +267,7 @@ export default async function ArtistV2Page({
 
   let topTracksResolved: TopTrackResolvedRow[] = [];
 
-  if (topTrackIds.length > 0) {
+  if (artistTrackIds.length > 0) {
     const { data, error } = await supabase
       .from("artist_top_tracks_resolved")
       .select(
@@ -262,7 +288,7 @@ export default async function ArtistV2Page({
         track_status
       `
       )
-      .in("track_id", topTrackIds);
+      .in("track_id", artistTrackIds);
 
     if (!error && Array.isArray(data)) {
       topTracksResolved = data as TopTrackResolvedRow[];
@@ -272,76 +298,96 @@ export default async function ArtistV2Page({
   const detailsByTrackId = new Map<string, TopTrackResolvedRow>();
   for (const r of topTracksResolved) detailsByTrackId.set(r.track_id, r);
 
-  const rankedTracks: TopTrackDto[] = topTracksRawApi
-    .map((a): TopTrackDto | null => {
-      const d = detailsByTrackId.get(a.track_id) ?? null;
-      if (!d) return null;
+  const buildTrackDto = (
+    trackId: string,
+    stats: TopTracksRow | null
+  ): TopTrackDto | null => {
+    const d = detailsByTrackId.get(trackId) ?? null;
+    if (!d) return null;
 
-      const audioUrl = d.audio_path
-        ? supabase.storage.from("tracks").getPublicUrl(d.audio_path).data
-            .publicUrl
-        : null;
+    const audioUrl = d.audio_path
+      ? supabase.storage.from("tracks").getPublicUrl(d.audio_path).data
+          .publicUrl
+      : null;
 
-      if (!audioUrl) return null;
+    if (!audioUrl) return null;
 
-      const coverUrl = d.cover_path
-        ? supabase.storage.from("release_covers").getPublicUrl(d.cover_path)
-            .data.publicUrl ?? null
-        : null;
+    const coverUrl = d.cover_path
+      ? supabase.storage.from("release_covers").getPublicUrl(d.cover_path).data
+          .publicUrl ?? null
+      : null;
 
-      const ownerId = String(d.owner_id ?? "");
-      const ownerName = String(
-        d.owner_name ?? artistProfile.display_name ?? "Unknown Artist"
-      );
+    const ownerId = String(d.owner_id ?? "");
+    const ownerName = String(
+      d.owner_name ?? artistProfile.display_name ?? "Unknown Artist"
+    );
 
-      const artists: Array<{ id: string; displayName: string }> = [];
-      if (ownerId) artists.push({ id: ownerId, displayName: ownerName });
+    const artists: Array<{ id: string; displayName: string }> = [];
+    if (ownerId) artists.push({ id: ownerId, displayName: ownerName });
 
-      const collabArr: ArtistCollaboratorRow[] = Array.isArray(d.collaborators)
-        ? d.collaborators
-        : [];
-      for (const c of collabArr) {
-        const cid = String(c?.artist_id ?? "");
-        const cname = String(c?.display_name ?? "Unknown Artist");
-        if (!cid) continue;
-        if (!artists.some((x) => x.id === cid)) {
-          artists.push({ id: cid, displayName: cname });
-        }
+    const collabArr: ArtistCollaboratorRow[] = Array.isArray(d.collaborators)
+      ? d.collaborators
+      : [];
+
+    for (const c of collabArr) {
+      const cid = String(c?.artist_id ?? "");
+      const cname = String(c?.display_name ?? "Unknown Artist");
+      if (!cid) continue;
+      if (!artists.some((x) => x.id === cid)) {
+        artists.push({ id: cid, displayName: cname });
       }
+    }
 
-      const baseTitle = d.track_title ?? "Untitled";
-      const version = (d.track_version ?? "").trim();
-      const title = version ? `${baseTitle} (${version})` : baseTitle;
+    const baseTitle = d.track_title ?? "Untitled";
+    const version = (d.track_version ?? "").trim();
+    const title = version ? `${baseTitle} (${version})` : baseTitle;
 
-      return {
-        trackId: a.track_id,
-        releaseId: d.release_id ?? null,
-        title,
-        coverUrl,
-        artists,
-        audioUrl,
-        status: d.track_status ?? null,
-        isExplicit: explicitByTrackId.get(String(a.track_id)) ?? false,
-        bpm: d.bpm ?? null,
-        key: d.key ?? null,
-        genre: d.genre ?? null,
-        stats30d: {
-          streams: a.streams ?? 0,
-          listeners: a.unique_listeners ?? 0,
-          listenedSeconds: a.listened_seconds ?? 0,
-          ratingsCount: a.ratings_count ?? 0,
-          ratingAvg: a.rating_avg ?? null,
-        },
-      };
-    })
+    return {
+      trackId,
+      releaseId: d.release_id ?? null,
+      title,
+      coverUrl,
+      artists,
+      audioUrl,
+      status: d.track_status ?? null,
+      isExplicit: explicitByTrackId.get(String(trackId)) ?? false,
+      bpm: d.bpm ?? null,
+      key: d.key ?? null,
+      genre: d.genre ?? null,
+      stats30d: {
+        streams: stats?.streams ?? 0,
+        listeners: stats?.unique_listeners ?? 0,
+        listenedSeconds: stats?.listened_seconds ?? 0,
+        ratingsCount: stats?.ratings_count ?? 0,
+        ratingAvg: stats?.rating_avg ?? null,
+      },
+    };
+  };
+
+  const rankedTracks: TopTrackDto[] = topTracksRawApi
+    .map((a) => buildTrackDto(a.track_id, a))
+    .filter((x): x is TopTrackDto => x !== null);
+
+  const analyticsTrackIdSet = new Set(analyticsTrackIds);
+
+  const collaboratorFallbackTracks: TopTrackDto[] = artistTrackIds
+    .filter((trackId) => !analyticsTrackIdSet.has(trackId))
+    .map((trackId) => buildTrackDto(trackId, null))
     .filter((x): x is TopTrackDto => x !== null);
 
   const visibleRankedTracks = hideExplicitTracks
     ? rankedTracks.filter((track) => !track.isExplicit)
     : rankedTracks;
 
+  const visibleCollaboratorFallbackTracks = hideExplicitTracks
+    ? collaboratorFallbackTracks.filter((track) => !track.isExplicit)
+    : collaboratorFallbackTracks;
+
   const topTracks: TopTrackDto[] = visibleRankedTracks.slice(0, 5);
-  const allTracks: TopTrackDto[] = visibleRankedTracks.slice(5, 20);
+  const allTracks: TopTrackDto[] = [
+    ...visibleRankedTracks.slice(5, 20),
+    ...visibleCollaboratorFallbackTracks,
+  ].slice(0, 15);
 
   // B) Viewer Context
   const isSelf = !!viewerId && viewerId === artistId;

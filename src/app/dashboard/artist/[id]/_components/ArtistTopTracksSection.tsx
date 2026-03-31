@@ -137,7 +137,7 @@ export default function ArtistTopTracksSection({
                       }))}
                       fallbackArtistId={fallbackArtistId}
                       fallbackDisplayName={fallbackDisplayName}
-                      disableLinks
+                      currentArtistId={fallbackArtistId}
                     />
                   </div>
                 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Bookmark } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SaveArtistButton({
@@ -59,7 +60,7 @@ export default function SaveArtistButton({
       onClick={toggle}
       disabled={busy}
       className={`
-        inline-flex items-center justify-center
+        inline-flex items-center justify-center gap-2
         h-10 px-4 rounded-full
         bg-transparent border border-white/10
         text-[#B3B3B3] text-sm font-medium
@@ -69,7 +70,19 @@ export default function SaveArtistButton({
         ${className ?? ""}
       `.trim()}
     >
-      {isSaved ? "Remove from Library" : "Save to Library"}
+      {busy ? (
+        "..."
+      ) : isSaved ? (
+        <>
+          <Bookmark size={16} aria-hidden="true" />
+          Remove from Library
+        </>
+      ) : (
+        <>
+          <Bookmark size={16} aria-hidden="true" />
+          Save to Library
+        </>
+      )}
     </button>
   );
 }

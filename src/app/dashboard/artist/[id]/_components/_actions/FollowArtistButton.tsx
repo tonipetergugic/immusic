@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, UserPlus } from "lucide-react";
 import { followProfile, unfollowProfile } from "@/app/(topbar)/profile/actions";
 
 function showNotice(message: string) {
@@ -52,7 +53,7 @@ export default function FollowArtistButton({
       onClick={toggle}
       disabled={busy}
       className={`
-  inline-flex min-w-[120px] cursor-pointer items-center justify-center
+  inline-flex min-w-[120px] cursor-pointer items-center justify-center gap-2
   h-10 px-4 rounded-full
   bg-transparent border border-white/10
   text-[#B3B3B3] text-sm font-medium
@@ -62,7 +63,19 @@ export default function FollowArtistButton({
   ${className ?? ""}
 `.trim()}
     >
-      {busy ? "..." : isFollowing ? "Following" : "Follow"}
+      {busy ? (
+        "..."
+      ) : isFollowing ? (
+        <>
+          <Check size={16} aria-hidden="true" />
+          Following
+        </>
+      ) : (
+        <>
+          <UserPlus size={16} aria-hidden="true" />
+          Follow
+        </>
+      )}
     </button>
   );
 }

@@ -115,6 +115,7 @@ export default function FollowersModal({
                 hover:border-[#00FFC6]
                 hover:text-[#00FFC6]
                 transition
+                cursor-pointer
               "
               aria-label="Close"
             >
@@ -208,12 +209,12 @@ export default function FollowersModal({
                               }}
                               className={`
                                 inline-flex items-center justify-center
-                                h-8 px-3
-                                rounded-full
+                                w-[128px] h-9
+                                rounded-xl
                                 border
-                                text-xs font-semibold
+                                text-sm font-semibold
                                 transition
-                                shrink-0
+                                shrink-0 whitespace-nowrap cursor-pointer
                                 ${
                                   isBusy
                                     ? "opacity-60 cursor-wait border-white/10 bg-white/[0.04] text-white/70"
@@ -224,12 +225,14 @@ export default function FollowersModal({
                               `}
                             >
                               {isBusy ? (
-                                <span className="inline-flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center gap-2">
                                   <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
                                   <span className="text-white/70">Saving</span>
                                 </span>
+                              ) : isFollowing ? (
+                                "Following"
                               ) : (
-                                (isFollowing ? "Following" : "Follow")
+                                "Follow"
                               )}
                             </button>
                           );

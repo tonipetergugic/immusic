@@ -97,7 +97,7 @@ export default function ArtistHeaderActions({
                     artistId={artistId}
                     isFollowing={isFollowing}
                     onChange={setIsFollowing}
-                    className="w-full justify-start !bg-transparent !border-0 !shadow-none hover:!bg-white/5 rounded-lg px-3 py-2"
+                    className="w-full !min-w-0 !h-auto !justify-start !gap-3 cursor-pointer !bg-transparent !border-0 !shadow-none hover:!bg-white/5 !rounded-lg !px-3 !py-2"
                   />
                 ) : (
                   <div className="opacity-50">
@@ -105,7 +105,7 @@ export default function ArtistHeaderActions({
                       artistId={artistId}
                       isFollowing={false}
                       onChange={setIsFollowing}
-                      className="w-full justify-start !bg-transparent !border-0 !shadow-none hover:!bg-white/5 rounded-lg px-3 py-2"
+                      className="w-full !min-w-0 !h-auto !justify-start !gap-3 !bg-transparent !border-0 !shadow-none hover:!bg-white/5 !rounded-lg !px-3 !py-2"
                     />
                   </div>
                 )}
@@ -122,7 +122,7 @@ export default function ArtistHeaderActions({
                     viewerId={viewer.id}
                     isSaved={isSaved}
                     onChange={setIsSaved}
-                    className="w-full justify-start !bg-transparent !border-0 !shadow-none hover:!bg-white/5 rounded-lg px-3 py-2"
+                    className="w-full !min-w-0 !h-auto !justify-start !gap-3 cursor-pointer !bg-transparent !border-0 !shadow-none hover:!bg-white/5 !rounded-lg !px-3 !py-2"
                   />
                 </div>
               ) : null}
