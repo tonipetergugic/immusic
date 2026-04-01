@@ -11,12 +11,10 @@ export function SectionDivider() {
 export function Stat({
   label,
   value,
-  hint,
   valueClassName,
 }: {
   label: string;
   value: string;
-  hint?: string;
   valueClassName?: string;
 }) {
   return (

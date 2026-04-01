@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { useArtistProfile } from "@/app/artist/_components/ArtistProfileProvider";
 
-export default function ArtistDashboardHero({
-  publicArtistHref,
-}: {
-  publicArtistHref: string;
-}) {
+export default function ArtistDashboardHero() {
   const { displayName, bannerUrl } = useArtistProfile();
 
   const artistName = displayName?.trim() ? displayName : "Artist";

@@ -1,6 +1,5 @@
 import Sidebar from "./components/ArtistSidebar";
 import Topbar from "../dashboard/components/Topbar";
-import ScrollToTopOnRouteChange from "./components/ScrollToTopOnRouteChange";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ArtistProfileProvider } from "@/app/artist/_components/ArtistProfileProvider";
 import AppShell from "@/components/layout/AppShell";

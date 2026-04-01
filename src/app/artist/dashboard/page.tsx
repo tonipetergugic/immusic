@@ -58,14 +58,16 @@ export default async function ArtistDashboardPage() {
 
   const premiumTx = (premiumTxRaw ?? []) as PremiumTxRow[];
 
-  const publicArtistHref = `/dashboard/artist/${user.id}`;
-
-  type PerfRow = {
-    release_id: string;
-    track_title: string;
-    stream_count: number | null;
+  type AnalyticsTopTrackRow = {
+    track_id: string;
+    streams: number | null;
+    ratings_count: number | null;
     rating_avg: number | null;
-    rating_count: number | null;
+  };
+
+  type ResolvedTrackRow = {
+    track_id: string;
+    track_title: string | null;
     cover_path: string | null;
   };
 
@@ -77,19 +79,34 @@ export default async function ArtistDashboardPage() {
   };
 
   const { data: topRatedRaw, error: topRatedError } = await supabase
-    .from("artist_dashboard_release_tracks")
-    .select("release_id, track_title, stream_count, rating_avg, rating_count, cover_path")
+    .from("analytics_artist_top_tracks_30d")
+    .select(
+      `
+      track_id,
+      streams:streams_30d,
+      ratings_count:ratings_count_30d,
+      rating_avg:rating_avg_30d
+    `
+    )
     .eq("artist_id", user.id)
-    .order("rating_avg", { ascending: false, nullsFirst: false })
-    .order("rating_count", { ascending: false, nullsFirst: false })
-    .limit(50);
+    .gt("ratings_count_30d", 0)
+    .order("rating_avg_30d", { ascending: false, nullsFirst: false })
+    .order("ratings_count_30d", { ascending: false, nullsFirst: false })
+    .limit(3);
 
   const { data: topStreamsRaw, error: topStreamsError } = await supabase
-    .from("artist_dashboard_release_tracks")
-    .select("release_id, track_title, stream_count, rating_avg, rating_count, cover_path")
+    .from("analytics_artist_top_tracks_30d")
+    .select(
+      `
+      track_id,
+      streams:streams_30d,
+      ratings_count:ratings_count_30d,
+      rating_avg:rating_avg_30d
+    `
+    )
     .eq("artist_id", user.id)
-    .order("stream_count", { ascending: false, nullsFirst: false })
-    .limit(50);
+    .order("streams_30d", { ascending: false, nullsFirst: false })
+    .limit(3);
 
   const { data: statsRaw, error: statsError } = await supabase
     .from("artist_dashboard_release_tracks")
@@ -102,8 +119,35 @@ export default async function ArtistDashboardPage() {
     throw perfError;
   }
 
-  const topRatedRows = (topRatedRaw ?? []) as PerfRow[];
-  const topStreamsRows = (topStreamsRaw ?? []) as PerfRow[];
+  const topRatedRows = (topRatedRaw ?? []) as AnalyticsTopTrackRow[];
+  const topStreamsRows = (topStreamsRaw ?? []) as AnalyticsTopTrackRow[];
+
+  const analyticsTrackIds = Array.from(
+    new Set(
+      [...topRatedRows, ...topStreamsRows]
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const { data: topTrackDetailsRaw, error: topTrackDetailsError } =
+    analyticsTrackIds.length > 0
+      ? await supabase
+          .from("artist_top_tracks_resolved")
+          .select("track_id, track_title, cover_path")
+          .in("track_id", analyticsTrackIds)
+      : { data: [], error: null };
+
+  if (topTrackDetailsError) {
+    throw topTrackDetailsError;
+  }
+
+  const detailsByTrackId = new Map(
+    ((topTrackDetailsRaw ?? []) as ResolvedTrackRow[]).map((row) => [
+      row.track_id,
+      row,
+    ])
+  );
 
   const statsRows = (statsRaw ?? []) as StatsRow[];
 
@@ -116,8 +160,6 @@ export default async function ArtistDashboardPage() {
   const totalReleases = Array.from(
     new Set(statsRows.map((row) => row.release_id).filter(Boolean))
   ).length;
-
-  const avgStreamsPerTrack = totalTracks > 0 ? totalStreams / totalTracks : 0;
 
   const { weightedRatingSum, ratingCountSum } = statsRows.reduce(
     (acc, row) => {
@@ -134,38 +176,36 @@ export default async function ArtistDashboardPage() {
     { weightedRatingSum: 0, ratingCountSum: 0 }
   );
 
-  const totalRatingsCount = statsRows.reduce(
-    (sum, row) => sum + (typeof row.rating_count === "number" ? row.rating_count : 0),
-    0
-  );
+  const avgRating = ratingCountSum > 0 ? weightedRatingSum / ratingCountSum : 0;
 
-  const avgRating =
-    ratingCountSum > 0 ? weightedRatingSum / ratingCountSum : 0;
+  const performanceTracks = topStreamsRows.flatMap((row, index) => {
+    const details = detailsByTrackId.get(row.track_id);
+    if (!details) return [];
 
-  const getReleaseCoverPath = (row: PerfRow) => {
-    return row.cover_path ?? null;
-  };
+    return [
+      {
+        key: `p-${row.track_id}-${index}`,
+        title: details.track_title ?? "Untitled Track",
+        streams: row.streams ?? 0,
+        coverUrl: getCoverUrl(supabase, details.cover_path),
+      },
+    ];
+  });
 
+  const qualityTracks = topRatedRows.flatMap((row, index) => {
+    const details = detailsByTrackId.get(row.track_id);
+    if (!details || typeof row.rating_avg !== "number") return [];
 
-  const performanceTracks = topStreamsRows
-    .slice(0, 3)
-    .map((row, index) => ({
-      key: `p-${row.release_id}-${row.track_title ?? "untitled"}-${index}`,
-      title: row.track_title ?? "Untitled Track",
-      streams: row.stream_count ?? 0,
-      coverUrl: getCoverUrl(supabase, getReleaseCoverPath(row)),
-    }));
-
-  const qualityTracks = topRatedRows
-    .filter((row) => (row.rating_count ?? 0) > 0 && typeof row.rating_avg === "number")
-    .slice(0, 3)
-    .map((row, index) => ({
-      key: `q-${row.release_id}-${row.track_title ?? "untitled"}-${index}`,
-      title: row.track_title ?? "Untitled Track",
-      rating: row.rating_avg ?? 0,
-      ratingCount: row.rating_count ?? 0,
-      coverUrl: getCoverUrl(supabase, getReleaseCoverPath(row)),
-    }));
+    return [
+      {
+        key: `q-${row.track_id}-${index}`,
+        title: details.track_title ?? "Untitled Track",
+        rating: row.rating_avg,
+        ratingCount: row.ratings_count ?? 0,
+        coverUrl: getCoverUrl(supabase, details.cover_path),
+      },
+    ];
+  });
 
   const lastUpdatedLabel = new Date().toLocaleString("de-DE", {
     year: "numeric",
@@ -177,7 +217,7 @@ export default async function ArtistDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <ArtistDashboardHero publicArtistHref={publicArtistHref} />
+      <ArtistDashboardHero />
 
       <div className="space-y-3">
         <section className="mt-16 mb-10">
@@ -384,7 +424,7 @@ export default async function ArtistDashboardPage() {
           />
 
           <MenuTile
-            href={publicArtistHref}
+            href={`/dashboard/artist/${user.id}`}
             title="Public Page"
             description="View your public artist profile as listeners see it."
             icon={<ExternalLink className="h-6 w-6" />}
