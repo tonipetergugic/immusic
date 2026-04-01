@@ -194,17 +194,12 @@ function TrackRatingInline({
   }
 
   const hasInitial = useMemo(() => {
-    // Library v2 passes initialEligibility as a signal that initial payload is provided.
-    // Even if avg is null and counts are 0, we must skip the initial GET to avoid N× requests.
+    // Only skip the initial GET when user-specific state is already known.
+    // Aggregate summary values alone are not enough, because `my_stars` may still be unknown.
     if (initialEligibility !== undefined) return true;
-
-    return (
-      initialMyStars !== null ||
-      initialAvg !== null ||
-      (typeof initialCount === "number" && initialCount > 0) ||
-      (typeof initialStreams === "number" && initialStreams > 0)
-    );
-  }, [initialMyStars, initialAvg, initialCount, initialStreams, initialEligibility]);
+    if (initialMyStars !== null) return true;
+    return false;
+  }, [initialMyStars, initialEligibility]);
 
   useEffect(() => {
     if (!releaseTrackId) return;

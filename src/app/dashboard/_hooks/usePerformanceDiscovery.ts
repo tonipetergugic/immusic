@@ -40,6 +40,11 @@ type ReleaseTrackAggregateRow = {
     | null;
 };
 
+type MyRatingRow = {
+  track_id: string;
+  stars: number | null;
+};
+
 function getErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) return err.message;
   return fallback;
@@ -69,6 +74,7 @@ export function usePerformanceDiscovery({
         rating_avg: number | null;
         rating_count: number;
         stream_count: number;
+        my_stars: number | null;
       }
     >
   >({});
@@ -139,6 +145,10 @@ export function usePerformanceDiscovery({
             )
           );
 
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
           if (trackIds.length > 0) {
             const { data: tmeta, error: tmetaErr } = await supabase
               .from("tracks")
@@ -206,6 +216,23 @@ export function usePerformanceDiscovery({
             }
           }
 
+          const myStarsByTrackId = new Map<string, number>();
+
+          if (trackIds.length > 0 && user?.id) {
+            const { data: myRatings, error: myRatingsErr } = await supabase
+              .from("track_ratings")
+              .select("track_id, stars")
+              .eq("user_id", user.id)
+              .in("track_id", trackIds);
+
+            if (!myRatingsErr && myRatings) {
+              for (const row of (myRatings ?? []) as MyRatingRow[]) {
+                if (!row?.track_id || typeof row.stars !== "number") continue;
+                myStarsByTrackId.set(String(row.track_id), row.stars);
+              }
+            }
+          }
+
           if (trackIds.length > 0 && releaseIds.length > 0) {
             const { data: rts, error: rtsErr } = await supabase
               .from("release_tracks")
@@ -216,7 +243,13 @@ export function usePerformanceDiscovery({
             if (!rtsErr && rts) {
               const map: Record<
                 string,
-                { release_track_id: string; rating_avg: number | null; rating_count: number; stream_count: number }
+                {
+                  release_track_id: string;
+                  rating_avg: number | null;
+                  rating_count: number;
+                  stream_count: number;
+                  my_stars: number | null;
+                }
               > = {};
               for (const rt of (rts ?? []) as ReleaseTrackAggregateRow[]) {
                 const ratingSource = Array.isArray(rt.tracks)
@@ -230,6 +263,7 @@ export function usePerformanceDiscovery({
                   rating_avg: ratingSource?.rating_avg ?? null,
                   rating_count: ratingSource?.rating_count ?? 0,
                   stream_count: lifetimeStreamsByTrackId.get(String(rt.track_id)) ?? 0,
+                  my_stars: myStarsByTrackId.get(String(rt.track_id)) ?? null,
                 };
               }
               if (!cancelled) setPerfReleaseTrackMap(map);

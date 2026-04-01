@@ -6,7 +6,7 @@ import PlayOverlayButton from "@/components/PlayOverlayButton";
 import ReleaseDetailClient from "./ReleaseDetailClient";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatReleaseDate, formatTotalDuration } from "./_lib/format";
-import { buildArtistsList } from "./_lib/artists";
+import { buildArtistsList, type ResolvedArtistRow } from "./_lib/artists";
 
 type ReleaseTrackRelation = {
   id: string;
@@ -26,15 +26,6 @@ type ReleaseTrackRelation = {
   artist:
     | { id: string; display_name: string | null }
     | { id: string; display_name: string | null }[]
-    | null;
-  track_collaborators:
-    | {
-        role: string | null;
-        profiles:
-          | { id: string; display_name: string | null }
-          | { id: string; display_name: string | null }[]
-          | null;
-      }[]
     | null;
 };
 
@@ -179,13 +170,6 @@ export default async function ReleaseDetailPage({
         artist:profiles!tracks_artist_id_fkey (
           id,
           display_name
-        ),
-        track_collaborators (
-          role,
-          profiles:profile_id (
-            id,
-            display_name
-          )
         )
       )
     `
@@ -215,6 +199,37 @@ export default async function ReleaseDetailPage({
   const trackIds = validItems
     .map((row) => getTrack(row)?.id)
     .filter((value): value is string => typeof value === "string");
+
+  let trackArtistsResolvedRows: {
+    track_id: string | null;
+    artists: ResolvedArtistRow[] | null;
+  }[] = [];
+
+  if (trackIds.length > 0) {
+    const { data: resolvedArtistsData, error: resolvedArtistsError } =
+      await supabase
+        .from("track_artists_resolved")
+        .select("track_id, artists")
+        .in("track_id", trackIds);
+
+    if (resolvedArtistsError) {
+      throw resolvedArtistsError;
+    }
+
+    trackArtistsResolvedRows = resolvedArtistsData ?? [];
+  }
+
+  const trackArtistsByTrackId = new Map<string, ResolvedArtistRow[]>();
+
+  for (const row of trackArtistsResolvedRows) {
+    const trackId = String(row.track_id ?? "");
+    if (!trackId) continue;
+
+    trackArtistsByTrackId.set(
+      trackId,
+      Array.isArray(row.artists) ? row.artists : []
+    );
+  }
 
   let lifetimeRows: { track_id: string; streams_lifetime: number | null }[] = [];
 
@@ -306,12 +321,8 @@ export default async function ReleaseDetailPage({
       ratingCount: t?.rating_count ?? null,
       streamCount: lifetimeStreamsByTrackId.get(String(t?.id ?? "")) ?? 0,
       artists: buildArtistsList({
-        track: t
-          ? {
-              artist: t.artist ?? null,
-              track_collaborators: t.track_collaborators ?? null,
-            }
-          : null,
+        primaryArtist: Array.isArray(t?.artist) ? t.artist[0] ?? null : t?.artist ?? null,
+        resolvedArtists: trackArtistsByTrackId.get(String(t?.id ?? "")) ?? [],
       }),
     };
   });

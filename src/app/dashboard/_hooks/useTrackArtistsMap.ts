@@ -9,15 +9,9 @@ type DiscoverySourceItem = {
   track_id?: string | null;
 };
 
-type CollaboratorRow = {
+type TrackArtistsResolvedRow = {
   track_id: string | null;
-  role: string | null;
-  position: number | null;
-  profiles:
-    | {
-        id: string | null;
-        display_name: string | null;
-      }
+  artists:
     | {
         id: string | null;
         display_name: string | null;
@@ -64,42 +58,36 @@ export function useTrackArtistsMap({
     async function loadTrackArtists() {
       try {
         const { data, error } = await supabase
-          .from("track_collaborators")
-          .select(
-            `
-            track_id,
-            role,
-            position,
-            profiles:profiles!track_collaborators_profile_id_fkey (
-              id,
-              display_name
-            )
-          `
-          )
-          .in("track_id", trackIds)
-          .order("position", { ascending: true });
+          .from("track_artists_resolved")
+          .select("track_id, artists")
+          .in("track_id", trackIds);
 
         if (error) return;
         if (!data) return;
 
         const map: Record<string, Artist[]> = {};
 
-        for (const row of (data ?? []) as CollaboratorRow[]) {
-          const trackId = row.track_id;
-          const profile = Array.isArray(row.profiles)
-            ? (row.profiles[0] ?? null)
-            : (row.profiles ?? null);
+        for (const row of (data ?? []) as TrackArtistsResolvedRow[]) {
+          const trackId = String(row.track_id ?? "");
+          if (!trackId) continue;
 
-          if (!trackId || !profile?.id) continue;
+          const artists = Array.isArray(row.artists)
+            ? row.artists
+                .map((artist) => {
+                  const artistId = String(artist?.id ?? "");
+                  if (!artistId) return null;
 
-          if (!map[trackId]) map[trackId] = [];
+                  return {
+                    id: artistId,
+                    display_name: String(
+                      artist?.display_name ?? "Unknown Artist"
+                    ),
+                  };
+                })
+                .filter((artist): artist is Artist => artist !== null)
+            : [];
 
-          if (!map[trackId].some((artist) => artist.id === String(profile.id))) {
-            map[trackId].push({
-              id: String(profile.id),
-              display_name: String(profile.display_name ?? "Unknown Artist"),
-            });
-          }
+          map[trackId] = artists;
         }
 
         if (!cancelled) setTrackArtistsMap(map);

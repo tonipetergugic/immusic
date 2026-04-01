@@ -22,6 +22,7 @@ type PerfQueueTrack = PlayerTrack & {
   release_id?: string | null;
   release_track_id?: string | null;
   stream_count?: number | null;
+  my_stars?: number | null;
 };
 
 type Props = {
@@ -147,7 +148,7 @@ export default function PerformanceDiscoverySection({
                         }}
                         className="
                           min-w-0 flex-1 text-left text-[13px] font-semibold text-[#00FFC6] truncate
-                          hover:text-[#00E0B0] transition-colors
+                          hover:text-[#00E0B0] transition-colors cursor-pointer
                           focus:outline-none
                         "
                         title={formatTrackTitle(rowTrack.title, rowTrack.version)}
@@ -172,7 +173,7 @@ export default function PerformanceDiscoverySection({
                               onClick={() => routerPush(`/dashboard/artist/${artistItem.id}`)}
                               className="
                                 hover:text-[#00FFC6] hover:underline underline-offset-2
-                                transition-colors
+                                transition-colors cursor-pointer
                                 focus:outline-none
                               "
                               title={artistItem.display_name}
@@ -194,7 +195,7 @@ export default function PerformanceDiscoverySection({
                         className="
                           mt-1 text-left text-xs text-white/60 truncate
                           hover:text-[#00FFC6] hover:underline underline-offset-2
-                          transition-colors
+                          transition-colors cursor-pointer
                           focus:outline-none
                         "
                         title={artistName}
@@ -210,13 +211,12 @@ export default function PerformanceDiscoverySection({
                   metaSlot={
                     rowTrack.release_track_id ? (
                       <TrackRatingInline
-                        readOnly={true}
                         releaseTrackId={rowTrack.release_track_id}
                         trackId={rowTrack.id}
                         initialAvg={rowTrack.rating_avg}
                         initialCount={rowTrack.rating_count ?? undefined}
                         initialStreams={rowTrack.stream_count ?? 0}
-                        initialMyStars={null}
+                        initialMyStars={rowTrack.my_stars ?? null}
                       />
                     ) : (
                       <span className="text-xs text-white/60">★</span>

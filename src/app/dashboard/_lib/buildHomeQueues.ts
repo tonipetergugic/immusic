@@ -14,6 +14,7 @@ type PerfReleaseTrackAggregate = {
   rating_avg: number | null;
   rating_count: number;
   stream_count: number;
+  my_stars: number | null;
 };
 
 type PerfTrackMeta = {
@@ -41,7 +42,7 @@ type HomeQueueTrack = {
   rating_avg: number | null;
   rating_count: number;
   stream_count: number;
-  my_stars?: number | null;
+  my_stars: number | null;
   bpm: number | null;
   key: string | null;
   artists: ArtistMini[];
@@ -181,6 +182,7 @@ export function buildPerfQueue(params: {
       rating_avg: rt?.rating_avg ?? (row.rating_avg ?? null),
       rating_count: rt?.rating_count ?? (row.rating_count ?? 0),
       stream_count: rt?.stream_count ?? (row.streams_30d ?? 0),
+      my_stars: rt?.my_stars ?? null,
       bpm: perfTrackMetaMap?.[trackId]?.bpm ?? null,
       key: perfTrackMetaMap?.[trackId]?.key ?? null,
       artists,

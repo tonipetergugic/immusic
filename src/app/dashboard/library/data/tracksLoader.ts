@@ -86,6 +86,16 @@ type RatingsWindowTrackRow = {
   in_window: boolean | null;
 };
 
+type TrackArtistsResolvedRow = {
+  track_id: string | null;
+  artists:
+    | {
+        id: string | null;
+        display_name: string | null;
+      }[]
+    | null;
+};
+
 export async function loadLibraryV2Tracks({
   supabase,
   userId,
@@ -295,8 +305,12 @@ export async function loadLibraryV2Tracks({
       for (const row of (myRows ?? []) as MyTrackRatingRow[]) {
         const trackId = String(row.track_id ?? "");
         if (!trackId) continue;
-        if (myStarsByReleaseTrackId[trackId] === undefined) {
-          myStarsByReleaseTrackId[trackId] = row.stars ?? null;
+
+        const releaseTrackId = releaseTrackIdByTrackId[trackId];
+        if (!releaseTrackId) continue;
+
+        if (myStarsByReleaseTrackId[releaseTrackId] === undefined) {
+          myStarsByReleaseTrackId[releaseTrackId] = row.stars ?? null;
         }
       }
     }
@@ -347,7 +361,54 @@ export async function loadLibraryV2Tracks({
     }
   }
 
-  const tracks = toPlayerTrackList(safeUnique);
+  const trackArtistsByTrackId: Record<
+    string,
+    { id: string; display_name: string }[]
+  > = {};
+
+  if (trackIds.length > 0) {
+    const { data: artistRows, error: artistRowsErr } = await supabase
+      .from("track_artists_resolved")
+      .select("track_id, artists")
+      .in("track_id", trackIds);
+
+    if (artistRowsErr) {
+      console.error(
+        "LibraryV2: Failed to load track_artists_resolved:",
+        artistRowsErr
+      );
+    } else {
+      for (const row of (artistRows ?? []) as TrackArtistsResolvedRow[]) {
+        const trackId = String(row.track_id ?? "");
+        if (!trackId) continue;
+
+        trackArtistsByTrackId[trackId] = Array.isArray(row.artists)
+          ? row.artists
+              .map((artist) => {
+                const artistId = String(artist?.id ?? "");
+                if (!artistId) return null;
+
+                return {
+                  id: artistId,
+                  display_name: String(
+                    artist?.display_name ?? "Unknown Artist"
+                  ),
+                };
+              })
+              .filter(
+                (
+                  artist
+                ): artist is { id: string; display_name: string } => artist !== null
+              )
+          : [];
+      }
+    }
+  }
+
+  const tracks = toPlayerTrackList(safeUnique).map((track) => ({
+    ...track,
+    artists: trackArtistsByTrackId[String(track.id)] ?? [],
+  }));
 
   return {
     tracks,
