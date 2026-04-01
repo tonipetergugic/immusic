@@ -71,11 +71,24 @@ export default async function ArtistDashboardPage() {
     cover_path: string | null;
   };
 
-  type StatsRow = {
-    release_id: string;
-    stream_count: number | null;
+  type ArtistMembershipRow = {
+    track_id: string;
+  };
+
+  type TrackStatRow = {
+    id: string;
     rating_avg: number | null;
     rating_count: number | null;
+  };
+
+  type TrackLifetimeRow = {
+    track_id: string;
+    streams_lifetime: number | null;
+  };
+
+  type TrackReleaseRow = {
+    track_id: string;
+    release_id: string | null;
   };
 
   const { data: topRatedRaw, error: topRatedError } = await supabase
@@ -108,12 +121,12 @@ export default async function ArtistDashboardPage() {
     .order("streams_30d", { ascending: false, nullsFirst: false })
     .limit(3);
 
-  const { data: statsRaw, error: statsError } = await supabase
-    .from("artist_dashboard_release_tracks")
-    .select("release_id, stream_count, rating_avg, rating_count")
+  const { data: artistMembershipsRaw, error: artistMembershipsError } = await supabase
+    .from("analytics_artist_track_memberships")
+    .select("track_id")
     .eq("artist_id", user.id);
 
-  const perfError = topRatedError ?? topStreamsError ?? statsError;
+  const perfError = topRatedError ?? topStreamsError ?? artistMembershipsError;
 
   if (perfError) {
     throw perfError;
@@ -149,19 +162,69 @@ export default async function ArtistDashboardPage() {
     ])
   );
 
-  const statsRows = (statsRaw ?? []) as StatsRow[];
+  const artistMemberships = (artistMembershipsRaw ?? []) as ArtistMembershipRow[];
 
-  const totalStreams = statsRows.reduce(
-    (sum, row) => sum + (typeof row.stream_count === "number" ? row.stream_count : 0),
+  const quickStatsTrackIds = Array.from(
+    new Set(
+      artistMemberships
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const [
+    { data: quickStatsTracksRaw, error: quickStatsTracksError },
+    { data: quickStatsLifetimeRaw, error: quickStatsLifetimeError },
+    { data: quickStatsReleaseRaw, error: quickStatsReleaseError },
+  ] = quickStatsTrackIds.length > 0
+    ? await Promise.all([
+        supabase
+          .from("tracks")
+          .select("id, rating_avg, rating_count")
+          .in("id", quickStatsTrackIds),
+        supabase
+          .from("analytics_track_lifetime")
+          .select("track_id, streams_lifetime")
+          .in("track_id", quickStatsTrackIds),
+        supabase
+          .from("artist_top_tracks_resolved")
+          .select("track_id, release_id")
+          .in("track_id", quickStatsTrackIds),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ];
+
+  const quickStatsError =
+    quickStatsTracksError ?? quickStatsLifetimeError ?? quickStatsReleaseError;
+
+  if (quickStatsError) {
+    throw quickStatsError;
+  }
+
+  const quickStatsTracks = (quickStatsTracksRaw ?? []) as TrackStatRow[];
+  const quickStatsLifetime = (quickStatsLifetimeRaw ?? []) as TrackLifetimeRow[];
+  const quickStatsReleases = (quickStatsReleaseRaw ?? []) as TrackReleaseRow[];
+
+  const totalStreams = quickStatsLifetime.reduce(
+    (sum, row) =>
+      sum + (typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0),
     0
   );
 
-  const totalTracks = statsRows.length;
+  const totalTracks = quickStatsTrackIds.length;
+
   const totalReleases = Array.from(
-    new Set(statsRows.map((row) => row.release_id).filter(Boolean))
+    new Set(
+      quickStatsReleases
+        .map((row) => String(row.release_id ?? ""))
+        .filter(Boolean)
+    )
   ).length;
 
-  const { weightedRatingSum, ratingCountSum } = statsRows.reduce(
+  const { weightedRatingSum, ratingCountSum } = quickStatsTracks.reduce(
     (acc, row) => {
       const count = typeof row.rating_count === "number" ? row.rating_count : 0;
       const avg = typeof row.rating_avg === "number" ? row.rating_avg : null;
