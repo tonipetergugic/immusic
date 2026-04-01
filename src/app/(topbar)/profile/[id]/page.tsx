@@ -59,7 +59,8 @@ export default async function PublicProfileV2Page({
 
   const viewerId = viewer?.id ?? null;
   const isSelf = !!viewerId && viewerId === profileId;
-  const canFollow = !!viewerId && !isSelf;
+  const viewerFollowSourceId = viewerId && !isSelf ? viewerId : null;
+  const canFollow = !!viewerFollowSourceId;
 
   // counts + following state (server-first, minimal)
   const [
@@ -75,13 +76,13 @@ export default async function PublicProfileV2Page({
       .from("follows")
       .select("*", { count: "exact", head: true })
       .eq("follower_id", profileId),
-    canFollow
+    viewerFollowSourceId
       ? supabase
           .from("follows")
           .select("*", { count: "exact", head: true })
-          .eq("follower_id", viewerId as string)
+          .eq("follower_id", viewerFollowSourceId)
           .eq("following_id", profileId)
-      : Promise.resolve({ count: 0 } as any),
+      : Promise.resolve({ count: 0 } as { count: number | null }),
   ]);
 
   const isFollowingInitial = canFollow ? (followingEdgeCount ?? 0) > 0 : false;
