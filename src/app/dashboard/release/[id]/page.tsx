@@ -35,6 +35,12 @@ type ReleaseTrackItem = {
   track: ReleaseTrackRelation | ReleaseTrackRelation[] | null;
 };
 
+type MyTrackRatingRow = {
+  track_id: string | null;
+  stars: number | null;
+  created_at: string | null;
+};
+
 export default async function ReleaseDetailPage({
   params,
 }: {
@@ -254,6 +260,30 @@ export default async function ReleaseDetailPage({
     ])
   );
 
+  const myStarsByTrackId = new Map<string, number | null>();
+
+  if (user?.id && trackIds.length > 0) {
+    const { data: myRatingRows, error: myRatingsError } = await supabase
+      .from("track_ratings")
+      .select("track_id, stars, created_at")
+      .eq("user_id", user.id)
+      .in("track_id", trackIds)
+      .order("created_at", { ascending: false });
+
+    if (myRatingsError) {
+      throw myRatingsError;
+    }
+
+    for (const row of (myRatingRows ?? []) as MyTrackRatingRow[]) {
+      const trackId = String(row.track_id ?? "");
+      if (!trackId) continue;
+
+      if (!myStarsByTrackId.has(trackId)) {
+        myStarsByTrackId.set(trackId, row.stars ?? null);
+      }
+    }
+  }
+
   const releaseProfile = Array.isArray(release.profiles)
     ? release.profiles[0] ?? null
     : release.profiles;
@@ -320,6 +350,7 @@ export default async function ReleaseDetailPage({
       ratingAvg: t?.rating_avg ?? null,
       ratingCount: t?.rating_count ?? null,
       streamCount: lifetimeStreamsByTrackId.get(String(t?.id ?? "")) ?? 0,
+      myStars: myStarsByTrackId.get(String(t?.id ?? "")) ?? null,
       artists: buildArtistsList({
         primaryArtist: Array.isArray(t?.artist) ? t.artist[0] ?? null : t?.artist ?? null,
         resolvedArtists: trackArtistsByTrackId.get(String(t?.id ?? "")) ?? [],

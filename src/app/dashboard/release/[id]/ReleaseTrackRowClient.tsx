@@ -19,6 +19,7 @@ export default function ReleaseTrackRowClient({
   ratingAvg,
   ratingCount,
   streamCount,
+  myStars,
   releaseCoverUrl,
   isActive,
   onSelect,
@@ -42,6 +43,7 @@ export default function ReleaseTrackRowClient({
   ratingAvg: number | null;
   ratingCount: number | null;
   streamCount: number;
+  myStars: number | null;
   releaseCoverUrl: string | null;
   isActive: boolean;
   onSelect: () => void;
@@ -145,7 +147,7 @@ export default function ReleaseTrackRowClient({
             initialAvg={ratingAvg ?? null}
             initialCount={ratingCount ?? 0}
             initialStreams={streamCount ?? 0}
-            initialMyStars={null}
+            initialMyStars={myStars}
             showStreamsOnDesktopOnly={true}
           />
         }

@@ -38,7 +38,7 @@ type ArtistCollaboratorRow = {
   display_name: string | null;
 };
 
-type TrackCollaboratorLinkRow = {
+type ArtistMembershipRow = {
   track_id: string | null;
 };
 
@@ -209,18 +209,18 @@ export default async function ArtistV2Page({
     .map((t) => String(t.track_id ?? ""))
     .filter(Boolean);
 
-  const { data: collaboratorTrackRows, error: collaboratorTrackRowsError } =
+  const { data: membershipTrackRows, error: membershipTrackRowsError } =
     await supabase
-      .from("track_collaborators")
+      .from("analytics_artist_track_memberships")
       .select("track_id")
-      .eq("profile_id", artistId);
+      .eq("artist_id", artistId);
 
-  if (collaboratorTrackRowsError) {
-    // collaborator tracks sind optionaler Zusatzcontent → fallback ohne collab merge.
+  if (membershipTrackRowsError) {
+    // membership tracks sind optionaler Zusatzcontent → fallback ohne membership merge.
   }
 
   const collaboratorTrackIds = (
-    (collaboratorTrackRows ?? []) as TrackCollaboratorLinkRow[]
+    (membershipTrackRows ?? []) as ArtistMembershipRow[]
   )
     .map((row) => String(row.track_id ?? ""))
     .filter(Boolean);

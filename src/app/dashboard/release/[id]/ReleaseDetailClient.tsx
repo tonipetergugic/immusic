@@ -25,6 +25,7 @@ type ReleaseDetailTrack = {
   ratingAvg: number | null;
   ratingCount: number | null;
   streamCount: number;
+  myStars: number | null;
   artists: Artist[];
 };
 
@@ -141,6 +142,7 @@ export default function ReleaseDetailClient({
                 ratingAvg={row.ratingAvg}
                 ratingCount={row.ratingCount}
                 streamCount={row.streamCount}
+                myStars={row.myStars}
                 releaseCoverUrl={releaseCoverUrl}
                 isActive={row.trackId === selectedTrack?.trackId}
                 onSelect={() => setSelectedTrackId(row.trackId)}

@@ -97,12 +97,21 @@ type PlaylistTrackRow = {
 
   artist_profile_id: string | null;
   artist_display_name: string | null;
-  track_collaborators: unknown;
 };
 
 type ExplicitTrackRow = {
   id: string;
   is_explicit: boolean | null;
+};
+
+type TrackArtistsResolvedRow = {
+  track_id: string | null;
+  artists:
+    | {
+        id: string | null;
+        display_name: string | null;
+      }[]
+    | null;
 };
 
 type CollabArtist = { id: string; display_name: string };
@@ -242,8 +251,7 @@ export default async function PlaylistPage(
       rating_count,
       stream_count,
       artist_profile_id,
-      artist_display_name,
-      track_collaborators
+      artist_display_name
     `
     )
     .eq("playlist_id", id)
@@ -306,6 +314,53 @@ export default async function PlaylistPage(
     );
   }
 
+  const visibleTrackIds = Array.from(
+    new Set(
+      visiblePlaylistTracks
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  let trackArtistsResolvedRows: TrackArtistsResolvedRow[] = [];
+
+  if (visibleTrackIds.length > 0) {
+    const { data: resolvedArtistRows, error: resolvedArtistRowsError } =
+      await supabase
+        .from("track_artists_resolved")
+        .select("track_id, artists")
+        .in("track_id", visibleTrackIds);
+
+    if (resolvedArtistRowsError) {
+      throw resolvedArtistRowsError;
+    }
+
+    trackArtistsResolvedRows = resolvedArtistRows ?? [];
+  }
+
+  const trackArtistsByTrackId = new Map<string, CollabArtist[]>();
+
+  for (const row of trackArtistsResolvedRows) {
+    const trackId = String(row.track_id ?? "");
+    if (!trackId) continue;
+
+    const artists = Array.isArray(row.artists)
+      ? row.artists
+          .map((artist) => {
+            const artistId = String(artist?.id ?? "");
+            if (!artistId) return null;
+
+            return {
+              id: artistId,
+              display_name: String(artist?.display_name ?? ""),
+            };
+          })
+          .filter((artist): artist is CollabArtist => Boolean(artist))
+      : [];
+
+    trackArtistsByTrackId.set(trackId, artists);
+  }
+
   const convertedTracks: PlayerTrack[] = visiblePlaylistTracks.flatMap((row) => {
     const cover_url =
       row.release_cover_path
@@ -349,30 +404,17 @@ export default async function PlaylistPage(
         : null,
     });
 
-    const ownerArtist =
-      row.artist_profile_id
-        ? {
+    const fallbackOwnerArtists = row.artist_profile_id
+      ? [
+          {
             id: String(row.artist_profile_id),
             display_name: String(row.artist_display_name ?? ""),
-          }
-        : null;
+          },
+        ]
+      : [];
 
-    const collaboratorsRaw = parseTrackCollaborators(row.track_collaborators)
-      .map((c) => {
-        const pr = c?.profiles;
-        if (!pr?.id) return null;
-        return {
-          id: String(pr.id),
-          display_name: String(pr.display_name ?? ""),
-        };
-      })
-      .filter((x): x is CollabArtist => Boolean(x));
-
-    const artistsRaw = [ownerArtist, ...collaboratorsRaw].filter(
-      (x): x is CollabArtist => Boolean(x)
-    );
-
-    const artists = Array.from(new Map(artistsRaw.map((a) => [a.id, a])).values());
+    const artists =
+      trackArtistsByTrackId.get(String(row.track_id ?? "")) ?? fallbackOwnerArtists;
 
     return [{
       ...playerTrack,
@@ -383,7 +425,7 @@ export default async function PlaylistPage(
       rating_count: row.rating_count ?? 0,
       stream_count:
         lifetimeStreamsByTrackId.get(String(row.track_id ?? "")) ?? 0,
-      track_collaborators: parseTrackCollaborators(row.track_collaborators),
+      track_collaborators: [],
       artist: null,
     }];
   });
