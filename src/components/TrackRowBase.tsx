@@ -76,7 +76,7 @@ export default function TrackRowBase({
   coverSize = "md",
 }: TrackRowBaseProps) {
   const releaseId = track.release_id ?? null;
-  const to = href ?? (releaseId ? `/dashboard/release/${releaseId}` : "#");
+  const to = href ?? (releaseId ? `/dashboard/release/${releaseId}` : null);
 
   const coverBox = coverSize === "sm" ? "w-12 h-12" : "w-16 h-16";
   const overlaySize = coverSize === "sm" ? "sm" : "sm"; // rows: keep overlay compact
@@ -167,16 +167,28 @@ export default function TrackRowBase({
               titleSlot
             ) : (
               <div className="flex items-center gap-2 min-w-0">
-                <Link
-                  href={to}
-                  className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${
-                    isCurrent || track.status === "performance"
-                      ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                      : "text-white hover:text-[#00FFC6]"
-                  }`}
-                >
-                  {formatTrackTitle(track.title, track.version ?? null)}
-                </Link>
+                {to ? (
+                  <Link
+                    href={to}
+                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block cursor-pointer ${
+                      isCurrent || track.status === "performance"
+                        ? "text-[#00FFC6] hover:text-[#00E0B0]"
+                        : "text-white hover:text-[#00FFC6]"
+                    }`}
+                  >
+                    {formatTrackTitle(track.title, track.version ?? null)}
+                  </Link>
+                ) : (
+                  <span
+                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
+                      isCurrent || track.status === "performance"
+                        ? "text-[#00FFC6]"
+                        : "text-white"
+                    }`}
+                  >
+                    {formatTrackTitle(track.title, track.version ?? null)}
+                  </span>
+                )}
 
                 {track.is_explicit ? <ExplicitBadge /> : null}
               </div>

@@ -405,10 +405,19 @@ export async function loadLibraryV2Tracks({
     }
   }
 
-  const tracks = toPlayerTrackList(safeUnique).map((track) => ({
-    ...track,
-    artists: trackArtistsByTrackId[String(track.id)] ?? [],
-  }));
+  const tracks = toPlayerTrackList(safeUnique).map((track) => {
+    const source = safeUnique.find((item) => String(item.id) === String(track.id));
+
+    return {
+      ...track,
+      release_id: source?.release_id ?? null,
+      release_track_id: source?.release_track_id ?? null,
+      rating_avg: source?.rating_avg ?? null,
+      rating_count: source?.rating_count ?? 0,
+      stream_count: lifetimeStreamsByTrackId.get(String(track.id)) ?? 0,
+      artists: trackArtistsByTrackId[String(track.id)] ?? [],
+    };
+  });
 
   return {
     tracks,
