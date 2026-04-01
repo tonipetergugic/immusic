@@ -54,8 +54,15 @@ export default function FollowSection({
 
       setViewerId(json?.viewerId ?? null);
       setViewerFollowingIds(new Set((json?.viewerFollowingIds ?? []) as string[]));
-      setModalProfiles((json?.profiles ?? []) as any);
-    } catch (e) {
+      setModalProfiles(
+        (json?.profiles ?? []) as {
+          id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          role: string | null;
+        }[]
+      );
+    } catch (e: unknown) {
       console.error("openList error:", e);
       setViewerId(null);
       setViewerFollowingIds(new Set());
@@ -86,7 +93,7 @@ export default function FollowSection({
       } else {
         await followProfile(targetId);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("toggleFollowInModal error:", e);
       setViewerFollowingIds(prev);
     } finally {
