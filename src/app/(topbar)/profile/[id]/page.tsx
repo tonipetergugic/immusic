@@ -87,12 +87,22 @@ export default async function PublicProfileV2Page({
   const isFollowingInitial = canFollow ? (followingEdgeCount ?? 0) > 0 : false;
 
   // 2) Playlists (server-first via existing endpoint, no schema guessing)
-  const plRes = await fetch(`${origin}/api/profiles/${profileId}/playlists`, {
-    cache: "no-store",
-    headers: cookieHeader ? { cookie: cookieHeader } : undefined,
-  });
-  const plJson = await plRes.json().catch(() => ({}));
-  const playlists: PublicPlaylist[] = plRes.ok ? (plJson?.playlists ?? []) : [];
+  let playlists: PublicPlaylist[] = [];
+
+  if (origin) {
+    try {
+      const plRes = await fetch(`${origin}/api/profiles/${profileId}/playlists`, {
+        cache: "no-store",
+        headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+      });
+
+      const plJson = await plRes.json().catch(() => ({}));
+      playlists = plRes.ok ? (plJson?.playlists ?? []) : [];
+    } catch (error) {
+      console.error("Failed to load public profile playlists:", error);
+      playlists = [];
+    }
+  }
 
   return (
     <PublicProfileView

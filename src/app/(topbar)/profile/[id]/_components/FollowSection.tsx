@@ -118,11 +118,11 @@ export default function FollowSection({
         setFollowerCount(prevCount + 1);
         await followProfile(profileId);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // rollback
       setFollowing(was);
       setFollowerCount(prevCount);
-      showNotice(e?.message ?? "Something went wrong.");
+      showNotice(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }

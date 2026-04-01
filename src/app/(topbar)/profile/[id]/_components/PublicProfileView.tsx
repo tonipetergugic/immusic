@@ -84,9 +84,9 @@ export default function PublicProfileView({
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-4xl md:text-5xl font-bold text-white drop-shadow-xl truncate">
+              <h2 className="text-4xl md:text-5xl font-bold text-white drop-shadow-xl truncate">
                 {profile.display_name ?? "Unknown"}
-              </h1>
+              </h2>
 
               <p className="mt-2 text-sm md:text-base text-white/70 drop-shadow-md">
                 {profile.role ?? "listener"}
