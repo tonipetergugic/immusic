@@ -23,11 +23,13 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [runningUiState, setRunningUiState] = useState<"queued" | "running">("queued");
+  const [visualStep, setVisualStep] = useState(0);
   const [buyingCredits, setBuyingCredits] = useState(false);
 
   const pollCountRef = useRef(0);
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
+  const kickoffInFlightRef = useRef(false);
 
   useEffect(() => {
     const POLL_MS = 5000;
@@ -43,6 +45,8 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     setCanFeedback(false);
     setRejectReason(null);
     setRunningUiState("queued");
+    setVisualStep(0);
+    kickoffInFlightRef.current = false;
 
     pollCountRef.current = 0;
     startedAtRef.current = Date.now();
@@ -97,10 +101,16 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
         setRunningUiState("queued");
 
-        try {
-          await fetch("/api/ai/track-check/process-next", { method: "POST" });
-        } catch {
-          // best-effort trigger only
+        if (!kickoffInFlightRef.current) {
+          kickoffInFlightRef.current = true;
+
+          void fetch("/api/ai/track-check/process-next", { method: "POST" })
+            .catch(() => {
+              // best-effort trigger only
+            })
+            .finally(() => {
+              kickoffInFlightRef.current = false;
+            });
         }
 
         if (cancelled) return;
@@ -115,13 +125,45 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
     return () => {
       cancelled = true;
+      kickoffInFlightRef.current = false;
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
   }, [retryKey, queueId]);
 
+  useEffect(() => {
+    if (runningUiState !== "running" || approved || rejected || timedOut || errorText) {
+      setVisualStep(0);
+      return;
+    }
+
+    setVisualStep(0);
+
+    const step1Timer = window.setTimeout(() => {
+      setVisualStep(1);
+    }, 7000);
+
+    const step2Timer = window.setTimeout(() => {
+      setVisualStep(2);
+    }, 15000);
+
+    return () => {
+      window.clearTimeout(step1Timer);
+      window.clearTimeout(step2Timer);
+    };
+  }, [runningUiState, approved, rejected, timedOut, errorText, retryKey]);
+
+  const runningVisualStatuses = [
+    "Preparing analysis…",
+    "Checking audio quality…",
+    "Inspecting technical details…",
+  ];
+
   const activeVisualStatus =
-    runningUiState === "queued" ? "Queued for processing…" : "Inspecting technical details…";
+    runningUiState === "queued"
+      ? "Queued for processing…"
+      : runningVisualStatuses[visualStep] ??
+        runningVisualStatuses[runningVisualStatuses.length - 1];
   const isRunning = !approved && !rejected && !timedOut && !errorText;
 
   async function handleBuyCredits() {
