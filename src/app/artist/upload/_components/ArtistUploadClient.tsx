@@ -206,6 +206,7 @@ export default function ArtistUploadClient({ userId }: Props) {
     }
 
     setUploading(true);
+    let uploadedFilePath: string | null = null;
 
     try {
       setFlowStep("validating");
@@ -236,6 +237,7 @@ export default function ArtistUploadClient({ userId }: Props) {
         return;
       }
 
+      uploadedFilePath = filePath;
       setAudioPath(filePath);
       setFlowStep("queueing");
 
@@ -253,6 +255,19 @@ export default function ArtistUploadClient({ userId }: Props) {
       const queueData = (await queueRes.json()) as QueueApiResponse;
 
       if (!queueRes.ok || !queueData.ok || !queueData.queue_id) {
+        if (uploadedFilePath) {
+          const { error: removeError } = await supabase.storage
+            .from("ingest_wavs")
+            .remove([uploadedFilePath]);
+
+          if (removeError) {
+            console.error(removeError);
+          }
+
+          uploadedFilePath = null;
+          setAudioPath(null);
+        }
+
         setUiError(
           "error" in queueData && queueData.error
             ? queueData.error
@@ -269,6 +284,20 @@ export default function ArtistUploadClient({ userId }: Props) {
       return;
     } catch (e) {
       console.error(e);
+
+      if (uploadedFilePath) {
+        const { error: removeError } = await supabase.storage
+          .from("ingest_wavs")
+          .remove([uploadedFilePath]);
+
+        if (removeError) {
+          console.error(removeError);
+        }
+
+        uploadedFilePath = null;
+        setAudioPath(null);
+      }
+
       setUiError("Could not start the quality check. Please try again.");
       setUploading(false);
       setFlowStep("idle");
