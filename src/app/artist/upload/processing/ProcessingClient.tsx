@@ -30,10 +30,12 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
   const kickoffInFlightRef = useRef(false);
+  const transientFailureCountRef = useRef(0);
 
   useEffect(() => {
     const POLL_MS = 5000;
     const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+    const MAX_TRANSIENT_FAILURES = 3;
 
     let cancelled = false;
 
@@ -47,6 +49,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     setRunningUiState("queued");
     setVisualStep(0);
     kickoffInFlightRef.current = false;
+    transientFailureCountRef.current = 0;
 
     pollCountRef.current = 0;
     startedAtRef.current = Date.now();
@@ -70,7 +73,14 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
         if (cancelled) return;
 
-        if (!("ok" in statusData) || statusData.ok !== true) {
+        if (!statusRes.ok || !("ok" in statusData) || statusData.ok !== true) {
+          transientFailureCountRef.current += 1;
+
+          if (transientFailureCountRef.current < MAX_TRANSIENT_FAILURES) {
+            timerRef.current = window.setTimeout(tick, POLL_MS);
+            return;
+          }
+
           setErrorText("Processing failed. Please try again.");
           return;
         }
@@ -79,6 +89,8 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           setErrorText("Processing failed. Please reload the page.");
           return;
         }
+
+        transientFailureCountRef.current = 0;
 
         if (statusData.processed) {
           if (statusData.decision === "approved") {
@@ -117,6 +129,14 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         timerRef.current = window.setTimeout(tick, POLL_MS);
       } catch {
         if (cancelled) return;
+
+        transientFailureCountRef.current += 1;
+
+        if (transientFailureCountRef.current < MAX_TRANSIENT_FAILURES) {
+          timerRef.current = window.setTimeout(tick, POLL_MS);
+          return;
+        }
+
         setErrorText("Processing failed. Please reload the page.");
       }
     }
@@ -126,6 +146,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     return () => {
       cancelled = true;
       kickoffInFlightRef.current = false;
+      transientFailureCountRef.current = 0;
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };

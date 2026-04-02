@@ -20,21 +20,19 @@ function readFourCC(view: DataView, offset: number) {
 }
 
 async function validateWavFile(file: File): Promise<WavValidation> {
-  // Read entire file (your dev WAVs are small; robust chunk scanning needs more than the first bytes)
-  const buf = await file.arrayBuffer();
-  if (buf.byteLength < 44) {
+  const riffHeader = await file.slice(0, 12).arrayBuffer();
+  if (riffHeader.byteLength < 12 || file.size < 44) {
     return { ok: false, reason: "Invalid WAV: file too small." };
   }
 
-  const view = new DataView(buf);
+  const riffView = new DataView(riffHeader);
 
-  const riff = readFourCC(view, 0);
-  const wave = readFourCC(view, 8);
+  const riff = readFourCC(riffView, 0);
+  const wave = readFourCC(riffView, 8);
   if (riff !== "RIFF" || wave !== "WAVE") {
     return { ok: false, reason: "Invalid WAV: missing RIFF/WAVE header." };
   }
 
-  // Scan chunks: "fmt " and "data"
   let offset = 12;
   let fmtFound = false;
   let dataFound = false;
@@ -45,62 +43,65 @@ async function validateWavFile(file: File): Promise<WavValidation> {
   let bitsPerSample: number | null = null;
   let dataBytes: number | null = null;
 
-  while (offset + 8 <= view.byteLength) {
-    const id = readFourCC(view, offset);
-    const size = view.getUint32(offset + 4, true);
+  while (offset + 8 <= file.size) {
+    const chunkHeader = await file.slice(offset, offset + 8).arrayBuffer();
+    if (chunkHeader.byteLength < 8) break;
+
+    const headerView = new DataView(chunkHeader);
+    const id = readFourCC(headerView, 0);
+    const size = headerView.getUint32(4, true);
     const chunkDataStart = offset + 8;
 
-    // Basic bounds check
-    if (chunkDataStart + size > view.byteLength) break;
-
     if (id === "fmt ") {
-      // PCM fmt chunk minimal size is 16
-      if (size < 16) return { ok: false, reason: "Invalid WAV: corrupt fmt chunk." };
+      if (size < 16) {
+        return { ok: false, reason: "Invalid WAV: corrupt fmt chunk." };
+      }
 
-      audioFormat = view.getUint16(chunkDataStart + 0, true);
-      channels = view.getUint16(chunkDataStart + 2, true);
-      sampleRate = view.getUint32(chunkDataStart + 4, true);
-      bitsPerSample = view.getUint16(chunkDataStart + 14, true);
+      const fmtChunk = await file.slice(chunkDataStart, chunkDataStart + 16).arrayBuffer();
+      if (fmtChunk.byteLength < 16) {
+        return { ok: false, reason: "Invalid WAV: corrupt fmt chunk." };
+      }
 
+      const fmtView = new DataView(fmtChunk);
+      audioFormat = fmtView.getUint16(0, true);
+      channels = fmtView.getUint16(2, true);
+      sampleRate = fmtView.getUint32(4, true);
+      bitsPerSample = fmtView.getUint16(14, true);
       fmtFound = true;
     } else if (id === "data") {
       dataBytes = size;
       dataFound = true;
     }
 
-    // Chunks are padded to even sizes
     offset = chunkDataStart + size + (size % 2);
+
     if (fmtFound && dataFound) break;
   }
 
   if (!fmtFound || audioFormat == null || channels == null || sampleRate == null || bitsPerSample == null) {
     return { ok: false, reason: "Invalid WAV: missing fmt chunk." };
   }
+
   if (!dataFound || dataBytes == null) {
     return { ok: false, reason: "Invalid WAV: missing data chunk." };
   }
 
-  // Enforce: PCM only (16/24-bit)
   if (audioFormat !== 1) {
     return { ok: false, reason: "Unsupported WAV: only PCM is allowed (16/24-bit)." };
   }
 
-  // Enforce: stereo
   if (channels !== 2) {
     return { ok: false, reason: "Unsupported WAV: must be stereo (2 channels)." };
   }
 
-  // Enforce: sample rate
   if (sampleRate !== 44100 && sampleRate !== 48000) {
     return { ok: false, reason: "Unsupported WAV: sample rate must be 44.1 kHz or 48 kHz." };
   }
 
-  // Enforce: bit depth
   if (bitsPerSample !== 16 && bitsPerSample !== 24) {
     return { ok: false, reason: "Unsupported WAV: bit depth must be 16-bit or 24-bit." };
   }
 
-  // Duration estimate from data bytes
   const bytesPerSample = bitsPerSample / 8;
   const bytesPerSecond = sampleRate * channels * bytesPerSample;
   if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) {
@@ -109,7 +110,6 @@ async function validateWavFile(file: File): Promise<WavValidation> {
 
   const durationSeconds = dataBytes / bytesPerSecond;
 
-  // Enforce: max 10 minutes
   if (durationSeconds > 600.0) {
     return { ok: false, reason: "Track too long: max length is 10 minutes." };
   }
