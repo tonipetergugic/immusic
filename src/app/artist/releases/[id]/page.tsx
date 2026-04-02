@@ -2,6 +2,29 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import ReleaseEditorClient from "./ReleaseEditorClient";
 
+type TrackRow = {
+  id: string;
+  title: string | null;
+  version: string | null;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+};
+
+type BoostRow = {
+  track_id: string;
+  enabled: boolean | null;
+};
+
+type EligibilityRow = {
+  track_id: string;
+  track_status: string | null;
+  is_development: boolean | null;
+  exposure_completed: boolean | null;
+  rating_count: number | null;
+  avg_stars: number | null;
+};
+
 export default async function ReleaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -48,7 +71,6 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
     rawTracks?.map((t) => ({
       track_id: t.track_id,
       track_title: null as string | null,
-      track_version: null as string | null, // filled from tracks table below
       position: t.position,
       release_id: t.release_id,
     })) ?? [];
@@ -61,23 +83,15 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
         .from("tracks")
         .select("id, title, version, bpm, key, genre")
         .in("id", existingTrackIds)
-    : { data: [] as any[], error: null };
+    : { data: [] as TrackRow[], error: null };
 
   if (trackErr) {
     throw trackErr;
   }
 
   const trackTitleById = (trackRows ?? []).reduce(
-    (acc: Record<string, string | null>, r: any) => {
-      acc[r.id] = (r.title ?? null) as string | null;
-      return acc;
-    },
-    {},
-  );
-
-  const trackVersionById = (trackRows ?? []).reduce(
-    (acc: Record<string, string | null>, r: any) => {
-      acc[r.id] = (r.version ?? null) as string | null;
+    (acc: Record<string, string | null>, r: TrackRow) => {
+      acc[r.id] = r.title ?? null;
       return acc;
     },
     {},
@@ -86,13 +100,12 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const initialTracks = baseTracks.map((t) => ({
     ...t,
     track_title: trackTitleById[t.track_id] ?? "Untitled",
-    track_version: trackVersionById[t.track_id] ?? null,
   }));
 
   const missingTrackRows =
     existingTrackIds.length > 0 && (trackRows ?? []).length !== existingTrackIds.length;
   const hasMissingMeta = (trackRows ?? []).some(
-    (r: any) => r.bpm == null || r.key == null || r.genre == null,
+    (r: TrackRow) => r.bpm == null || r.key == null || r.genre == null,
   );
 
   const allTracksMetadataComplete =
@@ -105,16 +118,19 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
         .select("track_id, enabled")
         .eq("artist_id", user.id)
         .in("track_id", existingTrackIds)
-    : { data: [] as any[], error: null };
+    : { data: [] as BoostRow[], error: null };
 
   if (boostErr) {
     throw boostErr;
   }
 
-  const boostEnabledById = (boostRows ?? []).reduce((acc: Record<string, boolean>, r: any) => {
-    acc[r.track_id] = !!r.enabled;
-    return acc;
-  }, {});
+  const boostEnabledById = (boostRows ?? []).reduce(
+    (acc: Record<string, boolean>, r: BoostRow) => {
+      acc[r.track_id] = !!r.enabled;
+      return acc;
+    },
+    {}
+  );
 
   const { data: eligibilityRows, error: eligibilityError } = existingTrackIds.length
     ? await supabase
@@ -122,7 +138,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
         .select("track_id, track_status, is_development, exposure_completed, rating_count, avg_stars")
         .eq("artist_id", user.id)
         .in("track_id", existingTrackIds)
-    : { data: [] as any[], error: null };
+    : { data: [] as EligibilityRow[], error: null };
 
   if (eligibilityError) {
     throw eligibilityError;
@@ -140,7 +156,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
           avg_stars: number | null;
         }
       >,
-      r: any
+      r: EligibilityRow
     ) => {
       acc[r.track_id] = {
         track_status: typeof r.track_status === "string" ? r.track_status : null,

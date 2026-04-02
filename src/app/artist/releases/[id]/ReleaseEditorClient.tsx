@@ -93,6 +93,9 @@ export default function ReleaseEditorClient({
     !isLocked && hasCover && hasAtLeastOneTrack && allTracksMetadataComplete;
 
   const markAsDraft = useCallback(() => {
+    // Draft is already the editable state. Avoid redundant writes.
+    if (status === "draft") return;
+
     // Published releases are immutable (DB-enforced). Never attempt draft transitions.
     if (status === "published") return;
 
@@ -126,6 +129,14 @@ export default function ReleaseEditorClient({
       }
     });
   }, [canPublish, releaseId, startTransition]);
+
+  const createdAtLabel = (() => {
+    const d = new Date(releaseData.created_at);
+    return (
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ` +
+      `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`
+    );
+  })();
 
   return (
     <div className="w-full text-white">
@@ -296,6 +307,7 @@ export default function ReleaseEditorClient({
                               markAsDraft();
                             } else {
                               showNotice(result.error);
+                              setTitle(savedTitle);
                             }
                           } finally {
                             setTitlePending(false);
@@ -368,13 +380,7 @@ export default function ReleaseEditorClient({
 
                   <div className="text-sm text-[#B3B3B3]">
                     <span className="text-white/55">Created</span>{" "}
-                    {(() => {
-                      const d = new Date(releaseData.created_at);
-                      const formatted =
-                        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ` +
-                        `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
-                      return formatted;
-                    })()}
+                    {createdAtLabel}
                   </div>
                 </div>
 

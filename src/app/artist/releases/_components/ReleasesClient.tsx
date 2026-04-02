@@ -15,21 +15,21 @@ export type ReleaseRecord = {
 };
 
 export default function ReleasesClient({ initialReleases }: { initialReleases: ReleaseRecord[] }) {
-  const [releases] = useState<ReleaseRecord[]>(initialReleases);
   const [query, setQuery] = useState("");
   const statusFilters = [
-  { value: "all", label: "All" },
-  { value: "published", label: "Published" },
-  { value: "draft", label: "Draft" },
-] as const;
-const [statusFilter, setStatusFilter] = useState<
-  (typeof statusFilters)[number]["value"]
+    { value: "all", label: "All" },
+    { value: "published", label: "Published" },
+    { value: "draft", label: "Draft" },
+  ] as const;
+  const [statusFilter, setStatusFilter] = useState<
+    (typeof statusFilters)[number]["value"]
 >("all");
 
   const visibleReleases = useMemo(() => {
-    return releases
-      .filter((r: any) => {
-        const q = query.trim().toLowerCase();
+    const q = query.trim().toLowerCase();
+
+    return initialReleases
+      .filter((r: ReleaseRecord) => {
         const matchesQuery = !q || String(r.title ?? "").toLowerCase().includes(q);
 
         const s = String(r.status ?? "draft");
@@ -37,28 +37,25 @@ const [statusFilter, setStatusFilter] = useState<
           statusFilter === "all"
             ? true
             : statusFilter === "published"
-            ? s === "published"
-            : statusFilter === "draft"
-            ? s === "draft"
-            : false;
+              ? s === "published"
+              : statusFilter === "draft"
+                ? s === "draft"
+                : false;
 
         return matchesQuery && matchesStatus;
       })
-      .sort((a: any, b: any) => {
+      .sort((a: ReleaseRecord, b: ReleaseRecord) => {
         const aLive = String(a.status ?? "draft") === "published" ? 1 : 0;
         const bLive = String(b.status ?? "draft") === "published" ? 1 : 0;
 
-        // Live first
         if (aLive !== bLive) return bLive - aLive;
 
-        // Within group: newest first
         const at = new Date(a.created_at).getTime();
         const bt = new Date(b.created_at).getTime();
         return bt - at;
       });
-  }, [releases, query, statusFilter]);
+  }, [initialReleases, query, statusFilter]);
 
-  const loading = false;
   const isFiltering = query.trim().length > 0 || statusFilter !== "all";
 
   return (
@@ -147,17 +144,7 @@ const [statusFilter, setStatusFilter] = useState<
 
       {/* Grid */}
       <div className="mt-8">
-        {loading ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <div className="aspect-square w-full rounded-lg bg-white/10 animate-pulse" />
-                <div className="mt-2.5 h-3.5 w-2/3 rounded-md bg-white/10 animate-pulse" />
-                <div className="mt-1.5 h-3 w-1/3 rounded-md bg-white/10 animate-pulse" />
-              </div>
-            ))}
-          </div>
-        ) : visibleReleases.length === 0 ? (
+        {visibleReleases.length === 0 ? (
           <div className="py-12 text-center">
             <p className="font-semibold text-white/80">
               {isFiltering ? "No matching releases" : "No releases yet"}
