@@ -180,6 +180,16 @@ export async function addTrackToReleaseAction(releaseId: string, trackId: string
   });
 
   if (error) {
+    const errorText = `${error.message ?? ""} ${error.details ?? ""}`;
+
+    if (error.code === "23505" && errorText.includes("(release_id, track_id)")) {
+      return { error: "This track is already in this release." as const };
+    }
+
+    if (error.code === "23505" && errorText.includes("(release_id, position)")) {
+      return { error: "Failed to add track because the track order changed. Please try again." as const };
+    }
+
     return { error: "Failed to add track to release." as const };
   }
 
