@@ -46,6 +46,7 @@ type ReleaseEditorClientProps = {
   releaseData: ReleaseData;
   coverUrl: string | null;
   allTracksMetadataComplete: boolean;
+  allTracksHavePublishableStatus: boolean;
   eligibilityByTrackId?: Record<
     string,
     {
@@ -66,6 +67,7 @@ export default function ReleaseEditorClient({
   releaseData,
   coverUrl,
   allTracksMetadataComplete,
+  allTracksHavePublishableStatus,
   eligibilityByTrackId,
   boostEnabledById,
 }: ReleaseEditorClientProps) {
@@ -88,9 +90,16 @@ export default function ReleaseEditorClient({
   const hasCover = Boolean(currentCoverUrl);
   const isLocked = isPublished || hasBeenPublished;
 
+  const hasValidTitle = title.trim().length > 0;
+
   // Publish Preconditions (verbindlich)
   const canPublish =
-    !isLocked && hasCover && hasAtLeastOneTrack && allTracksMetadataComplete;
+    !isLocked &&
+    hasValidTitle &&
+    hasCover &&
+    hasAtLeastOneTrack &&
+  allTracksMetadataComplete &&
+  allTracksHavePublishableStatus;
 
   const markAsDraft = useCallback(() => {
     // Draft is already the editable state. Avoid redundant writes.
@@ -225,7 +234,7 @@ export default function ReleaseEditorClient({
 
             {!allTracksMetadataComplete && hasAtLeastOneTrack ? (
               <div className="mt-3 text-xs text-white/65">
-                Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, genre, lyrics flag, and explicit flag.
+                Tip: Open <span className="text-white/80">My Tracks</span> and complete BPM, key, and genre for all tracks.
               </div>
             ) : null}
 

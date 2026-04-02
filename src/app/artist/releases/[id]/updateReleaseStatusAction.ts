@@ -43,15 +43,23 @@ export async function updateReleaseStatusAction(releaseId: string, newStatus: st
     return { error: "This release cannot be changed." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("releases")
     .update({ status: "draft" })
     .eq("id", releaseId)
-    .eq("artist_id", user.id);
+    .eq("artist_id", user.id)
+    .neq("status", "published")
+    .is("published_at", null)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     console.error("Failed to update status:", error);
     return { error: "Failed to update status." };
+  }
+
+  if (!updated) {
+    return { error: "This release cannot be changed." };
   }
 
   return { success: true };

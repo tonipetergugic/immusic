@@ -9,6 +9,7 @@ type TrackRow = {
   bpm: number | null;
   key: string | null;
   genre: string | null;
+  status: string | null;
 };
 
 type BoostRow = {
@@ -81,7 +82,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
   const { data: trackRows, error: trackErr } = existingTrackIds.length
     ? await supabase
         .from("tracks")
-        .select("id, title, version, bpm, key, genre")
+        .select("id, title, version, bpm, key, genre, status")
         .in("id", existingTrackIds)
     : { data: [] as TrackRow[], error: null };
 
@@ -110,6 +111,16 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
 
   const allTracksMetadataComplete =
     existingTrackIds.length > 0 && !missingTrackRows && !hasMissingMeta;
+
+  const hasInvalidTrackStatus = (trackRows ?? []).some(
+    (r: TrackRow) =>
+      r.status !== "approved" &&
+      r.status !== "development" &&
+      r.status !== "performance",
+  );
+
+  const allTracksHavePublishableStatus =
+    existingTrackIds.length > 0 && !missingTrackRows && !hasInvalidTrackStatus;
 
   // --- Boost opt-in states ---
   const { data: boostRows, error: boostErr } = existingTrackIds.length
@@ -185,6 +196,7 @@ export default async function ReleaseDetailPage({ params }: { params: Promise<{ 
       existingTrackIds={existingTrackIds}
       coverUrl={coverUrl}
       allTracksMetadataComplete={allTracksMetadataComplete}
+      allTracksHavePublishableStatus={allTracksHavePublishableStatus}
       eligibilityByTrackId={eligibilityByTrackId}
       boostEnabledById={boostEnabledById}
     />
