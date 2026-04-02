@@ -32,6 +32,29 @@ export default async function ProcessingPage({
     );
   }
 
+  const { data: queueRow, error: queueErr } = await supabase
+    .from("tracks_ai_queue")
+    .select("id")
+    .eq("id", queueId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (queueErr) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] text-white">
+        <p className="text-white/70">Failed to load processing queue.</p>
+      </div>
+    );
+  }
+
+  if (!queueRow) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0E0E10] text-white">
+        <p className="text-white/70">Queue not found.</p>
+      </div>
+    );
+  }
+
   const { data: creditsRow, error: creditsErr } = await supabase
     .from("artist_credits")
     .select("balance")

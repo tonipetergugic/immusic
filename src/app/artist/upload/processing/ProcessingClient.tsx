@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { unlockPaidFeedbackAction } from "../feedback/actions";
 
-type ApiResponse =
-  | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean; queue_id?: string }
-  | { ok: true; processed: true; decision: "rejected"; reason?: string; feedback_available?: boolean; queue_id?: string }
-  | { ok: true; processed: false; reason: string; queue_id?: string }
+type QueueStatusResponse =
+  | { ok: true; processed: true; decision: "approved"; feedback_available?: boolean; queue_id: string }
+  | { ok: true; processed: true; decision: "rejected"; reason?: string; feedback_available?: boolean; queue_id: string }
+  | { ok: true; processed: false; reason: "queued" | "processing"; queue_id: string }
   | { ok: false; error: string };
 
 type Props = { credits: number; queueId: string };
@@ -58,54 +58,62 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         if (elapsed >= TIMEOUT_MS) {
           setTimedOut(true);
           setStatusText("Taking longer than expected.");
-          // Stop polling on timeout (clear end state)
           return;
         }
-
-        const res = await fetch("/api/ai/track-check/process-next", { method: "POST" });
-        const data = (await res.json()) as ApiResponse;
+        const statusRes = await fetch(
+          `/api/ai/track-check/status?queue_id=${encodeURIComponent(queueId)}`,
+          { cache: "no-store" },
+        );
+        const statusData = (await statusRes.json()) as QueueStatusResponse;
 
         if (cancelled) return;
 
-        if (!("ok" in data) || data.ok !== true) {
+        if (!("ok" in statusData) || statusData.ok !== true) {
           setErrorText("Processing failed. Please try again.");
           return;
         }
 
-        const resQueueId = (data as any).queue_id as string | undefined;
-        const isOurQueue = typeof resQueueId === "string" && resQueueId === queueId;
+        if (statusData.queue_id !== queueId) {
+          setErrorText("Processing failed. Please reload the page.");
+          return;
+        }
 
-        if (data.processed === false) {
-          setStatusText("Queued… processing will start shortly.");
+        if (statusData.processed) {
+          if (statusData.decision === "approved") {
+            setApproved(true);
+            setCanFeedback(!!statusData.feedback_available);
+            setStatusText("Approved. Your track is now in My Tracks.");
+            return;
+          }
+
+          setRejected(true);
+          setRejectReason(statusData.reason ?? null);
+
+          if (statusData.reason === "duplicate_audio" || statusData.reason === "duplicate") {
+            setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
+          } else {
+            setStatusText("Processing completed. Detailed AI feedback is available to unlock for this upload.");
+          }
+
+          return;
+        }
+
+        if (statusData.reason === "processing") {
+          setStatusText("Processing your track…");
           timerRef.current = window.setTimeout(tick, POLL_MS);
           return;
         }
 
-        if (!isOurQueue) {
-          timerRef.current = window.setTimeout(tick, POLL_MS);
-          return;
+        setStatusText("Queued… processing will start shortly.");
+
+        try {
+          await fetch("/api/ai/track-check/process-next", { method: "POST" });
+        } catch {
+          // best-effort trigger only
         }
 
-        if (data.decision === "approved") {
-          setApproved(true);
-          setCanFeedback(!!data.feedback_available);
-          setStatusText("Approved. Your track is now in My Tracks.");
-          return; // stop polling
-        }
-
-        // rejected (our queue)
-        setRejected(true);
-
-        const rr = (data as any).reason as string | undefined;
-        setRejectReason(rr ?? null);
-
-        if (rr === "duplicate_audio" || rr === "duplicate") {
-          setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
-        } else {
-          setStatusText("Processing completed. Detailed AI feedback is available to unlock for this upload.");
-        }
-
-        // stop polling
+        if (cancelled) return;
+        timerRef.current = window.setTimeout(tick, POLL_MS);
       } catch {
         if (cancelled) return;
         setErrorText("Processing failed. Please reload the page.");

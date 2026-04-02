@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, RotateCcw, Upload as UploadIcon } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
-import { submitToQueueAction } from "../actions";
 
 type WavValidation =
   | { ok: true; durationSeconds: number; sampleRate: number; channels: number; bitsPerSample: number }
@@ -119,6 +119,10 @@ async function validateWavFile(file: File): Promise<WavValidation> {
 
 type Props = { userId: string };
 
+type QueueApiResponse =
+  | { ok: true; queue_id: string }
+  | { ok: false; error: string };
+
 function formatMB(bytes: number) {
   return (bytes / (1024 * 1024)).toFixed(1);
 }
@@ -135,6 +139,7 @@ function randomId() {
 }
 
 export default function ArtistUploadClient({ userId }: Props) {
+  const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [title, setTitle] = useState("");
@@ -147,10 +152,6 @@ export default function ArtistUploadClient({ userId }: Props) {
   const [fileError, setFileError] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
   const [flowStep, setFlowStep] = useState<"idle" | "validating" | "uploading" | "queueing">("idle");
-
-  const submitFormRef = useRef<HTMLFormElement | null>(null);
-  const audioPathInputRef = useRef<HTMLInputElement | null>(null);
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const hasTitleError = titleTouched && !title.trim();
 
@@ -238,17 +239,34 @@ export default function ArtistUploadClient({ userId }: Props) {
       setAudioPath(filePath);
       setFlowStep("queueing");
 
-      if (!submitFormRef.current || !audioPathInputRef.current || !titleInputRef.current) {
-        setUiError("Could not start the quality check. Please try again.");
+      const queueRes = await fetch("/api/artist/upload/queue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          audio_path: filePath,
+          title: title.trim(),
+        }),
+      });
+
+      const queueData = (await queueRes.json()) as QueueApiResponse;
+
+      if (!queueRes.ok || !queueData.ok || !queueData.queue_id) {
+        setUiError(
+          "error" in queueData && queueData.error
+            ? queueData.error
+            : "Could not start the quality check. Please try again."
+        );
         setUploading(false);
         setFlowStep("idle");
         return;
       }
 
-      audioPathInputRef.current.value = filePath;
-      titleInputRef.current.value = title.trim();
-
-      submitFormRef.current.requestSubmit();
+      router.push(
+        `/artist/upload/processing?queue_id=${encodeURIComponent(queueData.queue_id)}`
+      );
+      return;
     } catch (e) {
       console.error(e);
       setUiError("Could not start the quality check. Please try again.");
@@ -459,10 +477,6 @@ export default function ArtistUploadClient({ userId }: Props) {
             Reset upload
           </button>
 
-          <form ref={submitFormRef} action={submitToQueueAction} className="hidden">
-            <input ref={audioPathInputRef} type="hidden" name="audio_path" defaultValue="" />
-            <input ref={titleInputRef} type="hidden" name="title" defaultValue="" />
-          </form>
         </div>
       </div>
     </div>

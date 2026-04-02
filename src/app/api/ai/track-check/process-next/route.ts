@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -32,6 +33,29 @@ export async function POST() {
     supabase,
     userId: user.id,
   });
+
+  const { data: activeProcessingItem, error: activeProcessingErr } = await supabase
+    .from("tracks_ai_queue")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "processing")
+    .order("processing_started_at", { ascending: true })
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeProcessingErr) {
+    return NextResponse.json({ ok: false, error: "processing_fetch_failed" }, { status: 500 });
+  }
+
+  if (activeProcessingItem?.id) {
+    return NextResponse.json({
+      ok: true,
+      processed: false,
+      reason: "processing_in_progress",
+      queue_id: activeProcessingItem.id,
+    });
+  }
 
   const fetched = await fetchPendingOrRespond({
     supabase,
