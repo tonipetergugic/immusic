@@ -517,7 +517,7 @@ export default function ReleaseEditorClient({
                   setPublishModalOpen(false);
                 }}
                 disabled={isPending}
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/[0.07] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-white/85 backdrop-blur transition hover:bg-white/[0.07] hover:border-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -526,7 +526,7 @@ export default function ReleaseEditorClient({
                 type="button"
                 onClick={confirmPublish}
                 disabled={isPending || !canPublish}
-                className="rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/15 px-5 py-2.5 text-sm font-semibold text-[#00FFC6] backdrop-blur transition
+                className="min-w-[124px] cursor-pointer rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/15 px-5 py-2.5 text-sm font-semibold text-[#00FFC6] backdrop-blur transition
   hover:bg-[#00FFC6]/25 hover:border-[#00FFC6]/50
   hover:shadow-[0_0_0_1px_rgba(0,255,198,0.25),0_12px_40px_rgba(0,255,198,0.18)]
   focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40 disabled:opacity-60 disabled:cursor-not-allowed"

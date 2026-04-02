@@ -207,7 +207,9 @@ export async function removeTrackFromReleaseAction(releaseId: string, trackId: s
   });
 
   if (error) {
-    return { error: "Failed to remove track from release." as const };
+    return {
+      error: error.message || ("Failed to remove track from release." as const),
+    };
   }
 
   if (!data) {

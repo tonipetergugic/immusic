@@ -106,11 +106,11 @@ function SortableTrackItem({
       : !isDevOk
       ? (releasePublished ? { label: "Enable Development", href: null } : null)
       : !isExposureOk
-      ? { label: "Check Guaranteed Exposure", href: "/artist/dashboard" }
+      ? { label: "Check Guaranteed Exposure", href: "/artist/analytics" }
       : ratingCount < 3
-      ? { label: "Collect more ratings (Development)", href: "/artist/dashboard" }
+      ? { label: "Collect more ratings (Development)", href: "/artist/analytics" }
       : avgStars < 3.0
-      ? { label: "Improve rating quality", href: "/artist/dashboard" }
+      ? { label: "Improve rating quality", href: "/artist/analytics" }
       : null;
 
   return (
@@ -229,6 +229,8 @@ function SortableTrackItem({
                 nextStep.href ? (
                   <a
                     href={nextStep.href}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
                     className="inline-block text-[13px] font-semibold text-[#00FFC6] hover:text-[#00E0B0] transition"
                   >
                     Next step: <span className="text-[#00FFC6]">{nextStep.label}</span>
@@ -256,7 +258,7 @@ function SortableTrackItem({
                   const res = await removeTrackFromReleaseAction(track.release_id, track.track_id);
 
                   if (res && "error" in res) {
-                    showNotice(res.error ?? "Failed to update track order.");
+                    showNotice(res.error ?? "Failed to remove track from release.");
                     onRefresh?.();
                     return;
                   }

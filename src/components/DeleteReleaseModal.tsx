@@ -42,7 +42,7 @@ export default function DeleteReleaseModal({
           <button
             onClick={onClose}
             disabled={isPending}
-            className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur transition
+            className="cursor-pointer rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur transition
     hover:bg-white/10 hover:border-white/25
     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -56,7 +56,7 @@ export default function DeleteReleaseModal({
               if (isPending) return;
               if (onConfirm) onConfirm();
             }}
-            className="rounded-xl border border-red-500/30 bg-red-500/15 px-5 py-2.5 text-sm font-semibold text-red-300 backdrop-blur transition
+            className="min-w-[148px] cursor-pointer rounded-xl border border-red-500/30 bg-red-500/15 px-5 py-2.5 text-sm font-semibold text-red-300 backdrop-blur transition
     hover:bg-red-500/25 hover:border-red-500/50
     hover:shadow-[0_0_0_1px_rgba(239,68,68,0.25),0_12px_40px_rgba(239,68,68,0.18)]
     focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:cursor-not-allowed disabled:opacity-60"

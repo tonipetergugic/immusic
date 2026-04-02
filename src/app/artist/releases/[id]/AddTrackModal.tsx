@@ -106,8 +106,17 @@ export default function AddTrackModal({
   const shouldShowLimitedNote = matchingTracks.length > 12;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.06] p-6 text-white relative shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_80px_rgba(0,0,0,0.55)]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md"
+      onClick={() => {
+        if (addingTrackId) return;
+        onClose();
+      }}
+    >
+      <div
+        className="relative flex h-[640px] w-full max-w-md flex-col rounded-2xl border border-white/10 bg-white/[0.06] p-6 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_80px_rgba(0,0,0,0.55)]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={() => {
             if (addingTrackId) return;
@@ -119,7 +128,9 @@ export default function AddTrackModal({
           ✕
         </button>
 
-        <h2 className="text-lg font-semibold mb-4">Add Tracks</h2>
+        <h2 className="mb-4 text-lg font-semibold">Add Tracks</h2>
+
+        <div className="flex flex-1 min-h-0 flex-col">
 
         {loading && <p className="text-sm text-gray-400">Loading tracks...</p>}
 
@@ -149,7 +160,7 @@ export default function AddTrackModal({
 
         {!loading && filteredTracks.length > 0 && (
           <>
-            <ul className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+            <ul className="h-[416px] space-y-2 overflow-y-auto pr-1">
               {filteredTracks.map((t) => (
                 <li
                   key={t.id}
@@ -206,6 +217,7 @@ export default function AddTrackModal({
             ) : null}
           </>
         )}
+        </div>
       </div>
     </div>
   );
