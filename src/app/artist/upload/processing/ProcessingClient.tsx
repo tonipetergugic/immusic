@@ -15,7 +15,6 @@ type Props = { credits: number; queueId: string };
 
 export default function ProcessingClient({ credits, queueId }: Props) {
   const router = useRouter();
-  const [statusText, setStatusText] = useState<string>("Processing your track…");
   const [rejectReason, setRejectReason] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [rejected, setRejected] = useState(false);
@@ -23,7 +22,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const [canFeedback, setCanFeedback] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
-  const [visualStep, setVisualStep] = useState(0);
+  const [runningUiState, setRunningUiState] = useState<"queued" | "running">("queued");
   const [buyingCredits, setBuyingCredits] = useState(false);
 
   const pollCountRef = useRef(0);
@@ -42,8 +41,8 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     setRejected(false);
     setApproved(false);
     setCanFeedback(false);
-    setStatusText("Processing your track…");
     setRejectReason(null);
+    setRunningUiState("queued");
 
     pollCountRef.current = 0;
     startedAtRef.current = Date.now();
@@ -57,7 +56,6 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         const elapsed = Date.now() - startedAtRef.current;
         if (elapsed >= TIMEOUT_MS) {
           setTimedOut(true);
-          setStatusText("Taking longer than expected.");
           return;
         }
         const statusRes = await fetch(
@@ -82,29 +80,22 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           if (statusData.decision === "approved") {
             setApproved(true);
             setCanFeedback(!!statusData.feedback_available);
-            setStatusText("Approved. Your track is now in My Tracks.");
             return;
           }
 
           setRejected(true);
           setRejectReason(statusData.reason ?? null);
 
-          if (statusData.reason === "duplicate_audio" || statusData.reason === "duplicate") {
-            setStatusText("This audio already exists on IMUSIC. Uploading it again is not allowed.");
-          } else {
-            setStatusText("Processing completed. Detailed AI feedback is available to unlock for this upload.");
-          }
-
           return;
         }
 
         if (statusData.reason === "processing") {
-          setStatusText("Processing your track…");
+          setRunningUiState("running");
           timerRef.current = window.setTimeout(tick, POLL_MS);
           return;
         }
 
-        setStatusText("Queued… processing will start shortly.");
+        setRunningUiState("queued");
 
         try {
           await fetch("/api/ai/track-check/process-next", { method: "POST" });
@@ -129,41 +120,8 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     };
   }, [retryKey, queueId]);
 
-  useEffect(() => {
-    if (approved || rejected || timedOut || errorText) return;
-
-    const steps = [
-      "Preparing analysis…",
-      "Checking audio quality…",
-      "Inspecting technical details…",
-    ];
-
-    setVisualStep(0);
-
-    let current = 0;
-
-    const interval = window.setInterval(() => {
-      current += 1;
-
-      if (current >= steps.length - 1) {
-        setVisualStep(steps.length - 1);
-        window.clearInterval(interval);
-        return;
-      }
-
-      setVisualStep(current);
-    }, 5500);
-
-    return () => window.clearInterval(interval);
-  }, [approved, rejected, timedOut, errorText, retryKey]);
-
-  const visualStatuses = [
-    "Preparing analysis…",
-    "Checking audio quality…",
-    "Inspecting technical details…",
-  ];
-
-  const activeVisualStatus = visualStatuses[visualStep] ?? visualStatuses[0];
+  const activeVisualStatus =
+    runningUiState === "queued" ? "Queued for processing…" : "Inspecting technical details…";
   const isRunning = !approved && !rejected && !timedOut && !errorText;
 
   async function handleBuyCredits() {
@@ -197,27 +155,23 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
   return (
     <div className="min-h-screen bg-[#0E0E10] px-6 py-10 text-white">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-3xl">
         <h1 className="mb-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
           <span className="text-[#00FFC6]">Processing</span> your{" "}
           <span className="text-[#00FFC6]">track</span>
         </h1>
 
         {isRunning ? (
-          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+          <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex items-start justify-between gap-6">
+              <div className="flex items-start justify-between gap-5">
                 <div className="min-w-0">
-                  <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                  <p className="text-[19px] font-semibold tracking-tight text-white sm:text-[22px]">
                     {activeVisualStatus}
-                  </p>
-
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-white/60 sm:text-base">
-                    {statusText}
                   </p>
                 </div>
 
-                <div className="relative mt-1 h-5 w-5 shrink-0">
+                <div className="relative mt-0.5 h-5 w-5 shrink-0">
                   <span className="absolute inset-0 rounded-full border border-white/15" />
                   <span className="absolute inset-0 rounded-full bg-[#00FFC6]/20 blur-[6px]" />
                   <span className="absolute inset-0 animate-ping rounded-full bg-[#00FFC6]/25" />
@@ -225,13 +179,13 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 </div>
               </div>
 
-              <div className="mt-8">
+              <div className="mt-6">
                 <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
                   <div className="processing-bar h-full w-1/3 rounded-full bg-[#00FFC6]" />
                 </div>
               </div>
 
-              <p className="mt-auto pt-6 text-center text-sm text-white/70 sm:text-[15px]">
+              <p className="mt-auto pt-5 text-center text-[18px] text-white/70">
                 Do not close this page — your track is currently being processed.
               </p>
             </div>
@@ -239,7 +193,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         ) : null}
 
         {timedOut && !approved && !rejected && (
-          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+          <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
             <div className="flex min-h-0 flex-1 flex-col text-center">
               <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
                 Taking longer than expected.
@@ -248,7 +202,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                 <button
                   type="button"
-                  className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                  className="rounded-2xl border border-[#00FFC6]/60 px-6 py-3 font-semibold text-[#00FFC6] bg-transparent transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] cursor-pointer"
                   onClick={() => setRetryKey((k) => k + 1)}
                 >
                   Retry Processing
@@ -256,7 +210,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
                 <button
                   type="button"
-                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                  className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                   onClick={() => router.replace("/artist/upload")}
                 >
                   Back to Upload
@@ -267,7 +221,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         )}
 
         {rejected && (
-          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+          <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
             {rejectReason === "duplicate_audio" || rejectReason === "duplicate" ? (
               <div className="flex min-h-0 flex-1 flex-col text-center text-white/70">
                 <p className="mb-4 text-xl font-semibold tracking-tight text-white/95 sm:text-2xl">
@@ -277,14 +231,14 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                     onClick={() => router.replace("/artist/upload")}
                   >
                     Back to Upload
                   </button>
                   <button
                     type="button"
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                    className="rounded-2xl border border-[#00FFC6]/60 px-6 py-3 font-semibold text-[#00FFC6] bg-transparent transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] cursor-pointer"
                     onClick={() => router.replace("/artist/my-tracks")}
                   >
                     Go to My Tracks
@@ -294,23 +248,23 @@ export default function ProcessingClient({ credits, queueId }: Props) {
             ) : credits >= 10 ? (
               <div className="flex min-h-0 flex-1 flex-col text-center text-white/70">
                 <p className="mb-5 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                  Track <span className="text-red-400">rejected</span>. Detailed AI analysis is available for this upload.
+                  Track <span className="text-red-400">rejected</span>. AI analysis is available for this upload.
                 </p>
 
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                     onClick={() => router.replace("/artist/upload")}
                   >
                     Back to Upload
                   </button>
 
-                  <form action={unlockPaidFeedbackAction}>
+                  <form action={unlockPaidFeedbackAction} className="contents">
                     <input type="hidden" name="queue_id" value={queueId} />
                     <button
                       type="submit"
-                      className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                      className="shrink-0 whitespace-nowrap rounded-2xl border border-[#00FFC6]/60 px-6 py-3 font-semibold text-[#00FFC6] bg-transparent transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] cursor-pointer"
                     >
                       Detailed AI Analysis (10 Credits)
                     </button>
@@ -320,7 +274,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
             ) : (
               <div className="flex min-h-0 flex-1 flex-col text-center text-white/70">
                 <p className="mb-5 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                  Track <span className="text-red-400">rejected</span>. Detailed AI analysis is available for this upload.
+                  Track <span className="text-red-400">rejected</span>. AI analysis is available for this upload.
                 </p>
 
                 <p className="mt-3 text-base text-white/75 sm:text-lg">
@@ -331,7 +285,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                     onClick={() => router.replace("/artist/upload")}
                   >
                     Back to Upload
@@ -340,7 +294,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                   <button
                     type="button"
                     disabled={buyingCredits}
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-2xl border border-[#00FFC6]/60 px-6 py-3 font-semibold text-[#00FFC6] bg-transparent transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handleBuyCredits}
                   >
                     {buyingCredits ? "Opening checkout..." : "Buy Credits"}
@@ -352,7 +306,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         )}
 
         {approved && (
-          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+          <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
             {credits >= 10 ? (
               <div className="flex min-h-0 flex-1 flex-col text-center">
                 <p className="mb-4 text-xl font-semibold tracking-tight text-white sm:text-2xl">
@@ -362,17 +316,17 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                     onClick={() => router.replace("/artist/my-tracks")}
                   >
                     Go to My Tracks
                   </button>
 
-                  <form action={unlockPaidFeedbackAction}>
+                  <form action={unlockPaidFeedbackAction} className="contents">
                     <input type="hidden" name="queue_id" value={queueId} />
                     <button
                       type="submit"
-                      className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)]"
+                      className="shrink-0 whitespace-nowrap rounded-2xl border border-[#00FFC6]/60 px-6 py-3 font-semibold text-[#00FFC6] bg-transparent transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] cursor-pointer"
                     >
                       Detailed AI Analysis (10 Credits)
                     </button>
@@ -393,7 +347,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                 <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
                   <button
                     type="button"
-                    className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                    className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                     onClick={() => router.replace("/artist/my-tracks")}
                   >
                     Go to My Tracks
@@ -402,7 +356,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                   <button
                     type="button"
                     disabled={buyingCredits}
-                    className="rounded-2xl border border-[#00FFC6]/60 bg-transparent px-6 py-3 font-semibold text-[#00FFC6] transition cursor-pointer hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-2xl border border-[#00FFC6]/60 px-6 py-3 font-semibold text-[#00FFC6] bg-transparent transition hover:-translate-y-[1px] hover:border-[#00FFC6] hover:bg-[#00FFC6]/10 hover:shadow-[0_10px_30px_rgba(0,255,198,0.15)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handleBuyCredits}
                   >
                     {buyingCredits ? "Opening checkout..." : "Buy Credits"}
@@ -414,7 +368,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         )}
 
         {errorText && !isRunning && !approved && !rejected && !timedOut ? (
-          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-6 text-left shadow-[0_30px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-7">
+          <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
             <div className="flex min-h-0 flex-1 flex-col text-center">
               <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
                 Processing <span className="text-red-400">failed</span>. Please try again.
@@ -427,7 +381,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               <div className="mt-auto flex justify-center pt-6">
                 <button
                   type="button"
-                  className="rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition cursor-pointer hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05]"
+                  className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
                   onClick={() => router.replace("/artist/upload")}
                 >
                   Back to Upload
