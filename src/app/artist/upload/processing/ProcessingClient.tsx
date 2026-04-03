@@ -116,7 +116,15 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         if (!kickoffInFlightRef.current) {
           kickoffInFlightRef.current = true;
 
-          void fetch("/api/ai/track-check/process-next", { method: "POST" })
+          void fetch("/api/ai/track-check/process-next", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              queue_id: queueId,
+            }),
+          })
             .catch(() => {
               // best-effort trigger only
             })
@@ -216,6 +224,16 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     }
   }
 
+  const showRecoverableState = (timedOut || !!errorText) && !approved && !rejected;
+
+  const recoverableTitle = timedOut
+    ? "Taking longer than expected."
+    : "Processing was temporarily interrupted.";
+
+  const recoverableDescription = timedOut
+    ? "Processing may still be running in the background. You can retry processing or return to upload."
+    : "We could not continue tracking this upload right now. You can retry processing or return to upload.";
+
   return (
     <div className="min-h-screen bg-[#0E0E10] px-6 py-10 text-white">
       <div className="mx-auto w-full max-w-3xl">
@@ -255,11 +273,15 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           </div>
         ) : null}
 
-        {timedOut && !approved && !rejected && (
+        {showRecoverableState ? (
           <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
             <div className="flex min-h-0 flex-1 flex-col text-center">
               <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                Taking longer than expected.
+                {recoverableTitle}
+              </p>
+
+              <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-white/65 sm:text-lg">
+                {recoverableDescription}
               </p>
 
               <div className="mt-auto flex flex-col justify-center gap-3.5 pt-5 sm:flex-row">
@@ -281,7 +303,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {rejected && (
           <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
@@ -430,29 +452,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           </div>
         )}
 
-        {errorText && !isRunning && !approved && !rejected && !timedOut ? (
-          <div className="flex h-[235px] w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.025)_48%,rgba(255,255,255,0.02)_100%)] p-5 text-left shadow-[0_26px_80px_rgba(0,0,0,0.42)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6">
-            <div className="flex min-h-0 flex-1 flex-col text-center">
-              <p className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                Processing <span className="text-red-400">failed</span>. Please try again.
-              </p>
-
-              <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-white/65 sm:text-lg">
-                We could not complete the next step for this track.
-              </p>
-
-              <div className="mt-auto flex justify-center pt-6">
-                <button
-                  type="button"
-                  className="min-w-[132px] whitespace-normal text-center leading-tight rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3 font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:-translate-y-[1px] hover:border-white/20 hover:bg-white/[0.05] cursor-pointer"
-                  onClick={() => router.replace("/artist/upload")}
-                >
-                  Back to Upload
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        
       </div>
 
       <style jsx>{`
