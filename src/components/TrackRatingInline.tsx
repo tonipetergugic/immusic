@@ -203,6 +203,8 @@ function TrackRatingInline({
     return false;
   }, [initialMyStars, initialEligibility]);
 
+  const awaitingInitialUserState = !readOnly && !hasInitial && !hydrated;
+
   useEffect(() => {
     if (!releaseTrackId) return;
     if (readOnly) return;
@@ -327,7 +329,7 @@ function TrackRatingInline({
         <Tooltip label="You already rated this track. Ratings are final." placement="top">
           <div className="flex gap-0.5">
             {[1, 2, 3, 4, 5].map((n) => {
-              const disabled = submitting || alreadyRated;
+              const disabled = submitting || alreadyRated || awaitingInitialUserState;
               return (
                 <button
                   key={n}
@@ -360,7 +362,7 @@ function TrackRatingInline({
       ) : (
         <div className="flex gap-0.5">
           {[1, 2, 3, 4, 5].map((n) => {
-            const disabled = submitting;
+            const disabled = submitting || awaitingInitialUserState;
             return (
               <button
                 key={n}
