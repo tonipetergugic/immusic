@@ -20,7 +20,9 @@ export default async function EditTrackPage({
 
   const { data: track, error } = await supabase
     .from("tracks")
-    .select("id,title,version,bpm,key,genre,lyrics,has_lyrics,is_explicit,artist_id,audio_path")
+    .select(
+      "id,title,version,bpm,key,genre,lyrics,has_lyrics,is_explicit,artist_id,audio_path,source_queue_id",
+    )
     .eq("id", trackId)
     .eq("artist_id", user.id)
     .single();
@@ -29,9 +31,9 @@ export default async function EditTrackPage({
     notFound();
   }
 
-  let queueId: string | null = null;
+  let queueId: string | null = track.source_queue_id ?? null;
 
-  if (track.audio_path) {
+  if (!queueId && track.audio_path) {
     const { data: queueRows } = await supabase
       .from("tracks_ai_queue")
       .select("id")

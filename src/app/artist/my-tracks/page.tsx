@@ -55,38 +55,9 @@ export default async function MyTracksPage() {
     throw new Error("Failed to load tracks.");
   }
 
-  // Load latest queue_id per audio_path for this artist (for "View Feedback" menu entry)
-  const audioPaths = Array.from(
-    new Set((data ?? []).map((t) => t.audio_path).filter(Boolean))
-  );
-
-  const latestQueueIdByAudioPath = new Map<string, string>();
-
-  if (audioPaths.length > 0) {
-    const { data: queueRows, error: queueErr } = await supabase
-      .from("tracks_ai_queue")
-      .select("id,audio_path,created_at")
-      .eq("user_id", user.id)
-      .in("audio_path", audioPaths)
-      .order("created_at", { ascending: false });
-
-    if (queueErr) {
-      throw new Error("Failed to load feedback queue.");
-    }
-
-    // rows are newest-first, keep first occurrence per audio_path
-    for (const row of queueRows ?? []) {
-      if (!row?.audio_path) continue;
-      if (!latestQueueIdByAudioPath.has(row.audio_path)) {
-        latestQueueIdByAudioPath.set(row.audio_path, row.id);
-      }
-    }
-  }
-
   const tracks = (data ?? []).map((t) => {
     const isLocked = lockedTrackIdSet.has(t.id);
-    const queue_id = latestQueueIdByAudioPath.get(t.audio_path) ?? null;
-    return { ...t, isLocked, queue_id };
+    return { ...t, isLocked };
   });
 
   return (
