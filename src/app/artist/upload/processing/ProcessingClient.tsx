@@ -45,7 +45,6 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const [visualStep, setVisualStep] = useState(0);
   const [buyingCredits, setBuyingCredits] = useState(false);
 
-  const pollCountRef = useRef(0);
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
   const kickoffInFlightRef = useRef(false);
@@ -70,14 +69,11 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     kickoffInFlightRef.current = false;
     transientFailureCountRef.current = 0;
 
-    pollCountRef.current = 0;
     startedAtRef.current = Date.now();
 
     async function tick() {
       try {
         if (cancelled) return;
-
-        pollCountRef.current += 1;
 
         const elapsed = Date.now() - startedAtRef.current;
         if (elapsed >= TIMEOUT_MS) {
@@ -130,7 +126,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           return;
         }
 
-        setRunningUiState("queued");
+        setRunningUiState((current) => (current === "running" ? "running" : "queued"));
 
         if (!kickoffInFlightRef.current) {
           kickoffInFlightRef.current = true;
