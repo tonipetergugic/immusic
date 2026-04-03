@@ -31,6 +31,20 @@ export default async function EditTrackPage({
     notFound();
   }
 
+  const { data: lockedRows, error: lockedErr } = await supabase
+    .from("release_tracks")
+    .select("release_id, releases!inner(status, artist_id)")
+    .eq("track_id", track.id)
+    .eq("releases.status", "published")
+    .eq("releases.artist_id", user.id)
+    .limit(1);
+
+  if (lockedErr) {
+    throw new Error("Failed to validate track lock state.");
+  }
+
+  const isLocked = Boolean(lockedRows && lockedRows.length > 0);
+
   let queueId: string | null = track.source_queue_id ?? null;
 
   if (!queueId && track.audio_path) {
@@ -82,6 +96,7 @@ export default async function EditTrackPage({
             artist_id: track.artist_id,
             audio_path: track.audio_path,
             queue_id: queueId,
+            is_locked: isLocked,
           }}
           initialPendingInvites={(pendingInvites ?? []).map((r: any) => ({
             id: r.id,

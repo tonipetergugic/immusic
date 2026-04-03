@@ -13,6 +13,7 @@ export type Track = {
   artist_id: string;
   audio_path: string | null;
   queue_id: string | null;
+  is_locked: boolean;
 };
 
 export type CollabResult = {

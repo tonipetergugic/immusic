@@ -4,6 +4,7 @@ type TrackActionsSectionProps = {
   editError: string | null;
   editSuccess: string | null;
   isPending: boolean;
+  isLocked: boolean;
   queueId: string | null;
   onSave: () => void;
   onDone: () => void;
@@ -15,6 +16,7 @@ export default function TrackActionsSection({
   editError,
   editSuccess,
   isPending,
+  isLocked,
   queueId,
   onSave,
   onDone,
@@ -32,16 +34,17 @@ export default function TrackActionsSection({
         </div>
       </div>
 
-      <div className="mt-5 space-y-3">
-        {editError && (
+      <div className="mt-5 min-h-[44px]">
+        {editError ? (
           <div className="rounded-xl border border-red-400/15 bg-red-400/10 px-3 py-2 text-sm text-red-300">
             {editError}
           </div>
-        )}
-        {editSuccess && (
+        ) : editSuccess ? (
           <div className="rounded-xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-300">
             {editSuccess}
           </div>
+        ) : (
+          <div aria-hidden="true" className="h-[44px]" />
         )}
       </div>
 
@@ -49,7 +52,7 @@ export default function TrackActionsSection({
         <button
           type="button"
           className="inline-flex items-center justify-center rounded-xl border border-[#00FFC6]/35 bg-[#00FFC6]/12 px-4 py-3 text-sm font-semibold text-[#00FFC6] transition cursor-pointer hover:bg-[#00FFC6]/16 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
-          disabled={isPending}
+          disabled={isPending || isLocked}
           onClick={onSave}
         >
           {isPending ? "Saving..." : "Save Changes"}
@@ -76,7 +79,8 @@ export default function TrackActionsSection({
         <div className="mt-2 border-t border-white/10 pt-4">
           <button
             type="button"
-            className="w-full rounded-xl border border-red-400/15 bg-red-400/8 px-4 py-3 text-sm font-semibold text-red-200/90 transition cursor-pointer hover:bg-red-400/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
+            className="w-full rounded-xl border border-red-400/15 bg-red-400/8 px-4 py-3 text-sm font-semibold text-red-200/90 transition cursor-pointer hover:bg-red-400/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isLocked}
             onClick={onDelete}
           >
             Delete Track

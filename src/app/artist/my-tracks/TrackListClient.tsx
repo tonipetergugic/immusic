@@ -9,7 +9,6 @@ type Track = {
   title: string;
   version: string | null;
   audio_path: string;
-  queue_id?: string | null;
   bpm: number | null;
   key: string | null;
   genre: string | null;

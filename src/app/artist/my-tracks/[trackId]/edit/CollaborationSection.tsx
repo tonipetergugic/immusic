@@ -15,6 +15,7 @@ const COLLAB_ROLE_ITEMS = [
 ] as const;
 
 type CollaborationSectionProps = {
+  isLocked: boolean;
   collabQuery: string;
   onCollabQueryChange: (value: string) => void;
   collabRole: CollaborationRole;
@@ -31,6 +32,7 @@ type CollaborationSectionProps = {
 };
 
 export default function CollaborationSection({
+  isLocked,
   collabQuery,
   onCollabQueryChange,
   collabRole,
@@ -60,7 +62,8 @@ export default function CollaborationSection({
         <button
           type="button"
           onClick={onRefresh}
-          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-transparent px-4 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/40"
+          disabled={isLocked}
+          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-transparent px-4 text-sm font-semibold text-white/80 transition hover:bg-white/[0.06] hover:border-[#00FFC6]/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Refresh invites
         </button>
@@ -71,8 +74,9 @@ export default function CollaborationSection({
           <input
             type="text"
             value={collabQuery}
+            disabled={isLocked}
             onChange={(e) => onCollabQueryChange(e.target.value)}
-            className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+            className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 disabled:cursor-not-allowed disabled:opacity-50"
             placeholder="Search artist by name…"
           />
 
@@ -81,13 +85,14 @@ export default function CollaborationSection({
               value={collabRole}
               onChange={(value) => onCollabRoleChange(value as CollaborationRole)}
               items={COLLAB_ROLE_ITEMS as unknown as { value: string; label: string }[]}
+              disabled={isLocked}
               className="min-w-0"
             />
 
             <button
               type="button"
               className="h-[52px] rounded-xl border border-white/10 bg-transparent px-4 text-sm font-semibold text-white/80 transition cursor-pointer hover:bg-white/[0.06] hover:border-[#00FFC6]/40 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={collabLoading || collabQuery.trim().length < 2}
+              disabled={isLocked || collabLoading || collabQuery.trim().length < 2}
               onClick={onSearch}
             >
               {collabLoading ? "Searching..." : "Search"}
@@ -106,7 +111,8 @@ export default function CollaborationSection({
               <button
                 key={p.id}
                 type="button"
-                className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left text-white/85 hover:bg-white/[0.04]"
+                disabled={isLocked}
+                className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left text-white/85 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => onInvite(p)}
               >
                 <span className="truncate">{p.display_name}</span>

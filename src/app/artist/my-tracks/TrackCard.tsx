@@ -9,7 +9,6 @@ type Track = {
   title: string;
   version: string | null;
   audio_path: string | null;
-  queue_id?: string | null;
   bpm: number | null;
   key: string | null;
   genre: string | null;
@@ -42,19 +41,17 @@ export function TrackCard({ track }: TrackCardProps) {
       className={
         "group relative overflow-hidden rounded-[24px] border border-white/10 bg-[#131317] transition " +
         (isLocked
-          ? "cursor-not-allowed opacity-55"
+          ? "cursor-pointer opacity-55 hover:border-[#00FFC6]/20 hover:bg-[#16161b]"
           : "cursor-pointer hover:border-[#00FFC6]/35 hover:bg-[#16161b] hover:shadow-[0_0_0_1px_rgba(0,255,198,0.18),0_0_20px_rgba(0,255,198,0.08)]")
       }
       role="button"
       tabIndex={0}
       onClick={() => {
-        if (isLocked) return;
         router.push(`/artist/my-tracks/${track.id}/edit`);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          if (isLocked) return;
           router.push(`/artist/my-tracks/${track.id}/edit`);
         }
       }}

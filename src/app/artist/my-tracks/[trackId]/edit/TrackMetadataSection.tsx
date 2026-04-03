@@ -114,6 +114,7 @@ type TrackMetadataSectionProps = {
   newGenre: string;
   onGenreChange: (value: string) => void;
   newHasLyrics: boolean;
+  isLocked: boolean;
   onHasLyricsChange: (value: boolean) => void;
   newIsExplicit: boolean;
   onIsExplicitChange: (value: boolean) => void;
@@ -137,6 +138,7 @@ export default function TrackMetadataSection({
   newGenre,
   onGenreChange,
   newHasLyrics,
+  isLocked,
   onHasLyricsChange,
   newIsExplicit,
   onIsExplicitChange,
@@ -172,8 +174,9 @@ export default function TrackMetadataSection({
           </label>
           <input
             type="text"
-            className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20"
+            className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 disabled:cursor-not-allowed disabled:opacity-50"
             value={newTitle}
+            disabled={isLocked}
             onChange={(e) => onTitleChange(e.target.value)}
             maxLength={100}
             placeholder="Track title"
@@ -190,6 +193,7 @@ export default function TrackMetadataSection({
               value={newBpm}
               onChange={onBpmChange}
               items={BPM_ITEMS}
+              disabled={isLocked}
               placeholder="Typical range: 60–180"
             />
 
@@ -217,6 +221,7 @@ export default function TrackMetadataSection({
               value={newKey}
               onChange={onKeyChange}
               items={keyItems}
+              disabled={isLocked}
               placeholder="Select key"
             />
           </div>
@@ -232,6 +237,7 @@ export default function TrackMetadataSection({
               value={newVersion}
               onChange={onVersionChange}
               items={versionItems}
+              disabled={isLocked}
               placeholder="None"
             />
           </div>
@@ -245,6 +251,7 @@ export default function TrackMetadataSection({
               value={newGenre}
               onChange={onGenreChange}
               items={GENRE_ITEMS}
+              disabled={isLocked}
               placeholder="Select genre"
             />
           </div>
@@ -265,8 +272,9 @@ export default function TrackMetadataSection({
                 <input
                   type="checkbox"
                   checked={newHasLyrics}
+                  disabled={isLocked}
                   onChange={(e) => onHasLyricsChange(e.target.checked)}
-                  className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6]"
+                  className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             </div>
@@ -286,8 +294,9 @@ export default function TrackMetadataSection({
                 <input
                   type="checkbox"
                   checked={newIsExplicit}
+                  disabled={isLocked || !newHasLyrics}
                   onChange={(e) => onIsExplicitChange(e.target.checked)}
-                  className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6]"
+                  className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             </div>
@@ -309,7 +318,8 @@ export default function TrackMetadataSection({
 
                   <button
                     type="button"
-                    className="cursor-pointer text-sm font-semibold text-[#00FFC6] transition hover:text-[#00FFC6]/80"
+                    className="cursor-pointer text-sm font-semibold text-[#00FFC6] transition hover:text-[#00FFC6]/80 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={isLocked}
                     onClick={onOpenLyricsModal}
                   >
                     {newLyrics.trim() ? "Expand editor" : "+ Add lyrics"}
@@ -318,9 +328,10 @@ export default function TrackMetadataSection({
 
                 <textarea
                   value={newLyrics}
+                  disabled={isLocked}
                   onChange={(e) => onLyricsChange(e.target.value)}
                   placeholder="Paste or write your lyrics here..."
-                  className="min-h-[240px] w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-white outline-none placeholder:text-white/30"
+                  className="min-h-[240px] w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-white outline-none placeholder:text-white/30 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </>
             ) : (

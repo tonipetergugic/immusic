@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   deleteTrackAction,
@@ -52,6 +52,7 @@ export default function EditTrackClient({
   const [newIsExplicit, setNewIsExplicit] = useState<boolean>(Boolean(track.is_explicit));
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const editSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [newLyrics, setNewLyrics] = useState<string>(track.lyrics ?? "");
   const [isLyricsModalOpen, setIsLyricsModalOpen] = useState(false);
   const [lyricsDraft, setLyricsDraft] = useState<string>(track.lyrics ?? "");
@@ -76,7 +77,17 @@ export default function EditTrackClient({
     setAcceptedCollabs(initialAcceptedCollabs);
   }, [initialAcceptedCollabs]);
 
+  useEffect(() => {
+    return () => {
+      if (editSuccessTimeoutRef.current) {
+        clearTimeout(editSuccessTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const runCollabSearch = async () => {
+    if (track.is_locked) return;
+
     const q = collabQuery.trim();
     setCollabError(null);
     setCollabSuccess(null);
@@ -132,7 +143,16 @@ export default function EditTrackClient({
     setIsLyricsModalOpen(true);
   };
 
+  const handleHasLyricsChange = (value: boolean) => {
+    setNewHasLyrics(value);
+    if (!value) {
+      setNewIsExplicit(false);
+    }
+  };
+
   const handleInviteCollaborator = async (p: CollabResult) => {
+    if (track.is_locked) return;
+
     setCollabError(null);
     setCollabSuccess(null);
 
@@ -160,6 +180,8 @@ export default function EditTrackClient({
   };
 
   const handleRefreshCollaborations = () => {
+    if (track.is_locked) return;
+
     setCollabError(null);
     setCollabSuccess(null);
     router.refresh();
@@ -236,13 +258,20 @@ export default function EditTrackClient({
         genre: newGenre.trim() === "" ? null : newGenre.trim(),
         has_lyrics: newHasLyrics,
         lyrics: newHasLyrics ? (newLyrics.trim() === "" ? null : newLyrics) : null,
-        is_explicit: newIsExplicit,
+        is_explicit: newHasLyrics ? newIsExplicit : false,
         version: versionValue,
       };
 
       await renameTrackAction(track.id, payload);
 
+      if (editSuccessTimeoutRef.current) {
+        clearTimeout(editSuccessTimeoutRef.current);
+      }
+
       setEditSuccess("Saved.");
+      editSuccessTimeoutRef.current = setTimeout(() => {
+        setEditSuccess(null);
+      }, 2500);
     });
   };
 
@@ -293,7 +322,8 @@ export default function EditTrackClient({
           newGenre={newGenre}
           onGenreChange={setNewGenre}
           newHasLyrics={newHasLyrics}
-          onHasLyricsChange={setNewHasLyrics}
+          isLocked={track.is_locked}
+          onHasLyricsChange={handleHasLyricsChange}
           newIsExplicit={newIsExplicit}
           onIsExplicitChange={setNewIsExplicit}
           newLyrics={newLyrics}
@@ -304,6 +334,7 @@ export default function EditTrackClient({
         {/* Right column */}
         <div className="min-w-0 xl:flex xl:h-full xl:flex-col xl:gap-8">
           <CollaborationSection
+            isLocked={track.is_locked}
             collabQuery={collabQuery}
             onCollabQueryChange={setCollabQuery}
             collabRole={collabRole}
@@ -323,6 +354,7 @@ export default function EditTrackClient({
             editError={editError}
             editSuccess={editSuccess}
             isPending={isPending}
+            isLocked={track.is_locked}
             queueId={track.queue_id}
             onSave={handleSave}
             onDone={handleDone}
