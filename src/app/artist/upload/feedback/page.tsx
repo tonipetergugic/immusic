@@ -61,6 +61,21 @@ export default async function UploadFeedbackV3Page({
     apiStatus: data.feedback_state,
   });
 
+  if (!unlocked) {
+    return (
+      <div className="min-h-screen bg-[#0E0E10] px-6 py-10 text-white">
+        <div className="mx-auto w-full max-w-3xl">
+          <UnlockFooterSection
+            error={error}
+            creditBalance={creditBalance}
+            queueId={queueId}
+            unlockPaidFeedbackAction={unlockPaidFeedbackAction}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0E0E10] text-white">
       {/* Fullscreen V3 skeleton — no max-width container on purpose */}
@@ -294,14 +309,6 @@ export default async function UploadFeedbackV3Page({
               </div>
 
               <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
-
-              {/* Unlock panel (still shown for errors/balance; unlocked=true) */}
-              <UnlockFooterSection
-                error={error}
-                creditBalance={creditBalance}
-                queueId={queueId}
-                unlockPaidFeedbackAction={unlockPaidFeedbackAction}
-              />
             </div>
         </main>
       </div>
