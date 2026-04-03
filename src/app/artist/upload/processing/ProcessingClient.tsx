@@ -11,6 +11,25 @@ type QueueStatusResponse =
   | { ok: true; processed: false; reason: "queued" | "processing"; queue_id: string }
   | { ok: false; error: string };
 
+type ProcessNextResponse =
+  | { ok: true; processed: false; reason: "processing_in_progress"; queue_id: string }
+  | {
+      ok: true;
+      processed: true;
+      decision: "approved";
+      feedback_available?: boolean;
+      queue_id: string;
+    }
+  | {
+      ok: true;
+      processed: true;
+      decision: "rejected";
+      reason?: string;
+      feedback_available?: boolean;
+      queue_id: string;
+    }
+  | { ok: false; error: string };
+
 type Props = { credits: number; queueId: string };
 
 export default function ProcessingClient({ credits, queueId }: Props) {
@@ -125,6 +144,39 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               queue_id: queueId,
             }),
           })
+            .then(async (res) => {
+              let data: ProcessNextResponse | null = null;
+
+              try {
+                data = (await res.json()) as ProcessNextResponse;
+              } catch {
+                return;
+              }
+
+              if (cancelled || !data || !("queue_id" in data) || data.queue_id !== queueId) {
+                return;
+              }
+
+              if (data.ok !== true) {
+                return;
+              }
+
+              if (data.processed) {
+                if (data.decision === "approved") {
+                  setApproved(true);
+                  setCanFeedback(!!data.feedback_available);
+                  return;
+                }
+
+                setRejected(true);
+                setRejectReason(data.reason ?? null);
+                return;
+              }
+
+              if (data.reason === "processing_in_progress") {
+                setRunningUiState("running");
+              }
+            })
             .catch(() => {
               // best-effort trigger only
             })
