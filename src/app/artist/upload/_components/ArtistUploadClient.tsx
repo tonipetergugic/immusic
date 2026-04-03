@@ -383,73 +383,78 @@ export default function ArtistUploadClient({ userId }: Props) {
           </div>
 
           {file ? (
-            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">Selected file</div>
-                  <div className="mt-2 break-all text-sm text-white/90">{file.name}</div>
-                  <div className="mt-1 text-sm text-[#B3B3B3]">
-                    {(file.name.split(".").pop() || "").toUpperCase()} · {formatMB(file.size)} MB
-                  </div>
-                </div>
-
-                {(file.name.split(".").pop() || "").toLowerCase() === "wav" ? (
-                  <span className="inline-flex shrink-0 items-center rounded-md border border-[#00FFC6]/40 bg-[#00FFC6]/10 px-2 py-1 text-[11px] font-medium tracking-wide text-white">
-                    WAV DETECTED
-                  </span>
-                ) : (
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
-                    WAV required
-                  </span>
-                )}
-              </div>
-
-              {uploading ? (
-                <div className="mt-4 rounded-xl border border-[#00FFC6]/20 bg-[#00FFC6]/5 px-4 py-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-semibold text-white">
-                        {flowStep === "validating" && "Validating file..."}
-                        {flowStep === "uploading" && "Uploading file..."}
-                        {flowStep === "queueing" && "Starting quality check..."}
-                      </div>
-                      <p className="mt-1 text-sm text-white/65">
-                        Please wait. Do not close this page.
-                      </p>
+            <>
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-xs uppercase tracking-[0.12em] text-white/60">Selected file</div>
+                    <div className="mt-2 break-all text-sm text-white/90">{file.name}</div>
+                    <div className="mt-1 text-sm text-[#B3B3B3]">
+                      {(file.name.split(".").pop() || "").toUpperCase()} · {formatMB(file.size)} MB
                     </div>
                   </div>
 
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className={`h-full rounded-full bg-[#00FFC6] transition-all duration-300 ${
-                        flowStep === "validating"
-                          ? "w-1/3"
-                          : flowStep === "uploading"
-                            ? "w-2/3"
-                            : "w-full"
-                      }`}
-                    />
-                  </div>
+                  {(file.name.split(".").pop() || "").toLowerCase() === "wav" ? (
+                    <span className="inline-flex shrink-0 items-center rounded-md border border-[#00FFC6]/40 bg-[#00FFC6]/10 px-2 py-1 text-[11px] font-medium tracking-wide text-white">
+                      WAV DETECTED
+                    </span>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
+                      WAV required
+                    </span>
+                  )}
                 </div>
-              ) : null}
 
-              {uiError ? (
-                <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
-                  {uiError}
-                </div>
-              ) : null}
+                {uiError ? (
+                  <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+                    {uiError}
+                  </div>
+                ) : null}
 
-              {audioPath && !uploading ? (
-                <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-                    Uploaded file path
+                {audioPath && !uploading ? (
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                    <div className="text-xs uppercase tracking-[0.12em] text-white/60">
+                      Uploaded file path
+                    </div>
+                    <div className="mt-2 break-all text-sm text-[#B3B3B3]">
+                      {audioPath}
+                    </div>
                   </div>
-                  <div className="mt-2 break-all text-sm text-[#B3B3B3]">
-                    {audioPath}
+                ) : null}
+              </div>
+
+              <div className="mt-4 min-h-[112px] rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                {uploading ? (
+                  <>
+                    <div className="text-sm font-semibold text-white">
+                      {flowStep === "validating" && "Validating file..."}
+                      {flowStep === "uploading" && "Uploading file..."}
+                      {flowStep === "queueing" && "Starting quality check..."}
+                    </div>
+
+                    <p className="mt-1 text-sm text-white/65">
+                      Please wait. Do not close this page.
+                    </p>
+
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full bg-[#00FFC6] transition-all duration-300 ${
+                          flowStep === "validating"
+                            ? "w-1/3"
+                            : flowStep === "uploading"
+                              ? "w-2/3"
+                              : "w-full"
+                        }`}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex h-full min-h-[88px] items-center text-sm text-white/45">
+                    Upload status will appear here.
                   </div>
-                </div>
-              ) : null}
-            </div>
+                )}
+              </div>
+            </>
           ) : null}
 
           <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
@@ -470,7 +475,7 @@ export default function ArtistUploadClient({ userId }: Props) {
           <button
             onClick={handleUpload}
             disabled={!file || uploading || title.trim().length === 0 || !rightsAccepted}
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#00FFC6]/60 hover:bg-[#00FFC6]/16 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.16)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-white/40 disabled:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#00FFC6]/60 hover:bg-[#00FFC6]/16 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.16)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-white/40 disabled:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 sm:w-[340px]"
             type="button"
           >
             <ArrowRight size={16} strokeWidth={2.5} className="text-[#00FFC6] transition group-hover:translate-x-0.5" />
