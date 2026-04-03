@@ -125,19 +125,6 @@ export default function EditTrackClient({
     }
   };
 
-  const handleBpmBlur = () => {
-    if (newBpm === "") return;
-
-    const n = Number.parseInt(newBpm, 10);
-    if (Number.isNaN(n)) {
-      setNewBpm("");
-      return;
-    }
-
-    const clamped = Math.min(240, Math.max(40, n));
-    setNewBpm(String(clamped));
-  };
-
   const handleOpenLyricsModal = () => {
     setLyricsDraft(newLyrics);
     setIsLyricsModalOpen(true);
@@ -312,7 +299,6 @@ export default function EditTrackClient({
           onTitleChange={setNewTitle}
           newBpm={newBpm}
           onBpmChange={setNewBpm}
-          onBpmBlur={handleBpmBlur}
           newKey={newKey}
           onKeyChange={setNewKey}
           allowedKeys={ALLOWED_KEYS}

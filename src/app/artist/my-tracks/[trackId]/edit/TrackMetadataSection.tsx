@@ -104,7 +104,6 @@ type TrackMetadataSectionProps = {
   onTitleChange: (value: string) => void;
   newBpm: string;
   onBpmChange: (value: string) => void;
-  onBpmBlur: () => void;
   newKey: string;
   onKeyChange: (value: string) => void;
   allowedKeys: Set<string>;
@@ -128,7 +127,6 @@ export default function TrackMetadataSection({
   onTitleChange,
   newBpm,
   onBpmChange,
-  onBpmBlur,
   newKey,
   onKeyChange,
   allowedKeys,

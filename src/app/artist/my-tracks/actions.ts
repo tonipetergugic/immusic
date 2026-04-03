@@ -32,6 +32,7 @@ export async function inviteTrackCollaboratorAction(args: {
     throw new Error("Not authenticated.");
   }
   const inviterId = authData.user.id;
+  await assertTrackNotLocked(supabase, inviterId, args.trackId);
 
   // load display_name snapshots (optional but clean)
   const [
