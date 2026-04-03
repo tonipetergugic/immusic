@@ -54,6 +54,7 @@ type TrackRatingInlineProps = {
 
   // Optional: hide streams label on mobile automatically (matches PlaylistRow pattern)
   showStreamsOnDesktopOnly?: boolean;
+  hideStreams?: boolean;
   readOnly?: boolean;
 };
 
@@ -93,6 +94,7 @@ function TrackRatingInline({
   initialMyStars = null,
   initialEligibility,
   showStreamsOnDesktopOnly = true,
+  hideStreams = false,
   readOnly = false,
 }: TrackRatingInlineProps) {
   const [submitting, setSubmitting] = useState(false);
@@ -500,14 +502,16 @@ function TrackRatingInline({
 
       <span className="text-xs text-white/30">·</span>
 
-      <span
-        className={[
-          "text-xs text-white/50 whitespace-nowrap",
-          showStreamsOnDesktopOnly ? "hidden md:inline" : "",
-        ].join(" ")}
-      >
-        {shownStreams ?? 0} streams
-      </span>
+      {!hideStreams ? (
+        <span
+          className={[
+            "text-xs text-white/50 whitespace-nowrap",
+            showStreamsOnDesktopOnly ? "hidden md:inline" : "",
+          ].join(" ")}
+        >
+          {shownStreams ?? 0} streams
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import TrackRowBase from "@/components/TrackRowBase";
+import TrackRatingInline from "@/components/TrackRatingInline";
 import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import LibraryTrackArtists from "@/components/LibraryTrackArtists";
 import { toPlayerTrack } from "@/lib/playerTrack";
@@ -11,44 +12,6 @@ import type { TopTrackDto } from "../_types/artistPageDto";
 type ArtistAllPlayerTrack = PlayerTrack & {
   release_id?: string | null;
 };
-
-function Stars({
-  avg,
-  count,
-  trackId,
-}: {
-  avg: number | null;
-  count: number;
-  trackId: string;
-}) {
-  if (avg === null || count <= 0) {
-    return <div className="text-xs text-white/40">No ratings yet</div>;
-  }
-
-  const rounded = Math.round(Number(avg));
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-[2px] leading-none">
-        {[1, 2, 3, 4, 5].map((i) => {
-          const filled = i <= rounded;
-          return (
-            <span
-              key={`star-${trackId}-${i}`}
-              className={filled ? "text-[#00FFC6] text-sm" : "text-white/25 text-sm"}
-              aria-hidden="true"
-            >
-              ★
-            </span>
-          );
-        })}
-      </div>
-      <div className="text-xs text-white/50 tabular-nums">
-        {Number(avg).toFixed(1)} ({count})
-      </div>
-    </div>
-  );
-}
 
 export default function ArtistAllTracksSection({
   allTracks,
@@ -134,17 +97,23 @@ export default function ArtistAllTracksSection({
                 metaSlot={
                   <div
                     key={`meta-${t.trackId}`}
-                    className="flex items-center gap-4 min-w-0"
+                    className="flex min-w-0 items-center gap-4 overflow-hidden"
                   >
-                    <div className="w-[140px]">
-                      <Stars
-                        avg={t.stats30d.ratingAvg}
-                        count={t.stats30d.ratingsCount}
-                        trackId={t.trackId}
-                      />
+                    <div className="w-[140px] shrink-0">
+                      {t.releaseTrackId ? (
+                        <TrackRatingInline
+                          releaseTrackId={t.releaseTrackId}
+                          trackId={t.trackId}
+                          initialAvg={t.stats30d.ratingAvg}
+                          initialCount={t.stats30d.ratingsCount}
+                          hideStreams={true}
+                        />
+                      ) : (
+                        <div className="text-xs text-white/40">No ratings yet</div>
+                      )}
                     </div>
 
-                    <div className="hidden sm:block text-xs text-white/50 tabular-nums whitespace-nowrap">
+                    <div className="hidden min-w-0 flex-1 truncate text-xs text-white/50 tabular-nums sm:block">
                       {(t.stats30d.streams ?? 0).toLocaleString()} streams
                     </div>
                   </div>

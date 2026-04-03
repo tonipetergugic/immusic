@@ -298,6 +298,47 @@ export default async function ArtistV2Page({
   const detailsByTrackId = new Map<string, TopTrackResolvedRow>();
   for (const r of topTracksResolved) detailsByTrackId.set(r.track_id, r);
 
+  const resolvedReleaseIds = Array.from(
+    new Set(
+      topTracksResolved
+        .map((row) => String(row.release_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const resolvedTrackIds = Array.from(
+    new Set(
+      topTracksResolved
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const { data: releaseTrackRows, error: releaseTrackRowsError } =
+    resolvedReleaseIds.length > 0 && resolvedTrackIds.length > 0
+      ? await supabase
+          .from("release_tracks")
+          .select("id, track_id, release_id")
+          .in("release_id", resolvedReleaseIds)
+          .in("track_id", resolvedTrackIds)
+      : { data: [], error: null };
+
+  if (releaseTrackRowsError) {
+    // optional fallback: rating action on artist page stays hidden if release-track mapping is unavailable
+  }
+
+  const releaseTrackIdByPair = new Map<string, string>();
+  for (const row of releaseTrackRows ?? []) {
+    const trackId = String(row.track_id ?? "");
+    const releaseId = String(row.release_id ?? "");
+    const releaseTrackId = String(row.id ?? "");
+    if (!trackId || !releaseId || !releaseTrackId) continue;
+    const key = `${trackId}:${releaseId}`;
+    if (!releaseTrackIdByPair.has(key)) {
+      releaseTrackIdByPair.set(key, releaseTrackId);
+    }
+  }
+
   const buildTrackDto = (
     trackId: string,
     stats: TopTracksRow | null
@@ -345,6 +386,9 @@ export default async function ArtistV2Page({
     return {
       trackId,
       releaseId: d.release_id ?? null,
+      releaseTrackId: d.release_id
+        ? releaseTrackIdByPair.get(`${trackId}:${d.release_id}`) ?? null
+        : null,
       title,
       coverUrl,
       artists,
