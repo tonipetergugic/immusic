@@ -36,7 +36,6 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
   }, [props.items]);
 
   const [tip, setTip] = useState<null | { x: number; y: number; name: string; value: number }>(null);
-  const [, setHoverCode] = useState<string | null>(null);
 
   const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
@@ -103,7 +102,6 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
           onMoveStart={() => {
             setIsDragging(true);
             setTip(null);
-            setHoverCode(null);
           }}
           onMoveEnd={() => {
             setIsDragging(false);
@@ -128,7 +126,6 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
               const name = typeof rawName === "string" ? rawName : String(rawName);
 
               const hasValue = value > 0;
-              const keyCode = (iso2 ?? "").toUpperCase();
 
               return (
                 <Geography
@@ -136,7 +133,6 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
                   geography={geo}
                   onMouseMove={(e: React.MouseEvent) => {
                     if (isDragging) return;
-                    setHoverCode(keyCode || null);
                     const el = containerRef.current;
                     if (!el) return;
                     const rect = el.getBoundingClientRect();
@@ -150,7 +146,6 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
                   onMouseLeave={() => {
                     if (isDragging) return;
                     setTip(null);
-                    setHoverCode(null);
                   }}
                   style={{
                     default: {
