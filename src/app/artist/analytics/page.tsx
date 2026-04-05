@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { getArtistAnalyticsSummary, type AnalyticsRange } from "@/lib/analytics/getArtistAnalytics.server";
 import { getTrackRatingBreakdownById } from "@/lib/analytics/getTrackRatingBreakdown.server";
+import { getArtistTrackIds } from "./_lib/getArtistTrackIds.server";
+import { getConversionTabData } from "./_lib/getConversionTabData.server";
+import { getOverviewTabData } from "./_lib/getOverviewTabData.server";
 import ArtistAnalyticsClient from "./components/ArtistAnalyticsClient";
 import type {
   Range,
-  ArtistAnalyticsSummary,
   TopTrackRow,
   TrackDetailsRow,
   CountryListeners30dRow,
-  TopConvertingTrackRow,
 } from "./types";
 import {
   normalizeRange,
@@ -25,7 +25,6 @@ import type {
   ReleaseRow,
   TrackTitleRow,
   CountryStreamsRow,
-  SummaryRow,
 } from "./_lib/analyticsRows";
 
 export const dynamic = "force-dynamic";
@@ -59,10 +58,10 @@ export default async function ArtistAnalyticsPage({
   const initialTab = normalizeTab(awaitedSearchParams.tab);
   const trackSort = normalizeTrackSort(awaitedSearchParams.sort);
 
-  const summary = (await getArtistAnalyticsSummary({
+  const overviewData = await getOverviewTabData({
     artistId,
-    range: range as AnalyticsRange,
-  })) as ArtistAnalyticsSummary;
+    range,
+  });
 
   // Top tracks (range-based, derived from analytics_track_daily)
   const rangeToDays = (r: Range): number | null => {
@@ -338,7 +337,7 @@ export default async function ArtistAnalyticsPage({
 
   const detailTrackIds = sortedTopAgg.map((r) => r.track_id);
   const ratingBreakdownFromIso: string | null =
-    days === null ? null : `${summary.from}T00:00:00.000Z`;
+    days === null ? null : `${overviewData.summary.from}T00:00:00.000Z`;
 
   const ratingBreakdownById = await getTrackRatingBreakdownById({
     trackIds: detailTrackIds,
@@ -413,161 +412,13 @@ export default async function ArtistAnalyticsPage({
     })
     .filter((r) => r.country_iso2.length === 2 && r.listeners_30d > 0);
 
-  // Followers (live) — how many profiles follow this artist
-  const { count: followersCount, error: followersErr } = await supabase
-    .from("follows")
-    .select("*", { count: "exact", head: true })
-    .eq("following_id", artistId);
+  const trackIds = await getArtistTrackIds(artistId);
 
-  if (followersErr) throw new Error(followersErr.message);
-
-  // Saves (live) — how many times tracks of this artist are in user libraries
-  const { data: artistTracks, error: artistTracksErr } = await supabase
-    .from("tracks")
-    .select("id")
-    .eq("artist_id", artistId);
-
-  if (artistTracksErr) throw new Error(artistTracksErr.message);
-
-  const trackIds = (artistTracks || []).map((t) => t.id);
-
-  let savesCount = 0;
-
-  if (trackIds.length > 0) {
-    let savesQuery = supabaseAdmin
-      .from("library_tracks")
-      .select("track_id", { count: "exact", head: true })
-      .in("track_id", trackIds)
-      .neq("user_id", artistId);
-
-    if (days !== null) {
-      const from = new Date();
-      from.setDate(from.getDate() - (days - 1));
-      const fromISO = from.toISOString().slice(0, 10);
-      savesQuery = savesQuery.gte("created_at", `${fromISO}T00:00:00.000Z`);
-    }
-
-    const { count, error: savesErr } = await savesQuery;
-
-    if (savesErr) throw new Error(savesErr.message);
-    savesCount = count ?? 0;
-  }
-
-  // Conversion (live) — saves per unique listeners in the active range
-  // Listeners source of truth: summary.unique_listeners_total (range truth)
-  const uniqueListenersInRange = Number(((summary as SummaryRow | null)?.unique_listeners_total) ?? 0);
-
-  const conversionPct =
-    uniqueListenersInRange > 0
-      ? (Number(savesCount ?? 0) / uniqueListenersInRange) * 100
-      : Number.NaN;
-
-  // Top converting tracks (server-side, no DB changes)
-  const topConvertingTracks: TopConvertingTrackRow[] = [];
-
-  if (trackIds.length > 0) {
-    // Unique listeners per track in selected range (truth from valid_listen_events)
-    const uniqByTrack = new Map<string, Set<string>>();
-
-    let vq2 = supabaseAdmin
-      .from("valid_listen_events")
-      .select("track_id, user_id")
-      .in("track_id", trackIds);
-
-    if (days !== null) {
-      const from = new Date();
-      from.setDate(from.getDate() - (days - 1));
-      const fromISO = from.toISOString().slice(0, 10);
-      vq2 = vq2.gte("created_at", `${fromISO}T00:00:00.000Z`);
-    }
-
-    const { data: vRows2, error: vErr2 } = await vq2;
-    if (vErr2) throw new Error(vErr2.message);
-
-    ((vRows2 || []) as ValidListenRow[]).forEach((r) => {
-      const tid = String(r.track_id);
-      const uid = r.user_id ? String(r.user_id) : null;
-      if (!uid) return;
-
-      const set = uniqByTrack.get(tid) ?? new Set<string>();
-      set.add(uid);
-      uniqByTrack.set(tid, set);
-    });
-
-    // Hard rule: only tracks with at least 2 listeners in selected range
-    const eligibleTrackIds = trackIds.filter(
-      (id) => (uniqByTrack.get(String(id))?.size ?? 0) >= 2
-    );
-
-    if (eligibleTrackIds.length > 0) {
-      // Saves per track (current library state)
-      let savesQuery2 = supabaseAdmin
-        .from("library_tracks")
-        .select("track_id")
-        .in("track_id", eligibleTrackIds)
-        .neq("user_id", artistId);
-
-      if (days !== null) {
-        const from = new Date();
-        from.setDate(from.getDate() - (days - 1));
-        const fromISO = from.toISOString().slice(0, 10);
-        savesQuery2 = savesQuery2.gte("created_at", `${fromISO}T00:00:00.000Z`);
-      }
-
-      const { data: saveRows2, error: savesErr2 } = await savesQuery2;
-
-      if (savesErr2) throw new Error(savesErr2.message);
-
-      const savesByTrack = new Map<string, number>();
-      ((saveRows2 || []) as { track_id: string | null }[]).forEach((r) => {
-        const tid = r.track_id ? String(r.track_id) : null;
-        if (!tid) return;
-        savesByTrack.set(tid, (savesByTrack.get(tid) ?? 0) + 1);
-      });
-
-      // Titles for eligible tracks
-      const { data: titleRows2, error: titleErr2 } = await supabase
-        .from("tracks")
-        .select("id, title")
-        .in("id", eligibleTrackIds);
-
-      if (titleErr2) throw new Error(titleErr2.message);
-
-      const titleByEligibleId = new Map<string, string>();
-      ((titleRows2 || []) as TrackTitleRow[]).forEach((t) =>
-        titleByEligibleId.set(String(t.id), String(t.title ?? "Unknown track"))
-      );
-
-      const coverPathByEligibleTrackId = await loadPublishedCoverPathByTrackIds(
-        eligibleTrackIds.map((id) => String(id))
-      );
-
-      const items = eligibleTrackIds
-        .map((id) => {
-          const tid = String(id);
-          const listeners = uniqByTrack.get(tid)?.size ?? 0;
-          const saves = savesByTrack.get(tid) ?? 0;
-          const conversion_pct = listeners > 0 ? (saves / listeners) * 100 : 0;
-
-          return {
-            track_id: tid,
-            title: titleByEligibleId.get(tid) || "Unknown track",
-            cover_url: toPublicCoverUrl(coverPathByEligibleTrackId.get(tid) ?? null),
-            listeners,
-            saves,
-            conversion_pct,
-          } satisfies TopConvertingTrackRow;
-        })
-        .sort((a, b) => {
-          if (b.conversion_pct !== a.conversion_pct) return b.conversion_pct - a.conversion_pct;
-          if (b.listeners !== a.listeners) return b.listeners - a.listeners;
-          return b.saves - a.saves;
-        })
-        .slice(0, 5);
-
-      topConvertingTracks.push(...items);
-    }
-  }
+  const conversionData = await getConversionTabData({
+    artistId,
+    range,
+    trackIds,
+  });
 
   return (
     <ArtistAnalyticsClient
@@ -575,15 +426,15 @@ export default async function ArtistAnalyticsPage({
       initialTab={initialTab as Tab}
       initialRange={range}
       initialTrackSort={trackSort}
-      summary={summary}
+      summary={overviewData.summary}
       topTracks={topTracks}
       topRatedTracks={topRatedTracks}
       trackDetailsById={trackDetailsById}
       countryListeners30d={countryListeners30d}
-      followersCount={followersCount ?? 0}
-      savesCount={savesCount ?? 0}
-      topConvertingTracks={topConvertingTracks}
-      conversionPct={conversionPct}
+      followersCount={overviewData.followersCount ?? 0}
+      savesCount={overviewData.savesCount ?? 0}
+      topConvertingTracks={conversionData.topConvertingTracks}
+      conversionPct={overviewData.conversionPct}
     />
   );
 }

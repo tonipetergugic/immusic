@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AnalyticsHeader from "./AnalyticsHeader";
-import StatCard from "./StatCard";
-import WorldMapCard from "./WorldMapCard";
+import AudienceTabPanel from "./AudienceTabPanel";
 import AnalyticsTabs from "./AnalyticsTabs";
-import StreamsOverTimeChart from "./StreamsOverTimeChart";
+import OverviewTabPanel from "./OverviewTabPanel";
 import TracksTabPanel from "./TracksTabPanel";
 import ConversionTabPanel from "./ConversionTabPanel";
 import type {
@@ -31,10 +30,6 @@ type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 
 export type StreamsPoint = { day: string; streams: number };
 export type ListenersPoint = { day: string; listeners: number };
-
-function formatInt(v: number) {
-  return new Intl.NumberFormat("en-US").format(v);
-}
 
 export default function ArtistAnalyticsClient(props: {
   artistId: string;
@@ -129,60 +124,23 @@ export default function ArtistAnalyticsClient(props: {
       ? trackDetailsById[selectedTrackId] ?? null
       : null;
 
-  const liveStreamsTotal =
-    summary?.streams_over_time?.reduce((acc, p) => acc + (p.streams || 0), 0) ?? 0;
-
-  const uniqueListenersTotal = props.summary?.unique_listeners_total ?? 0;
-  
   return (
     <div className="space-y-6">
       <AnalyticsHeader activeRange={activeRange} onRangeChange={handleRangeChange} />
       <AnalyticsTabs value={activeTab} onChange={handleTabChange} />
 
       {activeTab === "Overview" && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-            <StatCard
-              label="Streams"
-              value={formatInt(liveStreamsTotal)}
-            />
-
-            <StatCard
-              label="Listeners"
-              value={formatInt(uniqueListenersTotal)}
-            />
-
-            <StatCard
-              label="Track saves"
-              value={formatInt(props.savesCount)}
-            />
-
-            <StatCard
-              label="Followers"
-              value={formatInt(props.followersCount)}
-            />
-
-            <StatCard
-              label="Conversion"
-              value={
-                Number.isFinite(props.conversionPct)
-                  ? `${props.conversionPct.toFixed(1)}%`
-                  : "—"
-              }
-            />
-          </div>
-
-          <div className="mt-8 min-h-[360px]">
-            <StreamsOverTimeChart range={activeRange} points={props.summary.streams_over_time} />
-          </div>
-        </>
+        <OverviewTabPanel
+          activeRange={activeRange}
+          summary={summary}
+          followersCount={props.followersCount}
+          savesCount={props.savesCount}
+          conversionPct={props.conversionPct}
+        />
       )}
 
       {activeTab === "Audience" && (
-        <div className="space-y-6">
-          {/* Audience should be server-first + minimal: map + real top locations */}
-          <WorldMapCard items={countryListeners30d} />
-        </div>
+        <AudienceTabPanel countryListeners30d={countryListeners30d} />
       )}
 
       {activeTab === "Tracks" && (
