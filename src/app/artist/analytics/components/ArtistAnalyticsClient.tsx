@@ -8,64 +8,33 @@ import StatCard from "./StatCard";
 import WorldMapCard from "./WorldMapCard";
 import AnalyticsTabs from "./AnalyticsTabs";
 import StreamsOverTimeChart from "./StreamsOverTimeChart";
-import AppSelect from "@/components/AppSelect";
+import TracksTabPanel from "./TracksTabPanel";
+import { getRangeLabel } from "../_lib/analyticsRangeLabel";
+import type {
+  Range,
+  ArtistAnalyticsSummary,
+  TopTrackRow,
+  TrackDetailsRow,
+  CountryListeners30dRow,
+  TopConvertingTrackRow,
+} from "../types";
 
-const TRACK_SORT_ITEMS = [
-  { value: "streams", label: "Streams" },
-  { value: "listeners", label: "Unique listeners" },
-  { value: "rating", label: "Avg rating" },
-  { value: "time", label: "Listening time" },
-];
+export type {
+  Range,
+  ArtistAnalyticsSummary,
+  TopTrackRow,
+  TrackDetailsRow,
+  CountryListeners30dRow,
+  TopConvertingTrackRow,
+} from "../types";
 
 type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
-export type Range = "7d" | "28d" | "all";
 
 export type StreamsPoint = { day: string; streams: number };
 export type ListenersPoint = { day: string; listeners: number };
 
-export type ArtistAnalyticsSummary = {
-  range: Range;
-  from: string;
-  streams_over_time: StreamsPoint[];
-  listeners_over_time: ListenersPoint[];
-  unique_listeners_total: number;
-};
-
-export type TopTrackRow = {
-  track_id: string;
-  title: string;
-  cover_url: string | null;
-  streams: number;
-  unique_listeners: number;
-  listened_seconds: number;
-  ratings_count: number;
-  rating_avg: number | null;
-};
-
-export type CountryListeners30dRow = {
-  country_iso2: string;     // ISO2 only (DE, US, ES, ...)
-  listeners_30d: number;    // rolling 30d
-};
-
-export type TopConvertingTrackRow = {
-  track_id: string;
-  title: string;
-  cover_url: string | null;
-  listeners: number;
-  saves: number;
-  conversion_pct: number;
-};
-
 function formatInt(v: number) {
   return new Intl.NumberFormat("en-US").format(v);
-}
-
-type RangeLabel = { badge: string; subtitle: string; metricSuffix: string };
-
-function getRangeLabel(r: "7d" | "28d" | "all"): RangeLabel {
-  if (r === "7d") return { badge: "7d", subtitle: "last 7 days", metricSuffix: "(7d)" };
-  if (r === "28d") return { badge: "28d", subtitle: "last 28 days", metricSuffix: "(28d)" };
-  return { badge: "All time", subtitle: "all time", metricSuffix: "(all time)" };
 }
 
 export default function ArtistAnalyticsClient(props: {
@@ -76,6 +45,7 @@ export default function ArtistAnalyticsClient(props: {
   summary: ArtistAnalyticsSummary;
   topTracks: TopTrackRow[];
   topRatedTracks: TopTrackRow[];
+  trackDetailsById: Record<string, TrackDetailsRow>;
   countryListeners30d: CountryListeners30dRow[];
   followersCount: number;
   savesCount: number;
@@ -101,7 +71,7 @@ export default function ArtistAnalyticsClient(props: {
     return "28d";
   }, [searchParams, props.initialRange]);
 
-  const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl);
+  const activeTab = tabFromUrl;
   const [activeRange, setActiveRange] = useState<Range>(rangeFromUrl);
   const [trackSort, setTrackSort] = useState<"streams" | "listeners" | "rating" | "time">(props.initialTrackSort);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -110,20 +80,23 @@ export default function ArtistAnalyticsClient(props: {
     setTrackSort(props.initialTrackSort);
   }, [props.initialTrackSort]);
 
+  useEffect(() => {
+    setActiveRange(rangeFromUrl);
+  }, [rangeFromUrl]);
+
   // URL ist Quelle der Wahrheit (Navigation triggert Server-Render)
   // State nur für UI-Responsiveness; wir navigieren bei Änderungen.
   const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab.toLowerCase());
-    router.replace(`${pathname}?${next.toString()}`);
+    window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
   };
 
   const handleRangeChange = (range: Range) => {
     setActiveRange(range);
     const next = new URLSearchParams(searchParams.toString());
     next.set("range", range);
-    router.replace(`${pathname}?${next.toString()}`);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
   const handleTrackSortChange = (newSort: "streams" | "listeners" | "rating" | "time") => {
@@ -136,11 +109,26 @@ export default function ArtistAnalyticsClient(props: {
   const summary = props.summary;
   const topTracks = props.topTracks;
   const topRatedTracks = props.topRatedTracks;
+  const trackDetailsById = props.trackDetailsById;
   const countryListeners30d = props.countryListeners30d;
 
-  const selectedTrack = selectedTrackId
-    ? topTracks.find((t) => t.track_id === selectedTrackId) ?? null
-    : null;
+  const trackIndexById = useMemo(() => {
+    return Object.fromEntries(
+      [...topTracks, ...topRatedTracks].map((track) => [track.track_id, track])
+    ) as Record<string, TopTrackRow>;
+  }, [topTracks, topRatedTracks]);
+
+  useEffect(() => {
+    if (!selectedTrackId) return;
+    if (!trackIndexById[selectedTrackId]) {
+      setSelectedTrackId(null);
+    }
+  }, [selectedTrackId, trackIndexById]);
+
+  const selectedTrack: TrackDetailsRow | null =
+    selectedTrackId && trackIndexById[selectedTrackId]
+      ? trackDetailsById[selectedTrackId] ?? null
+      : null;
 
   const liveStreamsTotal =
     summary?.streams_over_time?.reduce((acc, p) => acc + (p.streams || 0), 0) ?? 0;
@@ -199,217 +187,16 @@ export default function ArtistAnalyticsClient(props: {
       )}
 
       {activeTab === "Tracks" && (
-        <div className="mt-8 space-y-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-lg font-semibold">Track performance</p>
-              {(() => {
-                const r = getRangeLabel(activeRange);
-                return (
-                  <p className="text-sm text-[#B3B3B3] mt-1">
-                    Your best performing tracks ({r.subtitle})
-                  </p>
-                );
-              })()}
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-[#B3B3B3] shrink-0">Sort:</label>
-              <div className="w-[210px]">
-                <AppSelect
-                  value={trackSort}
-                  onChange={(value) =>
-                    handleTrackSortChange(value as "streams" | "listeners" | "rating" | "time")
-                  }
-                  items={TRACK_SORT_ITEMS}
-                  className="[&>button]:h-[42px] [&>button]:rounded-xl [&>button]:border-white/10 [&>button]:bg-white/5 [&>button]:px-3 [&>button]:py-2 [&>button]:text-sm [&>button]:text-white [&>button]:hover:bg-white/10 [&>button]:focus:ring-1 [&>button]:focus:ring-white/20 [&>button_svg]:text-white/55"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <div className="xl:col-span-2 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-              <div className="px-4 md:px-5 py-4 border-b border-white/10">
-                <div className="flex items-center gap-4">
-                  <p className="text-sm font-semibold">Top tracks</p>
-
-                  <div className="ml-auto flex items-center gap-6 text-xs text-[#B3B3B3]">
-                    <div className="w-14 text-right">Streams</div>
-                    <div className="w-14 text-right">Listeners</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="divide-y divide-white/10">
-                {topTracks.length === 0 && (
-                  <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">No data yet.</div>
-                )}
-
-                {topTracks.map((t, idx) => (
-                  <div
-                    key={t.track_id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setSelectedTrackId(t.track_id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") setSelectedTrackId(t.track_id);
-                    }}
-                    className={[
-                      "cursor-pointer px-4 md:px-5 py-3 flex items-center gap-4 transition",
-                      selectedTrackId === t.track_id ? "bg-white/10" : "hover:bg-white/5",
-                    ].join(" ")}
-                  >
-                    <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
-
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
-                        {t.cover_url ? (
-                          <Image
-                            src={t.cover_url}
-                            alt=""
-                            fill
-                            sizes="40px"
-                            className="object-cover"
-                            loading="lazy"
-                          />
-                        ) : null}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{t.title}</p>
-                      </div>
-                    </div>
-
-                    <div className="hidden md:flex items-center gap-6">
-                      <div className="w-14 text-right text-sm text-white/90 tabular-nums">
-                        {formatInt(t.streams)}
-                      </div>
-                      <div className="w-14 text-right text-sm text-[#00FFC6] tabular-nums">
-                        {formatInt(t.unique_listeners)}
-                      </div>
-                    </div>
-
-                    <div className="md:hidden text-sm text-[#00FFC6] tabular-nums">
-                      {formatInt(t.streams)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Track details</p>
-                </div>
-
-                {!selectedTrack ? (
-                  <div className="mt-3 min-h-[88px]">
-                    <p className="text-sm text-[#B3B3B3]">
-                      Select a track to see details.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
-                        {selectedTrack.cover_url ? (
-                          <Image
-                            src={selectedTrack.cover_url}
-                            alt=""
-                            fill
-                            sizes="40px"
-                            className="object-cover"
-                            loading="lazy"
-                          />
-                        ) : null}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{selectedTrack.title}</p>
-                        {(() => {
-                          const r = getRangeLabel(activeRange);
-                          return (
-                            <p className="text-xs text-[#B3B3B3]">
-                              Based on {r.subtitle}
-                            </p>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    <div className="h-px w-full bg-white/10" />
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="px-2 py-1">
-                        <p className="text-xs text-[#B3B3B3]">Streams</p>
-                        <p className="text-sm font-semibold tabular-nums">{formatInt(selectedTrack.streams)}</p>
-                      </div>
-
-                      <div className="px-2 py-1">
-                        <p className="text-xs text-[#B3B3B3]">Unique listeners</p>
-                        <p className="text-sm font-semibold tabular-nums">{formatInt(selectedTrack.unique_listeners)}</p>
-                      </div>
-
-                      <div className="px-2 py-1">
-                        <p className="text-xs text-[#B3B3B3]">Listening time</p>
-                        <p className="text-sm font-semibold tabular-nums">
-                          {Math.round((selectedTrack.listened_seconds ?? 0) / 60)} min
-                        </p>
-                      </div>
-
-                      <div className="px-2 py-1">
-                        <p className="text-xs text-[#B3B3B3]">Avg rating</p>
-                        <p className="text-sm font-semibold tabular-nums">
-                          {selectedTrack.rating_avg === null ? "—" : selectedTrack.rating_avg.toFixed(2)}
-                          <span className="text-xs text-[#B3B3B3]"> · {selectedTrack.ratings_count}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-                <p className="text-sm font-semibold mb-3">Top rated</p>
-                <div className="divide-y divide-white/10">
-                  {topRatedTracks.length === 0 && (
-                    <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">No data yet.</div>
-                  )}
-
-                  {topRatedTracks.slice(0, 5).map((t, idx) => (
-                    <div key={t.track_id} className="px-4 md:px-5 py-3 flex items-center gap-3">
-                      <div className="w-8 text-xs text-[#B3B3B3]">{idx + 1}</div>
-
-                      <div className="relative h-9 w-9 rounded-md bg-white/10 overflow-hidden shrink-0">
-                        {t.cover_url ? (
-                          <Image
-                            src={t.cover_url}
-                            alt=""
-                            fill
-                            sizes="36px"
-                            className="object-cover"
-                            loading="lazy"
-                          />
-                        ) : null}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{t.title}</p>
-                        <p className="text-xs text-[#B3B3B3]">
-                          Avg rating · {t.ratings_count} ratings
-                        </p>
-                      </div>
-
-                      <div className="text-sm text-[#00FFC6] tabular-nums">
-                        {t.rating_avg === null ? "-" : t.rating_avg.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TracksTabPanel
+          activeRange={activeRange}
+          trackSort={trackSort}
+          topTracks={topTracks}
+          topRatedTracks={topRatedTracks}
+          selectedTrackId={selectedTrackId}
+          selectedTrack={selectedTrack}
+          onSelectTrack={setSelectedTrackId}
+          onTrackSortChange={handleTrackSortChange}
+        />
       )}
 
       {activeTab === "Conversion" && (

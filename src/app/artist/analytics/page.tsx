@@ -2,13 +2,16 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getArtistAnalyticsSummary, type AnalyticsRange } from "@/lib/analytics/getArtistAnalytics.server";
-import ArtistAnalyticsClient, {
-  type Range,
-  type ArtistAnalyticsSummary,
-  type TopTrackRow,
-  type CountryListeners30dRow,
-  type TopConvertingTrackRow,
-} from "./components/ArtistAnalyticsClient";
+import { getTrackRatingBreakdownById } from "@/lib/analytics/getTrackRatingBreakdown.server";
+import ArtistAnalyticsClient from "./components/ArtistAnalyticsClient";
+import type {
+  Range,
+  ArtistAnalyticsSummary,
+  TopTrackRow,
+  TrackDetailsRow,
+  CountryListeners30dRow,
+  TopConvertingTrackRow,
+} from "./types";
 import {
   normalizeRange,
   normalizeTab,
@@ -333,6 +336,38 @@ export default async function ArtistAnalyticsPage({
     rating_avg: r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg),
   }));
 
+  const detailTrackIds = sortedTopAgg.map((r) => r.track_id);
+  const ratingBreakdownFromIso: string | null =
+    days === null ? null : `${summary.from}T00:00:00.000Z`;
+
+  const ratingBreakdownById = await getTrackRatingBreakdownById({
+    trackIds: detailTrackIds,
+    fromIso: ratingBreakdownFromIso,
+  });
+
+  const trackDetailsById: Record<string, TrackDetailsRow> = Object.fromEntries(
+    sortedTopAgg.map((r) => [
+      r.track_id,
+      {
+        track_id: r.track_id,
+        title: titleById.get(r.track_id) || "Unknown track",
+        cover_url: toPublicCoverUrl(coverPathByTrackId.get(r.track_id) ?? null),
+        streams: Number(r.streams ?? 0),
+        unique_listeners: Number(r.unique_listeners ?? 0),
+        listened_seconds: Number(r.listened_seconds ?? 0),
+        ratings_count: Number(r.ratings_count ?? 0),
+        rating_avg: r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg),
+        ...(ratingBreakdownById[r.track_id] ?? {
+          rating_1_count: 0,
+          rating_2_count: 0,
+          rating_3_count: 0,
+          rating_4_count: 0,
+          rating_5_count: 0,
+        }),
+      } satisfies TrackDetailsRow,
+    ])
+  );
+
   // Top rated tracks (range-based, derived from topAgg)
   const MIN_RATINGS = 3;
 
@@ -543,6 +578,7 @@ export default async function ArtistAnalyticsPage({
       summary={summary}
       topTracks={topTracks}
       topRatedTracks={topRatedTracks}
+      trackDetailsById={trackDetailsById}
       countryListeners30d={countryListeners30d}
       followersCount={followersCount ?? 0}
       savesCount={savesCount ?? 0}
