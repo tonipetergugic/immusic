@@ -15,55 +15,82 @@ function formatInt(v: number) {
 
 export default function TrackDetailsPanel({ track, activeRange }: Props) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Track details</p>
-      </div>
-
+    <section className="border-b border-white/10 pb-8">
       {!track ? (
-        <div className="mt-3 min-h-[88px]">
-          <p className="text-sm text-[#B3B3B3]">
-            Select a track to see details.
+        <div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+            Track details
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+            Select a track
+          </h2>
+          <p className="mt-2 text-sm text-white/55">
+            Select a track from the list to see performance and rating details.
           </p>
         </div>
       ) : (
-        <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
-              {track.cover_url ? (
-                <Image
-                  src={track.cover_url}
-                  alt=""
-                  fill
-                  sizes="40px"
-                  className="object-cover"
-                  loading="lazy"
-                />
-              ) : null}
+        <div className="grid grid-cols-2 gap-x-8 items-start">
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Track details
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{track.title}</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+              {track.title}
+            </h2>
+
+            <div className="mt-2">
               <TrackRatingBasedOnLine activeRange={activeRange} />
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="relative h-14 w-14 overflow-hidden rounded-md bg-white/10 shrink-0">
+                  {track.cover_url ? (
+                    <Image
+                      src={track.cover_url}
+                      alt=""
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate text-base font-medium text-white">
+                    {track.title}
+                  </p>
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+                  Streams
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-white tabular-nums">
+                  {formatInt(track.streams)}
+                </p>
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+                  Listening time
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-white tabular-nums">
+                  {Math.round((track.listened_seconds ?? 0) / 60)} min
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="h-px w-full bg-white/10" />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="px-2 py-1">
-              <p className="text-xs text-[#B3B3B3]">Streams</p>
-              <p className="text-sm font-semibold tabular-nums">{formatInt(track.streams)}</p>
-            </div>
-
-            <div className="px-2 py-1">
-              <p className="text-xs text-[#B3B3B3]">Unique listeners</p>
-              <p className="text-sm font-semibold tabular-nums">{formatInt(track.unique_listeners)}</p>
-            </div>
-
-            <div className="px-2 py-1">
-              <p className="text-xs text-[#B3B3B3]">Listening time</p>
-              <p className="text-sm font-semibold tabular-nums">
-                {Math.round((track.listened_seconds ?? 0) / 60)} min
+          <div className="space-y-6">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+                Unique listeners
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-white tabular-nums">
+                {formatInt(track.unique_listeners)}
               </p>
             </div>
 
@@ -71,6 +98,6 @@ export default function TrackDetailsPanel({ track, activeRange }: Props) {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

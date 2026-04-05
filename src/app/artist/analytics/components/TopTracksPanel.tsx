@@ -19,21 +19,28 @@ export default function TopTracksPanel({
   onSelectTrack,
 }: Props) {
   return (
-    <div className="xl:col-span-2 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-      <div className="px-4 md:px-5 py-4 border-b border-white/10">
-        <div className="flex items-center gap-4">
-          <p className="text-sm font-semibold">Top tracks</p>
+    <section className="min-w-0">
+      <div className="border-b border-white/10 pb-4">
+        <div className="flex items-end gap-4">
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Tracks
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+              Top tracks
+            </h2>
+          </div>
 
-          <div className="ml-auto flex items-center gap-6 text-xs text-[#B3B3B3]">
-            <div className="w-14 text-right">Streams</div>
-            <div className="w-14 text-right">Listeners</div>
+          <div className="ml-auto hidden items-center gap-6 pr-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white/45 md:flex">
+            <div className="w-16 text-right">Streams</div>
+            <div className="w-16 text-right">Listeners</div>
           </div>
         </div>
       </div>
 
       <div className="divide-y divide-white/10">
         {topTracks.length === 0 && (
-          <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">No data yet.</div>
+          <div className="py-4 text-sm text-white/55">No data yet.</div>
         )}
 
         {topTracks.map((t, idx) => (
@@ -46,14 +53,14 @@ export default function TopTracksPanel({
               if (e.key === "Enter" || e.key === " ") onSelectTrack(t.track_id);
             }}
             className={[
-              "cursor-pointer px-4 md:px-5 py-3 flex items-center gap-4 transition",
-              selectedTrackId === t.track_id ? "bg-white/10" : "hover:bg-white/5",
+              "cursor-pointer flex items-center gap-4 px-4 py-4 transition",
+              selectedTrackId === t.track_id ? "bg-white/[0.04]" : "hover:bg-white/[0.025]",
             ].join(" ")}
           >
-            <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
+            <div className="w-10 text-xs text-white/40">{idx + 1}</div>
 
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="relative h-10 w-10 overflow-hidden rounded-md bg-white/10 shrink-0">
                 {t.cover_url ? (
                   <Image
                     src={t.cover_url}
@@ -67,25 +74,25 @@ export default function TopTracksPanel({
               </div>
 
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{t.title}</p>
+                <p className="truncate text-sm font-medium text-white">{t.title}</p>
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-6">
-              <div className="w-14 text-right text-sm text-white/90 tabular-nums">
+            <div className="hidden items-center gap-6 pr-2 md:flex">
+              <div className="w-16 text-right text-sm tabular-nums text-white/88">
                 {formatInt(t.streams)}
               </div>
-              <div className="w-14 text-right text-sm text-[#00FFC6] tabular-nums">
+              <div className="w-16 text-right text-sm tabular-nums text-[#00FFC6]">
                 {formatInt(t.unique_listeners)}
               </div>
             </div>
 
-            <div className="md:hidden text-sm text-[#00FFC6] tabular-nums">
+            <div className="text-sm tabular-nums text-[#00FFC6] md:hidden">
               {formatInt(t.streams)}
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

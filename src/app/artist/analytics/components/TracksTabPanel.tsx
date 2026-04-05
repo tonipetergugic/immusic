@@ -35,14 +35,14 @@ export default function TracksTabPanel({
         onTrackSortChange={onTrackSortChange}
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)] xl:items-start">
         <TopTracksPanel
           topTracks={topTracks}
           selectedTrackId={selectedTrackId}
           onSelectTrack={onSelectTrack}
         />
 
-        <div className="space-y-4">
+        <div className="space-y-8 xl:border-l xl:border-white/10 xl:pl-8">
           <TrackDetailsPanel track={selectedTrack} activeRange={activeRange} />
 
           <TopRatedTracksPanel

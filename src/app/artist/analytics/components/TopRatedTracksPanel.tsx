@@ -15,11 +15,19 @@ export default function TopRatedTracksPanel({
   onSelectTrack,
 }: Props) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-      <p className="text-sm font-semibold mb-3">Top rated</p>
+    <section className="pt-1">
+      <div className="border-b border-white/10 pb-4">
+        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+          Ranking
+        </div>
+        <h3 className="mt-2 text-xl font-semibold tracking-tight text-white">
+          Top rated
+        </h3>
+      </div>
+
       <div className="divide-y divide-white/10">
         {topRatedTracks.length === 0 && (
-          <div className="px-4 md:px-5 py-3 text-xs text-[#B3B3B3]">No data yet.</div>
+          <div className="py-4 text-sm text-white/55">No data yet.</div>
         )}
 
         {topRatedTracks.slice(0, 5).map((t, idx) => (
@@ -32,19 +40,19 @@ export default function TopRatedTracksPanel({
               if (e.key === "Enter" || e.key === " ") onSelectTrack(t.track_id);
             }}
             className={[
-              "cursor-pointer px-4 md:px-5 py-3 flex items-center gap-3 transition",
-              selectedTrackId === t.track_id ? "bg-white/10" : "hover:bg-white/5",
+              "cursor-pointer flex items-center gap-3 py-4 transition",
+              selectedTrackId === t.track_id ? "bg-white/[0.04]" : "hover:bg-white/[0.025]",
             ].join(" ")}
           >
-            <div className="w-8 text-xs text-[#B3B3B3]">{idx + 1}</div>
+            <div className="w-8 text-xs text-white/40">{idx + 1}</div>
 
-            <div className="relative h-9 w-9 rounded-md bg-white/10 overflow-hidden shrink-0">
+            <div className="relative h-10 w-10 overflow-hidden rounded-md bg-white/10 shrink-0">
               {t.cover_url ? (
                 <Image
                   src={t.cover_url}
                   alt=""
                   fill
-                  sizes="36px"
+                  sizes="40px"
                   className="object-cover"
                   loading="lazy"
                 />
@@ -52,18 +60,18 @@ export default function TopRatedTracksPanel({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{t.title}</p>
-              <p className="text-xs text-[#B3B3B3]">
+              <p className="truncate text-sm font-medium text-white">{t.title}</p>
+              <p className="mt-1 text-xs text-white/45">
                 Avg rating · {t.ratings_count} ratings
               </p>
             </div>
 
-            <div className="text-sm text-[#00FFC6] tabular-nums">
-              {t.rating_avg === null ? "-" : t.rating_avg.toFixed(2)}
+            <div className="text-sm font-medium tabular-nums text-[#00FFC6]">
+              {t.rating_avg === null ? "—" : t.rating_avg.toFixed(2)}
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

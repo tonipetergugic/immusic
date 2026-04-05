@@ -32,35 +32,43 @@ export default function TrackRatingPanel(props: Props) {
   ] as const;
 
   return (
-    <div className="px-2 py-1 space-y-3">
+    <div className="min-w-0">
       <div>
-        <p className="text-xs text-[#B3B3B3]">Avg rating</p>
-        <p className="text-sm font-semibold tabular-nums">
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+          Avg rating
+        </p>
+        <p className="mt-2 text-2xl font-semibold tracking-tight text-white tabular-nums">
           {track.rating_avg === null ? "—" : track.rating_avg.toFixed(2)}
-          <span className="text-xs text-[#B3B3B3]"> · {track.ratings_count}</span>
+          <span className="ml-2 text-sm font-medium text-white/50">
+            · {track.ratings_count}
+          </span>
         </p>
       </div>
 
-      <div className="space-y-2.5 pt-1 border-t border-white/10">
+      <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
         {breakdownRows.map(({ stars, count }) => {
           const pct = total > 0 ? (count / total) * 100 : 0;
           const pctRounded = Math.round(pct);
+
           return (
-            <div key={stars} className="flex items-center gap-2 min-w-0">
-              <span className="w-8 shrink-0 text-xs text-[#B3B3B3] tabular-nums">
+            <div key={stars} className="grid grid-cols-[38px_minmax(0,1fr)_42px_40px] items-center gap-3">
+              <span className="text-xs tabular-nums text-white/55">
                 {stars}★
               </span>
-              <div className="flex-1 min-w-0 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+
+              <div className="h-1.5 min-w-0 overflow-hidden rounded-full bg-white/[0.08]">
                 <div
-                  className="h-full rounded-full bg-white/35"
+                  className="h-full rounded-full bg-[#00FFC6]"
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <span className="shrink-0 text-xs tabular-nums text-white/80 w-8 text-right">
+
+              <span className="text-right text-xs tabular-nums text-white/70">
                 {pctRounded}%
               </span>
-              <span className="shrink-0 text-[11px] text-[#B3B3B3] tabular-nums w-8 text-right">
-                ({count})
+
+              <span className="text-right text-[11px] tabular-nums text-white/45">
+                {count}
               </span>
             </div>
           );
