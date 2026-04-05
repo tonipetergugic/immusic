@@ -100,6 +100,18 @@ export default function ArtistAnalyticsClient(props: {
     }
   }, [selectedTrackId, trackIndexById]);
 
+  useEffect(() => {
+    if (activeTab !== "Tracks") return;
+    if (props.topTracks.length === 0) return;
+
+    const firstTrackId = props.topTracks[0]?.track_id ?? null;
+    if (!firstTrackId) return;
+
+    if (!selectedTrackId || !trackIndexById[selectedTrackId]) {
+      setSelectedTrackId(firstTrackId);
+    }
+  }, [activeTab, props.topTracks, selectedTrackId, trackIndexById]);
+
   const selectedTrack: TrackDetailsRow | null =
     selectedTrackId && trackIndexById[selectedTrackId]
       ? props.trackDetailsById[selectedTrackId] ?? null

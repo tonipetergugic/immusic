@@ -7,6 +7,11 @@ function formatInt(v: number) {
   return new Intl.NumberFormat("en-US").format(v);
 }
 
+function formatListeningTime(seconds: number) {
+  const minutes = Math.round((seconds ?? 0) / 60);
+  return `${formatInt(minutes)} min`;
+}
+
 type Props = {
   topTracks: TopTrackRow[];
   selectedTrackId: string | null;
@@ -23,17 +28,16 @@ export default function TopTracksPanel({
       <div className="border-b border-white/10 pb-4">
         <div className="flex items-end gap-4">
           <div>
-            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
-              Tracks
-            </div>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+            <h2 className="text-2xl font-semibold tracking-tight text-white">
               Top tracks
             </h2>
           </div>
 
-          <div className="ml-auto hidden items-center gap-6 pr-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white/45 md:flex">
+          <div className="ml-auto hidden items-center gap-5 pr-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white/45 xl:flex">
             <div className="w-16 text-right">Streams</div>
             <div className="w-16 text-right">Listeners</div>
+            <div className="w-16 text-right">Rating</div>
+            <div className="w-20 text-right">Time</div>
           </div>
         </div>
       </div>
@@ -78,16 +82,22 @@ export default function TopTracksPanel({
               </div>
             </div>
 
-            <div className="hidden items-center gap-6 pr-2 md:flex">
+            <div className="hidden items-center gap-5 pr-2 xl:flex">
               <div className="w-16 text-right text-sm tabular-nums text-white/88">
                 {formatInt(t.streams)}
               </div>
               <div className="w-16 text-right text-sm tabular-nums text-[#00FFC6]">
                 {formatInt(t.unique_listeners)}
               </div>
+              <div className="w-16 text-right text-sm tabular-nums text-white/80">
+                {t.rating_avg === null ? "—" : t.rating_avg.toFixed(2)}
+              </div>
+              <div className="w-20 text-right text-sm tabular-nums text-white/60">
+                {formatListeningTime(t.listened_seconds)}
+              </div>
             </div>
 
-            <div className="text-sm tabular-nums text-[#00FFC6] md:hidden">
+            <div className="text-sm tabular-nums text-[#00FFC6] xl:hidden">
               {formatInt(t.streams)}
             </div>
           </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import TrackDetailsPanel from "./TrackDetailsPanel";
-import TopRatedTracksPanel from "./TopRatedTracksPanel";
 import TopTracksPanel from "./TopTracksPanel";
 import TracksTabHeader from "./TracksTabHeader";
 import type { Range, TopTrackRow, TrackDetailsRow } from "../types";
@@ -21,7 +20,6 @@ export default function TracksTabPanel({
   activeRange,
   trackSort,
   topTracks,
-  topRatedTracks,
   selectedTrackId,
   selectedTrack,
   onSelectTrack,
@@ -42,14 +40,8 @@ export default function TracksTabPanel({
           onSelectTrack={onSelectTrack}
         />
 
-        <div className="space-y-8 xl:border-l xl:border-white/10 xl:pl-8">
+        <div className="xl:border-l xl:border-white/10 xl:pl-8">
           <TrackDetailsPanel track={selectedTrack} activeRange={activeRange} />
-
-          <TopRatedTracksPanel
-            topRatedTracks={topRatedTracks}
-            selectedTrackId={selectedTrackId}
-            onSelectTrack={onSelectTrack}
-          />
         </div>
       </div>
     </div>
