@@ -1,13 +1,12 @@
 "use client";
 
-import type { TrackDetailsRow, Range } from "../types";
+import type { TrackDetailsRow } from "../types";
 
 type Props = {
   track: TrackDetailsRow;
-  activeRange: Range;
 };
 
-/** Avg rating + Ratings count (Grid-Zelle). */
+/** Track rating summary + breakdown. */
 export default function TrackRatingPanel(props: Props) {
   const { track } = props;
 

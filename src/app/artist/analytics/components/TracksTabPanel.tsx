@@ -9,7 +9,6 @@ type Props = {
   activeRange: Range;
   trackSort: "streams" | "listeners" | "rating" | "time";
   topTracks: TopTrackRow[];
-  topRatedTracks: TopTrackRow[];
   selectedTrackId: string | null;
   selectedTrack: TrackDetailsRow | null;
   onSelectTrack: (trackId: string) => void;
@@ -41,7 +40,7 @@ export default function TracksTabPanel({
         />
 
         <div className="xl:border-l xl:border-white/10 xl:pl-8">
-          <TrackDetailsPanel track={selectedTrack} activeRange={activeRange} />
+          <TrackDetailsPanel track={selectedTrack} />
         </div>
       </div>
     </div>

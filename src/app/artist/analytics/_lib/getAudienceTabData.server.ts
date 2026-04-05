@@ -23,7 +23,7 @@ export async function getAudienceTabData(args: {
     .limit(250);
 
   if (countryError) {
-    // intentionally silent: analytics world map errors are non-blocking
+    throw new Error(countryError.message);
   }
 
   const countryListeners30d: CountryListeners30dRow[] = (countryRows ?? [])

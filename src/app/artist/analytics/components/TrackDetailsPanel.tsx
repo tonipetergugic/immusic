@@ -1,14 +1,13 @@
 "use client";
 
-import type { Range, TrackDetailsRow } from "../types";
+import type { TrackDetailsRow } from "../types";
 import TrackRatingPanel from "./TrackRatingPanel";
 
 type Props = {
   track: TrackDetailsRow | null;
-  activeRange: Range;
 };
 
-export default function TrackDetailsPanel({ track, activeRange }: Props) {
+export default function TrackDetailsPanel({ track }: Props) {
   return (
     <section>
       {!track ? (
@@ -22,7 +21,7 @@ export default function TrackDetailsPanel({ track, activeRange }: Props) {
         </div>
       ) : (
         <div>
-          <TrackRatingPanel track={track} activeRange={activeRange} />
+          <TrackRatingPanel track={track} />
         </div>
       )}
     </section>

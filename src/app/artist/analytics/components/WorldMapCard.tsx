@@ -87,10 +87,10 @@ export default function WorldMapCard({
 
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium text-white">
-                          {pretty}
-                        </div>
-                        <div className="mt-1 text-xs uppercase tracking-[0.14em] text-white/35">
-                          {code}
+                          <span className="mr-2 text-xs uppercase tracking-[0.14em] text-white/35">
+                            {code}
+                          </span>
+                          <span>{pretty}</span>
                         </div>
                       </div>
 

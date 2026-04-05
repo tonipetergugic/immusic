@@ -8,7 +8,6 @@ import type { AnalyticsTrackDailyRow, ValidListenRow, TrackTitleRow } from "./an
 
 export type TracksTabData = {
   topTracks: TopTrackRow[];
-  topRatedTracks: TopTrackRow[];
   trackDetailsById: Record<string, TrackDetailsRow>;
 };
 
@@ -353,33 +352,8 @@ export async function getTracksTabData(args: {
     ])
   );
 
-  // Top rated tracks (range-based, derived from topAgg)
-  const MIN_RATINGS = 3;
-
-  const topRatedAgg = topAggWithRatings
-    .filter((r) => (r.ratings_count ?? 0) >= MIN_RATINGS && r.rating_avg !== null)
-    .sort((a, b) => {
-      const ra = Number(a.rating_avg ?? 0);
-      const rb = Number(b.rating_avg ?? 0);
-      if (rb !== ra) return rb - ra;
-      return Number(b.ratings_count ?? 0) - Number(a.ratings_count ?? 0);
-    })
-    .slice(0, 20);
-
-  const topRatedTracks: TopTrackRow[] = topRatedAgg.map((r) => ({
-    track_id: r.track_id,
-    title: titleById.get(r.track_id) || "Unknown track",
-    cover_url: toPublicCoverUrl(coverPathByTrackId.get(r.track_id) ?? null),
-    streams: Number(r.streams ?? 0),
-    unique_listeners: Number(r.unique_listeners ?? 0),
-    listened_seconds: Number(r.listened_seconds ?? 0),
-    ratings_count: Number(r.ratings_count ?? 0),
-    rating_avg: r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg),
-  }));
-
   return {
     topTracks,
-    topRatedTracks,
     trackDetailsById,
   };
 }

@@ -25,7 +25,6 @@ export default function ArtistAnalyticsClient(props: {
   initialTrackSort: "streams" | "listeners" | "rating" | "time";
   summary: ArtistAnalyticsSummary;
   topTracks: TopTrackRow[];
-  topRatedTracks: TopTrackRow[];
   trackDetailsById: Record<string, TrackDetailsRow>;
   countryListeners30d: CountryListeners30dRow[];
   followersCount: number;
@@ -89,9 +88,9 @@ export default function ArtistAnalyticsClient(props: {
 
   const trackIndexById = useMemo(() => {
     return Object.fromEntries(
-      [...props.topTracks, ...props.topRatedTracks].map((track) => [track.track_id, track])
+      props.topTracks.map((track) => [track.track_id, track])
     ) as Record<string, TopTrackRow>;
-  }, [props.topTracks, props.topRatedTracks]);
+  }, [props.topTracks]);
 
   useEffect(() => {
     if (!selectedTrackId) return;
@@ -141,7 +140,6 @@ export default function ArtistAnalyticsClient(props: {
           activeRange={activeRange}
           trackSort={trackSort}
           topTracks={props.topTracks}
-          topRatedTracks={props.topRatedTracks}
           selectedTrackId={selectedTrackId}
           selectedTrack={selectedTrack}
           onSelectTrack={setSelectedTrackId}

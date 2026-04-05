@@ -7,12 +7,11 @@ import { getOverviewTabData } from "./_lib/getOverviewTabData.server";
 import { getRangeStartIso } from "./_lib/getRangeStartIso";
 import { getTracksTabData } from "./_lib/getTracksTabData.server";
 import ArtistAnalyticsClient from "./components/ArtistAnalyticsClient";
-import type { ArtistAnalyticsSummary, Range } from "./types";
+import type { ArtistAnalyticsSummary } from "./types";
 import {
   normalizeRange,
   normalizeTab,
   normalizeTrackSort,
-  type TrackSort,
   type Tab,
 } from "./_lib/analyticsParams";
 export const dynamic = "force-dynamic";
@@ -74,7 +73,6 @@ export default async function ArtistAnalyticsPage({
         })
       : {
           topTracks: [],
-          topRatedTracks: [],
           trackDetailsById: {},
         };
 
@@ -108,7 +106,6 @@ export default async function ArtistAnalyticsPage({
       initialTrackSort={trackSort}
       summary={overviewData.summary}
       topTracks={tracksData.topTracks}
-      topRatedTracks={tracksData.topRatedTracks}
       trackDetailsById={tracksData.trackDetailsById}
       countryListeners30d={audienceData.countryListeners30d}
       followersCount={overviewData.followersCount ?? 0}
