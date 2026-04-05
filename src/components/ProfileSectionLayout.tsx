@@ -19,31 +19,29 @@ export default function ProfileSectionLayout({
   showBackLink = true,
 }: ProfileSectionLayoutProps) {
   return (
-    <div className="w-full max-w-[896px] mx-auto text-white">
-      <div
-        className="
-          bg-[#0B0B0D]
-          border border-[#1A1A1C]
-          rounded-2xl
-          p-8
-          lg:min-h-[1040px]
-          shadow-[0_20px_60px_rgba(0,0,0,0.6)]
-        "
-      >
-        {showBackLink ? <BackLink className="mb-6" /> : null}
+    <div className="mx-auto w-full max-w-[1040px] text-white">
+      {showBackLink ? <BackLink className="mb-8" /> : null}
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold leading-tight">{title}</h1>
-          <p className="text-[#B3B3B3] mt-1">{description}</p>
-        </div>
+      <div className="border-b border-white/10 pb-8">
+        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#B3B3B3]">
+          Account
+        </p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight leading-tight">
+          {title}
+        </h1>
+        <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[#B3B3B3]">
+          {description}
+        </p>
+      </div>
 
-        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-10">
-          <aside className="lg:pr-8 lg:border-r lg:border-[#1A1A1C]">
+      <div className="grid gap-10 pt-10 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-12">
+        <aside className="lg:border-r lg:border-white/10 lg:pr-8">
+          <div className="lg:sticky lg:top-6">
             <ProfileSectionNav current={current} />
-          </aside>
+          </div>
+        </aside>
 
-          <div className="min-w-0">{children}</div>
-        </div>
+        <div className="min-w-0">{children}</div>
       </div>
     </div>
   );

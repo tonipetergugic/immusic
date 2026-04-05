@@ -12,7 +12,11 @@ export default function ProfileSectionNav({
 }: ProfileSectionNavProps) {
   return (
     <nav aria-label="Profile sections" className="w-full">
-      <div className="flex flex-col gap-1">
+      <div className="mb-4 text-[11px] font-medium uppercase tracking-[0.22em] text-[#7A7A7A]">
+        Sections
+      </div>
+
+      <div className="flex flex-col">
         {profileSectionItems.map((item) => {
           const isActive = item.key === current;
           const Icon = item.icon;
@@ -22,19 +26,23 @@ export default function ProfileSectionNav({
               key={item.key}
               href={item.href}
               className={`
-                flex items-center gap-3 rounded-md px-3 py-3 text-sm transition-colors cursor-pointer
+                group flex items-center gap-3 border-l-2 py-3 pl-4 text-sm transition-colors
                 ${
                   isActive
-                    ? "bg-[#161619] text-[#00FFC6]"
-                    : "text-white hover:bg-[#161619] hover:text-[#00FFC6]"
+                    ? "border-[#00FFC6] text-[#00FFC6]"
+                    : "border-transparent text-[#B3B3B3] hover:border-white/15 hover:text-white"
                 }
               `}
             >
               <Icon
                 size={18}
-                className={isActive ? "text-[#00FFC6]" : "text-white"}
+                className={
+                  isActive
+                    ? "text-[#00FFC6]"
+                    : "text-[#8A8A8A] transition-colors group-hover:text-white"
+                }
               />
-              <span>{item.label}</span>
+              <span className="font-medium">{item.label}</span>
             </Link>
           );
         })}

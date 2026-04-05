@@ -70,37 +70,35 @@ export default async function ArtistProfilePage({
 
   return (
     <div className="relative w-full text-white">
-      <div className="mx-auto w-full max-w-[820px] space-y-8">
-        <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[700px] -translate-x-1/2 rounded-full bg-[#00FFC6]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[700px] -translate-x-1/2 rounded-full bg-[#00FFC6]/10 blur-3xl" />
 
-        <div>
+      <div className="mx-auto w-full max-w-[920px] space-y-10">
+        <div className="border-b border-white/10 pb-8">
           <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
             <User className="h-7 w-7 text-[#00FFC6]" />
             Artist profile
           </h1>
-          <p className="mt-1 text-sm text-[#B3B3B3]">
+          <p className="mt-3 text-[15px] leading-7 text-[#B3B3B3]">
             Update your public artist page details.
           </p>
         </div>
 
         {successMessage ? <ProfileSuccessToast message={successMessage} /> : null}
 
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.03] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_rgba(0,0,0,0.35)]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <ImageIcon className="h-5 w-5 text-[#00FFC6]" />
-                <h2 className="text-2xl font-semibold tracking-tight text-white">
-                  Banner
-                </h2>
-              </div>
-              <p className="mt-2 text-sm text-[#B3B3B3]">
-                This image appears at the top of your public artist page.
-              </p>
+        <section className="border-b border-white/10 pb-10">
+          <div>
+            <div className="flex items-center gap-3">
+              <ImageIcon className="h-5 w-5 text-[#00FFC6]" />
+              <h2 className="text-2xl font-semibold tracking-tight text-white">
+                Banner
+              </h2>
             </div>
+            <p className="mt-2 text-sm text-[#B3B3B3]">
+              This image appears at the top of your public artist page.
+            </p>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-6">
             <BannerUpload
               userId={profile.id}
               currentBannerUrl={profile.banner_url}
@@ -111,7 +109,7 @@ export default async function ArtistProfilePage({
               }
             />
           </div>
-        </div>
+        </section>
 
         <ProfileForm
           profile={profile}
