@@ -1,12 +1,15 @@
 import "server-only";
 
+import { getArtistAnalyticsSummary, type AnalyticsRange } from "@/lib/analytics/getArtistAnalytics.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Range, TopConvertingTrackRow } from "../types";
-import type { ValidListenRow, TrackTitleRow } from "./analyticsRows";
+import type { ValidListenRow, TrackTitleRow, SummaryRow } from "./analyticsRows";
 
 export type ConversionTabData = {
   topConvertingTracks: TopConvertingTrackRow[];
+  savesCount: number;
+  conversionPct: number;
 };
 
 function rangeToDays(r: Range): number | null {
@@ -24,12 +27,52 @@ export async function getConversionTabData(args: {
   const { artistId, range, trackIds } = args;
 
   if (trackIds.length === 0) {
-    return { topConvertingTracks: [] };
+    return {
+      topConvertingTracks: [],
+      savesCount: 0,
+      conversionPct: Number.NaN,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
   const supabaseAdmin = getSupabaseAdmin();
   const days = rangeToDays(range);
+
+  const summary = await getArtistAnalyticsSummary({
+    artistId,
+    range: range as AnalyticsRange,
+  });
+
+  let savesCount = 0;
+
+  if (trackIds.length > 0) {
+    let savesQuery = supabaseAdmin
+      .from("library_tracks")
+      .select("track_id", { count: "exact", head: true })
+      .in("track_id", trackIds)
+      .neq("user_id", artistId);
+
+    if (days !== null) {
+      const from = new Date();
+      from.setDate(from.getDate() - (days - 1));
+      const fromISO = from.toISOString().slice(0, 10);
+      savesQuery = savesQuery.gte("created_at", `${fromISO}T00:00:00.000Z`);
+    }
+
+    const { count, error: savesErr } = await savesQuery;
+
+    if (savesErr) throw new Error(savesErr.message);
+    savesCount = count ?? 0;
+  }
+
+  const uniqueListenersInRange = Number(
+    ((summary as SummaryRow | null)?.unique_listeners_total) ?? 0
+  );
+
+  const conversionPct =
+    uniqueListenersInRange > 0
+      ? (Number(savesCount ?? 0) / uniqueListenersInRange) * 100
+      : Number.NaN;
 
   const toPublicCoverUrl = (p: string | null): string | null => {
     if (!p) return null;
@@ -249,5 +292,9 @@ export async function getConversionTabData(args: {
     topConvertingTracks.push(...items);
   }
 
-  return { topConvertingTracks };
+  return {
+    topConvertingTracks,
+    savesCount,
+    conversionPct,
+  };
 }

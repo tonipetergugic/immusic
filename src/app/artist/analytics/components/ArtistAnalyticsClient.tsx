@@ -83,7 +83,7 @@ export default function ArtistAnalyticsClient(props: {
   const handleTabChange = (tab: Tab) => {
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab.toLowerCase());
-    window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
   const handleRangeChange = (range: Range) => {
