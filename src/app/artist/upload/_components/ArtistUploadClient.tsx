@@ -306,126 +306,110 @@ export default function ArtistUploadClient({ userId }: Props) {
 
   return (
     <div className="w-full text-white">
-      <div className="w-full max-w-[820px] mx-auto">
-        {/* Header (visual hero) */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#00FFC6]/10 via-white/[0.02] to-transparent px-6 py-7 sm:px-8 sm:py-8">
-        {/* soft shapes */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#00FFC6]/10 blur-3xl" />
-          <div className="absolute -top-16 right-[-120px] h-72 w-72 rounded-full bg-[#00FFC6]/6 blur-3xl" />
-        </div>
-
-        <div className="relative">
-          <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
-            <UploadIcon className="h-7 w-7 text-[#00FFC6]" aria-hidden="true" />
-            <span>
-              Upload <span className="text-[#00FFC6]">Track</span>
-            </span>
-          </h1>
-          <p className="mt-2 text-sm text-[#B3B3B3]">
-            Upload your audio file and submit it for quality control.
-          </p>
-        </div>
-      </div>
-
-      {/* Panel */}
-      <div className="mt-6 rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-7 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
-        {/* Title */}
-        <div>
-          <label className="block text-lg font-semibold text-white" htmlFor="track-title">
-            Track title
-          </label>
-          <input
-            id="track-title"
-            name="title"
-            type="text"
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => setTitleTouched(true)}
-            placeholder="e.g. Cosmic Puls"
-            className={`w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/90 placeholder:text-white/35 transition focus:outline-none focus:border-[#00FFC6]/60 focus:shadow-[0_0_0_2px_rgba(0,255,198,0.16),0_0_40px_rgba(0,255,198,0.10)] ${hasTitleError ? "border-red-400/60 focus:border-red-400/80 focus:shadow-[0_0_0_2px_rgba(248,113,113,0.25)]" : ""}`}
-          />
-          {hasTitleError ? (
-            <p className="mt-2 text-sm text-red-400/90">Please enter a track title.</p>
-          ) : (
-            <p className="mt-2 text-sm text-[#B3B3B3]">
-              Tip: use the exact track title you want to show publicly.
+      <div className="mx-auto w-full max-w-[920px]">
+        <div className="border-b border-white/10 pb-8">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#B3B3B3]">
+              Upload
             </p>
-          )}
+            <h1 className="mt-3 flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">
+              <UploadIcon className="h-7 w-7 text-[#00FFC6]" aria-hidden="true" />
+              <span>
+                Upload <span className="text-[#00FFC6]">Track</span>
+              </span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[#B3B3B3]">
+              Upload your audio file and submit it for quality control.
+            </p>
+          </div>
         </div>
 
-        {/* Dropzone */}
-        <div className="mt-6">
-          <div className="mt-8 text-lg font-semibold text-white">Audio file</div>
-          <p className="text-sm text-white/70">
-            WAV (Master), 44.1 kHz or 48 kHz, 16-bit or 24-bit, stereo
-          </p>
-
-          <p className="mt-1 text-sm text-white/40">
-            Max length: 10 minutes
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-white/60">
-            IMUSIC uses lossless WAV ingest for reliable analysis. After quality control, the system transcodes to MP3 for streaming.
-          </p>
-
-          <div className="mt-3">
-            <AudioDropzone
-              onFileSelected={handleFileSelected}
-              resetSignal={resetSignal}
-              fileError={fileError}
+        <section className="pt-10">
+          <div>
+            <label className="block text-lg font-semibold text-white" htmlFor="track-title">
+              Track title
+            </label>
+            <input
+              id="track-title"
+              name="title"
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => setTitleTouched(true)}
+              placeholder="e.g. Cosmic Puls"
+              className={`w-full border-0 border-b bg-transparent px-0 pb-5 pt-3 text-[30px] leading-tight text-white placeholder:text-white/30 transition focus:outline-none ${
+                hasTitleError
+                  ? "border-red-400/70 focus:border-red-400"
+                  : "border-white/15 focus:border-[#00FFC6]"
+              }`}
             />
-            {fileError && (
-              <p className="mt-2 text-sm text-red-400/90">
-                Please upload a valid WAV file.
+            {hasTitleError ? (
+              <p className="mt-2 text-sm text-red-400/90">Please enter a track title.</p>
+            ) : (
+              <p className="mt-2 text-sm text-[#B3B3B3]">
+                Tip: use the exact track title you want to show publicly.
               </p>
             )}
           </div>
 
-          {file ? (
-            <>
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-xs uppercase tracking-[0.12em] text-white/60">Selected file</div>
-                    <div className="mt-2 break-all text-sm text-white/90">{file.name}</div>
-                    <div className="mt-1 text-sm text-[#B3B3B3]">
-                      {(file.name.split(".").pop() || "").toUpperCase()} · {formatMB(file.size)} MB
-                    </div>
-                  </div>
+          <div className="mt-10 border-b border-white/10 pb-10">
+            <div className="text-2xl font-semibold tracking-tight text-white">Audio file</div>
+            <p className="mt-2 text-sm text-white/70">
+              WAV (Master), 44.1 kHz or 48 kHz, 16-bit or 24-bit, stereo
+            </p>
+
+            <p className="mt-1 text-sm text-white/40">
+              Max length: 10 minutes
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-white/60">
+              IMUSIC uses lossless WAV ingest for reliable analysis. After quality control, the system transcodes to MP3 for streaming.
+            </p>
+
+            <div className="mt-4">
+              <AudioDropzone
+                onFileSelected={handleFileSelected}
+                resetSignal={resetSignal}
+                fileError={fileError}
+              />
+              {fileError && (
+                <p className="mt-2 text-sm text-red-400/90">
+                  Please upload a valid WAV file.
+                </p>
+              )}
+            </div>
+
+            {file ? (
+              <div className="mt-6 space-y-4 border-b border-white/10 pb-6">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <span className="break-all text-white/90">{file.name}</span>
+                  <span className="text-[#B3B3B3]">
+                    {(file.name.split(".").pop() || "").toUpperCase()} · {formatMB(file.size)} MB
+                  </span>
 
                   {(file.name.split(".").pop() || "").toLowerCase() === "wav" ? (
-                    <span className="inline-flex shrink-0 items-center rounded-md border border-[#00FFC6]/40 bg-[#00FFC6]/10 px-2 py-1 text-[11px] font-medium tracking-wide text-white">
+                    <span className="inline-flex items-center rounded-md border border-[#00FFC6]/40 px-2 py-1 text-[11px] font-medium tracking-wide text-white">
                       WAV DETECTED
                     </span>
                   ) : (
-                    <span className="inline-flex shrink-0 items-center rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-white/70">
+                    <span className="inline-flex items-center rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70">
                       WAV required
                     </span>
                   )}
                 </div>
 
                 {uiError ? (
-                  <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
-                    {uiError}
-                  </div>
+                  <p className="text-sm text-red-300">{uiError}</p>
                 ) : null}
 
                 {audioPath && !uploading ? (
-                  <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-                    <div className="text-xs uppercase tracking-[0.12em] text-white/60">
-                      Uploaded file path
-                    </div>
-                    <div className="mt-2 break-all text-sm text-[#B3B3B3]">
-                      {audioPath}
-                    </div>
-                  </div>
+                  <p className="break-all text-sm text-[#B3B3B3]">
+                    {audioPath}
+                  </p>
                 ) : null}
-              </div>
 
-              <div className="mt-4 min-h-[112px] rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
                 {uploading ? (
-                  <>
+                  <div className="pt-1">
                     <div className="text-sm font-semibold text-white">
                       {flowStep === "validating" && "Validating file..."}
                       {flowStep === "uploading" && "Uploading file..."}
@@ -447,73 +431,68 @@ export default function ArtistUploadClient({ userId }: Props) {
                         }`}
                       />
                     </div>
-                  </>
-                ) : (
-                  <div className="flex h-full min-h-[88px] items-center text-sm text-white/45">
-                    Upload status will appear here.
                   </div>
+                ) : (
+                  <p className="text-sm text-white/45">Upload status will appear here.</p>
                 )}
               </div>
-            </>
-          ) : null}
+            ) : null}
 
-          <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-            <input
-              type="checkbox"
-              checked={rightsAccepted}
-              onChange={(e) => setRightsAccepted(e.target.checked)}
-              className="mt-1 accent-[#00FFC6]"
-            />
-            <span>
-              I confirm that I own or control all rights to this recording and that it does not contain copyrighted material.
-            </span>
-          </label>
-        </div>
+            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+              <input
+                type="checkbox"
+                checked={rightsAccepted}
+                onChange={(e) => setRightsAccepted(e.target.checked)}
+                className="mt-1 accent-[#00FFC6]"
+              />
+              <span>
+                I confirm that I own or control all rights to this recording and that it does not contain copyrighted material.
+              </span>
+            </label>
+          </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            onClick={handleUpload}
-            disabled={!file || uploading || title.trim().length === 0 || !rightsAccepted}
-            className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#00FFC6]/60 hover:bg-[#00FFC6]/16 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.16)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-white/40 disabled:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 sm:w-[340px]"
-            type="button"
-          >
-            <ArrowRight size={16} strokeWidth={2.5} className="text-[#00FFC6] transition group-hover:translate-x-0.5" />
-            <span>
-              {flowStep === "validating"
-                ? "Validating..."
-                : flowStep === "uploading"
-                  ? "Uploading..."
-                  : flowStep === "queueing"
-                    ? "Starting quality check..."
-                    : "Upload and start quality check"}
-            </span>
-          </button>
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              onClick={handleUpload}
+              disabled={!file || uploading || title.trim().length === 0 || !rightsAccepted}
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#00FFC6]/60 hover:bg-[#00FFC6]/16 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.16)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-white/40 disabled:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 sm:w-[340px]"
+              type="button"
+            >
+              <ArrowRight size={16} strokeWidth={2.5} className="text-[#00FFC6] transition group-hover:translate-x-0.5" />
+              <span>
+                {flowStep === "validating"
+                  ? "Validating..."
+                  : flowStep === "uploading"
+                    ? "Uploading..."
+                    : flowStep === "queueing"
+                      ? "Starting quality check..."
+                      : "Upload and start quality check"}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setTitle("");
-              setFile(null);
-              setUploading(false);
-              setAudioPath(null);
-              setRightsAccepted(false);
-              setTitleTouched(false);
-              setResetSignal((s) => s + 1);
-              setFileError(false);
-              setUiError(null);
-              setFlowStep("idle");
-            }}
-            disabled={uploading}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RotateCcw size={16} strokeWidth={2.5} className="text-white/40" />
-            Reset upload
-          </button>
-
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTitle("");
+                setFile(null);
+                setUploading(false);
+                setAudioPath(null);
+                setRightsAccepted(false);
+                setTitleTouched(false);
+                setResetSignal((s) => s + 1);
+                setFileError(false);
+                setUiError(null);
+                setFlowStep("idle");
+              }}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RotateCcw size={16} strokeWidth={2.5} className="text-white/40" />
+              Reset upload
+            </button>
+          </div>
+        </section>
       </div>
     </div>
-  </div>
   );
 }

@@ -69,9 +69,7 @@ export default async function ArtistProfilePage({
           : null;
 
   return (
-    <div className="relative w-full text-white">
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[700px] -translate-x-1/2 rounded-full bg-[#00FFC6]/10 blur-3xl" />
-
+    <div className="w-full text-white">
       <div className="mx-auto w-full max-w-[920px] space-y-10">
         <div className="border-b border-white/10 pb-8">
           <h1 className="flex items-center gap-3 text-4xl font-semibold tracking-tight text-white">

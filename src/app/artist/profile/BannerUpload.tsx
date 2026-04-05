@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import BannerPreview from "./BannerPreview";
-import { setBannerUrlAction } from "./bannerActions";
-import { setBannerPosYAction } from "./bannerActions";
+import { setBannerPosYAction, setBannerUrlAction } from "./bannerActions";
 import { Trash2 } from "lucide-react";
 
 export default function BannerUpload({
