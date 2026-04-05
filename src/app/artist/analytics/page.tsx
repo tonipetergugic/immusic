@@ -64,25 +64,42 @@ export default async function ArtistAnalyticsPage({
           conversionPct: Number.NaN,
         };
 
-  const tracksData = await getTracksTabData({
-    artistId,
-    range,
-    ratingBreakdownFromIso: getRangeStartIso(range),
-    trackSort,
-  });
+  const tracksData =
+    initialTab === "Tracks"
+      ? await getTracksTabData({
+          artistId,
+          range,
+          ratingBreakdownFromIso: getRangeStartIso(range),
+          trackSort,
+        })
+      : {
+          topTracks: [],
+          topRatedTracks: [],
+          trackDetailsById: {},
+        };
 
   const audienceData =
     initialTab === "Audience"
       ? await getAudienceTabData({ artistId })
       : { countryListeners30d: [] };
 
-  const trackIds = await getArtistTrackIds(artistId);
+  const trackIds =
+    initialTab === "Conversion"
+      ? await getArtistTrackIds(artistId)
+      : [];
 
-  const conversionData = await getConversionTabData({
-    artistId,
-    range,
-    trackIds,
-  });
+  const conversionData =
+    initialTab === "Conversion"
+      ? await getConversionTabData({
+          artistId,
+          range,
+          trackIds,
+        })
+      : {
+          topConvertingTracks: [],
+          savesCount: 0,
+          conversionPct: Number.NaN,
+        };
 
   return (
     <ArtistAnalyticsClient
