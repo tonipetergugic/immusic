@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import dynamic from "next/dynamic";
 
 const AudienceWorldMap = dynamic(() => import("./AudienceWorldMap"), { ssr: false });
-import type { CountryListeners30dRow } from "./ArtistAnalyticsClient";
+import type { CountryListeners30dRow } from "../types";
 
 export default function WorldMapCard({
   items,

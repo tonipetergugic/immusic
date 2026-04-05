@@ -9,7 +9,12 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import type { Range, ListenersPoint } from "./ArtistAnalyticsClient";
+import type { Range } from "../types";
+
+type ListenersPoint = {
+  day: string;
+  listeners: number;
+};
 
 type Point = { date: string; listeners: number };
 

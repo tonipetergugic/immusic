@@ -1,4 +1,4 @@
-import type { Range } from "../components/ArtistAnalyticsClient";
+import type { Range } from "../types";
 
 export type TrackSort = "streams" | "listeners" | "rating" | "time";
 export type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";

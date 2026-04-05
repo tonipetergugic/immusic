@@ -17,22 +17,9 @@ import type {
   TopConvertingTrackRow,
 } from "../types";
 
-export type {
-  Range,
-  ArtistAnalyticsSummary,
-  TopTrackRow,
-  TrackDetailsRow,
-  CountryListeners30dRow,
-  TopConvertingTrackRow,
-} from "../types";
-
 type Tab = "Overview" | "Audience" | "Tracks" | "Conversion";
 
-export type StreamsPoint = { day: string; streams: number };
-export type ListenersPoint = { day: string; listeners: number };
-
 export default function ArtistAnalyticsClient(props: {
-  artistId: string;
   initialTab: Tab;
   initialRange: Range;
   initialTrackSort: "streams" | "listeners" | "rating" | "time";
@@ -100,17 +87,11 @@ export default function ArtistAnalyticsClient(props: {
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
-  const summary = props.summary;
-  const topTracks = props.topTracks;
-  const topRatedTracks = props.topRatedTracks;
-  const trackDetailsById = props.trackDetailsById;
-  const countryListeners30d = props.countryListeners30d;
-
   const trackIndexById = useMemo(() => {
     return Object.fromEntries(
-      [...topTracks, ...topRatedTracks].map((track) => [track.track_id, track])
+      [...props.topTracks, ...props.topRatedTracks].map((track) => [track.track_id, track])
     ) as Record<string, TopTrackRow>;
-  }, [topTracks, topRatedTracks]);
+  }, [props.topTracks, props.topRatedTracks]);
 
   useEffect(() => {
     if (!selectedTrackId) return;
@@ -121,7 +102,7 @@ export default function ArtistAnalyticsClient(props: {
 
   const selectedTrack: TrackDetailsRow | null =
     selectedTrackId && trackIndexById[selectedTrackId]
-      ? trackDetailsById[selectedTrackId] ?? null
+      ? props.trackDetailsById[selectedTrackId] ?? null
       : null;
 
   return (
@@ -132,7 +113,7 @@ export default function ArtistAnalyticsClient(props: {
       {activeTab === "Overview" && (
         <OverviewTabPanel
           activeRange={activeRange}
-          summary={summary}
+          summary={props.summary}
           followersCount={props.followersCount}
           savesCount={props.savesCount}
           conversionPct={props.conversionPct}
@@ -140,15 +121,15 @@ export default function ArtistAnalyticsClient(props: {
       )}
 
       {activeTab === "Audience" && (
-        <AudienceTabPanel countryListeners30d={countryListeners30d} />
+        <AudienceTabPanel countryListeners30d={props.countryListeners30d} />
       )}
 
       {activeTab === "Tracks" && (
         <TracksTabPanel
           activeRange={activeRange}
           trackSort={trackSort}
-          topTracks={topTracks}
-          topRatedTracks={topRatedTracks}
+          topTracks={props.topTracks}
+          topRatedTracks={props.topRatedTracks}
           selectedTrackId={selectedTrackId}
           selectedTrack={selectedTrack}
           onSelectTrack={setSelectedTrackId}

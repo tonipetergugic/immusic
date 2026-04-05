@@ -103,7 +103,6 @@ export default async function ArtistAnalyticsPage({
 
   return (
     <ArtistAnalyticsClient
-      artistId={artistId}
       initialTab={initialTab as Tab}
       initialRange={range}
       initialTrackSort={trackSort}
