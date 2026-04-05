@@ -9,9 +9,8 @@ type Props = {
 
 export default function AudienceTabPanel(props: Props) {
   return (
-    <div className="space-y-6">
-      {/* Audience should be server-first + minimal: map + real top locations */}
+    <section>
       <WorldMapCard items={props.countryListeners30d} />
-    </div>
+    </section>
   );
 }

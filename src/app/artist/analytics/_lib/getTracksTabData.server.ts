@@ -19,6 +19,39 @@ function rangeToDays(r: Range): number | null {
   return 28;
 }
 
+function getRangeRatingMetrics(
+  breakdown:
+    | Pick<
+        TrackDetailsRow,
+        | "rating_1_count"
+        | "rating_2_count"
+        | "rating_3_count"
+        | "rating_4_count"
+        | "rating_5_count"
+      >
+    | null
+    | undefined
+) {
+  const rating1 = Number(breakdown?.rating_1_count ?? 0);
+  const rating2 = Number(breakdown?.rating_2_count ?? 0);
+  const rating3 = Number(breakdown?.rating_3_count ?? 0);
+  const rating4 = Number(breakdown?.rating_4_count ?? 0);
+  const rating5 = Number(breakdown?.rating_5_count ?? 0);
+
+  const ratings_count = rating1 + rating2 + rating3 + rating4 + rating5;
+  const weighted_sum =
+    rating1 * 1 +
+    rating2 * 2 +
+    rating3 * 3 +
+    rating4 * 4 +
+    rating5 * 5;
+
+  return {
+    ratings_count,
+    rating_avg: ratings_count > 0 ? weighted_sum / ratings_count : null,
+  };
+}
+
 export async function getTracksTabData(args: {
   artistId: string;
   range: Range;
@@ -35,9 +68,7 @@ export async function getTracksTabData(args: {
 
   let topQuery = supabase
     .from("analytics_track_daily")
-    .select(
-      "track_id, streams, listeners, listened_seconds, ratings_count, rating_avg"
-    )
+    .select("track_id, streams, listeners, listened_seconds")
     .eq("artist_id", artistId);
 
   if (days !== null) {
@@ -56,46 +87,34 @@ export async function getTracksTabData(args: {
   type Agg = {
     streams: number;
     listened_seconds: number;
-    ratings_count: number;
-    rating_sum: number; // rating_avg * ratings_count
   };
 
   const aggByTrack = new Map<string, Agg>();
 
-  ((dailyRows || []) as AnalyticsTrackDailyRow[]).forEach((r) => {
+  ((dailyRows || []) as unknown as AnalyticsTrackDailyRow[]).forEach((r) => {
     const id = String(r.track_id);
     const streams = Number(r.streams ?? 0);
     const listened_seconds = Number(r.listened_seconds ?? 0);
-    const ratings_count = Number(r.ratings_count ?? 0);
-    const rating_avg = r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg);
 
     const prev = aggByTrack.get(id) ?? {
       streams: 0,
       listened_seconds: 0,
-      ratings_count: 0,
-      rating_sum: 0,
     };
 
     prev.streams += streams;
     prev.listened_seconds += listened_seconds;
-    prev.ratings_count += ratings_count;
-
-    if (rating_avg !== null && ratings_count > 0) {
-      prev.rating_sum += rating_avg * ratings_count;
-    }
 
     aggByTrack.set(id, prev);
   });
 
-  const topAgg = Array.from(aggByTrack.entries())
-    .map(([track_id, a]) => ({
-      track_id,
-      streams: a.streams,
-      unique_listeners: 0,
-      listened_seconds: a.listened_seconds,
-      ratings_count: a.ratings_count,
-      rating_avg: a.ratings_count > 0 ? a.rating_sum / a.ratings_count : null,
-    }));
+  const topAgg = Array.from(aggByTrack.entries()).map(([track_id, a]) => ({
+    track_id,
+    streams: a.streams,
+    unique_listeners: 0,
+    listened_seconds: a.listened_seconds,
+    ratings_count: 0,
+    rating_avg: null,
+  }));
 
   // fetch titles for these track ids
   const ids = topAgg.map((r) => r.track_id);
@@ -135,7 +154,23 @@ export async function getTracksTabData(args: {
     unique_listeners: uniqByTrackId.get(row.track_id)?.size ?? 0,
   }));
 
-  const sortedTopAgg = [...topAggWithListeners].sort((a, b) => {
+  const detailTrackIds = topAggWithListeners.map((r) => r.track_id);
+
+  const ratingBreakdownById = await getTrackRatingBreakdownById({
+    trackIds: detailTrackIds,
+    fromIso: ratingBreakdownFromIso,
+  });
+
+  const topAggWithRatings = topAggWithListeners.map((row) => {
+    const metrics = getRangeRatingMetrics(ratingBreakdownById[row.track_id]);
+    return {
+      ...row,
+      ratings_count: metrics.ratings_count,
+      rating_avg: metrics.rating_avg,
+    };
+  });
+
+  const sortedTopAgg = [...topAggWithRatings].sort((a, b) => {
     if (trackSort === "listeners") {
       return (b.unique_listeners ?? 0) - (a.unique_listeners ?? 0);
     }
@@ -295,13 +330,6 @@ export async function getTracksTabData(args: {
     rating_avg: r.rating_avg === null || r.rating_avg === undefined ? null : Number(r.rating_avg),
   }));
 
-  const detailTrackIds = sortedTopAgg.map((r) => r.track_id);
-
-  const ratingBreakdownById = await getTrackRatingBreakdownById({
-    trackIds: detailTrackIds,
-    fromIso: ratingBreakdownFromIso,
-  });
-
   const trackDetailsById: Record<string, TrackDetailsRow> = Object.fromEntries(
     sortedTopAgg.map((r) => [
       r.track_id,
@@ -328,7 +356,7 @@ export async function getTracksTabData(args: {
   // Top rated tracks (range-based, derived from topAgg)
   const MIN_RATINGS = 3;
 
-  const topRatedAgg = topAggWithListeners
+  const topRatedAgg = topAggWithRatings
     .filter((r) => (r.ratings_count ?? 0) >= MIN_RATINGS && r.rating_avg !== null)
     .sort((a, b) => {
       const ra = Number(a.rating_avg ?? 0);

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type TrackRatingBreakdownCounts = {
   rating_1_count: number;
@@ -31,7 +31,7 @@ export async function getTrackRatingBreakdownById(args: {
 }): Promise<Record<string, TrackRatingBreakdownCounts>> {
   if (args.trackIds.length === 0) return {};
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = getSupabaseAdmin();
 
   let q = supabase.from("track_ratings").select("track_id, stars").in("track_id", args.trackIds);
 

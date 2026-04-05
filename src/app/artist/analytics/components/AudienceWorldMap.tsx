@@ -44,14 +44,14 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
   return (
     <div
       ref={containerRef}
-      className={`relative mt-4 h-[520px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/20 ${
+      className={`relative h-[520px] w-full overflow-hidden ${
         isDragging ? "cursor-grabbing" : "cursor-grab"
       }`}
     >
       {/* Tooltip (außerhalb SVG) */}
       {tip ? (
         <div
-          className="pointer-events-none absolute z-20 rounded-lg border border-white/10 bg-black/80 px-3 py-2 text-xs text-white"
+          className="pointer-events-none absolute z-20 rounded-xl border border-white/10 bg-[#0E0E10]/92 px-3 py-2 text-xs text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
           style={{ left: tip.x + 12, top: tip.y + 12 }}
         >
           <div className="font-semibold">{tip.name}</div>
@@ -65,7 +65,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         <button
           type="button"
           onClick={() => setZoom((z) => clamp(z + 0.5, 1, 6))}
-          className="cursor-pointer h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
+          className="cursor-pointer h-9 w-9 rounded-full border border-white/12 bg-black/45 text-white/90 transition hover:bg-black/65"
           aria-label="Zoom in"
         >
           +
@@ -73,7 +73,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         <button
           type="button"
           onClick={() => setZoom((z) => clamp(z - 0.5, 1, 6))}
-          className="cursor-pointer h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
+          className="cursor-pointer h-9 w-9 rounded-full border border-white/12 bg-black/45 text-white/90 transition hover:bg-black/65"
           aria-label="Zoom out"
         >
           −
@@ -81,7 +81,7 @@ export default function AudienceWorldMap(props: { items: Item[] }) {
         <button
           type="button"
           onClick={() => setZoom(1)}
-          className="cursor-pointer h-9 w-9 rounded-lg border border-white/10 bg-black/60 text-white/90 hover:bg-black/80"
+          className="cursor-pointer h-9 w-9 rounded-full border border-white/12 bg-black/45 text-white/90 transition hover:bg-black/65"
           aria-label="Reset zoom"
         >
           ⟳

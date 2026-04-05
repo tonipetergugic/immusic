@@ -1,6 +1,5 @@
 "use client";
 
-import StatCard from "./StatCard";
 import StreamsOverTimeChart from "./StreamsOverTimeChart";
 import type { ArtistAnalyticsSummary, Range } from "../types";
 
@@ -30,38 +29,56 @@ export default function OverviewTabPanel({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        <StatCard
-          label="Streams"
-          value={formatInt(liveStreamsTotal)}
-        />
+      <section className="border-b border-white/10 pb-8">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-6 xl:grid-cols-5">
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Streams
+            </div>
+            <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              {formatInt(liveStreamsTotal)}
+            </div>
+          </div>
 
-        <StatCard
-          label="Listeners"
-          value={formatInt(uniqueListenersTotal)}
-        />
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Listeners
+            </div>
+            <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              {formatInt(uniqueListenersTotal)}
+            </div>
+          </div>
 
-        <StatCard
-          label="Track saves"
-          value={formatInt(savesCount)}
-        />
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Track saves
+            </div>
+            <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              {formatInt(savesCount)}
+            </div>
+          </div>
 
-        <StatCard
-          label="Followers"
-          value={formatInt(followersCount)}
-        />
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Followers
+            </div>
+            <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              {formatInt(followersCount)}
+            </div>
+          </div>
 
-        <StatCard
-          label="Conversion"
-          value={
-            Number.isFinite(conversionPct)
-              ? `${conversionPct.toFixed(1)}%`
-              : "—"
-          }
-        />
-      </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Conversion
+            </div>
+            <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              {Number.isFinite(conversionPct) ? `${conversionPct.toFixed(1)}%` : "—"}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="mt-8 min-h-[360px]">
+      <div className="pt-8">
         <StreamsOverTimeChart range={activeRange} points={summary.streams_over_time} />
       </div>
     </>

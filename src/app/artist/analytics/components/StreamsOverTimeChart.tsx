@@ -27,6 +27,12 @@ function formatDayLabel(isoDay: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
 }
 
+function formatRangeLabel(range: Range) {
+  if (range === "7d") return "Last 7 days";
+  if (range === "28d") return "Last 28 days";
+  return "All time";
+}
+
 export default function StreamsOverTimeChart({
   range,
   points,
@@ -38,8 +44,6 @@ export default function StreamsOverTimeChart({
     date: formatDayLabel(p.day),
     streams: Number(p.streams ?? 0),
   }));
-
-  const last = data[data.length - 1]?.streams ?? 0;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
@@ -62,10 +66,21 @@ export default function StreamsOverTimeChart({
   }, []);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-      <div className="mb-6">
-        <div>
-          <div className="text-lg font-semibold text-white">Streams over time</div>
+    <section className="min-w-0">
+      <div className="border-b border-white/10 pb-4">
+        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+          Overview
+        </div>
+
+        <div className="mt-2 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-white">
+              Streams over time
+            </h2>
+            <p className="mt-1 text-sm text-white/55">
+              {formatRangeLabel(range)}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -119,9 +134,9 @@ export default function StreamsOverTimeChart({
             />
           </LineChart>
         ) : (
-          <div className="h-full w-full rounded-xl border border-white/10 bg-black/10" />
+          <div className="h-full w-full border-b border-white/10 bg-white/[0.02]" />
         )}
       </div>
-    </div>
+    </section>
   );
 }
