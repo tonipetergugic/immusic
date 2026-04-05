@@ -192,7 +192,7 @@ export default function BannerUpload({
     <div className="space-y-4">
       {/* Dropzone / Click-to-upload surface */}
       <div
-        className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
+        className="group relative overflow-hidden"
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -210,7 +210,7 @@ export default function BannerUpload({
         <div
           ref={previewRef}
           className={[
-            "relative h-[220px] sm:h-[240px] overflow-hidden rounded-2xl",
+            "relative h-[220px] overflow-hidden rounded-xl border border-white/10 bg-black/20 sm:h-[240px]",
             currentBannerUrl ? "cursor-grab active:cursor-grabbing" : "",
             isPositionDragging ? "ring-2 ring-[#00FFC6]/30" : "",
           ].join(" ")}
@@ -305,48 +305,50 @@ export default function BannerUpload({
       </div>
 
       {currentBannerUrl ? (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-white/70">Banner position</div>
+        <div className="space-y-4">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="text-sm font-medium text-white">Banner position</div>
+              <div className="mt-1 text-sm text-[#B3B3B3]">
+                Adjust what part of the image stays visible after cropping.
+              </div>
+            </div>
 
-            <div className="text-xs">
-              {positionSaveState === "saving" ? (
-                <span className="text-[#00FFC6]">Saving...</span>
-              ) : positionSaveState === "saved" ? (
-                <span className="text-emerald-300">Saved</span>
-              ) : null}
+            <div className="flex items-center gap-3">
+              <div className="text-xs">
+                {positionSaveState === "saving" ? (
+                  <span className="text-[#00FFC6]">Saving...</span>
+                ) : positionSaveState === "saved" ? (
+                  <span className="text-emerald-300">Saved</span>
+                ) : null}
+              </div>
+
+              <div className="w-12 text-right text-sm text-white/50 tabular-nums">
+                {posY}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={posY}
-              disabled={uploading || isCommittingPos}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setPosY(v);
-              }}
-              onPointerUp={async () => {
-                await commitBannerPosY(posYRef.current ?? 50);
-              }}
-              onPointerCancel={async () => {
-                await commitBannerPosY(posYRef.current ?? 50);
-              }}
-              className="w-full cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed"
-              aria-label="Banner vertical position"
-            />
-            <div className="w-12 text-right text-sm text-white/50 tabular-nums">
-              {posY}
-            </div>
-          </div>
-
-          <div className="text-sm text-[#B3B3B3]">
-            Tip: adjust what part of the image stays visible after cropping.
-          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={posY}
+            disabled={uploading || isCommittingPos}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setPosY(v);
+            }}
+            onPointerUp={async () => {
+              await commitBannerPosY(posYRef.current ?? 50);
+            }}
+            onPointerCancel={async () => {
+              await commitBannerPosY(posYRef.current ?? 50);
+            }}
+            className="w-full cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed"
+            aria-label="Banner vertical position"
+          />
         </div>
       ) : null}
 
@@ -424,9 +426,11 @@ export default function BannerUpload({
         </div>
       ) : null}
 
-      {errorMessage && (
-        <p className="text-sm text-red-400">{errorMessage}</p>
-      )}
+      {errorMessage ? (
+        <p className="border-b border-red-400/20 pb-2 text-sm text-red-400">
+          {errorMessage}
+        </p>
+      ) : null}
     </div>
   );
 }
