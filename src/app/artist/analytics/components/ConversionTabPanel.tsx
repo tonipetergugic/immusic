@@ -22,37 +22,38 @@ export default function ConversionTabPanel({
   conversionPct,
 }: Props) {
   return (
-    <div className="space-y-4">
-      {/* Header like Track performance */}
-      <div>
-        <div className="text-lg font-semibold">Save performance</div>
-        <div className="text-sm text-muted-foreground">
+    <section className="pb-10">
+      <div className="border-b border-white/10 pb-4">
+        <h2 className="text-3xl font-semibold tracking-tight text-white">
+          Save performance
+        </h2>
+        <p className="mt-2 text-sm text-white/55">
           {(() => {
             const r = getRangeLabel(activeRange);
             const label = r.badge ?? r.subtitle ?? String(activeRange);
             return <>Saves vs listeners ({label})</>;
           })()}
-        </div>
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* LEFT: Big list card */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden xl:col-span-2">
-          <div className="px-4 md:px-5 py-4 border-b border-white/10 flex items-center justify-between">
-            <div className="text-sm font-medium text-muted-foreground">
-              Top save ratio tracks
+      <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)] xl:items-start">
+        <div className="min-w-0">
+          <div className="flex items-end gap-4 border-b border-white/10 pb-4">
+            <div>
+              <h3 className="text-xl font-semibold tracking-tight text-white">
+                Top save ratio tracks
+              </h3>
             </div>
 
-            {/* column labels on desktop */}
-            <div className="hidden md:flex items-center gap-6 text-xs text-[#B3B3B3]">
-              <div className="w-14 text-right">Saves</div>
-              <div className="w-14 text-right">Listeners</div>
+            <div className="ml-auto hidden items-center gap-5 pr-4 text-[11px] font-medium uppercase tracking-[0.16em] text-white/45 xl:flex">
+              <div className="w-16 text-right">Saves</div>
+              <div className="w-16 text-right">Listeners</div>
               <div className="w-16 text-right">Conv.</div>
             </div>
           </div>
 
           {topConvertingTracks.length === 0 ? (
-            <div className="px-4 md:px-5 py-4 text-sm text-muted-foreground">
+            <div className="py-4 text-sm text-white/55">
               Not enough listener data yet.
             </div>
           ) : (
@@ -60,12 +61,12 @@ export default function ConversionTabPanel({
               {topConvertingTracks.map((t, idx) => (
                 <div
                   key={t.track_id}
-                  className="px-4 md:px-5 py-3 flex items-center gap-4 transition-colors hover:bg-white/5"
+                  className="flex items-center gap-4 px-4 py-4 transition hover:bg-white/[0.025]"
                 >
-                  <div className="w-10 text-xs text-[#B3B3B3]">{idx + 1}</div>
+                  <div className="w-10 text-xs text-white/40">{idx + 1}</div>
 
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="relative h-10 w-10 rounded-md bg-white/10 overflow-hidden shrink-0">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="relative h-10 w-10 overflow-hidden rounded-md bg-white/10 shrink-0">
                       {t.cover_url ? (
                         <Image
                           src={t.cover_url}
@@ -79,27 +80,27 @@ export default function ConversionTabPanel({
                     </div>
 
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{t.title}</p>
+                      <p className="truncate text-sm font-medium text-white">
+                        {t.title}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Desktop columns */}
-                  <div className="hidden md:flex items-center gap-6">
-                    <div className="w-14 text-right text-sm text-white/90 tabular-nums">
+                  <div className="hidden items-center gap-5 pr-2 xl:flex">
+                    <div className="w-16 text-right text-sm tabular-nums text-white/88">
                       {formatInt(t.saves)}
                     </div>
-                    <div className="w-14 text-right text-sm text-white/90 tabular-nums">
+                    <div className="w-16 text-right text-sm tabular-nums text-white/88">
                       {formatInt(t.listeners)}
                     </div>
-                    <div className="w-16 text-right text-sm text-[#00FFC6] tabular-nums">
+                    <div className="w-16 text-right text-sm tabular-nums text-[#00FFC6]">
                       {Number.isFinite(t.conversion_pct)
                         ? `${t.conversion_pct.toFixed(1)}%`
                         : "—"}
                     </div>
                   </div>
 
-                  {/* Mobile: show conversion only */}
-                  <div className="md:hidden text-sm text-[#00FFC6] tabular-nums">
+                  <div className="text-sm tabular-nums text-[#00FFC6] xl:hidden">
                     {Number.isFinite(t.conversion_pct)
                       ? `${t.conversion_pct.toFixed(1)}%`
                       : "—"}
@@ -110,38 +111,59 @@ export default function ConversionTabPanel({
           )}
         </div>
 
-        {/* RIGHT: stacked cards */}
-        <div className="grid gap-4 xl:col-span-1 xl:h-full xl:grid-rows-2">
-          {/* Conversion summary card */}
-          <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-            <div className="text-sm text-muted-foreground mb-1">
-              Save ratio
+        <div className="space-y-8 xl:border-l xl:border-white/10 xl:pl-8">
+          <section className="border-b border-white/10 pb-8">
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Summary
             </div>
-            <div className="text-3xl font-semibold">
-              {Number.isFinite(conversionPct)
-                ? `${conversionPct.toFixed(1)}%`
-                : "—"}
+            <div className="mt-4">
+              <p className="text-6xl font-semibold tracking-[-0.04em] text-white tabular-nums leading-none">
+                {Number.isFinite(conversionPct)
+                  ? `${conversionPct.toFixed(1)}%`
+                  : "—"}
+              </p>
+              <p className="mt-3 text-lg font-medium tracking-tight text-white/55">
+                save ratio
+              </p>
             </div>
 
-            <div className="mt-4 border-t border-white/5 pt-4">
-              <div className="text-sm text-muted-foreground mb-1">Saves</div>
-              <div className="text-2xl font-medium">{formatInt(savesCount)}</div>
+            <div className="mt-8">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+                Saves
+              </p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-white tabular-nums">
+                {formatInt(savesCount)}
+              </p>
             </div>
-          </div>
+          </section>
 
-          {/* How to read card */}
-          <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-4 md:p-5">
-            <div className="text-[18px] font-semibold text-white mb-2">
+          <section>
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+              Guide
+            </div>
+            <h3 className="mt-2 text-xl font-semibold tracking-tight text-white">
               How to read this
+            </h3>
+
+            <div className="mt-5 divide-y divide-white/10 border-t border-white/10">
+              <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 py-4">
+                <div className="text-sm font-medium text-white">&lt; 5%</div>
+                <div className="text-sm text-white/55">Low save rate</div>
+              </div>
+
+              <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 py-4">
+                <div className="text-sm font-medium text-white">5–10%</div>
+                <div className="text-sm text-white/55">Healthy save rate</div>
+              </div>
+
+              <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 py-4">
+                <div className="text-sm font-medium text-white">&gt; 10%</div>
+                <div className="text-sm text-white/55">Very strong save rate</div>
+              </div>
             </div>
-            <ul className="text-[18px] text-[#B3B3B3] list-disc list-inside space-y-1">
-              <li>&lt; 5% → low save rate</li>
-              <li>5–10% → healthy save rate</li>
-              <li>&gt; 10% → very strong save rate</li>
-            </ul>
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -39,12 +39,9 @@ export default function WorldMapCard({
   }, [items]);
 
   return (
-    <section className="border-b border-white/10 pb-10">
+    <section className="pb-10">
       <div>
-        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
-          Audience
-        </div>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">
+        <h2 className="text-3xl font-semibold tracking-tight text-white">
           Top countries
         </h2>
         <p className="mt-2 text-sm text-white/55">

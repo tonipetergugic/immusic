@@ -68,13 +68,9 @@ export default function StreamsOverTimeChart({
   return (
     <section className="min-w-0">
       <div className="border-b border-white/10 pb-4">
-        <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
-          Overview
-        </div>
-
-        <div className="mt-2 flex items-end justify-between gap-4">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
+            <h2 className="text-[30px] font-semibold tracking-tight text-white">
               Streams over time
             </h2>
             <p className="mt-1 text-sm text-white/55">

@@ -25,7 +25,7 @@ export default function TracksTabHeader({
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
-        <p className="text-lg font-semibold">Track performance</p>
+        <p className="text-[30px] font-semibold tracking-tight text-white">Track performance</p>
         {(() => {
           const r = getRangeLabel(activeRange);
           return (
