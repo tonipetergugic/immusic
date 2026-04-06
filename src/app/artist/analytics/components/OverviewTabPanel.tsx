@@ -72,7 +72,7 @@ export default function OverviewTabPanel({
               Conversion
             </div>
             <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
-              {Number.isFinite(conversionPct) ? `${conversionPct.toFixed(1)}%` : "—"}
+{Number.isFinite(conversionPct) ? `${Math.round(conversionPct)}%` : "—"}
             </div>
           </div>
         </div>

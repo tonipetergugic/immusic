@@ -4,7 +4,7 @@ import { getArtistAnalyticsSummary, type AnalyticsRange } from "@/lib/analytics/
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Range } from "../types";
-import type { SummaryRow } from "./analyticsRows";
+import type { ValidListenRow } from "./analyticsRows";
 import { getArtistTrackIds } from "./getArtistTrackIds.server";
 
 export type OverviewTabData = {
@@ -49,11 +49,12 @@ export async function getOverviewTabData(args: {
   const trackIds = await getArtistTrackIds(artistId);
 
   let savesCount = 0;
+  const savesByTrack = new Map<string, number>();
 
   if (trackIds.length > 0) {
     let savesQuery = supabaseAdmin
       .from("library_tracks")
-      .select("track_id", { count: "exact", head: true })
+      .select("track_id")
       .in("track_id", trackIds)
       .neq("user_id", artistId);
 
@@ -64,20 +65,61 @@ export async function getOverviewTabData(args: {
       savesQuery = savesQuery.gte("created_at", `${fromISO}T00:00:00.000Z`);
     }
 
-    const { count, error: savesErr } = await savesQuery;
+    const { data: saveRows, error: savesErr } = await savesQuery;
 
     if (savesErr) throw new Error(savesErr.message);
-    savesCount = count ?? 0;
+
+    ((saveRows || []) as { track_id: string | null }[]).forEach((row) => {
+      const tid = row.track_id ? String(row.track_id) : null;
+      if (!tid) return;
+      savesByTrack.set(tid, (savesByTrack.get(tid) ?? 0) + 1);
+    });
+
+    savesCount = Array.from(savesByTrack.values()).reduce((sum, value) => sum + value, 0);
   }
 
-  // Conversion (live) — saves per unique listeners in the active range
-  // Listeners source of truth: summary.unique_listeners_total (range truth)
-  const uniqueListenersInRange = Number(((summary as SummaryRow | null)?.unique_listeners_total) ?? 0);
+  const uniqByTrack = new Map<string, Set<string>>();
+
+  if (trackIds.length > 0) {
+    let listensQuery = supabaseAdmin
+      .from("valid_listen_events")
+      .select("track_id, user_id")
+      .in("track_id", trackIds);
+
+    if (days !== null) {
+      const from = new Date();
+      from.setDate(from.getDate() - (days - 1));
+      const fromISO = from.toISOString().slice(0, 10);
+      listensQuery = listensQuery.gte("created_at", `${fromISO}T00:00:00.000Z`);
+    }
+
+    const { data: listenRows, error: listenErr } = await listensQuery;
+
+    if (listenErr) throw new Error(listenErr.message);
+
+    ((listenRows || []) as ValidListenRow[]).forEach((row) => {
+      const tid = String(row.track_id);
+      const uid = row.user_id ? String(row.user_id) : null;
+      if (!uid) return;
+
+      const set = uniqByTrack.get(tid) ?? new Set<string>();
+      set.add(uid);
+      uniqByTrack.set(tid, set);
+    });
+  }
+
+  const totalListeners = trackIds.reduce(
+    (sum, id) => sum + (uniqByTrack.get(String(id))?.size ?? 0),
+    0
+  );
+
+  const totalSaves = trackIds.reduce(
+    (sum, id) => sum + (savesByTrack.get(String(id)) ?? 0),
+    0
+  );
 
   const conversionPct =
-    uniqueListenersInRange > 0
-      ? (Number(savesCount ?? 0) / uniqueListenersInRange) * 100
-      : Number.NaN;
+    totalListeners > 0 ? (totalSaves / totalListeners) * 100 : Number.NaN;
 
   return {
     summary,

@@ -8,6 +8,11 @@ function formatInt(v: number) {
   return new Intl.NumberFormat("en-US").format(v);
 }
 
+function formatPercentWhole(value: number) {
+  if (!Number.isFinite(value)) return "—";
+  return `${Math.round(value)}%`;
+}
+
 type Props = {
   activeRange: Range;
   topConvertingTracks: TopConvertingTrackRow[];
@@ -40,7 +45,7 @@ export default function ConversionTabPanel({
         <div className="min-w-0">
           <div className="flex items-end gap-4 border-b border-white/10 pb-4">
             <div>
-              <h3 className="text-xl font-semibold tracking-tight text-white">
+              <h3 className="text-[24px] font-semibold tracking-tight text-white">
                 Top save ratio tracks
               </h3>
             </div>
@@ -94,16 +99,12 @@ export default function ConversionTabPanel({
                       {formatInt(t.listeners)}
                     </div>
                     <div className="w-16 text-right text-sm tabular-nums text-[#00FFC6]">
-                      {Number.isFinite(t.conversion_pct)
-                        ? `${t.conversion_pct.toFixed(1)}%`
-                        : "—"}
+                      {formatPercentWhole(t.conversion_pct)}
                     </div>
                   </div>
 
                   <div className="text-sm tabular-nums text-[#00FFC6] xl:hidden">
-                    {Number.isFinite(t.conversion_pct)
-                      ? `${t.conversion_pct.toFixed(1)}%`
-                      : "—"}
+                    {formatPercentWhole(t.conversion_pct)}
                   </div>
                 </div>
               ))}
@@ -118,9 +119,7 @@ export default function ConversionTabPanel({
             </div>
             <div className="mt-4">
               <p className="text-6xl font-semibold tracking-[-0.04em] text-white tabular-nums leading-none">
-                {Number.isFinite(conversionPct)
-                  ? `${conversionPct.toFixed(1)}%`
-                  : "—"}
+                {formatPercentWhole(conversionPct)}
               </p>
               <p className="mt-3 text-lg font-medium tracking-tight text-white/55">
                 save ratio

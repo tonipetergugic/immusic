@@ -3,6 +3,10 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
+type TrackIdRow = { id: string | null };
+type MembershipTrackRow = { track_id: string | null };
+type UserIdRow = { user_id: string | null };
+
 export type AnalyticsRange = "7d" | "28d" | "all";
 
 export type StreamsOverTimePoint = {
@@ -48,7 +52,7 @@ export async function getArtistAnalyticsSummary(params: {
     rangeStart = "2000-01-01";
   }
 
-  // Get all track ids for this artist (needed because valid_listen_events has no artist_id)
+  // Get all track ids for this artist (owner tracks + collaboration memberships)
   const { data: artistTracks, error: artistTracksErr } = await supabase
     .from("tracks")
     .select("id")
@@ -56,8 +60,23 @@ export async function getArtistAnalyticsSummary(params: {
 
   if (artistTracksErr) throw artistTracksErr;
 
-  type TrackIdRow = { id: string | null };
-  const artistTrackIds = ((artistTracks || []) as TrackIdRow[]).map((t) => String(t.id));
+  const { data: membershipTracks, error: membershipTracksErr } = await supabase
+    .from("analytics_artist_track_memberships")
+    .select("track_id")
+    .eq("artist_id", params.artistId);
+
+  if (membershipTracksErr) throw membershipTracksErr;
+
+  const artistTrackIds = Array.from(
+    new Set([
+      ...((artistTracks || []) as TrackIdRow[])
+        .map((t) => String(t.id ?? ""))
+        .filter(Boolean),
+      ...((membershipTracks || []) as MembershipTrackRow[])
+        .map((t) => String(t.track_id ?? ""))
+        .filter(Boolean),
+    ])
+  );
 
   // Truth for unique listeners over the selected range: DISTINCT user_id from valid_listen_events
   let uniqueListenersTotal = 0;
@@ -73,7 +92,6 @@ export async function getArtistAnalyticsSummary(params: {
     if (uErr) throw uErr;
 
     const set = new Set<string>();
-    type UserIdRow = { user_id: string | null };
     ((uRows || []) as UserIdRow[]).forEach((r) => {
       if (r.user_id) set.add(String(r.user_id));
     });

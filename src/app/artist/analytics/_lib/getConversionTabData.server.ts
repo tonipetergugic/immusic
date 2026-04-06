@@ -1,10 +1,10 @@
 import "server-only";
 
-import { getArtistAnalyticsSummary, type AnalyticsRange } from "@/lib/analytics/getArtistAnalytics.server";
+import { getArtistAnalyticsSummary } from "@/lib/analytics/getArtistAnalytics.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Range, TopConvertingTrackRow } from "../types";
-import type { ValidListenRow, TrackTitleRow, SummaryRow } from "./analyticsRows";
+import type { ValidListenRow, TrackTitleRow } from "./analyticsRows";
 
 export type ConversionTabData = {
   topConvertingTracks: TopConvertingTrackRow[];
@@ -38,41 +38,13 @@ export async function getConversionTabData(args: {
   const supabaseAdmin = getSupabaseAdmin();
   const days = rangeToDays(range);
 
-  const summary = await getArtistAnalyticsSummary({
+  await getArtistAnalyticsSummary({
     artistId,
-    range: range as AnalyticsRange,
+    range,
   });
 
   let savesCount = 0;
-
-  if (trackIds.length > 0) {
-    let savesQuery = supabaseAdmin
-      .from("library_tracks")
-      .select("track_id", { count: "exact", head: true })
-      .in("track_id", trackIds)
-      .neq("user_id", artistId);
-
-    if (days !== null) {
-      const from = new Date();
-      from.setDate(from.getDate() - (days - 1));
-      const fromISO = from.toISOString().slice(0, 10);
-      savesQuery = savesQuery.gte("created_at", `${fromISO}T00:00:00.000Z`);
-    }
-
-    const { count, error: savesErr } = await savesQuery;
-
-    if (savesErr) throw new Error(savesErr.message);
-    savesCount = count ?? 0;
-  }
-
-  const uniqueListenersInRange = Number(
-    ((summary as SummaryRow | null)?.unique_listeners_total) ?? 0
-  );
-
-  const conversionPct =
-    uniqueListenersInRange > 0
-      ? (Number(savesCount ?? 0) / uniqueListenersInRange) * 100
-      : Number.NaN;
+  let conversionPct = Number.NaN;
 
   const toPublicCoverUrl = (p: string | null): string | null => {
     if (!p) return null;
@@ -248,6 +220,7 @@ export async function getConversionTabData(args: {
       if (!tid) return;
       savesByTrack.set(tid, (savesByTrack.get(tid) ?? 0) + 1);
     });
+    savesCount = Array.from(savesByTrack.values()).reduce((sum, value) => sum + value, 0);
 
     // Titles for eligible tracks
     const { data: titleRows2, error: titleErr2 } = await supabase
@@ -266,22 +239,36 @@ export async function getConversionTabData(args: {
       eligibleTrackIds.map((id) => String(id))
     );
 
-    const items = eligibleTrackIds
-      .map((id) => {
-        const tid = String(id);
-        const listeners = uniqByTrack.get(tid)?.size ?? 0;
-        const saves = savesByTrack.get(tid) ?? 0;
-        const conversion_pct = listeners > 0 ? (saves / listeners) * 100 : 0;
+    const itemsBase = eligibleTrackIds.map((id) => {
+      const tid = String(id);
+      const listeners = uniqByTrack.get(tid)?.size ?? 0;
+      const saves = savesByTrack.get(tid) ?? 0;
+      const conversion_pct = listeners > 0 ? (saves / listeners) * 100 : 0;
 
-        return {
-          track_id: tid,
-          title: titleByEligibleId.get(tid) || "Unknown track",
-          cover_url: toPublicCoverUrl(coverPathByEligibleTrackId.get(tid) ?? null),
-          listeners,
-          saves,
-          conversion_pct,
-        } satisfies TopConvertingTrackRow;
-      })
+      return {
+        track_id: tid,
+        title: titleByEligibleId.get(tid) || "Unknown track",
+        cover_url: toPublicCoverUrl(coverPathByEligibleTrackId.get(tid) ?? null),
+        listeners,
+        saves,
+        conversion_pct,
+      } satisfies TopConvertingTrackRow;
+    });
+
+    const totalListeners = eligibleTrackIds.reduce(
+      (sum, id) => sum + (uniqByTrack.get(String(id))?.size ?? 0),
+      0
+    );
+
+    const totalSaves = eligibleTrackIds.reduce(
+      (sum, id) => sum + (savesByTrack.get(String(id)) ?? 0),
+      0
+    );
+
+    conversionPct =
+      totalListeners > 0 ? (totalSaves / totalListeners) * 100 : Number.NaN;
+
+    const items = itemsBase
       .sort((a, b) => {
         if (b.conversion_pct !== a.conversion_pct) return b.conversion_pct - a.conversion_pct;
         if (b.listeners !== a.listeners) return b.listeners - a.listeners;

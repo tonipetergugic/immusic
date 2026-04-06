@@ -3,12 +3,20 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getTrackRatingBreakdownById } from "@/lib/analytics/getTrackRatingBreakdown.server";
+import { getArtistTrackIds } from "./getArtistTrackIds.server";
 import type { Range, TopTrackRow, TrackDetailsRow } from "../types";
-import type { AnalyticsTrackDailyRow, ValidListenRow, TrackTitleRow } from "./analyticsRows";
+import type { ValidListenRow, TrackTitleRow } from "./analyticsRows";
 
 export type TracksTabData = {
   topTracks: TopTrackRow[];
   trackDetailsById: Record<string, TrackDetailsRow>;
+};
+
+type DailyTrackMetricRow = {
+  track_id: string | null;
+  streams: number | string | null;
+  listeners: number | string | null;
+  listened_seconds: number | string | null;
 };
 
 function rangeToDays(r: Range): number | null {
@@ -64,23 +72,29 @@ export async function getTracksTabData(args: {
 
   // Top tracks (range-based, derived from analytics_track_daily)
   const days = rangeToDays(range);
+  const artistTrackIds = await getArtistTrackIds(artistId);
 
-  let topQuery = supabase
-    .from("analytics_track_daily")
-    .select("track_id, streams, listeners, listened_seconds")
-    .eq("artist_id", artistId);
+  let dailyRows: DailyTrackMetricRow[] = [];
 
-  if (days !== null) {
-    // inclusive window: last N days up to today
-    const from = new Date();
-    from.setDate(from.getDate() - (days - 1));
-    const fromISO = from.toISOString().slice(0, 10);
-    topQuery = topQuery.gte("day", fromISO);
+  if (artistTrackIds.length > 0) {
+    let topQuery = supabase
+      .from("analytics_track_daily")
+      .select("track_id, streams, listeners, listened_seconds")
+      .in("track_id", artistTrackIds);
+
+    if (days !== null) {
+      // inclusive window: last N days up to today
+      const from = new Date();
+      from.setDate(from.getDate() - (days - 1));
+      const fromISO = from.toISOString().slice(0, 10);
+      topQuery = topQuery.gte("day", fromISO);
+    }
+
+    const { data, error: dailyErr } = await topQuery;
+
+    if (dailyErr) throw new Error(dailyErr.message);
+    dailyRows = (data ?? []) as DailyTrackMetricRow[];
   }
-
-  const { data: dailyRows, error: dailyErr } = await topQuery;
-
-  if (dailyErr) throw new Error(dailyErr.message);
 
   // aggregate per track_id in JS (Supabase free plan friendly, no DB changes)
   type Agg = {
@@ -90,7 +104,7 @@ export async function getTracksTabData(args: {
 
   const aggByTrack = new Map<string, Agg>();
 
-  ((dailyRows || []) as unknown as AnalyticsTrackDailyRow[]).forEach((r) => {
+  dailyRows.forEach((r) => {
     const id = String(r.track_id);
     const streams = Number(r.streams ?? 0);
     const listened_seconds = Number(r.listened_seconds ?? 0);
