@@ -155,24 +155,27 @@ export default function TrackMetadataSection({
   }));
 
   return (
-    <section className="min-w-0 rounded-[28px] border border-white/10 bg-white/[0.03] p-6">
+    <section className="min-w-0 border-b border-white/10 pb-12">
       <div>
-        <div className="text-[1.125rem] font-semibold uppercase tracking-[0.12em] text-[#00FFC6]">
+        <div className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#B3B3B3]">
+          Metadata
+        </div>
+        <div className="mt-3 text-3xl font-semibold tracking-tight text-white">
           Track metadata
         </div>
-        <div className="mt-1 text-sm text-white/45">
+        <div className="mt-3 text-[15px] leading-7 text-[#B3B3B3]">
           Core information used for releases and discovery.
         </div>
       </div>
 
-      <div className="mt-7 space-y-6">
-        <div className="flex flex-col gap-2">
-          <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+      <div className="mt-10 space-y-8">
+        <div className="flex flex-col gap-3">
+          <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
             Title
           </label>
           <input
             type="text"
-            className="h-[52px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-base text-white outline-none transition cursor-pointer focus:border-[#00FFC6]/60 focus:ring-2 focus:ring-[#00FFC6]/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full border-0 border-b border-white/12 bg-transparent px-0 pb-4 pt-1 text-[30px] leading-tight text-white outline-none transition focus:border-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
             value={newTitle}
             disabled={isLocked}
             onChange={(e) => onTitleChange(e.target.value)}
@@ -181,9 +184,9 @@ export default function TrackMetadataSection({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+            <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
               BPM
             </label>
 
@@ -201,7 +204,7 @@ export default function TrackMetadataSection({
                 if (Number.isNaN(n)) return null;
                 if (n < 60 || n > 180) {
                   return (
-                    <div className="text-xs text-white/50">
+                    <div className="text-xs text-white/45">
                       Unusual BPM (typical range is 60–180).
                     </div>
                   );
@@ -211,7 +214,7 @@ export default function TrackMetadataSection({
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+            <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
               Key
             </label>
 
@@ -225,9 +228,9 @@ export default function TrackMetadataSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+            <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
               Version
             </label>
 
@@ -241,7 +244,7 @@ export default function TrackMetadataSection({
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+            <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
               Genre
             </label>
 
@@ -255,86 +258,90 @@ export default function TrackMetadataSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="flex flex-col gap-3 border-b border-white/10 pb-5">
+            <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
               Contains lyrics
             </label>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5">
-              <div className="flex min-h-[52px] items-center justify-between gap-4">
-                <div className="min-w-0 text-base text-white">
-                  Enable lyrics for this track.
+            <div className="flex min-h-[56px] items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-base text-white">Enable lyrics for this track.</div>
+                <div className="mt-1 text-sm text-[#B3B3B3]">
+                  Add song text for releases and discovery.
                 </div>
-
-                <input
-                  type="checkbox"
-                  checked={newHasLyrics}
-                  disabled={isLocked}
-                  onChange={(e) => onHasLyricsChange(e.target.checked)}
-                  className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
-                />
               </div>
+
+              <input
+                type="checkbox"
+                checked={newHasLyrics}
+                disabled={isLocked}
+                onChange={(e) => onHasLyricsChange(e.target.checked)}
+                className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
+              />
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+          <div className="flex flex-col gap-3 border-b border-white/10 pb-5">
+            <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
               Explicit content
             </label>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5">
-              <div className="flex min-h-[52px] items-center justify-between gap-4">
-                <div className="min-w-0 text-base text-white">
-                  Enable if the track is explicit.
+            <div className="flex min-h-[56px] items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-base text-white">Enable if the track is explicit.</div>
+                <div className="mt-1 text-sm text-[#B3B3B3]">
+                  Only available when lyrics are enabled.
                 </div>
-
-                <input
-                  type="checkbox"
-                  checked={newIsExplicit}
-                  disabled={isLocked || !newHasLyrics}
-                  onChange={(e) => onIsExplicitChange(e.target.checked)}
-                  className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
-                />
               </div>
+
+              <input
+                type="checkbox"
+                checked={newIsExplicit}
+                disabled={isLocked || !newHasLyrics}
+                onChange={(e) => onIsExplicitChange(e.target.checked)}
+                className="h-5 w-5 shrink-0 cursor-pointer accent-[#00FFC6] disabled:cursor-not-allowed disabled:opacity-50"
+              />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-xs uppercase tracking-[0.12em] text-white/60">
+        <div className="flex flex-col gap-3">
+          <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
             Lyrics
           </label>
 
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-            {newHasLyrics ? (
-              <>
-                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3.5">
-                  <div className="text-sm text-white/55">
-                    Song text for releases and discovery.
-                  </div>
+          <div className="pb-4">
+            <div className="flex min-h-[36px] items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="text-sm text-[#B3B3B3]">
+                Song text for releases and discovery.
+              </div>
 
-                  <button
-                    type="button"
-                    className="cursor-pointer text-sm font-semibold text-[#00FFC6] transition hover:text-[#00FFC6]/80 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={isLocked}
-                    onClick={onOpenLyricsModal}
-                  >
-                    {newLyrics.trim() ? "Expand editor" : "+ Add lyrics"}
-                  </button>
-                </div>
-
-                <textarea
-                  value={newLyrics}
+              {newHasLyrics ? (
+                <button
+                  type="button"
+                  className="inline-flex w-[120px] justify-end cursor-pointer text-sm font-semibold text-[#00FFC6] transition hover:text-[#00FFC6]/80 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isLocked}
-                  onChange={(e) => onLyricsChange(e.target.value)}
-                  placeholder="Paste or write your lyrics here..."
-                  className="min-h-[240px] w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-white outline-none placeholder:text-white/30 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </>
+                  onClick={onOpenLyricsModal}
+                >
+                  {newLyrics.trim() ? "Expand editor" : "+ Add lyrics"}
+                </button>
+              ) : (
+                <div className="w-[120px] shrink-0" />
+              )}
+            </div>
+
+            {newHasLyrics ? (
+              <textarea
+                value={newLyrics}
+                disabled={isLocked}
+                onChange={(e) => onLyricsChange(e.target.value)}
+                placeholder="Paste or write your lyrics here..."
+                className="min-h-[240px] w-full resize-none border-0 bg-transparent px-0 py-4 text-sm leading-7 text-white outline-none placeholder:text-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+              />
             ) : (
-              <div className="flex min-h-[292px] items-center justify-center px-6 text-center text-sm text-white/35">
-                {'Enable "Contains lyrics" to add song text.'}
+              <div className="pt-4 text-sm text-white/35">
+                Enable "Contains lyrics" to add song text.
               </div>
             )}
           </div>
