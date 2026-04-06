@@ -190,10 +190,11 @@ export default function PlaylistClient({
   async function handleTrackAdded(newPlayerTrack: PlaylistClientTrack) {
     if (!isOwner) return;
 
-    const [trackMetaResult, lifetimeResult, releaseTrackResult] = await Promise.all([
+  const [trackMetaResult, lifetimeResult, releaseTrackResult, ratingsResponse] =
+    await Promise.all([
       supabase
         .from("tracks")
-        .select("id, rating_avg, rating_count")
+        .select("id, version, rating_avg, rating_count")
         .eq("id", newPlayerTrack.id)
         .maybeSingle(),
       supabase
@@ -205,19 +206,24 @@ export default function PlaylistClient({
         .from("release_tracks")
         .select(
           `
+      id,
+      track_id,
+      release_id,
+      releases!inner(
         id,
-        track_id,
-        release_id,
-        releases!inner(
-          id,
-          status,
-          published_at,
-          created_at
-        )
-        `
+        status,
+        published_at,
+        created_at
+      )
+      `
         )
         .eq("track_id", newPlayerTrack.id)
         .eq("releases.status", "published"),
+      fetch(`/api/ratings?trackId=${encodeURIComponent(newPlayerTrack.id)}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      }),
     ]);
 
     if (trackMetaResult.error) {
@@ -235,8 +241,15 @@ export default function PlaylistClient({
       );
     }
 
+  if (!ratingsResponse.ok && ratingsResponse.status !== 401) {
+    console.error("Failed to load rating state for added track:", {
+      status: ratingsResponse.status,
+    });
+  }
+
     const trackMeta = (trackMetaResult.data ?? null) as {
       id: string;
+    version: string | null;
       rating_avg: number | null;
       rating_count: number | null;
     } | null;
@@ -265,6 +278,17 @@ export default function PlaylistClient({
           }[]
         | null;
     }>;
+
+  const ratingsJson = ratingsResponse.ok
+    ? ((await ratingsResponse.json()) as
+        | { ok: true; my_stars: number | null }
+        | { ok: false; error: string; code?: string })
+    : null;
+
+  const nextMyStars =
+    ratingsJson && "ok" in ratingsJson && ratingsJson.ok === true
+      ? ratingsJson.my_stars ?? null
+      : newPlayerTrack.my_stars ?? null;
 
     const bestReleaseTrack = releaseTrackRows.reduce(
       (best, row) => {
@@ -316,6 +340,7 @@ export default function PlaylistClient({
 
     const enriched: PlayerTrack = {
       ...newPlayerTrack,
+    version: trackMeta?.version ?? newPlayerTrack.version ?? null,
       release_id: newPlayerTrack.release_id ?? bestReleaseTrack?.release_id ?? null,
       release_track_id:
         newPlayerTrack.release_track_id ?? bestReleaseTrack?.release_track_id ?? null,
@@ -327,6 +352,7 @@ export default function PlaylistClient({
         typeof trackMeta?.rating_count === "number"
           ? trackMeta.rating_count
           : newPlayerTrack.rating_count ?? 0,
+    my_stars: nextMyStars,
       ...(typeof lifetimeRow?.streams_lifetime === "number"
         ? { stream_count: lifetimeRow.streams_lifetime }
         : { stream_count: fallbackStreamCount }),

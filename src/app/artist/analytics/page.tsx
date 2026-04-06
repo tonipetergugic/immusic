@@ -76,10 +76,7 @@ export default async function ArtistAnalyticsPage({
           trackDetailsById: {},
         };
 
-  const audienceData =
-    initialTab === "Audience"
-      ? await getAudienceTabData({ artistId })
-      : { countryListeners30d: [] };
+  const audienceData = await getAudienceTabData({ artistId });
 
   const trackIds =
     initialTab === "Conversion"
