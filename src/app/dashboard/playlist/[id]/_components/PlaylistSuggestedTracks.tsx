@@ -8,6 +8,10 @@ import {
   fetchPerformanceDiscovery,
   type PerformanceDiscoveryItem,
 } from "@/lib/discovery/fetchPerformanceDiscovery.client";
+import {
+  fetchDevelopmentDiscovery,
+  type DevelopmentDiscoveryItem,
+} from "@/lib/discovery/fetchDevelopmentDiscovery.client";
 import TrackRowBase from "@/components/TrackRowBase";
 import AddToPlaylistModal from "@/components/AddToPlaylistModal";
 import type { PlayerTrack } from "@/types/playerTrack";
@@ -20,6 +24,8 @@ type Props = {
   isOwner: boolean;
   onTrackAdded: (track: PlayerTrack) => void;
 };
+
+type DiscoveryMode = "performance" | "development";
 
 type TrackMetaRow = {
   id: string;
@@ -53,6 +59,7 @@ type SuggestedTrack = {
   rating_avg: number | null;
   rating_count: number;
   streams_30d: number;
+  status: DiscoveryMode;
 };
 
 function buildSuggestedPlayerTrack(item: SuggestedTrack): PlayerTrack {
@@ -61,7 +68,7 @@ function buildSuggestedPlayerTrack(item: SuggestedTrack): PlayerTrack {
     title: item.title,
     version: item.version ?? null,
     artist_id: item.artist_id,
-    status: "performance",
+    status: item.status,
     is_explicit: item.is_explicit,
     cover_url: item.cover_url ?? null,
     audio_url: "",
@@ -85,6 +92,7 @@ export default function PlaylistSuggestedTracks({
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { isTrackPlaybackBlocked } = usePlayer();
 
+  const [mode, setMode] = useState<DiscoveryMode>("performance");
   const [items, setItems] = useState<SuggestedTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -99,17 +107,32 @@ export default function PlaylistSuggestedTracks({
         setIsLoading(true);
         setErrorMessage(null);
 
-        const performanceItems = await fetchPerformanceDiscovery(12);
-        if (cancelled) return;
-
         const excluded = new Set(existingTrackIds);
 
-        const baseItems = (performanceItems ?? []).filter(
-          (item: PerformanceDiscoveryItem) =>
-            !!item?.track_id &&
-            !!item?.artist_id &&
-            !excluded.has(item.track_id)
-        );
+        const performanceItems =
+          mode === "performance" ? await fetchPerformanceDiscovery(12) : [];
+
+        const developmentResponse =
+          mode === "development"
+            ? await fetchDevelopmentDiscovery({ limit: 12 })
+            : null;
+
+        if (cancelled) return;
+
+        const baseItems =
+          mode === "performance"
+            ? (performanceItems ?? []).filter(
+                (item: PerformanceDiscoveryItem) =>
+                  !!item?.track_id &&
+                  !!item?.artist_id &&
+                  !excluded.has(item.track_id)
+              )
+            : (developmentResponse?.items ?? []).filter(
+                (item: DevelopmentDiscoveryItem) =>
+                  !!item?.track_id &&
+                  !!item?.artist_id &&
+                  !excluded.has(item.track_id)
+              );
 
         const trackIds = Array.from(
           new Set(baseItems.map((item) => item.track_id).filter(Boolean))
@@ -155,7 +178,7 @@ export default function PlaylistSuggestedTracks({
             {
               genre: row.genre ?? null,
               version: row.version ?? null,
-            is_explicit: row.is_explicit ?? null,
+              is_explicit: row.is_explicit ?? null,
             },
           ])
         );
@@ -171,33 +194,66 @@ export default function PlaylistSuggestedTracks({
           ])
         );
 
-        const nextItems: SuggestedTrack[] = baseItems
-          .map((item) => ({
-            id: item.track_id,
-            title: item.track_title?.trim() || "Untitled track",
-            artist_id: item.artist_id,
-            artist_name: artistMap.get(item.artist_id) ?? "Unknown artist",
-            cover_url: item.release_cover_path
-              ? supabase.storage
-                  .from("release_covers")
-                  .getPublicUrl(item.release_cover_path).data.publicUrl ?? null
-              : null,
-            version: trackMetaMap.get(item.track_id)?.version ?? null,
-            is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
-            genre: trackMetaMap.get(item.track_id)?.genre ?? null,
-            release_id: item.release_id ?? null,
-            release_track_id:
-              item.release_id
-                ? releaseTrackMap.get(`${item.track_id}:${item.release_id}`) ?? null
-                : null,
-            rating_avg:
-              item.rating_avg !== null && item.rating_avg !== undefined
-                ? Number(item.rating_avg)
-                : null,
-            rating_count: Number(item.rating_count ?? 0),
-            streams_30d: Number(item.streams_30d ?? 0),
-          }))
-          .slice(0, 5);
+        const nextItems: SuggestedTrack[] =
+          mode === "performance"
+            ? (baseItems as PerformanceDiscoveryItem[])
+                .map((item) => ({
+                  id: item.track_id,
+                  title: item.track_title?.trim() || "Untitled track",
+                  artist_id: item.artist_id,
+                  artist_name: artistMap.get(item.artist_id) ?? "Unknown artist",
+                  cover_url: item.release_cover_path
+                    ? supabase.storage
+                        .from("release_covers")
+                        .getPublicUrl(item.release_cover_path).data.publicUrl ?? null
+                    : null,
+                  version: trackMetaMap.get(item.track_id)?.version ?? null,
+                  is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
+                  genre: trackMetaMap.get(item.track_id)?.genre ?? null,
+                  release_id: item.release_id ?? null,
+                  release_track_id:
+                    item.release_id
+                      ? releaseTrackMap.get(`${item.track_id}:${item.release_id}`) ?? null
+                      : null,
+                  rating_avg:
+                    item.rating_avg !== null && item.rating_avg !== undefined
+                      ? Number(item.rating_avg)
+                      : null,
+                  rating_count: Number(item.rating_count ?? 0),
+                  streams_30d: Number(item.streams_30d ?? 0),
+                  status: "performance" as const,
+                }))
+                .slice(0, 5)
+            : (baseItems as DevelopmentDiscoveryItem[])
+                .map((item) => ({
+                  id: item.track_id,
+                  title: item.title?.trim() || "Untitled track",
+                  artist_id: item.artist_id,
+                  artist_name:
+                    artistMap.get(item.artist_id) ?? item.artist_name ?? "Unknown artist",
+                  cover_url: item.cover_path
+                    ? supabase.storage
+                        .from("release_covers")
+                        .getPublicUrl(item.cover_path).data.publicUrl ?? null
+                    : null,
+                  version: trackMetaMap.get(item.track_id)?.version ?? null,
+                  is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
+                  genre: trackMetaMap.get(item.track_id)?.genre ?? null,
+                  release_id: item.release_id ?? null,
+                  release_track_id:
+                    item.release_track_id ??
+                    (item.release_id
+                      ? releaseTrackMap.get(`${item.track_id}:${item.release_id}`) ?? null
+                      : null),
+                  rating_avg:
+                    item.rating_avg !== null && item.rating_avg !== undefined
+                      ? Number(item.rating_avg)
+                      : null,
+                  rating_count: Number(item.rating_count ?? 0),
+                  streams_30d: Number(item.stream_count ?? 0),
+                  status: "development" as const,
+                }))
+                .slice(0, 5);
 
         setItems(nextItems);
       } catch (error) {
@@ -218,7 +274,7 @@ export default function PlaylistSuggestedTracks({
     return () => {
       cancelled = true;
     };
-  }, [playlistId, supabase]);
+  }, [playlistId, existingTrackIds, mode, supabase]);
 
   const visibleItems = useMemo(() => {
     const excluded = new Set(existingTrackIds);
@@ -267,7 +323,7 @@ export default function PlaylistSuggestedTracks({
         ...playerTrack,
         genre: playerTrack.genre ?? item.genre ?? null,
         version: playerTrack.version ?? item.version ?? null,
-        status: playerTrack.status ?? "performance",
+        status: playerTrack.status ?? item.status,
       };
 
       onTrackAdded(mergedPlayerTrack);
@@ -331,6 +387,38 @@ export default function PlaylistSuggestedTracks({
         <p className="mt-1 text-sm text-white/50">
           Add strong discovery tracks directly to this playlist.
         </p>
+      </div>
+
+      <div className="mb-4">
+        <div className="inline-flex rounded-full border border-[#00FFC622] bg-black/25 p-1 backdrop-blur shadow-[0_0_22px_rgba(0,255,198,0.10)]">
+          <button
+            type="button"
+            onClick={() => setMode("development")}
+            aria-pressed={mode === "development"}
+            className={[
+              "min-w-[140px] cursor-pointer rounded-full border px-5 py-3 text-base font-semibold transition-all duration-200",
+              mode === "development"
+                ? "border-[#00FFC655] bg-[#0B1614] text-white/90 shadow-[0_0_18px_rgba(0,255,198,0.18)]"
+                : "border-transparent bg-transparent text-white/70 hover:text-white/90",
+            ].join(" ")}
+          >
+            Development
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMode("performance")}
+            aria-pressed={mode === "performance"}
+            className={[
+              "min-w-[140px] cursor-pointer rounded-full border px-5 py-3 text-base font-semibold transition-all duration-200",
+              mode === "performance"
+                ? "border-[#00FFC655] bg-[#0B1614] text-white/90 shadow-[0_0_18px_rgba(0,255,198,0.18)]"
+                : "border-transparent bg-transparent text-white/70 hover:text-white/90",
+            ].join(" ")}
+          >
+            Performance
+          </button>
+        </div>
       </div>
 
       {errorMessage ? (
