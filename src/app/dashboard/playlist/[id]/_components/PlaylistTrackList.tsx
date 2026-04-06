@@ -133,7 +133,6 @@ export default function PlaylistTrackList({
                 track={track}
                 tracks={tracks}
                 user={user}
-                showAddToPlaylist={false}
               />
             ))}
           </div>
