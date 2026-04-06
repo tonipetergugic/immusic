@@ -5,6 +5,7 @@ import Link from "next/link";
 import PlayOverlayButton from "@/components/PlayOverlayButton";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import { usePlayer } from "@/context/PlayerContext";
 
 type Props = {
   track: PlayerTrack;
@@ -14,6 +15,8 @@ type Props = {
 
 export default function TrackCard({ track, index, tracks }: Props) {
   // play handled by PlayOverlayButton (standardized)
+  const { isTrackPlaybackBlocked } = usePlayer();
+  const isBlocked = isTrackPlaybackBlocked(track);
 
   const releaseId = (track as any)?.release_id ?? null;
   const href = releaseId ? `/dashboard/release/${releaseId}` : "#";
@@ -21,18 +24,25 @@ export default function TrackCard({ track, index, tracks }: Props) {
   return (
     <Link
       href={href}
-      className="
+      aria-disabled={isBlocked}
+      tabIndex={isBlocked ? -1 : undefined}
+      onClick={(e) => {
+        if (!isBlocked) return;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className={`
         group relative 
         bg-[#111112] 
         p-3 rounded-xl 
         transition-all
-        hover:scale-[1.02]
-        hover:shadow-[0_0_12px_rgba(0,255,198,0.15)]
-        border border-transparent
-        hover:border-[#00FFC622]
-        cursor-pointer
-        block
-      "
+        border block
+        ${
+          isBlocked
+            ? "border-white/10 opacity-60"
+            : "border-transparent hover:scale-[1.02] hover:shadow-[0_0_12px_rgba(0,255,198,0.15)] hover:border-[#00FFC622] cursor-pointer"
+        }
+      `}
     >
       <div className="relative">
         <div className="block">
@@ -42,12 +52,15 @@ export default function TrackCard({ track, index, tracks }: Props) {
               alt={track.title}
               width={300}
               height={300}
-              className="
+              className={`
                 rounded-xl object-cover w-full h-auto
                 transition-all duration-300
-                group-hover:brightness-110
-                group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]
-              "
+                ${
+                  isBlocked
+                    ? "grayscale"
+                    : "group-hover:brightness-110 group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]"
+                }
+              `}
             />
           ) : (
             <div className="w-full aspect-square bg-neutral-800 rounded-xl" />
@@ -62,10 +75,10 @@ export default function TrackCard({ track, index, tracks }: Props) {
         />
       </div>
 
-      <h3 className="mt-3 text-sm font-semibold text-white/90 truncate">
+      <h3 className={`mt-3 text-sm font-semibold truncate ${isBlocked ? "text-white/45" : "text-white/90"}`}>
         {formatTrackTitle(track.title, (track as any).version)}
       </h3>
-      <p className="text-xs text-white/50 truncate">
+      <p className={`text-xs truncate ${isBlocked ? "text-white/35" : "text-white/50"}`}>
         {track.profiles?.display_name ?? "Unknown Artist"}
       </p>
     </Link>

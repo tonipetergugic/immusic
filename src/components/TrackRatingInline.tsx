@@ -311,11 +311,9 @@ function TrackRatingInline({
                   e.preventDefault();
                   e.stopPropagation();
                 }}
-                onMouseEnter={() => setHover(n)}
-                onMouseLeave={() => setHover(null)}
                 className={[
                   "transition-colors cursor-default",
-                  effectiveStars >= n ? "text-[#00FFC6]" : "text-white/35",
+                  displayStars >= n ? "text-[#00FFC6]" : "text-white/35",
                 ].join(" ")}
                 aria-label={`Rating ${n} star`}
                 title={`Rating ${n} star`}
@@ -362,7 +360,7 @@ function TrackRatingInline({
       ) : (
         <div className="flex gap-0.5">
           {[1, 2, 3, 4, 5].map((n) => {
-            const disabled = submitting || awaitingInitialUserState;
+            const disabled = submitting;
             return (
               <button
                 key={n}

@@ -172,22 +172,6 @@ export default async function PlaylistPage(
     data: { user },
   } = await supabase.auth.getUser();
 
-  let hideExplicitTracks = false;
-
-  if (user?.id) {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("hide_explicit_tracks")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error("Failed to load explicit preference for playlist page", profileError);
-    } else {
-      hideExplicitTracks = !!profile?.hide_explicit_tracks;
-    }
-  }
-
   const canSavePlaylist = !!user?.id;
 
   let initialSaved = false;
@@ -307,12 +291,6 @@ export default async function PlaylistPage(
   const explicitByTrackId = new Map<string, boolean>(
     explicitTrackRows.map((row) => [String(row.id), !!row.is_explicit])
   );
-
-  if (hideExplicitTracks && visiblePlaylistTracks.length > 0) {
-    visiblePlaylistTracks = visiblePlaylistTracks.filter(
-      (row) => !explicitByTrackId.get(String(row.track_id))
-    );
-  }
 
   const visibleTrackIds = Array.from(
     new Set(

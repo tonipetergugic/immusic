@@ -12,6 +12,7 @@ import TrackRowBase from "@/components/TrackRowBase";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import { GripVertical } from "lucide-react";
 import ExplicitBadge from "@/components/ExplicitBadge";
+import { usePlayer } from "@/context/PlayerContext";
 
 type PlaylistRowArtist = {
   id: string;
@@ -45,8 +46,10 @@ function PlaylistRow({
   };
 }) {
   const router = useRouter();
+  const { isTrackPlaybackBlocked } = usePlayer();
 
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
+  const isBlocked = isTrackPlaybackBlocked(track);
 
   function goToTrack(e: React.MouseEvent) {
     e.preventDefault();
@@ -104,15 +107,25 @@ function PlaylistRow({
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
+              aria-disabled={isBlocked}
+              tabIndex={isBlocked ? -1 : undefined}
               onPointerDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              onClick={goToTrack}
-              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate cursor-pointer transition-colors focus:outline-none ${
-                track.status === "performance"
-                  ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                  : "text-white hover:text-[#00FFC6]"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isBlocked) return;
+                const releaseId = track.release_id ?? null;
+                if (releaseId) router.push(`/dashboard/release/${releaseId}`);
+              }}
+              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
+                isBlocked
+                  ? "text-white/45 cursor-default"
+                  : track.status === "performance"
+                  ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                  : "text-white hover:text-[#00FFC6] cursor-pointer"
               }`}
               title={formatTrackTitle(track.title, track.version)}
             >
@@ -124,22 +137,33 @@ function PlaylistRow({
         }
         subtitleSlot={
           Array.isArray(track.artists) && track.artists.length > 0 ? (
-            <div className="mt-1 text-left text-xs text-white/60 truncate">
+            <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
               {track.artists.map((artist, idx) => (
                 <span key={artist.id}>
                   <button
                     type="button"
+                    aria-disabled={isBlocked}
+                    tabIndex={isBlocked ? -1 : undefined}
                     onPointerDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    onClick={(e) => goToArtistId(String(artist.id), e)}
-                    className="
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (isBlocked) return;
+                      router.push(`/dashboard/artist/${artist.id}`);
+                    }}
+                    className={
+                      isBlocked
+                        ? "transition-colors focus:outline-none cursor-default text-white/35"
+                        : `
                       cursor-pointer
                       hover:text-[#00FFC6] hover:underline underline-offset-2
                       transition-colors
                       focus:outline-none
-                    "
+                    `
+                    }
                     title={String(artist.display_name)}
                   >
                     {String(artist.display_name)}
@@ -151,23 +175,29 @@ function PlaylistRow({
           ) : track.profiles?.display_name ? (
             <button
               type="button"
+              aria-disabled={isBlocked}
+              tabIndex={isBlocked ? -1 : undefined}
               onPointerDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              onClick={goToArtist}
-              className="
-            mt-1 text-left text-xs text-white/60 truncate cursor-pointer
-            hover:text-[#00FFC6] hover:underline underline-offset-2
-            transition-colors
-            focus:outline-none
-          "
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isBlocked) return;
+                router.push(`/dashboard/artist/${track.artist_id}`);
+              }}
+              className={`mt-1 text-left text-xs truncate transition-colors focus:outline-none ${
+                isBlocked
+                  ? "text-white/35 cursor-default"
+                  : "text-white/60 cursor-pointer hover:text-[#00FFC6] hover:underline underline-offset-2"
+              }`}
               title={track.profiles.display_name}
             >
               {track.profiles.display_name}
             </button>
           ) : (
-            <div className="mt-1 text-xs text-white/40 truncate">Unknown artist</div>
+            <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>Unknown artist</div>
           )
         }
         metaSlot={
@@ -179,6 +209,7 @@ function PlaylistRow({
               initialCount={track.rating_count ?? 0}
               initialStreams={track.stream_count ?? 0}
               initialMyStars={track.my_stars ?? null}
+              readOnly={isBlocked}
               showStreamsOnDesktopOnly={true}
             />
           ) : (

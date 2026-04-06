@@ -44,21 +44,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const { data: viewerProfile, error: viewerProfileErr } = await supabase
-    .from("profiles")
-    .select("hide_explicit_tracks")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (viewerProfileErr) {
-    return NextResponse.json(
-      { ok: false, error: "db_error", details: viewerProfileErr.message },
-      { status: 500 }
-    );
-  }
-
-  const hideExplicitTracks = !!viewerProfile?.hide_explicit_tracks;
-
   const { data: candidates, error: candErr } = await supabase
     .from("development_discovery_candidates")
     .select(
@@ -166,9 +151,7 @@ export async function GET(req: Request) {
   const releaseById = new Map<string, any>((releases ?? []).map((r: any) => [r.id, r]));
   const profileById = new Map<string, any>((profiles ?? []).map((p: any) => [p.id, p]));
 
-  const visibleRows = hideExplicitTracks
-    ? rows.filter((row) => !trackById.get(row.track_id)?.is_explicit)
-    : rows;
+  const visibleRows = rows;
 
   // My stars (optional) – keyed by track_id
   const myStarsByTrackId = new Map<string, number>();

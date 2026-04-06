@@ -10,68 +10,15 @@ export type HomeReleaseCard = {
   release_type: string | null;
 };
 
-async function getHideExplicitTracksPreference(supabase: any) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) return false;
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("hide_explicit_tracks")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileError) return false;
-
-  return !!profile?.hide_explicit_tracks;
-}
-
-async function filterBlockedReleaseIds(
-  supabase: any,
-  releaseIds: string[],
-  hideExplicitTracks: boolean,
-) {
-  if (!hideExplicitTracks || releaseIds.length === 0) return releaseIds;
-
-  const { data, error } = await supabase
-    .from("release_tracks")
-    .select("release_id, tracks!inner(is_explicit)")
-    .in("release_id", releaseIds)
-    .eq("tracks.is_explicit", true);
-
-  if (error || !data) return releaseIds;
-
-  const blockedReleaseIds = new Set(
-    (data as any[])
-      .map((row) => row.release_id)
-      .filter(Boolean),
-  );
-
-  return releaseIds.filter((releaseId) => !blockedReleaseIds.has(releaseId));
-}
-
 export async function getHomeReleases(releaseIds: string[]) {
   if (releaseIds.length === 0) return {} as Record<string, HomeReleaseCard>;
 
   const supabase = await createSupabaseServerClient();
-  const hideExplicitTracks = await getHideExplicitTracksPreference(supabase);
-  const visibleReleaseIds = await filterBlockedReleaseIds(
-    supabase,
-    releaseIds,
-    hideExplicitTracks,
-  );
-
-  if (visibleReleaseIds.length === 0) {
-    return {} as Record<string, HomeReleaseCard>;
-  }
 
   const { data, error } = await supabase
     .from("releases")
     .select("id,title,cover_path,artist_id,release_type,profiles:artist_id(display_name)")
-    .in("id", visibleReleaseIds);
+    .in("id", releaseIds);
 
   if (error || !data) return {} as Record<string, HomeReleaseCard>;
 
@@ -110,8 +57,7 @@ export async function getLatestHomeReleaseIds(args: {
   if (limit <= 0) return [] as string[];
 
   const supabase = await createSupabaseServerClient();
-  const hideExplicitTracks = await getHideExplicitTracksPreference(supabase);
-  const fetchLimit = hideExplicitTracks ? Math.min(limit * 3, 150) : limit;
+  const fetchLimit = limit;
 
   // Helper to apply exclusion in a PostgREST-friendly way
   const applyExclude = (q: any) => {
@@ -138,12 +84,7 @@ export async function getLatestHomeReleaseIds(args: {
 
     if (!error && data) {
       const candidateIds = (data as any[]).map((r) => r.id).filter(Boolean);
-      const visibleIds = await filterBlockedReleaseIds(
-        supabase,
-        candidateIds,
-        hideExplicitTracks,
-      );
-      return visibleIds.slice(0, limit);
+      return candidateIds.slice(0, limit);
     }
   }
 
@@ -154,11 +95,6 @@ export async function getLatestHomeReleaseIds(args: {
 
   if (fallbackErr || !fallback) return [] as string[];
   const fallbackIds = (fallback as any[]).map((r) => r.id).filter(Boolean);
-  const visibleFallbackIds = await filterBlockedReleaseIds(
-    supabase,
-    fallbackIds,
-    hideExplicitTracks,
-  );
-  return visibleFallbackIds.slice(0, limit);
+  return fallbackIds.slice(0, limit);
 }
 

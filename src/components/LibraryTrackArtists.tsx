@@ -12,6 +12,7 @@ export default function LibraryTrackArtists(props: {
   fallbackDisplayName?: string | null;
   disableLinks?: boolean;
   currentArtistId?: string | null;
+  isBlocked?: boolean;
 }) {
   const router = useRouter();
 
@@ -27,6 +28,7 @@ export default function LibraryTrackArtists(props: {
 
   const artistsArr: Artist[] = Array.isArray(props.artists) ? props.artists : [];
   const disableLinks = props.disableLinks === true;
+  const isBlocked = props.isBlocked === true;
   const currentArtistId = props.currentArtistId
     ? String(props.currentArtistId)
     : null;
@@ -39,7 +41,7 @@ export default function LibraryTrackArtists(props: {
 
   if (artistsArr.length > 0) {
     return (
-      <div className="mt-1 text-left text-xs text-white/60 truncate">
+      <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
         {artistsArr.map((a, idx) => {
           const artistId = String(a.id ?? "");
           const artistName = String(a.display_name ?? "");
@@ -57,12 +59,16 @@ export default function LibraryTrackArtists(props: {
                     e.stopPropagation();
                   }}
                   onClick={(e) => goToArtistId(artistId, e)}
-                  className="
+                  className={
+                    isBlocked
+                      ? "transition-colors focus:outline-none cursor-default text-white/35"
+                      : `
                     cursor-pointer
                     hover:text-[#00FFC6] hover:underline underline-offset-2
                     transition-colors
                     focus:outline-none
-                  "
+                  `
+                  }
                   title={artistName}
                 >
                   {artistName}
@@ -84,7 +90,7 @@ export default function LibraryTrackArtists(props: {
     if (linkDisabled) {
       return (
         <div
-          className="mt-1 text-left text-xs text-white/60 truncate"
+          className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}
           title={fallbackDisplayName}
         >
           {fallbackDisplayName}
@@ -100,13 +106,11 @@ export default function LibraryTrackArtists(props: {
           e.stopPropagation();
         }}
         onClick={(e) => goToArtistId(fallbackArtistId, e)}
-        className="
-          mt-1 text-left text-xs text-white/60 truncate
-          cursor-pointer
-          hover:text-[#00FFC6] hover:underline underline-offset-2
-          transition-colors
-          focus:outline-none
-        "
+        className={`mt-1 text-left text-xs truncate transition-colors focus:outline-none ${
+          isBlocked
+            ? "text-white/35 cursor-default"
+            : "text-white/60 cursor-pointer hover:text-[#00FFC6] hover:underline underline-offset-2"
+        }`}
         title={fallbackDisplayName}
       >
         {fallbackDisplayName}
@@ -114,5 +118,5 @@ export default function LibraryTrackArtists(props: {
     );
   }
 
-  return <div className="mt-1 text-xs text-white/40 truncate">Unknown artist</div>;
+  return <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>Unknown artist</div>;
 }

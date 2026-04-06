@@ -8,6 +8,7 @@ import type { PlayerTrack } from "@/types/playerTrack";
 import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
 import ExplicitBadge from "@/components/ExplicitBadge";
 import AppSelect from "@/components/AppSelect";
+import { usePlayer } from "@/context/PlayerContext";
 
 type PerformanceItemLike = unknown;
 
@@ -51,6 +52,7 @@ export default function PerformanceDiscoverySection({
   perfTrackMetaMap,
   routerPush,
 }: Props) {
+  const { isTrackPlaybackBlocked } = usePlayer();
   const performanceGenreItems = [
     { value: "all", label: "All genres" },
     ...performanceGenreOptions.map((g) => ({
@@ -125,6 +127,7 @@ export default function PerformanceDiscoverySection({
               const artistName = rowTrack.profiles?.display_name ?? "Unknown Artist";
               const coverUrl = rowTrack.cover_url ?? null;
               const artists = rowTrack.artists ?? [];
+              const isBlocked = isTrackPlaybackBlocked(rowTrack);
 
               return (
                 <TrackRowBase
@@ -139,18 +142,23 @@ export default function PerformanceDiscoverySection({
                     <div className="flex items-center gap-2 min-w-0">
                       <button
                         type="button"
+                        aria-disabled={isBlocked}
+                        tabIndex={isBlocked ? -1 : undefined}
                         onPointerDown={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isBlocked) return;
                           if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                         }}
-                        className="
-                          min-w-0 flex-1 text-left text-[13px] font-semibold text-[#00FFC6] truncate
-                          hover:text-[#00E0B0] transition-colors cursor-pointer
-                          focus:outline-none
-                        "
+                        className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
+                          isBlocked
+                            ? "text-white/45 cursor-default"
+                            : "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                        }`}
                         title={formatTrackTitle(rowTrack.title, rowTrack.version)}
                       >
                         {formatTrackTitle(rowTrack.title, rowTrack.version)}
@@ -161,21 +169,32 @@ export default function PerformanceDiscoverySection({
                   }
                   subtitleSlot={
                     artists.length > 0 ? (
-                      <div className="mt-1 text-left text-xs text-white/60 truncate">
+                      <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
                         {artists.map((artistItem, idx2) => (
                           <span key={artistItem.id}>
                             <button
                               type="button"
+                              aria-disabled={isBlocked}
+                              tabIndex={isBlocked ? -1 : undefined}
                               onPointerDown={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                               }}
-                              onClick={() => routerPush(`/dashboard/artist/${artistItem.id}`)}
-                              className="
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (isBlocked) return;
+                                routerPush(`/dashboard/artist/${artistItem.id}`);
+                              }}
+                              className={
+                                isBlocked
+                                  ? "transition-colors cursor-default focus:outline-none text-white/35"
+                                  : `
                                 hover:text-[#00FFC6] hover:underline underline-offset-2
                                 transition-colors cursor-pointer
                                 focus:outline-none
-                              "
+                              `
+                              }
                               title={artistItem.display_name}
                             >
                               {artistItem.display_name}
@@ -187,23 +206,29 @@ export default function PerformanceDiscoverySection({
                     ) : rowTrack.artist_id ? (
                       <button
                         type="button"
+                        aria-disabled={isBlocked}
+                        tabIndex={isBlocked ? -1 : undefined}
                         onPointerDown={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        onClick={() => routerPush(`/dashboard/artist/${rowTrack.artist_id}`)}
-                        className="
-                          mt-1 text-left text-xs text-white/60 truncate
-                          hover:text-[#00FFC6] hover:underline underline-offset-2
-                          transition-colors cursor-pointer
-                          focus:outline-none
-                        "
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isBlocked) return;
+                          routerPush(`/dashboard/artist/${rowTrack.artist_id}`);
+                        }}
+                        className={`mt-1 text-left text-xs truncate transition-colors focus:outline-none ${
+                          isBlocked
+                            ? "text-white/35 cursor-default"
+                            : "text-white/60 hover:text-[#00FFC6] hover:underline underline-offset-2 cursor-pointer"
+                        }`}
                         title={artistName}
                       >
                         {artistName}
                       </button>
                     ) : (
-                      <div className="mt-1 text-xs text-white/40 truncate">
+                      <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>
                         Unknown artist
                       </div>
                     )

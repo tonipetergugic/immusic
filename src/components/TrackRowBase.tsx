@@ -82,8 +82,9 @@ export default function TrackRowBase({
   const overlaySize = coverSize === "sm" ? "sm" : "sm"; // rows: keep overlay compact
 
   const showDesktopCols = Boolean(bpmSlot || keySlot || genreSlot);
-  const { currentTrack, isPlaying } = usePlayer();
+  const { currentTrack, isPlaying, isTrackPlaybackBlocked } = usePlayer();
   const isCurrent = currentTrack?.id === track.id;
+  const isBlocked = isTrackPlaybackBlocked(track);
 
   return (
     <div
@@ -98,7 +99,7 @@ export default function TrackRowBase({
         "px-3 sm:px-4",
         "py-2",
         "rounded-none",
-        "bg-transparent hover:bg-white/5",
+        isBlocked ? "bg-transparent opacity-60" : "bg-transparent hover:bg-white/5",
         "border-b border-white/10 last:border-b-0",
         "transition-colors",
         className ?? "",
@@ -112,7 +113,9 @@ export default function TrackRowBase({
       {/* Cover + overlay play */}
       <div
         className={[
-          "w-16 h-16 rounded-md overflow-hidden relative group bg-neutral-700 justify-self-start",
+          isBlocked
+            ? "w-16 h-16 rounded-md overflow-hidden relative group bg-neutral-700 justify-self-start grayscale"
+            : "w-16 h-16 rounded-md overflow-hidden relative group bg-neutral-700 justify-self-start",
           coverBox,
         ].join(" ")}
       >
@@ -136,6 +139,7 @@ export default function TrackRowBase({
             tracks={getQueue ? undefined : tracks}
             index={getQueue ? undefined : index}
             getQueue={getQueue}
+            disableIfTrackBlocked={true}
           />
         )}
       </div>
@@ -170,10 +174,19 @@ export default function TrackRowBase({
                 {to ? (
                   <Link
                     href={to}
-                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block cursor-pointer ${
-                      isCurrent || track.status === "performance"
-                        ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                        : "text-white hover:text-[#00FFC6]"
+                    aria-disabled={isBlocked}
+                    tabIndex={isBlocked ? -1 : undefined}
+                    onClick={(e) => {
+                      if (!isBlocked) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${
+                      isBlocked
+                        ? "text-white/45 cursor-default"
+                        : isCurrent || track.status === "performance"
+                        ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                        : "text-white hover:text-[#00FFC6] cursor-pointer"
                     }`}
                   >
                     {formatTrackTitle(track.title, track.version ?? null)}
@@ -181,7 +194,9 @@ export default function TrackRowBase({
                 ) : (
                   <span
                     className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
-                      isCurrent || track.status === "performance"
+                      isBlocked
+                        ? "text-white/45"
+                        : isCurrent || track.status === "performance"
                         ? "text-[#00FFC6]"
                         : "text-white"
                     }`}
@@ -200,7 +215,7 @@ export default function TrackRowBase({
         {subtitleSlot ? (
           subtitleSlot
         ) : (
-          <div className="text-left text-xs leading-tight text-white/60 truncate">
+          <div className={`text-left text-xs leading-tight truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
             {track.profiles?.display_name ?? "Unknown Artist"}
           </div>
         )}

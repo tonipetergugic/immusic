@@ -31,29 +31,6 @@ export async function GET(req: Request) {
 
     const supabase = await createSupabaseServerClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    let hideExplicitTracks = false;
-
-    if (user) {
-      const { data: viewerProfile, error: viewerProfileErr } = await supabase
-        .from("profiles")
-        .select("hide_explicit_tracks")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (viewerProfileErr) {
-        return NextResponse.json(
-          { ok: false, error: viewerProfileErr.message, items: [] },
-          { status: 500, headers: { "Cache-Control": "no-store" } }
-        );
-      }
-
-      hideExplicitTracks = !!viewerProfile?.hide_explicit_tracks;
-    }
-
     const baseCount = Math.floor(limit * 0.8);
     const boostCount = limit - baseCount;
 
@@ -127,9 +104,7 @@ export async function GET(req: Request) {
 
     const trackById = new Map<string, any>((tracks ?? []).map((track: any) => [track.id, track]));
 
-    const visibleItems = hideExplicitTracks
-      ? items.filter((item: any) => !trackById.get(item.track_id)?.is_explicit)
-      : items;
+    const visibleItems = items;
 
     return NextResponse.json(
       {

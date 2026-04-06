@@ -6,6 +6,7 @@ import TrackOptionsTrigger from "@/components/TrackOptionsTrigger";
 import TrackRatingInline from "@/components/TrackRatingInline";
 import LibraryTrackArtists from "@/components/LibraryTrackArtists";
 import type { PlayerTrack } from "@/types/playerTrack";
+import { usePlayer } from "@/context/PlayerContext";
 
 export type LibraryV2TracksPayload = {
   tracks: PlayerTrack[];
@@ -18,6 +19,7 @@ export type LibraryV2TracksPayload = {
 
 export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) {
   const [trackData, setTrackData] = useState<PlayerTrack[]>(payload.tracks);
+  const { isTrackPlaybackBlocked } = usePlayer();
   const releaseTrackIdByTrackId = payload.releaseTrackIdByTrackId;
   const ratingByReleaseTrackId = payload.ratingByReleaseTrackId;
   const myStarsByReleaseTrackId = payload.myStarsByReleaseTrackId;
@@ -53,6 +55,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
           <div className="min-w-0 flex flex-col">
             {trackData.map((track, index) => {
               const releaseTrackId = releaseTrackIdByTrackId[String(track.id)];
+              const isBlocked = isTrackPlaybackBlocked(track);
               return (
                 <TrackRowBase
                   key={`library-trackrow:${track.id}`}
@@ -66,6 +69,8 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                       artists={track.artists}
                       fallbackArtistId={track.artist_id ?? null}
                       fallbackDisplayName={track.profiles?.display_name ?? "Unknown Artist"}
+                      isBlocked={isBlocked}
+                      disableLinks={isBlocked}
                     />
                   }
                   metaSlot={
@@ -83,6 +88,7 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                           initialCount={summary.count}
                           initialStreams={summary.streams}
                           initialMyStars={myStars}
+                          readOnly={isBlocked}
                           initialEligibility={{
                             window_open: windowOpenByTrackId[String(track.id)] ?? null,
                             can_rate: elig.can_rate,

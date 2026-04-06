@@ -161,20 +161,6 @@ export async function loadLibraryV2Tracks({
     };
   }
 
-  let hideExplicitTracks = false;
-
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("hide_explicit_tracks")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profileErr) {
-    console.error("LibraryV2: Failed to load explicit preference:", profileErr);
-  } else {
-    hideExplicitTracks = !!profile?.hide_explicit_tracks;
-  }
-
   const normalizedTracks =
     ((savedRows ?? []) as LibraryTrackSavedRow[])
       .map((row): LibraryTrackNormalized | null => {
@@ -230,9 +216,7 @@ export async function loadLibraryV2Tracks({
     new Map(normalizedTracks.map((track) => [String(track.id), track])).values()
   );
 
-  const visibleUnique = hideExplicitTracks
-    ? unique.filter((track) => !track.is_explicit)
-    : unique;
+  const visibleUnique = unique;
 
   const safeUnique = visibleUnique.filter(
     (track): track is LibraryTrackNormalized & { audio_url: string } => {

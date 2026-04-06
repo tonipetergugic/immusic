@@ -15,10 +15,6 @@ type LibraryReleaseSavedRow = {
   saved_at: string | null;
 };
 
-type LibraryExplicitReleaseRow = {
-  release_id: string | null;
-};
-
 type LibraryReleaseProfileRow = {
   display_name: string | null;
 };
@@ -61,44 +57,7 @@ export async function loadLibraryV2Releases({
 
   if (releaseIds.length === 0) return [];
 
-  let hideExplicitTracks = false;
-
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("hide_explicit_tracks")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profileErr) {
-    console.error("LibraryV2: Failed to load explicit preference for releases:", profileErr);
-  } else {
-    hideExplicitTracks = !!profile?.hide_explicit_tracks;
-  }
-
-  let visibleReleaseIds = releaseIds;
-
-  if (hideExplicitTracks) {
-    const { data: explicitRows, error: explicitErr } = await supabase
-      .from("release_tracks")
-      .select("release_id, tracks!inner(is_explicit)")
-      .in("release_id", releaseIds)
-      .eq("tracks.is_explicit", true);
-
-    if (explicitErr) {
-      console.error("LibraryV2: Failed to filter explicit releases:", explicitErr);
-    } else {
-      const blockedReleaseIds = new Set(
-        ((explicitRows ?? []) as LibraryExplicitReleaseRow[])
-          .map((row) => row.release_id)
-          .filter((releaseId): releaseId is string => Boolean(releaseId))
-          .map((releaseId) => String(releaseId))
-      );
-
-      visibleReleaseIds = releaseIds.filter((id) => !blockedReleaseIds.has(String(id)));
-    }
-  }
-
-  if (visibleReleaseIds.length === 0) return [];
+  if (releaseIds.length === 0) return [];
 
   const { data: releases, error: releasesErr } = await supabase
     .from("releases")
@@ -115,7 +74,7 @@ export async function loadLibraryV2Releases({
       )
       `
     )
-    .in("id", visibleReleaseIds);
+    .in("id", releaseIds);
 
   if (releasesErr) {
     console.error("LibraryV2: Failed to load releases:", releasesErr);
@@ -148,7 +107,7 @@ export async function loadLibraryV2Releases({
       })
   );
 
-  return visibleReleaseIds
+  return releaseIds
     .map((id) => byId.get(String(id)) ?? null)
     .filter((release): release is LibraryReleaseListItem => Boolean(release));
 }

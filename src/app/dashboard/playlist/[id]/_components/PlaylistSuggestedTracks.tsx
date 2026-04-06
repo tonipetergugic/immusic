@@ -14,6 +14,7 @@ import TrackRowBase from "@/components/TrackRowBase";
 import AddToPlaylistModal from "@/components/AddToPlaylistModal";
 import type { PlayerTrack } from "@/types/playerTrack";
 import ExplicitBadge from "@/components/ExplicitBadge";
+import { usePlayer } from "@/context/PlayerContext";
 
 type Props = {
   playlistId: string;
@@ -84,6 +85,7 @@ export default function PlaylistSuggestedTracks({
   onTrackAdded,
 }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const { isTrackPlaybackBlocked } = usePlayer();
 
   const [items, setItems] = useState<SuggestedTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -389,6 +391,7 @@ export default function PlaylistSuggestedTracks({
             }
 
             const track = buildSuggestedPlayerTrack(item);
+            const isBlocked = isTrackPlaybackBlocked(track);
 
             return (
               <TrackRowBase
@@ -403,7 +406,9 @@ export default function PlaylistSuggestedTracks({
                   <div className="flex items-center gap-2 min-w-0">
                     <span
                       className={`min-w-0 flex-1 text-left text-[14px] font-semibold truncate ${
-                        track.status === "performance"
+                        isBlocked
+                          ? "text-white/45"
+                          : track.status === "performance"
                           ? "text-[#00FFC6]"
                           : "text-white"
                       }`}
@@ -417,7 +422,7 @@ export default function PlaylistSuggestedTracks({
                 }
                 subtitleSlot={
                   <span
-                    className="text-left text-[12px] text-white/50 truncate"
+                    className={`text-left text-[12px] truncate ${isBlocked ? "text-white/35" : "text-white/50"}`}
                     title={item.artist_name}
                   >
                     {item.artist_name}

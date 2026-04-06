@@ -21,6 +21,8 @@ type PlayerContextType = {
   duration: number;
   volume: number;
   isShuffle: boolean;
+  hideExplicitTracks: boolean;
+  isTrackPlaybackBlocked: (track: PlayerTrack | null) => boolean;
 
   playTrack: (
     track: PlayerTrack,
@@ -55,6 +57,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playTrackRef = useRef<
     ((track: PlayerTrack, options?: { queue?: PlayerTrack[]; startIndex?: number }) => void) | null
   >(null);
+  const findPlayableIndexRef = useRef<
+    ((tracks: PlayerTrack[], startIndex: number, direction: 1 | -1) => number | null) | null
+  >(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const getCountryCodeISO2 = (): string => {
@@ -82,6 +87,119 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isShuffle, setIsShuffle] = useState(false);
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [hideExplicitTracks, setHideExplicitTracks] = useState(false);
+
+  const isExplicitPlaybackBlocked = useCallback(
+    async (track: PlayerTrack | null) => {
+      if (!track?.is_explicit) return false;
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user?.id) return false;
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("hide_explicit_tracks")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("explicit playback preference load error:", profileError);
+        return false;
+      }
+
+      const blocked = !!profile?.hide_explicit_tracks;
+      setHideExplicitTracks(blocked);
+      return blocked;
+    },
+    [supabase]
+  );
+
+  const isTrackPlaybackBlocked = useCallback(
+    (track: PlayerTrack | null) => {
+      return !!hideExplicitTracks && !!track?.is_explicit;
+    },
+    [hideExplicitTracks]
+  );
+
+  const findPlayableIndex = useCallback(
+    (tracks: PlayerTrack[], startIndex: number, direction: 1 | -1) => {
+      if (tracks.length === 0) return null;
+
+      for (let step = 0; step < tracks.length; step += 1) {
+        const index =
+          (startIndex + direction * step + tracks.length) % tracks.length;
+        const candidate = tracks[index] ?? null;
+
+        if (!isTrackPlaybackBlocked(candidate)) {
+          return index;
+        }
+      }
+
+      return null;
+    },
+    [isTrackPlaybackBlocked]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (userError || !user?.id) {
+        setHideExplicitTracks(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("hide_explicit_tracks")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (profileError) {
+        console.error("initial explicit playback preference load error:", profileError);
+        setHideExplicitTracks(false);
+        return;
+      }
+
+      setHideExplicitTracks(!!profile?.hide_explicit_tracks);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    function handleExplicitPreferenceChanged(event: Event) {
+      const customEvent = event as CustomEvent<{ hideExplicitTracks?: boolean }>;
+      setHideExplicitTracks(!!customEvent.detail?.hideExplicitTracks);
+    }
+
+    window.addEventListener(
+      "immusic:explicit-playback-preference-changed",
+      handleExplicitPreferenceChanged as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "immusic:explicit-playback-preference-changed",
+        handleExplicitPreferenceChanged as EventListener
+      );
+    };
+  }, []);
 
   useEffect(() => {
     queueRef.current = queue;
@@ -187,17 +305,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           sourceQueue,
           currentQueueTrack?.id ?? null
         );
-        const nextTrack = reshuffledQueue[0];
+        const playableIndex =
+          findPlayableIndexRef.current?.(reshuffledQueue, 0, 1) ?? null;
+
+        if (playableIndex === null) return;
+
+        const nextTrack = reshuffledQueue[playableIndex];
 
         if (!nextTrack) return;
 
-        syncQueueState(reshuffledQueue, 0);
+        syncQueueState(reshuffledQueue, playableIndex);
         playTrackRef.current?.(nextTrack, { queue: sourceQueue });
         return;
       }
 
       const nextIndex = idx < activeQueue.length - 1 ? idx + 1 : 0;
-      const nextTrack = activeQueue[nextIndex];
+      const playableIndex =
+        findPlayableIndexRef.current?.(activeQueue, nextIndex, 1) ?? null;
+
+      if (playableIndex === null) return;
+
+      const nextTrack = activeQueue[playableIndex];
 
       if (!nextTrack) return;
 
@@ -217,6 +345,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     async (track: PlayerTrack, options?: { queue?: PlayerTrack[]; startIndex?: number }) => {
       if (!audioRef.current) return;
       if (!track?.audio_url) return;
+      if (await isExplicitPlaybackBlocked(track)) return;
 
       const audio = audioRef.current;
       const isNewTrack = !currentTrack || currentTrack.id !== track.id;
@@ -287,15 +416,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         console.error("Audio play error:", err);
       }
     },
-    [createActiveQueue, currentTrack, isShuffle, syncQueueState]
+    [createActiveQueue, currentTrack, isExplicitPlaybackBlocked, isShuffle, syncQueueState]
   );
 
   useEffect(() => {
     playTrackRef.current = playTrack;
   }, [playTrack]);
 
+  useEffect(() => {
+    findPlayableIndexRef.current = findPlayableIndex;
+  }, [findPlayableIndex]);
+
   // TOGGLE PLAY
-  const togglePlay = useCallback(() => {
+  const togglePlay = useCallback(async () => {
     if (!audioRef.current) return;
     const audio = audioRef.current;
 
@@ -303,12 +436,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.pause();
       setIsPlaying(false);
     } else {
+      if (await isExplicitPlaybackBlocked(currentTrack)) return;
+
       audio
         .play()
         .then(() => setIsPlaying(true))
         .catch((err) => console.error("Resume error:", err));
     }
-  }, [isPlaying]);
+  }, [currentTrack, isExplicitPlaybackBlocked, isPlaying]);
 
   // PAUSE
   const pause = useCallback(() => {
@@ -345,10 +480,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playQueue = useCallback(
     (tracks: PlayerTrack[], startIndex: number) => {
       if (!tracks || tracks.length === 0) return;
+
       const safeIndex = Math.min(Math.max(startIndex, 0), tracks.length - 1);
-      playTrack(tracks[safeIndex], { queue: tracks, startIndex: safeIndex });
+      const playableIndex = findPlayableIndex(tracks, safeIndex, 1);
+
+      if (playableIndex === null) return;
+
+      playTrack(tracks[playableIndex], {
+        queue: tracks,
+        startIndex: playableIndex,
+      });
     },
-    [playTrack]
+    [findPlayableIndex, playTrack]
   );
 
   const toggleShuffle = useCallback(() => {
@@ -383,22 +526,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         sourceQueue,
         currentQueueTrack?.id ?? null
       );
-      const nextTrack = reshuffledQueue[0];
+      const playableIndex = findPlayableIndex(reshuffledQueue, 0, 1);
+
+      if (playableIndex === null) return;
+
+      const nextTrack = reshuffledQueue[playableIndex];
 
       if (!nextTrack) return;
 
-      syncQueueState(reshuffledQueue, 0);
+      syncQueueState(reshuffledQueue, playableIndex);
       playTrack(nextTrack, { queue: sourceQueue });
       return;
     }
 
     const nextIndex = idx < activeQueue.length - 1 ? idx + 1 : 0;
-    const nextTrack = activeQueue[nextIndex];
+    const playableIndex = findPlayableIndex(activeQueue, nextIndex, 1);
+
+    if (playableIndex === null) return;
+
+    const nextTrack = activeQueue[playableIndex];
 
     if (!nextTrack) return;
 
     playTrack(nextTrack, { queue: sourceQueue });
-  }, [createReshuffledQueue, playTrack, syncQueueState]);
+  }, [createReshuffledQueue, findPlayableIndex, playTrack, syncQueueState]);
 
   const playPrev = useCallback(() => {
     const activeQueue = queueRef.current;
@@ -406,7 +557,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const idx = currentIndexRef.current;
     const prevIndex = idx > 0 ? idx - 1 : activeQueue.length - 1;
-    const prevTrack = activeQueue[prevIndex];
+
+    const playableIndex = findPlayableIndex(activeQueue, prevIndex, -1);
+
+    if (playableIndex === null) return;
+
+    const prevTrack = activeQueue[playableIndex];
 
     if (!prevTrack) return;
 
@@ -415,7 +571,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       : activeQueue;
 
     playTrack(prevTrack, { queue: sourceQueue });
-  }, [playTrack]);
+  }, [findPlayableIndex, playTrack]);
 
   useEffect(() => {
     if (listeningTimerRef.current) {
@@ -485,6 +641,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         duration,
         volume,
         isShuffle,
+        hideExplicitTracks,
+        isTrackPlaybackBlocked,
         playTrack,
         togglePlay,
         pause,

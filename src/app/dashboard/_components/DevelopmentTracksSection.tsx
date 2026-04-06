@@ -6,6 +6,7 @@ import TrackRowBase from "@/components/TrackRowBase";
 import type { PlayerTrack } from "@/types/playerTrack";
 import HomeArtistSpotlightCard from "./HomeArtistSpotlightCard";
 import AppSelect from "@/components/AppSelect";
+import { usePlayer } from "@/context/PlayerContext";
 
 type DevItemLike = {
   genre?: string | null;
@@ -84,6 +85,7 @@ export default function DevelopmentTracksSection({
   devQueue,
   routerPush,
 }: Props) {
+  const { isTrackPlaybackBlocked } = usePlayer();
   const extraGenreItems = Array.from(
     new Set(
       (devItems ?? [])
@@ -253,6 +255,7 @@ export default function DevelopmentTracksSection({
               const artist = rowTrack.profiles?.display_name ?? "—";
               const coverUrl = rowTrack.cover_url ?? null;
               const artists = rowTrack.artists ?? [];
+              const isBlocked = isTrackPlaybackBlocked(rowTrack);
 
               return (
                 <TrackRowBase
@@ -265,21 +268,32 @@ export default function DevelopmentTracksSection({
                   leadingSlot={idx + 1}
                   subtitleSlot={
                     artists.length > 0 ? (
-                      <div className="mt-1 text-left text-xs text-white/60 truncate">
+                      <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
                         {artists.map((artistItem, idx2) => (
                           <span key={artistItem.id}>
                             <button
                               type="button"
+                              aria-disabled={isBlocked}
+                              tabIndex={isBlocked ? -1 : undefined}
                               onPointerDown={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                               }}
-                              onClick={() => routerPush(`/dashboard/artist/${artistItem.id}`)}
-                              className="
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (isBlocked) return;
+                                routerPush(`/dashboard/artist/${artistItem.id}`);
+                              }}
+                              className={
+                                isBlocked
+                                  ? "transition-colors cursor-default focus:outline-none text-white/35"
+                                  : `
                                 hover:text-[#00FFC6] hover:underline underline-offset-2
                                 transition-colors cursor-pointer
                                 focus:outline-none
-                              "
+                              `
+                              }
                               title={artistItem.display_name}
                             >
                               {artistItem.display_name}
@@ -291,23 +305,29 @@ export default function DevelopmentTracksSection({
                     ) : rowTrack.artist_id ? (
                       <button
                         type="button"
+                        aria-disabled={isBlocked}
+                        tabIndex={isBlocked ? -1 : undefined}
                         onPointerDown={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        onClick={() => routerPush(`/dashboard/artist/${rowTrack.artist_id}`)}
-                        className="
-                          mt-1 text-left text-xs text-white/60 truncate
-                          hover:text-[#00FFC6] hover:underline underline-offset-2
-                          transition-colors cursor-pointer
-                          focus:outline-none
-                        "
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isBlocked) return;
+                          routerPush(`/dashboard/artist/${rowTrack.artist_id}`);
+                        }}
+                        className={`mt-1 text-left text-xs truncate transition-colors focus:outline-none ${
+                          isBlocked
+                            ? "text-white/35 cursor-default"
+                            : "text-white/60 hover:text-[#00FFC6] hover:underline underline-offset-2 cursor-pointer"
+                        }`}
                         title={artist}
                       >
                         {artist}
                       </button>
                     ) : (
-                      <div className="mt-1 text-xs text-white/40 truncate">
+                      <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>
                         Unknown artist
                       </div>
                     )

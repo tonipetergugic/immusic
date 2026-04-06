@@ -23,6 +23,7 @@ type PlayOverlayButtonProps = {
 
   // Optional: async queue preparation (release cards etc.)
   getQueue?: () => Promise<{ tracks: PlayerTrack[]; index: number }>;
+  disableIfTrackBlocked?: boolean;
 };
 
 export default function PlayOverlayButton({
@@ -33,8 +34,16 @@ export default function PlayOverlayButton({
   index,
   tracks,
   getQueue,
+  disableIfTrackBlocked = false,
 }: PlayOverlayButtonProps) {
-  const { currentTrack, isPlaying, playTrack, togglePlay, playQueue } = usePlayer();
+  const {
+    currentTrack,
+    isPlaying,
+    playTrack,
+    togglePlay,
+    playQueue,
+    isTrackPlaybackBlocked,
+  } = usePlayer();
   const [loading, setLoading] = useState(false);
 
   const SIZE = size ?? "sm";
@@ -54,17 +63,25 @@ export default function PlayOverlayButton({
 
   const effectiveId = currentTrackId ?? track.id;
   const isCurrent = currentTrack?.id === effectiveId;
+  const isBlocked = isTrackPlaybackBlocked(track);
+  const hasPlayableQueuedTrack = Array.isArray(tracks)
+    ? tracks.some((item) => !isTrackPlaybackBlocked(item))
+    : false;
+  const shouldDisable = Array.isArray(tracks) && tracks.length > 0 ? !hasPlayableQueuedTrack : isBlocked;
+  const effectiveShouldDisable = disableIfTrackBlocked ? isBlocked : shouldDisable;
 
   const handleClick = async () => {
     if (loading) return;
 
     if (isCurrent) {
+      if (effectiveShouldDisable) return;
       togglePlay();
       return;
     }
 
     // Direct queue provided (fast path)
     if (tracks && typeof index === "number") {
+      if (effectiveShouldDisable) return;
       playQueue(tracks, index);
       return;
     }
@@ -75,6 +92,7 @@ export default function PlayOverlayButton({
         setLoading(true);
         const q = await getQueue();
         if (!q?.tracks || q.tracks.length === 0) return;
+        if (q.tracks.every((item) => isTrackPlaybackBlocked(item))) return;
         playQueue(q.tracks, Math.max(0, q.index ?? 0));
         return;
       } finally {
@@ -83,6 +101,7 @@ export default function PlayOverlayButton({
     }
 
     // Fallback: play a single track
+    if (effectiveShouldDisable) return;
     playTrack(track);
   };
 
@@ -100,16 +119,18 @@ export default function PlayOverlayButton({
       }}
       className={[
         "pointer-events-auto",
-        "rounded-full border border-[#00FFC655] bg-black/55",
-        "flex items-center justify-center",
-        "cursor-pointer",
+        "rounded-full flex items-center justify-center",
         sizeClass,
-        "shadow-[0_0_18px_rgba(0,255,198,0.22)]",
+        effectiveShouldDisable
+          ? "border border-white/12 bg-black/55 cursor-not-allowed opacity-55"
+          : "border border-[#00FFC655] bg-black/55 cursor-pointer shadow-[0_0_18px_rgba(0,255,198,0.22)]",
       ].join(" ")}
-      aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
+      aria-label={effectiveShouldDisable ? "Explicit playback blocked" : isCurrent && isPlaying ? "Pause track" : "Play track"}
     >
       {loading ? (
         <div className={["animate-pulse rounded-sm bg-[#00FFC6]", iconClass].join(" ")} />
+      ) : effectiveShouldDisable ? (
+        <Play className={["text-white/45", iconClass].join(" ")} />
       ) : isCurrent && isPlaying ? (
         <Pause className={["text-[#00FFC6]", iconClass].join(" ")} />
       ) : (
@@ -137,7 +158,7 @@ export default function PlayOverlayButton({
           void handleClick();
         }}
         className="md:hidden absolute inset-0 pointer-events-auto bg-transparent"
-        aria-label={isCurrent && isPlaying ? "Pause track" : "Play track"}
+        aria-label={effectiveShouldDisable ? "Explicit playback blocked" : isCurrent && isPlaying ? "Pause track" : "Play track"}
       />
 
       {/* Desktop: Hover-Overlay mit sichtbarem Button */}

@@ -7,6 +7,7 @@ import TrackRatingInline from "@/components/TrackRatingInline";
 import type { PlayerTrack } from "@/types/playerTrack";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import ExplicitBadge from "@/components/ExplicitBadge";
+import { usePlayer } from "@/context/PlayerContext";
 
 export default function ReleaseTrackRowClient({
   releaseTrackId,
@@ -49,6 +50,7 @@ export default function ReleaseTrackRowClient({
   onSelect: () => void;
 }) {
   const router = useRouter();
+  const { isTrackPlaybackBlocked } = usePlayer();
   const rowTrack: PlayerTrack = {
     id: track.id,
     title: track.title ?? "Untitled",
@@ -66,6 +68,7 @@ export default function ReleaseTrackRowClient({
       ? { display_name: artists[0].display_name }
       : undefined,
   };
+  const isBlocked = isTrackPlaybackBlocked(rowTrack);
 
   return (
     <div
@@ -86,18 +89,23 @@ export default function ReleaseTrackRowClient({
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
+              aria-disabled={isBlocked}
+              tabIndex={isBlocked ? -1 : undefined}
               onPointerDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
               onClick={(e) => {
                 e.stopPropagation();
+                if (isBlocked) return;
                 onSelect();
               }}
-              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none cursor-pointer ${
-                track.status === "performance"
-                  ? "text-[#00FFC6] hover:text-[#00E0B0]"
-                  : "text-white hover:text-[#00FFC6]"
+              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
+                isBlocked
+                  ? "text-white/45 cursor-default"
+                  : track.status === "performance"
+                  ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                  : "text-white hover:text-[#00FFC6] cursor-pointer"
               }`}
               title={formatTrackTitle(track.title, track.version)}
             >
@@ -109,11 +117,13 @@ export default function ReleaseTrackRowClient({
         }
         subtitleSlot={
           Array.isArray(artists) && artists.length > 0 ? (
-            <div className="mt-1 text-left text-xs text-white/60 truncate">
+            <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
               {artists.map((a, idx) => (
                 <span key={a.id}>
                   <button
                     type="button"
+                    aria-disabled={isBlocked}
+                    tabIndex={isBlocked ? -1 : undefined}
                     onPointerDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -121,13 +131,18 @@ export default function ReleaseTrackRowClient({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      if (isBlocked) return;
                       router.push(`/dashboard/artist/${a.id}`);
                     }}
-                    className="
+                    className={
+                      isBlocked
+                        ? "transition-colors focus:outline-none cursor-default text-white/35"
+                        : `
                       hover:text-[#00FFC6] hover:underline underline-offset-2
                       transition-colors
                       focus:outline-none cursor-pointer
-                    "
+                    `
+                    }
                     title={a.display_name}
                   >
                     {a.display_name}
@@ -137,7 +152,7 @@ export default function ReleaseTrackRowClient({
               ))}
             </div>
           ) : (
-            <div className="mt-1 text-xs text-white/40 truncate">Unknown artist</div>
+            <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>Unknown artist</div>
           )
         }
         metaSlot={

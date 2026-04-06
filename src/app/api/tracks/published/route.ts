@@ -6,26 +6,6 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let hideExplicitTracks = false;
-
-  if (user?.id) {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("hide_explicit_tracks")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error("published tracks route profile error:", profileError);
-    } else {
-      hideExplicitTracks = !!profile?.hide_explicit_tracks;
-    }
-  }
-
   const { data, error } = await supabase
     .from("tracks")
     .select(
@@ -135,9 +115,7 @@ export async function GET() {
     bestReleaseByTrackId.has(String(row?.id ?? ""))
   );
 
-  const rows = hideExplicitTracks
-    ? publishedRows.filter((row: any) => !row?.is_explicit)
-    : publishedRows;
+  const rows = publishedRows;
 
   const tracks =
     rows.map((row: any) => {

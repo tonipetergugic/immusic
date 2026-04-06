@@ -65,20 +65,6 @@ export default async function ArtistV2Page({
 
   const viewerId = user?.id ?? null;
 
-  let hideExplicitTracks = false;
-
-  if (viewerId) {
-    const { data: viewerProfile, error: viewerProfileError } = await supabase
-      .from("profiles")
-      .select("hide_explicit_tracks")
-      .eq("id", viewerId)
-      .maybeSingle();
-
-    if (!viewerProfileError) {
-      hideExplicitTracks = !!viewerProfile?.hide_explicit_tracks;
-    }
-  }
-
   // A) Artist Core (Guard)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -128,11 +114,7 @@ export default async function ArtistV2Page({
       .filter(Boolean)
   );
 
-  const releases = (releasesData ?? [])
-    .filter((r) =>
-      hideExplicitTracks ? !explicitReleaseIds.has(String(r.id)) : true
-    )
-    .map((r) => {
+  const releases = (releasesData ?? []).map((r) => {
       const coverUrl = r.cover_path
         ? supabase.storage.from("release_covers").getPublicUrl(r.cover_path).data
             .publicUrl
@@ -419,13 +401,9 @@ export default async function ArtistV2Page({
     .map((trackId) => buildTrackDto(trackId, null))
     .filter((x): x is TopTrackDto => x !== null);
 
-  const visibleRankedTracks = hideExplicitTracks
-    ? rankedTracks.filter((track) => !track.isExplicit)
-    : rankedTracks;
+  const visibleRankedTracks = rankedTracks;
 
-  const visibleCollaboratorFallbackTracks = hideExplicitTracks
-    ? collaboratorFallbackTracks.filter((track) => !track.isExplicit)
-    : collaboratorFallbackTracks;
+  const visibleCollaboratorFallbackTracks = collaboratorFallbackTracks;
 
   const topTracks: TopTrackDto[] = visibleRankedTracks.slice(0, 5);
   const allTracks: TopTrackDto[] = [

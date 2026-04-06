@@ -8,6 +8,7 @@ import LibraryTrackArtists from "@/components/LibraryTrackArtists";
 import { toPlayerTrack } from "@/lib/playerTrack";
 import type { PlayerTrack } from "@/types/playerTrack";
 import type { TopTrackDto } from "../_types/artistPageDto";
+import { usePlayer } from "@/context/PlayerContext";
 
 type ArtistTopPlayerTrack = PlayerTrack & {
   status?: string | null;
@@ -25,6 +26,7 @@ export default function ArtistTopTracksSection({
   fallbackArtistId: string;
   fallbackDisplayName: string;
 }) {
+  const { isTrackPlaybackBlocked } = usePlayer();
   const playerTracksQueue: PlayerTrack[] = useMemo(() => {
     return topTracks.map((t) => {
       const primaryArtistId = t.artists?.[0]?.id ?? fallbackArtistId;
@@ -78,6 +80,7 @@ export default function ArtistTopTracksSection({
             const queueIndex = queueIndexByTrackId.get(t.trackId) ?? -1;
             const track = playerTracksQueue[queueIndex];
             if (!track) return null;
+            const isBlocked = isTrackPlaybackBlocked(track);
 
             return (
               <TrackRowBase
@@ -101,6 +104,7 @@ export default function ArtistTopTracksSection({
                       fallbackArtistId={fallbackArtistId}
                       fallbackDisplayName={fallbackDisplayName}
                       currentArtistId={fallbackArtistId}
+                      isBlocked={isBlocked}
                     />
                   </div>
                 }
@@ -117,6 +121,7 @@ export default function ArtistTopTracksSection({
                           trackId={t.trackId}
                           initialAvg={t.stats30d.ratingAvg}
                           initialCount={t.stats30d.ratingsCount}
+                          readOnly={isBlocked}
                           hideStreams={true}
                         />
                       ) : (

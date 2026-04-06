@@ -63,6 +63,11 @@ export default function SettingsPage() {
 
     try {
       await updateHideExplicitTracks(nextValue);
+      window.dispatchEvent(
+        new CustomEvent("immusic:explicit-playback-preference-changed", {
+          detail: { hideExplicitTracks: nextValue },
+        })
+      );
     } catch (error) {
       console.error("updateHideExplicitTracks error:", error);
       setHideExplicitTracks(previousValue);
@@ -85,11 +90,11 @@ export default function SettingsPage() {
         <div className="flex items-start justify-between gap-8">
           <div className="min-w-0 max-w-[720px]">
             <div className="text-[24px] font-semibold tracking-tight text-white">
-              Hide explicit tracks
+              Block explicit playback
             </div>
 
             <div className="mt-3 text-[15px] leading-7 text-[#B3B3B3]">
-              Explicit songs will be hidden across the platform when this setting is enabled.
+              Explicit tracks remain visible across the platform, but playback is blocked when this setting is enabled.
             </div>
 
             <div className="mt-4 text-sm text-[#7A7A7A]">
@@ -98,8 +103,8 @@ export default function SettingsPage() {
                 : savingExplicitPreference
                 ? "Saving..."
                 : hideExplicitTracks
-                ? "Explicit tracks are currently hidden."
-                : "Explicit tracks are currently visible."}
+                ? "Explicit playback is currently blocked."
+                : "Explicit playback is currently allowed."}
             </div>
           </div>
 
