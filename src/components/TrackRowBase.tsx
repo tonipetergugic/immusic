@@ -184,7 +184,7 @@ export default function TrackRowBase({
                     className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${
                       isBlocked
                         ? "text-white/45 cursor-default"
-                        : isCurrent || track.status === "performance"
+                        : track.status === "performance"
                         ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
                         : "text-white hover:text-[#00FFC6] cursor-pointer"
                     }`}
@@ -196,7 +196,7 @@ export default function TrackRowBase({
                     className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
                       isBlocked
                         ? "text-white/45"
-                        : isCurrent || track.status === "performance"
+                        : track.status === "performance"
                         ? "text-[#00FFC6]"
                         : "text-white"
                     }`}
