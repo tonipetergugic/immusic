@@ -79,6 +79,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
+  const loadHideExplicitTracksPreference = useCallback(async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user?.id) return false;
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("hide_explicit_tracks")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("explicit playback preference load error:", profileError);
+      return false;
+    }
+
+    return !!profile?.hide_explicit_tracks;
+  }, [supabase]);
+
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -93,29 +115,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     async (track: PlayerTrack | null) => {
       if (!track?.is_explicit) return false;
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user?.id) return false;
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("hide_explicit_tracks")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("explicit playback preference load error:", profileError);
-        return false;
-      }
-
-      const blocked = !!profile?.hide_explicit_tracks;
+      const blocked = await loadHideExplicitTracksPreference();
       setHideExplicitTracks(blocked);
       return blocked;
     },
-    [supabase]
+    [loadHideExplicitTracksPreference]
   );
 
   const isTrackPlaybackBlocked = useCallback(
@@ -148,39 +152,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
+      const blocked = await loadHideExplicitTracksPreference();
       if (cancelled) return;
-
-      if (userError || !user?.id) {
-        setHideExplicitTracks(false);
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("hide_explicit_tracks")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (profileError) {
-        console.error("initial explicit playback preference load error:", profileError);
-        setHideExplicitTracks(false);
-        return;
-      }
-
-      setHideExplicitTracks(!!profile?.hide_explicit_tracks);
+      setHideExplicitTracks(blocked);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, [loadHideExplicitTracksPreference]);
 
   useEffect(() => {
     function handleExplicitPreferenceChanged(event: Event) {

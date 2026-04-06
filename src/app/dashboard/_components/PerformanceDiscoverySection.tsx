@@ -242,6 +242,7 @@ export default function PerformanceDiscoverySection({
                         initialCount={rowTrack.rating_count ?? undefined}
                         initialStreams={rowTrack.stream_count ?? 0}
                         initialMyStars={rowTrack.my_stars ?? null}
+                        readOnly={isBlocked}
                       />
                     ) : (
                       <span className="text-xs text-white/60">★</span>

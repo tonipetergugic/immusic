@@ -51,26 +51,6 @@ function PlaylistRow({
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
   const isBlocked = isTrackPlaybackBlocked(track);
 
-  function goToTrack(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const releaseId = track.release_id ?? null;
-    if (releaseId) router.push(`/dashboard/release/${releaseId}`);
-  }
-
-  function goToArtist(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    router.push(`/dashboard/artist/${track.artist_id}`);
-  }
-
-  function goToArtistId(artistId: string, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/dashboard/artist/${artistId}`);
-  }
-
   return (
     <div className="cursor-default">
       <TrackRowBase

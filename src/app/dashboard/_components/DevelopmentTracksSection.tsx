@@ -341,6 +341,7 @@ export default function DevelopmentTracksSection({
                         initialCount={rowTrack.rating_count ?? undefined}
                         initialStreams={rowTrack.stream_count ?? 0}
                         initialMyStars={rowTrack.my_stars}
+                        readOnly={isBlocked}
                       />
                     ) : (
                       <span className="text-xs text-white/60">★</span>

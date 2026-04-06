@@ -163,6 +163,7 @@ export default function ReleaseTrackRowClient({
             initialCount={ratingCount ?? 0}
             initialStreams={streamCount ?? 0}
             initialMyStars={myStars}
+            readOnly={isBlocked}
             showStreamsOnDesktopOnly={true}
           />
         }

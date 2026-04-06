@@ -1,9 +1,7 @@
  "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import CoverPlaceholder from "@/components/CoverPlaceholder";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import {

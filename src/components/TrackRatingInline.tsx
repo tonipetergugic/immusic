@@ -302,7 +302,7 @@ function TrackRatingInline({
   return (
     <div className="flex items-center gap-2 text-xs text-neutral-500">
       {readOnly ? (
-        <Tooltip label="You already rated this track. Ratings are final." placement="top">
+        <Tooltip label="Rating is unavailable because explicit playback is blocked by your settings." placement="top">
           <div className="flex gap-0.5">
             {[1, 2, 3, 4, 5].map((n) => (
               <span
