@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Tooltip from "@/components/Tooltip";
+import { useViewerRole } from "@/context/ViewerRoleContext";
 
 type ApiErrorCode =
   | "UNAUTHORIZED"
@@ -121,6 +122,19 @@ function TrackRatingInline({
 
   const [useTouchRatingModal, setUseTouchRatingModal] = useState(false);
 
+  const { isArtist, isLoaded: isViewerRoleLoaded } = useViewerRole();
+
+  const isReadOnly = readOnly || !isViewerRoleLoaded || isArtist;
+
+  const readOnlyLabel = useMemo(() => {
+    if (!isViewerRoleLoaded) return "Loading rating permissions.";
+    if (isArtist) return "Artists cannot rate tracks.";
+    if (readOnly) {
+      return "Rating is unavailable because explicit playback is blocked by your settings.";
+    }
+    return "";
+  }, [isViewerRoleLoaded, isArtist, readOnly]);
+
   const effectiveMyStars = hydrated ? myStars : initialMyStars;
   const alreadyRated = effectiveMyStars !== null;
   const [tapInfoOpen, setTapInfoOpen] = useState(false);
@@ -130,10 +144,12 @@ function TrackRatingInline({
     // PlaylistRow: myStars wins; otherwise derived from avg
     const effectiveAvg = hydrated ? avg : initialAvg;
     const effectiveMyStars = hydrated ? myStars : initialMyStars;
-    return readOnly ? Math.floor(effectiveAvg ?? 0) : (effectiveMyStars ?? Math.floor(effectiveAvg ?? 0));
-  }, [myStars, avg, initialAvg, initialMyStars, hydrated, readOnly]);
+    return isReadOnly
+      ? Math.floor(effectiveAvg ?? 0)
+      : (effectiveMyStars ?? Math.floor(effectiveAvg ?? 0));
+  }, [myStars, avg, initialAvg, initialMyStars, hydrated, isReadOnly]);
 
-  const effectiveStars = hover ?? displayStars;
+  const effectiveStars = isReadOnly ? displayStars : (hover ?? displayStars);
 
   const eligible = useMemo(() => {
     // Eligibility rules (Phase 2):
@@ -178,7 +194,7 @@ function TrackRatingInline({
       setAvg((prev) => (prev === nextAvg ? prev : nextAvg));
       setCount((prev) => (prev === nextCount ? prev : nextCount));
       setStreams((prev) => (prev === nextStreams ? prev : nextStreams));
-      if (!readOnly) {
+      if (!isReadOnly) {
         const nextMy = json.my_stars ?? null;
         setMyStars((prev) => (prev === nextMy ? prev : nextMy));
         setEligibility(
@@ -203,11 +219,11 @@ function TrackRatingInline({
     return false;
   }, [initialMyStars, initialEligibility]);
 
-  const awaitingInitialUserState = !readOnly && !hasInitial && !hydrated;
+  const awaitingInitialUserState = !isReadOnly && !hasInitial && !hydrated;
 
   useEffect(() => {
     if (!releaseTrackId) return;
-    if (readOnly) return;
+    if (isReadOnly) return;
 
     // If the parent provided initial summary, we skip the initial refresh.
     if (hasInitial) return;
@@ -223,7 +239,7 @@ function TrackRatingInline({
       ac.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [releaseTrackId, readOnly, hasInitial]);
+  }, [releaseTrackId, isReadOnly, hasInitial]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px), (pointer: coarse)");
@@ -244,7 +260,7 @@ function TrackRatingInline({
   }, []);
 
   async function handleRate(stars: number) {
-    if (readOnly) return;
+    if (isReadOnly) return;
     if (submitting) return;
 
     try {
@@ -301,8 +317,8 @@ function TrackRatingInline({
 
   return (
     <div className="flex items-center gap-2 text-xs text-neutral-500">
-      {readOnly ? (
-        <Tooltip label="Rating is unavailable because explicit playback is blocked by your settings." placement="top">
+      {isReadOnly ? (
+        <Tooltip label={readOnlyLabel} placement="top">
           <div className="flex gap-0.5">
             {[1, 2, 3, 4, 5].map((n) => (
               <span

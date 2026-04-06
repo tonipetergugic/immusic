@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import PlayerBar from "@/components/PlayerBar";
 import { PlayerProvider } from "@/context/PlayerContext";
+import { ViewerRoleProvider } from "@/context/ViewerRoleContext";
 
 export default function GlobalPlayerWrapper({
   children,
@@ -39,7 +40,8 @@ export default function GlobalPlayerWrapper({
   }, []);
 
   return (
-    <PlayerProvider>
+    <ViewerRoleProvider>
+      <PlayerProvider>
       {/* Global Notice */}
       {notice && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none px-4">
@@ -67,7 +69,8 @@ export default function GlobalPlayerWrapper({
       >
         <PlayerBar />
       </div>
-    </PlayerProvider>
+      </PlayerProvider>
+    </ViewerRoleProvider>
   );
 }
 
