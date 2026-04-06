@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getArtistAnalyticsSummary } from "@/lib/analytics/getArtistAnalytics.server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Range, TopConvertingTrackRow } from "../types";
@@ -37,11 +36,6 @@ export async function getConversionTabData(args: {
   const supabase = await createSupabaseServerClient();
   const supabaseAdmin = getSupabaseAdmin();
   const days = rangeToDays(range);
-
-  await getArtistAnalyticsSummary({
-    artistId,
-    range,
-  });
 
   let savesCount = 0;
   let conversionPct = Number.NaN;
@@ -220,7 +214,23 @@ export async function getConversionTabData(args: {
       if (!tid) return;
       savesByTrack.set(tid, (savesByTrack.get(tid) ?? 0) + 1);
     });
-    savesCount = Array.from(savesByTrack.values()).reduce((sum, value) => sum + value, 0);
+    savesCount = Array.from(savesByTrack.values()).reduce(
+      (sum, value) => sum + value,
+      0
+    );
+
+    const totalListeners = eligibleTrackIds.reduce(
+      (sum, id) => sum + (uniqByTrack.get(String(id))?.size ?? 0),
+      0
+    );
+
+    const totalSaves = eligibleTrackIds.reduce(
+      (sum, id) => sum + (savesByTrack.get(String(id)) ?? 0),
+      0
+    );
+
+    conversionPct =
+      totalListeners > 0 ? (totalSaves / totalListeners) * 100 : Number.NaN;
 
     // Titles for eligible tracks
     const { data: titleRows2, error: titleErr2 } = await supabase
@@ -254,19 +264,6 @@ export async function getConversionTabData(args: {
         conversion_pct,
       } satisfies TopConvertingTrackRow;
     });
-
-    const totalListeners = eligibleTrackIds.reduce(
-      (sum, id) => sum + (uniqByTrack.get(String(id))?.size ?? 0),
-      0
-    );
-
-    const totalSaves = eligibleTrackIds.reduce(
-      (sum, id) => sum + (savesByTrack.get(String(id)) ?? 0),
-      0
-    );
-
-    conversionPct =
-      totalListeners > 0 ? (totalSaves / totalListeners) * 100 : Number.NaN;
 
     const items = itemsBase
       .sort((a, b) => {

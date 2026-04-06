@@ -108,12 +108,16 @@ export async function getOverviewTabData(args: {
     });
   }
 
-  const totalListeners = trackIds.reduce(
+  const eligibleTrackIds = trackIds.filter(
+    (id) => (uniqByTrack.get(String(id))?.size ?? 0) >= 2
+  );
+
+  const totalListeners = eligibleTrackIds.reduce(
     (sum, id) => sum + (uniqByTrack.get(String(id))?.size ?? 0),
     0
   );
 
-  const totalSaves = trackIds.reduce(
+  const totalSaves = eligibleTrackIds.reduce(
     (sum, id) => sum + (savesByTrack.get(String(id)) ?? 0),
     0
   );
