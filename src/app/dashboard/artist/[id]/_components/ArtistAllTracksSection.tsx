@@ -110,6 +110,7 @@ export default function ArtistAllTracksSection({
                           trackId={t.trackId}
                           initialAvg={t.stats30d.ratingAvg}
                           initialCount={t.stats30d.ratingsCount}
+                          initialMyStars={t.my_stars}
                           readOnly={isBlocked}
                           hideStreams={true}
                         />

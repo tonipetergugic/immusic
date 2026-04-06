@@ -92,4 +92,6 @@ export type TopTrackDto = {
     ratingsCount: number;
     ratingAvg: number | null;
   };
+
+  my_stars: number | null;
 };

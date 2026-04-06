@@ -296,6 +296,30 @@ export default async function ArtistV2Page({
     )
   );
 
+  const { data: myRatingsRows, error: myRatingsError } =
+    viewerId && resolvedTrackIds.length > 0
+      ? await supabase
+          .from("track_ratings")
+          .select("track_id, stars")
+          .eq("user_id", viewerId)
+          .in("track_id", resolvedTrackIds)
+      : { data: [], error: null };
+
+  if (myRatingsError) {
+    console.error("Failed to load artist-page user ratings:", myRatingsError);
+  }
+
+  const myStarsByTrackId = new Map<string, number | null>();
+
+  for (const row of (myRatingsRows ?? []) as Array<{
+    track_id: string | null;
+    stars: number | null;
+  }>) {
+    const trackId = String(row.track_id ?? "");
+    if (!trackId) continue;
+    myStarsByTrackId.set(trackId, row.stars ?? null);
+  }
+
   const { data: releaseTrackRows, error: releaseTrackRowsError } =
     resolvedReleaseIds.length > 0 && resolvedTrackIds.length > 0
       ? await supabase
@@ -387,6 +411,7 @@ export default async function ArtistV2Page({
         ratingsCount: stats?.ratings_count ?? 0,
         ratingAvg: stats?.rating_avg ?? null,
       },
+      my_stars: myStarsByTrackId.get(trackId) ?? null,
     };
   };
 
