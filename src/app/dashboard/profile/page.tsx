@@ -127,225 +127,222 @@ export default function ProfilePage() {
       description="Change your display name and avatar."
       current="profile"
     >
-            {/* Avatar Upload */}
-            <div className="relative w-52 h-52 mx-auto mb-14 group">
-          <AvatarDropzone
-            avatarUrl={avatarUrl}
-            onFileSelected={async (file) => {
-              if (!file) return;
-              if (loading) return;
+      {/* Profile top row */}
+      <div className="grid gap-10 border-b border-white/10 pb-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <div className="min-w-0">
+          <div className="max-w-[620px]">
+            <div className="pb-8">
+              <div className="flex items-baseline justify-between gap-4">
+                <label className="text-sm text-[#B3B3B3]">Display name</label>
+                {role === "artist" ? (
+                  <span className="text-xs text-[#B3B3B3]">
+                    Visible as artist name
+                  </span>
+                ) : null}
+              </div>
 
-              setLoading(true);
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="
+                  mt-3
+                  w-full max-w-[520px]
+                  border-0 border-b border-white/10
+                  bg-transparent
+                  px-0 pb-4 pt-2
+                  text-[34px] leading-tight
+                  text-white
+                  placeholder-[#666]
+                  focus:outline-none
+                  focus:border-[#00FFC6]
+                  transition
+                "
+                placeholder="Enter your display name..."
+              />
 
-              const {
-                data: { user },
-              } = await supabase.auth.getUser();
+              <button
+                onClick={async () => {
+                  setNameSaving(true);
 
-              if (!user?.id) {
-                showNotice("You must be logged in.");
-                return;
-              }
+                  await updateDisplayName(displayName);
 
-              // Upload file
-              const ext = (file.name.split(".").pop() || "png").toLowerCase();
-              const filePath = `${user.id}/${Date.now()}.${ext}`;
+                  window.dispatchEvent(
+                    new CustomEvent("displayNameUpdated", { detail: displayName })
+                  );
 
-              const { error: uploadError } = await supabase.storage
-                .from("avatars")
-                .upload(filePath, file, {
-                  upsert: false,
-                  contentType: file.type || undefined,
+                  setInitialName(displayName);
+                  setNameSaving(false);
+                }}
+                className="
+                  mt-6
+                  inline-flex items-center justify-center
+                  min-w-[180px]
+                  rounded-xl
+                  px-5 py-3
+                  bg-transparent
+                  border border-white/10
+                  text-white/80 font-medium
+                  cursor-pointer
+                  hover:border-[#00FFC6]
+                  hover:text-[#00FFC6]
+                  hover:bg-white/[0.03]
+                  transition
+                  disabled:opacity-40
+                  disabled:cursor-not-allowed
+                  disabled:hover:border-white/10
+                  disabled:hover:text-white/80
+                  disabled:hover:bg-transparent
+                "
+                disabled={nameSaving || displayName === initialName}
+              >
+                {nameSaving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+
+            <div className="py-8">
+              <span className="block text-sm text-[#B3B3B3] mb-2">
+                Email
+              </span>
+              <div className="text-[24px] leading-tight text-white font-medium break-words">
+                {userEmail}
+              </div>
+            </div>
+
+            {viewerId ? (
+              <div className="pt-8">
+                <Link
+                  href={role === "artist" ? `/dashboard/artist/${viewerId}` : `/profile/${viewerId}`}
+                  className="
+                    inline-flex items-center gap-2
+                    text-sm font-medium
+                    text-[#00FFC6]
+                    hover:text-[#00E0B0]
+                    transition
+                  "
+                >
+                  {role === "artist" ? "View your artist page" : "View your public profile"}
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="lg:justify-self-end">
+          <div className="relative h-[300px] w-[300px] group">
+            <AvatarDropzone
+              avatarUrl={avatarUrl}
+              onFileSelected={async (file) => {
+                if (!file) return;
+                if (loading) return;
+
+                setLoading(true);
+
+                const {
+                  data: { user },
+                } = await supabase.auth.getUser();
+
+                if (!user?.id) {
+                  showNotice("You must be logged in.");
+                  return;
+                }
+
+                const ext = (file.name.split(".").pop() || "png").toLowerCase();
+                const filePath = `${user.id}/${Date.now()}.${ext}`;
+
+                const { error: uploadError } = await supabase.storage
+                  .from("avatars")
+                  .upload(filePath, file, {
+                    upsert: false,
+                    contentType: file.type || undefined,
+                  });
+
+                if (uploadError) {
+                  console.error("Avatar upload error:", uploadError);
+                  showNotice("Upload failed.");
+                  setLoading(false);
+                  return;
+                }
+
+                await cleanupOtherFilesInPrefix({
+                  bucket: "avatars",
+                  prefix: user.id,
+                  keepFullPath: filePath,
                 });
 
-              if (uploadError) {
-                console.error("Avatar upload error:", uploadError);
-                showNotice("Upload failed.");
+                const { data: publicUrl } = supabase.storage
+                  .from("avatars")
+                  .getPublicUrl(filePath);
+
+                const url = publicUrl.publicUrl;
+
+                await updateAvatar(url);
+                setAvatarUrl(url);
+
+                window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: url } }));
+
                 setLoading(false);
-                return;
-              }
-
-              // BEST-EFFORT CLEANUP: delete old avatar files in this user folder (keep only the new one)
-              await cleanupOtherFilesInPrefix({
-                bucket: "avatars",
-                prefix: user.id,
-                keepFullPath: filePath,
-              });
-
-              // Get public URL
-              const { data: publicUrl } = supabase.storage
-                .from("avatars")
-                .getPublicUrl(filePath);
-
-              const url = publicUrl.publicUrl;
-
-              // Update DB via Server Action (store the cache-busted URL)
-              await updateAvatar(url);
-
-              // Update UI
-              setAvatarUrl(url);
-
-              // notify Topbar (and any other listeners) with new avatar URL
-              window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: url } }));
-
-              setLoading(false);
-            }}
-          />
-
-          <div
-            className="
-              pointer-events-none
-              absolute inset-0
-              rounded-xl
-              flex items-center justify-center
-              bg-black/0
-              opacity-0
-              group-hover:opacity-100
-              group-hover:bg-black/35
-              transition
-            "
-          >
-            <span
-              className="
-                text-xs font-medium
-                text-white/90
-                px-3 py-1.5
-                rounded-full
-                border border-white/10
-                bg-black/35
-                backdrop-blur
-              "
-            >
-              Change avatar
-            </span>
-          </div>
-
-          {/* Delete icon */}
-          {avatarUrl && (
-            <button
-              type="button"
-              onClick={() => {
-                if (loading) return;
-                setIsDeleteAvatarModalOpen(true);
               }}
-              aria-label="Delete avatar"
+            />
+
+            <div
               className="
-                absolute top-1 right-1
-                p-1 rounded-full
-                bg-[#0E0E10]/80 backdrop-blur
-                hover:bg-red-500/40
+                pointer-events-none
+                absolute inset-0
+                rounded-xl
+                flex items-center justify-center
+                bg-black/0
+                opacity-0
+                group-hover:opacity-100
+                group-hover:bg-black/35
                 transition
-                opacity-0 group-hover:opacity-100
-                cursor-pointer
               "
             >
-              <Trash2 className="w-4 h-4 text-red-400" />
-            </button>
-          )}
-
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-              <div className="w-6 h-6 border-2 border-[#00FFC6] border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
-
-        {/* Display Name Editing */}
-        <div className="flex flex-col gap-2 mt-8">
-          <div className="flex items-baseline justify-between">
-            <label className="text-sm text-[#B3B3B3]">Display name</label>
-            {role === "artist" && (
-              <span className="text-xs text-[#B3B3B3]">
-                Visible as artist name
+              <span
+                className="
+                  text-xs font-medium
+                  text-white/90
+                  px-3 py-1.5
+                  rounded-full
+                  border border-white/10
+                  bg-black/35
+                  backdrop-blur
+                "
+              >
+                Change avatar
               </span>
-            )}
+            </div>
+
+            {avatarUrl ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (loading) return;
+                  setIsDeleteAvatarModalOpen(true);
+                }}
+                aria-label="Delete avatar"
+                className="
+                  absolute top-1 right-1
+                  p-1 rounded-full
+                  bg-[#0E0E10]/80 backdrop-blur
+                  hover:bg-red-500/40
+                  transition
+                  opacity-0 group-hover:opacity-100
+                  cursor-pointer
+                "
+              >
+                <Trash2 className="w-4 h-4 text-red-400" />
+              </button>
+            ) : null}
+
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="w-6 h-6 border-2 border-[#00FFC6] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : null}
           </div>
-
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="
-              w-full
-              bg-[#111113]
-              border border-[#1A1A1C]
-              rounded-xl
-              px-4 py-3
-              text-white placeholder-[#666]
-              focus:outline-none
-              focus:border-[#00FFC6]
-              focus:shadow-[0_0_0_2px_rgba(0,255,198,0.15)]
-              transition
-            "
-            placeholder="Enter your display name..."
-          />
-
-          <button
-            onClick={async () => {
-              setNameSaving(true);
-
-              await updateDisplayName(displayName);
-
-              // Dispatch custom event so Topbar updates immediately
-              window.dispatchEvent(
-                new CustomEvent("displayNameUpdated", { detail: displayName })
-              );
-
-              setInitialName(displayName);
-              setNameSaving(false);
-            }}
-            className="
-              mt-4 mx-auto
-              inline-flex items-center justify-center
-              w-[220px]
-              rounded-lg
-              px-5 py-2.5
-              bg-[#111113]
-              border border-[#1A1A1C]
-              text-[#B3B3B3] font-medium
-              cursor-pointer
-              hover:border-[#00FFC6]
-              hover:text-[#00FFC6]
-              transition
-              disabled:opacity-40
-              disabled:cursor-not-allowed
-              disabled:hover:border-[#1A1A1C]
-              disabled:hover:text-[#B3B3B3]
-            "
-            disabled={nameSaving || displayName === initialName}
-          >
-            {nameSaving ? "Saving..." : "Save changes"}
-          </button>
         </div>
-
-        {/* Email info */}
-        <div className="mt-8">
-          <span className="block text-sm text-[#B3B3B3] mb-1">
-            Email
-          </span>
-
-          <div className="text-white/90 font-medium">
-            {userEmail}
-          </div>
-
-        </div>
-
-        {/* Profile Link */}
-        {viewerId ? (
-          <div className="mt-8 pt-8 border-t border-[#1A1A1C]">
-            <Link
-              href={role === "artist" ? `/dashboard/artist/${viewerId}` : `/profile/${viewerId}`}
-              className="
-                inline-flex items-center gap-2
-                text-sm font-medium
-                text-[#00FFC6]
-                hover:text-[#00E0B0]
-                transition
-              "
-            >
-              {role === "artist" ? "View your artist page" : "View your public profile"}
-            </Link>
-          </div>
-        ) : null}
+      </div>
 
         <DeleteAvatarModal
           open={isDeleteAvatarModalOpen}

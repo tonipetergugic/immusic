@@ -170,265 +170,245 @@ export default function AccountPage() {
       description="Manage your email and security settings."
       current="account"
     >
-            {/* Email */}
-          <div className="mt-2">
+      {/* Email */}
+      <div className="mt-2 border-b border-white/10 pb-10">
+        <div className="mb-8">
+          <div className="text-sm text-[#B3B3B3]">Email</div>
+          <div className="mt-3 text-[24px] font-medium leading-tight text-white break-words">
+            {currentEmail || "—"}
+          </div>
+          <p className="mt-3 max-w-[640px] text-sm leading-6 text-[#B3B3B3]">
+            Change the email address used to sign in to your account.
+          </p>
+        </div>
 
-          <div className="text-sm text-[#B3B3B3] mb-2">Email</div>
+        <div className="max-w-[640px] space-y-6">
+          <div>
+            <label className="mb-2 block text-sm text-[#B3B3B3]">
+              New email
+            </label>
 
-          <div
-            className="
-              rounded-xl
-              border border-[#1A1A1C]
-              bg-[#111113]
-              px-4 py-4
-            "
-          >
-            <div className="text-xs text-[#B3B3B3] uppercase tracking-[0.08em]">
-              Current email
-            </div>
-            <div className="text-white/90 font-medium mt-1">
-              {currentEmail || "—"}
-            </div>
+            <input
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              type="email"
+              placeholder="Enter your new email address"
+              className="
+                w-full
+                bg-[#0F0F11]
+                border border-[#1A1A1C]
+                rounded-xl
+                px-4 py-3
+                text-white placeholder-[#666]
+                focus:outline-none
+                focus:border-[#00FFC6]
+                focus:shadow-[0_0_0_2px_rgba(0,255,198,0.15)]
+                transition
+              "
+            />
 
-            <div className="mt-4">
-              <label className="block text-sm text-[#B3B3B3] mb-2">
-                New email
-              </label>
+            <p className="mt-2 text-sm text-[#B3B3B3]">
+              This will replace your current login email after confirmation.
+            </p>
+          </div>
 
-              <input
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                type="email"
-                placeholder="Enter your new email address"
-                className="
-                  w-full
-                  bg-[#0F0F11]
-                  border border-[#1A1A1C]
-                  rounded-xl
-                  px-4 py-3
-                  text-white placeholder-[#666]
-                  focus:outline-none
-                  focus:border-[#00FFC6]
-                  focus:shadow-[0_0_0_2px_rgba(0,255,198,0.15)]
-                  transition
-                "
-              />
+          <div>
+            <label className="mb-2 block text-sm text-[#B3B3B3]">
+              Confirm email
+            </label>
 
-              <p className="mt-1 text-xs text-[#B3B3B3]">
-                This will replace your current login email after confirmation.
+            <input
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              type="email"
+              placeholder="Repeat new email"
+              className="
+                w-full
+                bg-[#0F0F11]
+                border border-[#1A1A1C]
+                rounded-xl
+                px-4 py-3
+                text-white placeholder-[#666]
+                focus:outline-none
+                focus:border-[#00FFC6]
+                focus:shadow-[0_0_0_2px_rgba(0,255,198,0.15)]
+                transition
+              "
+            />
+
+            {confirmEmail.length > 0 && !confirmEmailValid && (
+              <p className="mt-2 text-sm text-red-400">
+                Please enter a valid email format.
               </p>
+            )}
 
-              <label className="block text-sm text-[#B3B3B3] mt-4 mb-2">
-                Confirm email
-              </label>
+            {newEmail.length > 0 &&
+            confirmEmail.length > 0 &&
+            confirmEmailValid &&
+            newEmailValid &&
+            !emailsMatch ? (
+              <p className="mt-2 text-sm text-red-400">
+                Emails do not match.
+              </p>
+            ) : null}
+          </div>
 
-              <input
-                value={confirmEmail}
-                onChange={(e) => setConfirmEmail(e.target.value)}
-                type="email"
-                placeholder="Repeat new email"
-                className="
-                  w-full
-                  bg-[#0F0F11]
-                  border border-[#1A1A1C]
-                  rounded-xl
-                  px-4 py-3
-                  text-white placeholder-[#666]
-                  focus:outline-none
-                  focus:border-[#00FFC6]
-                  focus:shadow-[0_0_0_2px_rgba(0,255,198,0.15)]
-                  transition
-                "
-              />
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={handleEmailChange}
+              disabled={
+                saving ||
+                !newEmail ||
+                !confirmEmail ||
+                !newEmailValid ||
+                !confirmEmailValid ||
+                !emailsMatch
+              }
+              className="
+                inline-flex items-center justify-center
+                min-w-[220px]
+                rounded-lg
+                px-5 py-2.5
+                bg-[#111113]
+                border border-[#1A1A1C]
+                text-[#B3B3B3] font-medium
+                cursor-pointer
+                hover:border-[#00FFC6]
+                hover:text-[#00FFC6]
+                transition
+                disabled:opacity-40
+                disabled:cursor-not-allowed
+                disabled:hover:border-[#1A1A1C]
+                disabled:hover:text-[#B3B3B3]
+              "
+            >
+              {saving ? "Sending..." : "Send confirmation"}
+            </button>
 
-              {confirmEmail.length > 0 && !confirmEmailValid && (
-                <p className="mt-1 text-xs text-red-400">
-                  Please enter a valid email format.
-                </p>
-              )}
+            <span className="text-sm text-[#B3B3B3]">
+              We&apos;ll email a confirmation link.
+            </span>
+          </div>
 
-              {newEmail.length > 0 && confirmEmail.length > 0 && confirmEmailValid && newEmailValid && !emailsMatch && (
-                <p className="mt-1 text-xs text-red-400">
-                  Emails do not match.
-                </p>
-              )}
+          {errorMsg ? (
+            <div className="text-sm text-red-400">
+              {errorMsg}
+            </div>
+          ) : null}
 
-              <div className="flex items-center gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={handleEmailChange}
-                  disabled={
-                    saving ||
-                    !newEmail ||
-                    !confirmEmail ||
-                    !newEmailValid ||
-                    !confirmEmailValid ||
-                    !emailsMatch
-                  }
-                  className="
-                    inline-flex items-center justify-center
-                    w-[220px]
-                    rounded-lg
-                    px-5 py-2.5
-                    bg-[#111113]
-                    border border-[#1A1A1C]
-                    text-[#B3B3B3] font-medium
-                    cursor-pointer
-                    hover:border-[#00FFC6]
-                    hover:text-[#00FFC6]
-                    transition
-                    disabled:opacity-40
-                    disabled:cursor-not-allowed
-                    disabled:hover:border-[#1A1A1C]
-                    disabled:hover:text-[#B3B3B3]
-                  "
-                >
-                  {saving ? "Sending..." : "Send confirmation"}
-                </button>
+          {successMsg ? (
+            <div className="text-sm text-[#00FFC6]">
+              {successMsg}
+            </div>
+          ) : null}
+        </div>
+      </div>
 
-                <span className="text-xs text-[#B3B3B3]">
-                  We&apos;ll email a confirmation link.
-                </span>
-              </div>
+      {/* Security */}
+      <div className="mt-8 border-b border-white/10 pb-10">
+        <div className="text-sm text-[#B3B3B3] mb-4">Security</div>
 
-              {errorMsg && (
-                <div className="mt-3 text-sm text-red-400">
-                  {errorMsg}
-                </div>
-              )}
+        <p className="max-w-[640px] text-sm leading-6 text-[#B3B3B3]">
+          Use this if you think your account was accessed on another device.
+        </p>
 
-              {successMsg && (
-                <div className="mt-3 text-sm text-[#00FFC6]">
-                  {successMsg}
-                </div>
-              )}
+        <div className="mt-6 grid max-w-[640px] gap-6 sm:grid-cols-2">
+          <div>
+            <div className="text-xs text-[#B3B3B3]">Last sign-in</div>
+            <div className="mt-2 text-base text-white/90">
+              {formatDate(lastSignInAt)}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs text-[#B3B3B3]">Account last updated</div>
+            <div className="mt-2 text-base text-white/90">
+              {formatDate(accountUpdatedAt)}
             </div>
           </div>
         </div>
 
-        {/* Security */}
-        <div className="mt-8">
-          <div className="text-sm text-[#B3B3B3] mb-2">Security</div>
-
-          <div
+        <div className="mt-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLogoutEverywhere}
+            disabled={securitySaving}
             className="
-              rounded-xl
+              inline-flex items-center justify-center
+              w-[240px]
+              rounded-lg
+              px-5 py-2.5
+              bg-[#111113]
               border border-[#1A1A1C]
-              bg-[#111113]
-              px-4 py-4
+              text-red-300 font-medium
+              cursor-pointer
+              hover:border-red-400
+              hover:text-red-200
+              transition
+              disabled:opacity-40
+              disabled:cursor-not-allowed
+              disabled:hover:border-[#1A1A1C]
+              disabled:hover:text-red-300
             "
           >
-            <div className="text-sm text-[#B3B3B3] mt-1">
-              Use this if you think your account was accessed on another device.
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs text-[#B3B3B3]">Last sign-in</div>
-                <div className="text-sm text-white/90 mt-1">
-                  {formatDate(lastSignInAt)}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-[#B3B3B3]">Account last updated</div>
-                <div className="text-sm text-white/90 mt-1">
-                  {formatDate(accountUpdatedAt)}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 mt-4">
-              <button
-                type="button"
-                onClick={handleLogoutEverywhere}
-                disabled={securitySaving}
-                className="
-                  inline-flex items-center justify-center
-                  w-[240px]
-                  rounded-lg
-                  px-5 py-2.5
-                  bg-[#111113]
-                  border border-[#1A1A1C]
-                  text-red-300 font-medium
-                  cursor-pointer
-                  hover:border-red-400
-                  hover:text-red-200
-                  transition
-                  disabled:opacity-40
-                  disabled:cursor-not-allowed
-                  disabled:hover:border-[#1A1A1C]
-                  disabled:hover:text-red-300
-                "
-              >
-                {securitySaving ? "Working..." : "Logout everywhere"}
-              </button>
-            </div>
-
-            {securityError && (
-              <div className="mt-3 text-sm text-red-400">
-                {securityError}
-              </div>
-            )}
-
-            {securitySuccess && (
-              <div className="mt-3 text-sm text-[#00FFC6]">
-                {securitySuccess}
-              </div>
-            )}
-          </div>
+            {securitySaving ? "Working..." : "Logout everywhere"}
+          </button>
         </div>
 
-        {/* Danger Zone */}
-        <div className="mt-8">
-          <div className="text-sm text-[#B3B3B3] mb-2">Danger zone</div>
+        {securityError ? (
+          <div className="mt-3 text-sm text-red-400">
+            {securityError}
+          </div>
+        ) : null}
 
-          <div
+        {securitySuccess ? (
+          <div className="mt-3 text-sm text-[#00FFC6]">
+            {securitySuccess}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Danger Zone */}
+      <div className="mt-8">
+        <div className="text-sm text-[#B3B3B3] mb-4">Danger zone</div>
+
+        <p className="max-w-[640px] text-sm leading-6 text-[#B3B3B3]">
+          This permanently deletes your account and all associated data. This action cannot be undone.
+        </p>
+
+        <div className="mt-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteInfo(null);
+              setDeleteConfirmText("");
+              setDeleteOpen(true);
+            }}
             className="
-              rounded-xl
-              border border-red-500/20
+              inline-flex items-center justify-center
+              w-[220px]
+              rounded-lg
+              px-5 py-2.5
               bg-[#111113]
-              px-4 py-4
+              border border-red-500/30
+              text-red-300 font-medium
+              cursor-pointer
+              hover:border-red-400
+              hover:text-red-200
+              transition
             "
           >
-            <div className="text-sm text-[#B3B3B3] mt-1">
-              This permanently deletes your account and all associated data. This action cannot be undone.
-            </div>
-
-            <div className="mt-4 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteInfo(null);
-                  setDeleteConfirmText("");
-                  setDeleteOpen(true);
-                }}
-                className="
-                  inline-flex items-center justify-center
-                  w-[220px]
-                  rounded-lg
-                  px-5 py-2.5
-                  bg-[#111113]
-                  border border-red-500/30
-                  text-red-300 font-medium
-                  cursor-pointer
-                  hover:border-red-400
-                  hover:text-red-200
-                  transition
-                "
-              >
-                Delete account
-              </button>
-
-            </div>
-
-            {deleteInfo && (
-              <div className="mt-3 text-sm text-[#00FFC6]">
-                {deleteInfo}
-              </div>
-            )}
-          </div>
+            Delete account
+          </button>
         </div>
+
+        {deleteInfo ? (
+          <div className="mt-3 text-sm text-[#00FFC6]">
+            {deleteInfo}
+          </div>
+        ) : null}
+      </div>
 
         {/* Delete account modal (UI only) */}
         {deleteOpen && (

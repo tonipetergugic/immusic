@@ -23,9 +23,6 @@ export default function ProfileSectionLayout({
       {showBackLink ? <BackLink className="mb-8" /> : null}
 
       <div className="border-b border-white/10 pb-8">
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#B3B3B3]">
-          Account
-        </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight leading-tight">
           {title}
         </h1>

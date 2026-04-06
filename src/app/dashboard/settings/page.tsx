@@ -78,62 +78,57 @@ export default function SettingsPage() {
       description="Adjust your preferences and application settings."
       current="settings"
     >
-            {/* Content preferences */}
-            <div className="mt-2">
-              <div className="text-sm text-[#B3B3B3] mb-2">Content</div>
+      {/* Content preferences */}
+      <div className="mt-2 border-b border-white/10 pb-10">
+        <div className="mb-6 text-sm text-[#B3B3B3]">Content</div>
 
-              <div
-                className="
-            rounded-xl
-            border border-[#1A1A1C]
-            bg-[#111113]
-            px-4 py-4
-          "
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-white/90 font-medium">Hide explicit tracks</div>
-                    <div className="text-sm text-[#B3B3B3] mt-1">
-                      Explicit songs will be hidden across the platform when this setting is enabled.
-                    </div>
-                    <div className="text-xs text-[#7A7A7A] mt-2">
-                      {!preferencesLoaded
-                        ? "Loading preference..."
-                        : savingExplicitPreference
-                        ? "Saving..."
-                        : hideExplicitTracks
-                        ? "Explicit tracks are currently hidden."
-                        : "Explicit tracks are currently visible."}
-                    </div>
-                  </div>
-
-                  <label className="inline-flex items-center cursor-pointer shrink-0">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={hideExplicitTracks}
-                      disabled={!preferencesLoaded || savingExplicitPreference}
-                      onChange={(event) =>
-                        handleExplicitPreferenceChange(event.target.checked)
-                      }
-                    />
-                    <div
-                      className="
-                  relative h-6 w-11 rounded-full
-                  bg-[#2A2A2D]
-                  transition-colors
-                  peer-checked:bg-[#00FFC6]
-                  peer-disabled:opacity-50
-                  after:absolute after:left-[2px] after:top-[2px]
-                  after:h-5 after:w-5 after:rounded-full
-                  after:bg-white after:transition-transform
-                  peer-checked:after:translate-x-5
-                "
-                    />
-                  </label>
-                </div>
-              </div>
+        <div className="flex items-start justify-between gap-8">
+          <div className="min-w-0 max-w-[720px]">
+            <div className="text-[24px] font-semibold tracking-tight text-white">
+              Hide explicit tracks
             </div>
+
+            <div className="mt-3 text-[15px] leading-7 text-[#B3B3B3]">
+              Explicit songs will be hidden across the platform when this setting is enabled.
+            </div>
+
+            <div className="mt-4 text-sm text-[#7A7A7A]">
+              {!preferencesLoaded
+                ? "Loading preference..."
+                : savingExplicitPreference
+                ? "Saving..."
+                : hideExplicitTracks
+                ? "Explicit tracks are currently hidden."
+                : "Explicit tracks are currently visible."}
+            </div>
+          </div>
+
+          <label className="inline-flex shrink-0 cursor-pointer items-center pt-1">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={hideExplicitTracks}
+              disabled={!preferencesLoaded || savingExplicitPreference}
+              onChange={(event) =>
+                handleExplicitPreferenceChange(event.target.checked)
+              }
+            />
+            <div
+              className="
+                relative h-7 w-12 rounded-full
+                bg-[#2A2A2D]
+                transition-colors
+                peer-checked:bg-[#00FFC6]
+                peer-disabled:opacity-50
+                after:absolute after:left-[2px] after:top-[2px]
+                after:h-6 after:w-6 after:rounded-full
+                after:bg-white after:transition-transform
+                peer-checked:after:translate-x-5
+              "
+            />
+          </label>
+        </div>
+      </div>
 
     </ProfileSectionLayout>
   );
