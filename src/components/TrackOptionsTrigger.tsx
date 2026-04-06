@@ -15,6 +15,7 @@ type TrackOptionsTriggerProps = {
   tracks?: PlayerTrack[];
   showGoToArtist?: boolean;
   showGoToRelease?: boolean;
+  showAddToPlaylist?: boolean;
   releaseId?: string | null;
 };
 
@@ -28,6 +29,7 @@ export default function TrackOptionsTrigger({
   onLibraryRemoved,
   showGoToArtist = true,
   showGoToRelease = true,
+  showAddToPlaylist = true,
   releaseId = null,
 }: TrackOptionsTriggerProps) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -141,6 +143,7 @@ export default function TrackOptionsTrigger({
               position={menuPosition}
               showGoToArtist={showGoToArtist}
               showGoToRelease={showGoToRelease}
+              showAddToPlaylist={showAddToPlaylist}
               releaseId={releaseId}
               context={onRemove ? "playlist" : "default"}
             />,

@@ -35,11 +35,13 @@ function PlaylistRow({
   tracks,
   user,
   dragHandleProps,
+  showAddToPlaylist = true,
 }: {
   track: PlaylistRowTrack;
   tracks: PlaylistRowTrack[];
   onDelete?: () => void;
   user: User | null;
+  showAddToPlaylist?: boolean;
   dragHandleProps?: {
     listeners?: DraggableSyntheticListeners;
     setActivatorNodeRef: (node: HTMLButtonElement | null) => void;
@@ -199,7 +201,14 @@ function PlaylistRow({
         bpmSlot={<span>{track.bpm ?? "—"}</span>}
         keySlot={<span>{track.key ?? "—"}</span>}
         genreSlot={null}
-        actionsSlot={<TrackOptionsTrigger track={track} onRemove={onDelete} tracks={tracks} />}
+        actionsSlot={
+          <TrackOptionsTrigger
+            track={track}
+            onRemove={onDelete}
+            tracks={tracks}
+            showAddToPlaylist={showAddToPlaylist}
+          />
+        }
       />
     </div>
   );

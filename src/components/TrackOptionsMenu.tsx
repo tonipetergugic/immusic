@@ -30,6 +30,7 @@ type TrackOptionsMenuProps = {
   };
   showGoToArtist?: boolean;
   showGoToRelease?: boolean;
+  showAddToPlaylist?: boolean;
   releaseId?: string | null;
   context?: "default" | "playlist";
 };
@@ -59,6 +60,7 @@ export default function TrackOptionsMenu({
   position,
   showGoToArtist = true,
   showGoToRelease = true,
+  showAddToPlaylist = true,
   releaseId = null,
   context = "default",
 }: TrackOptionsMenuProps) {
@@ -125,27 +127,31 @@ export default function TrackOptionsMenu({
   }, [toast]);
 
   const menuItems: MenuItem[] = useMemo(() => {
-    const items: MenuItem[] = [
-      {
+    const items: MenuItem[] = [];
+
+    if (showAddToPlaylist) {
+      items.push({
         label: "Add to playlist",
         action: "add_to_playlist",
         icon: <Plus className="h-4 w-4 shrink-0" />,
-      },
-      {
-        label: isSaved ? "Remove from Library" : "Save to Library",
-        action: "toggle_library",
-        icon: isSaved ? (
-          <BookmarkMinus className="h-4 w-4 shrink-0" />
-        ) : (
-          <BookmarkPlus className="h-4 w-4 shrink-0" />
-        ),
-      },
-      {
-        label: "Share release",
-        action: "share",
-        icon: <Share2 className="h-4 w-4 shrink-0" />,
-      },
-    ];
+      });
+    }
+
+    items.push({
+      label: isSaved ? "Remove from Library" : "Save to Library",
+      action: "toggle_library",
+      icon: isSaved ? (
+        <BookmarkMinus className="h-4 w-4 shrink-0" />
+      ) : (
+        <BookmarkPlus className="h-4 w-4 shrink-0" />
+      ),
+    });
+
+    items.push({
+      label: "Share release",
+      action: "share",
+      icon: <Share2 className="h-4 w-4 shrink-0" />,
+    });
 
     if (showGoToArtist) {
       items.push({
@@ -178,7 +184,7 @@ export default function TrackOptionsMenu({
     }
 
     return items;
-  }, [isSaved, onRemove, showGoToArtist, showGoToRelease, releaseId, context]);
+  }, [isSaved, onRemove, showGoToArtist, showGoToRelease, showAddToPlaylist, releaseId, context]);
 
   const getShareUrl = () => {
     const rid = releaseId ?? (track as any)?.release_id ?? null;

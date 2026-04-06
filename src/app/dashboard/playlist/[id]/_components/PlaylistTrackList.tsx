@@ -133,7 +133,7 @@ export default function PlaylistTrackList({
                 track={track}
                 tracks={tracks}
                 user={user}
-                onDelete={() => onDeleteTrack(track.id)}
+                showAddToPlaylist={false}
               />
             ))}
           </div>
