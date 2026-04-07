@@ -79,7 +79,7 @@ export default function HomeScreenInstallHint() {
           <button
             type="button"
             onClick={handleDismissed}
-            className="shrink-0 text-sm text-white/50 transition hover:text-white"
+            className="shrink-0 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-white/60 transition hover:bg-white/10 hover:text-white"
             aria-label="Close install hint"
           >
             ✕
@@ -107,7 +107,7 @@ export default function HomeScreenInstallHint() {
           <button
             type="button"
             onClick={handleLater}
-            className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10"
+            className="flex-1 rounded-full border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
           >
             Later
           </button>
@@ -115,7 +115,7 @@ export default function HomeScreenInstallHint() {
           <button
             type="button"
             onClick={handleDismissed}
-            className="flex-1 rounded-full border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-4 py-3 text-sm font-semibold text-[#00FFC6] transition hover:bg-[#00FFC6]/15"
+            className="flex-1 rounded-full border border-[#00FFC6]/70 bg-[#0E0E10] px-5 py-3.5 text-sm font-semibold text-[#00FFC6] shadow-[0_0_0_1px_rgba(0,255,198,0.35),0_0_24px_rgba(0,255,198,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.55),0_0_40px_rgba(0,255,198,0.28)]"
           >
             Don’t show again
           </button>
