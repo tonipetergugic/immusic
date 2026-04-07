@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 const STORAGE_KEY = "immusic_install_hint_state";
 
 type InstallHintState = "later" | "dismissed" | null;
+type InstallPlatform = "ios" | "android" | null;
 
 function getStoredState(): InstallHintState {
   if (typeof window === "undefined") return null;
@@ -18,8 +19,8 @@ function getStoredState(): InstallHintState {
   return null;
 }
 
-function isIPhoneLikeMobile() {
-  if (typeof window === "undefined") return false;
+function getInstallPlatform(): InstallPlatform {
+  if (typeof window === "undefined") return null;
 
   const ua = window.navigator.userAgent.toLowerCase();
   const isIPhone = /iphone|ipod/.test(ua);
@@ -27,13 +28,23 @@ function isIPhoneLikeMobile() {
     /ipad/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-  return isIPhone || isIPad;
+  if (isIPhone || isIPad) {
+    return "ios";
+  }
+
+  const isAndroid = /android/.test(ua);
+  if (isAndroid) {
+    return "android";
+  }
+
+  return null;
 }
 
 export default function HomeScreenInstallHint() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const shouldRun = useMemo(() => isIPhoneLikeMobile(), []);
+  const platform = useMemo(() => getInstallPlatform(), []);
+  const shouldRun = platform !== null;
 
   useEffect(() => {
     if (!shouldRun) return;
@@ -58,7 +69,36 @@ export default function HomeScreenInstallHint() {
     setIsOpen(false);
   }
 
-  if (!shouldRun || !isOpen) return null;
+  if (!shouldRun || !isOpen || !platform) return null;
+
+  const title =
+    platform === "ios"
+      ? "Add ImMusic to your Home Screen"
+      : "Add ImMusic to your Home Screen";
+
+  const description =
+    platform === "ios"
+      ? "Open faster next time and use ImMusic more like an app on your iPhone."
+      : "Open faster next time and keep ImMusic on your Android home screen like an app.";
+
+  const steps =
+    platform === "ios"
+      ? [
+          <>Tap the <span className="font-semibold text-white">Share</span> button in Safari</>,
+          <>
+            Scroll and tap{" "}
+            <span className="font-semibold text-white">Add to Home Screen</span>
+          </>,
+          <>Tap <span className="font-semibold text-white">Add</span></>,
+        ]
+      : [
+          <>Tap the <span className="font-semibold text-white">browser menu</span> in Chrome</>,
+          <>
+            Tap{" "}
+            <span className="font-semibold text-white">Add to Home screen</span>
+          </>,
+          <>Confirm with <span className="font-semibold text-white">Add</span></>,
+        ];
 
   return (
     <div className="fixed inset-x-0 bottom-24 z-[80] px-4 sm:px-6 lg:hidden">
@@ -69,10 +109,10 @@ export default function HomeScreenInstallHint() {
               Quick Access
             </p>
             <h2 className="mt-2 text-xl font-semibold leading-tight text-white">
-              Add ImMusic to your Home Screen
+              {title}
             </h2>
             <p className="mt-3 text-sm leading-6 text-white/70">
-              Open faster next time and use ImMusic more like an app on your iPhone.
+              {description}
             </p>
           </div>
 
@@ -88,18 +128,12 @@ export default function HomeScreenInstallHint() {
 
         <div className="mt-5 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
           <ol className="space-y-3 text-sm text-white/80">
-            <li>
-              <span className="font-semibold text-white">1.</span> Tap the{" "}
-              <span className="font-semibold text-white">Share</span> button in Safari
-            </li>
-            <li>
-              <span className="font-semibold text-white">2.</span> Scroll and tap{" "}
-              <span className="font-semibold text-white">Add to Home Screen</span>
-            </li>
-            <li>
-              <span className="font-semibold text-white">3.</span> Tap{" "}
-              <span className="font-semibold text-white">Add</span>
-            </li>
+            {steps.map((step, index) => (
+              <li key={index}>
+                <span className="font-semibold text-white">{index + 1}.</span>{" "}
+                {step}
+              </li>
+            ))}
           </ol>
         </div>
 
