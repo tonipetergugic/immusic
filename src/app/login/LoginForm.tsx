@@ -30,7 +30,10 @@ export default function LoginForm({
   const [isSending, setIsSending] = useState(false);
 
   const normalizedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
-  const normalizedOtpCode = useMemo(() => otpCode.trim(), [otpCode]);
+  const normalizedOtpCode = useMemo(
+    () => otpCode.replace(/\D/g, ""),
+    [otpCode]
+  );
 
   const isValidEmail =
     normalizedEmail.length > 3 && normalizedEmail.includes("@");
@@ -181,7 +184,7 @@ export default function LoginForm({
                   focus:outline-none
                 "
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
+                onChange={(e) => setOtpCode(e.target.value.replace(/[^\d\s-]/g, ""))}
               />
             </div>
           ) : null}
