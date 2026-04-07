@@ -3,6 +3,7 @@ import Topbar from "./components/Topbar";
 import MobileSidebarDrawer from "./components/MobileSidebarDrawer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AppShell from "@/components/layout/AppShell";
+import HomeScreenInstallHint from "@/components/mobile/HomeScreenInstallHint";
 
 export default async function DashboardLayout({
   children,
@@ -73,6 +74,7 @@ export default async function DashboardLayout({
         </div>
       }
     >
+      <HomeScreenInstallHint />
       {children}
     </AppShell>
   );
