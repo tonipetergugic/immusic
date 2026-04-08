@@ -70,7 +70,6 @@ export type PlaylistCardDto = {
 export type TopTrackDto = {
   trackId: string;
   releaseId: string | null;
-  releaseTrackId: string | null;
 
   title: string;
   coverUrl: string | null;
