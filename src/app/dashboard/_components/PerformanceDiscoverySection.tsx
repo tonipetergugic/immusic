@@ -21,7 +21,6 @@ type PerfTrackMetaMap = Record<
 
 type PerfQueueTrack = PlayerTrack & {
   release_id?: string | null;
-  release_track_id?: string | null;
   stream_count?: number | null;
   my_stars?: number | null;
 };

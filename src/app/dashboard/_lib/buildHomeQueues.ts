@@ -9,10 +9,7 @@ type DevQueueSourceItem = DevelopmentDiscoveryItem & {
   is_explicit?: boolean | null;
 };
 
-type PerfReleaseTrackAggregate = {
-  release_track_id: string;
-  rating_avg: number | null;
-  rating_count: number;
+type PerfTrackStats = {
   stream_count: number;
   my_stars: number | null;
 };
@@ -118,7 +115,7 @@ export function buildDevQueue(params: {
 export function buildPerfQueue(params: {
   performanceItemsFiltered: PerformanceDiscoveryItem[] | Array<{ track_id: string }>;
   perfArtistMap: Record<string, string>;
-  perfReleaseTrackMap: Record<string, PerfReleaseTrackAggregate>;
+  perfTrackStatsMap: Record<string, PerfTrackStats>;
   perfTrackMetaMap: Record<string, PerfTrackMeta>;
   supabase: SupabaseClient;
   trackArtistsMap: Record<string, ArtistMini[]>;
@@ -126,7 +123,7 @@ export function buildPerfQueue(params: {
   const {
     performanceItemsFiltered,
     perfArtistMap,
-    perfReleaseTrackMap,
+    perfTrackStatsMap,
     perfTrackMetaMap,
     supabase,
     trackArtistsMap,
@@ -151,8 +148,7 @@ export function buildPerfQueue(params: {
       ? supabase.storage.from("tracks").getPublicUrl(audioPath).data.publicUrl
       : null;
 
-    const rtKey = `${releaseId}:${trackId}`;
-    const rt = perfReleaseTrackMap[rtKey];
+    const stats = perfTrackStatsMap[trackId];
     const meta = perfTrackMetaMap?.[trackId];
 
     const ownerId = String(artistId ?? "");
@@ -178,11 +174,11 @@ export function buildPerfQueue(params: {
       audio_path: audioPath,
       profiles: { display_name: artistName },
       release_id: releaseId,
-      release_track_id: rt?.release_track_id ?? null,
-      rating_avg: rt?.rating_avg ?? (row.rating_avg ?? null),
-      rating_count: rt?.rating_count ?? (row.rating_count ?? 0),
-      stream_count: rt?.stream_count ?? (row.streams_30d ?? 0),
-      my_stars: rt?.my_stars ?? null,
+      release_track_id: null,
+      rating_avg: row.rating_avg ?? null,
+      rating_count: row.rating_count ?? 0,
+      stream_count: stats?.stream_count ?? (row.streams_30d ?? 0),
+      my_stars: stats?.my_stars ?? null,
       bpm: perfTrackMetaMap?.[trackId]?.bpm ?? null,
       key: perfTrackMetaMap?.[trackId]?.key ?? null,
       artists,

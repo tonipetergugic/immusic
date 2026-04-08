@@ -24,20 +24,9 @@ type LifetimeRow = {
   streams_lifetime: number | null;
 };
 
-type ReleaseTrackAggregateRow = {
-  id: string;
-  track_id: string;
-  release_id: string;
-  tracks:
-    | {
-        rating_avg: number | null;
-        rating_count: number | null;
-      }
-    | {
-        rating_avg: number | null;
-        rating_count: number | null;
-      }[]
-    | null;
+type PerfTrackStats = {
+  stream_count: number;
+  my_stars: number | null;
 };
 
 type MyRatingRow = {
@@ -66,18 +55,7 @@ export function usePerformanceDiscovery({
   const [performanceError, setPerformanceError] = useState<string | null>(null);
 
   const [perfArtistMap, setPerfArtistMap] = useState<Record<string, string>>({});
-  const [perfReleaseTrackMap, setPerfReleaseTrackMap] = useState<
-    Record<
-      string,
-      {
-        release_track_id: string;
-        rating_avg: number | null;
-        rating_count: number;
-        stream_count: number;
-        my_stars: number | null;
-      }
-    >
-  >({});
+  const [perfTrackStatsMap, setPerfTrackStatsMap] = useState<Record<string, PerfTrackStats>>({});
   const [perfTrackMetaMap, setPerfTrackMetaMap] = useState<
     Record<
       string,
@@ -133,14 +111,6 @@ export function usePerformanceDiscovery({
             new Set(
               (items ?? [])
                 .map((x) => x.track_id)
-                .filter((id): id is string => Boolean(id))
-            )
-          );
-
-          const releaseIds = Array.from(
-            new Set(
-              (items ?? [])
-                .map((x) => x.release_id)
                 .filter((id): id is string => Boolean(id))
             )
           );
@@ -233,41 +203,17 @@ export function usePerformanceDiscovery({
             }
           }
 
-          if (trackIds.length > 0 && releaseIds.length > 0) {
-            const { data: rts, error: rtsErr } = await supabase
-              .from("release_tracks")
-              .select("id, track_id, release_id, tracks!inner(rating_avg, rating_count)")
-              .in("track_id", trackIds)
-              .in("release_id", releaseIds);
+          if (trackIds.length > 0) {
+            const map: Record<string, PerfTrackStats> = {};
 
-            if (!rtsErr && rts) {
-              const map: Record<
-                string,
-                {
-                  release_track_id: string;
-                  rating_avg: number | null;
-                  rating_count: number;
-                  stream_count: number;
-                  my_stars: number | null;
-                }
-              > = {};
-              for (const rt of (rts ?? []) as ReleaseTrackAggregateRow[]) {
-                const ratingSource = Array.isArray(rt.tracks)
-                  ? (rt.tracks[0] ?? null)
-                  : (rt.tracks ?? null);
-
-                const key = `${rt.release_id}:${rt.track_id}`;
-
-                map[key] = {
-                  release_track_id: rt.id,
-                  rating_avg: ratingSource?.rating_avg ?? null,
-                  rating_count: ratingSource?.rating_count ?? 0,
-                  stream_count: lifetimeStreamsByTrackId.get(String(rt.track_id)) ?? 0,
-                  my_stars: myStarsByTrackId.get(String(rt.track_id)) ?? null,
-                };
-              }
-              if (!cancelled) setPerfReleaseTrackMap(map);
+            for (const trackId of trackIds) {
+              map[trackId] = {
+                stream_count: lifetimeStreamsByTrackId.get(String(trackId)) ?? 0,
+                my_stars: myStarsByTrackId.get(String(trackId)) ?? null,
+              };
             }
+
+            if (!cancelled) setPerfTrackStatsMap(map);
           }
         } catch (e) {
         }
@@ -292,7 +238,7 @@ export function usePerformanceDiscovery({
     performanceLoading,
     performanceError,
     perfArtistMap,
-    perfReleaseTrackMap,
+    perfTrackStatsMap,
     perfTrackMetaMap,
   };
 }

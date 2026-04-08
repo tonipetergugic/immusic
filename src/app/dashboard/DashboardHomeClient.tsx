@@ -81,7 +81,7 @@ export default function DashboardHomeClient({
     performanceLoading,
     performanceError,
     perfArtistMap,
-    perfReleaseTrackMap,
+    perfTrackStatsMap,
     perfTrackMetaMap,
   } = usePerformanceDiscovery({
     discoveryMode,
@@ -135,12 +135,12 @@ export default function DashboardHomeClient({
     return buildPerfQueue({
       performanceItemsFiltered,
       perfArtistMap,
-      perfReleaseTrackMap,
+      perfTrackStatsMap,
       perfTrackMetaMap,
       supabase,
       trackArtistsMap,
     }) as unknown as PlayerTrack[];
-  }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
+  }, [performanceItemsFiltered, perfArtistMap, perfTrackStatsMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
   const HomeTabs = (
     <div className="border-b border-white/5 pb-2">
