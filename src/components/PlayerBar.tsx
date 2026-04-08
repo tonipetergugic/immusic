@@ -12,8 +12,7 @@ import {
   VolumeX,
   Shuffle,
 } from "lucide-react";
-import TrackRatingInline from "@/components/TrackRatingInline";
-import { formatTrackTitle } from "@/lib/formatTrackTitle";
+import MobileFullscreenPlayer from "@/components/MobileFullscreenPlayer";
 
 function formatTime(seconds: number): string {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -354,252 +353,33 @@ export default function PlayerBar() {
           </div>
         </div>
       ) : (
-        <div className="md:hidden">
-          {/* backdrop */}
-          <button
-            type="button"
-            onClick={() => setMobileExpanded(false)}
-            className="fixed inset-0 z-40 bg-black/50"
-            aria-label="Close player"
-          />
-
-          {/* sheet */}
-          <div
-            className="
-              fixed left-0 right-0 bottom-0 z-50
-              h-[88vh]
-              bg-[#0B0B0D]/95
-              backdrop-blur-xl
-              border-t border-[#1A1A1C]
-              shadow-[0_-2px_25px_rgba(0,255,198,0.10)]
-              rounded-t-3xl
-              px-5 pt-3 pb-6
-              flex flex-col
-            "
-          >
-            {/* grabber + close */}
-            <div className="relative flex items-center justify-center pb-3">
-              <div className="h-1 w-12 rounded-full bg-white/15" />
-              <button
-                type="button"
-                onClick={() => setMobileExpanded(false)}
-                className="
-                  absolute right-0
-                  w-10 h-10 rounded-full
-                  bg-white/5 border border-white/10
-                  text-white/80
-                  flex items-center justify-center
-                  hover:bg-white/10
-                  transition-colors
-                "
-                aria-label="Collapse player"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* big cover */}
-            <div className="mx-auto w-full max-w-[360px]">
-              <div className="w-full aspect-square rounded-2xl overflow-hidden bg-neutral-900">
-                {currentTrack.cover_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={currentTrack.cover_url}
-                    alt={currentTrack.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-sm text-white/40">
-                    No Cover
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="relative z-10 -mt-12 px-3">
-              <div
-                className="
-                  rounded-2xl
-                  border border-white/10
-                  bg-black/55
-                  backdrop-blur-md
-                  px-4 py-4
-                  text-center
-                  shadow-[0_12px_40px_rgba(0,0,0,0.45)]
-                "
-              >
-                {currentTrack.release_id ? (
-                  <button
-                    type="button"
-                    onClick={goToTrack}
-                    className="
-                      block w-full
-                      text-[20px] font-semibold leading-tight text-white/95
-                      truncate cursor-pointer
-                      hover:text-[#00FFC6]
-                      transition-colors
-                    "
-                    title={formatTrackTitle(currentTrack.title, currentTrack.version)}
-                  >
-                    {formatTrackTitle(currentTrack.title, currentTrack.version)}
-                  </button>
-                ) : (
-                  <div
-                    className="text-[20px] font-semibold leading-tight text-white/95 truncate"
-                    title={formatTrackTitle(currentTrack.title, currentTrack.version)}
-                  >
-                    {formatTrackTitle(currentTrack.title, currentTrack.version)}
-                  </div>
-                )}
-
-                {currentTrack?.profiles?.display_name ? (
-                  <button
-                    type="button"
-                    onClick={goToArtist}
-                    className="
-                      mt-2 block w-full
-                      text-[16px] text-white/70
-                      truncate cursor-pointer
-                      hover:text-[#00FFC6] hover:underline underline-offset-2
-                      transition-colors
-                    "
-                    title={currentTrack.profiles.display_name}
-                  >
-                    {currentTrack.profiles.display_name}
-                  </button>
-                ) : (
-                  <div className="mt-2 text-[16px] text-white/50 truncate">
-                    Unknown Artist
-                  </div>
-                )}
-
-                <div className="mt-4 flex justify-center">
-                  <TrackRatingInline
-                    trackId={currentTrack.id}
-                    initialAvg={currentTrack.rating_avg ?? null}
-                    initialCount={currentTrack.rating_count ?? 0}
-                    initialStreams={(currentTrack as any).stream_count ?? 0}
-                    initialMyStars={currentTrack.my_stars ?? null}
-                    showStreamsOnDesktopOnly={false}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* seek */}
-            <div className="mt-5">
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={0.1}
-                value={progress}
-                onChange={handleSeek}
-                className="
-                  w-full h-[4px]
-                  rounded-lg
-                  accent-[#00FFC6]
-                  bg-[#0D0D0F]
-                  cursor-pointer
-                "
-              />
-              <div className="mt-2 flex items-center justify-between text-xs text-white/50 tabular-nums">
-                <span>{formatTime(progress)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            {/* controls */}
-            <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center">
-              <div className="flex items-center justify-end gap-7 pr-4">
-                <button
-                  type="button"
-                  onClick={toggleShuffle}
-                  className={`transition-colors ${
-                    isShuffle
-                      ? "text-[#00FFC6]"
-                      : "text-white/80 hover:text-[#00FFC6]"
-                  }`}
-                  aria-label={isShuffle ? "Disable shuffle" : "Enable shuffle"}
-                  title={isShuffle ? "Shuffle on" : "Shuffle off"}
-                >
-                  <Shuffle size={22} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={playPrev}
-                  className="text-white/80 hover:text-[#00FFC6] transition-colors"
-                  aria-label="Previous"
-                >
-                  <SkipBack size={26} />
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={togglePlay}
-                className="
-                  w-16 h-16 rounded-full
-                  flex items-center justify-center
-                  bg-[#121214]
-                  text-white/95
-                  hover:text-[#00FFC6]
-                  hover:bg-[#00FFC6]/10
-                  transition-all
-                  justify-self-center
-                "
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? <Pause size={26} /> : <Play size={26} />}
-              </button>
-
-              <div className="flex items-center justify-start gap-7 pl-4">
-                <button
-                  type="button"
-                  onClick={playNext}
-                  className="text-white/80 hover:text-[#00FFC6] transition-colors"
-                  aria-label="Next"
-                >
-                  <SkipForward size={26} />
-                </button>
-
-                <div className="w-[22px] h-[22px] opacity-0 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* volume */}
-            <div className="mt-12 flex items-center gap-4">
-              <button
-                type="button"
-                onClick={toggleMute}
-                className="text-white/80 hover:text-[#00FFC6] transition-colors"
-                aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
-              >
-                {isMuted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
-              </button>
-
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={handleVolumeChange}
-                className="
-                  w-full h-[4px]
-                  rounded-lg
-                  accent-[#00FFC6]
-                  bg-[#0D0D0F]
-                  cursor-pointer
-                "
-              />
-            </div>
-
-            {/* spacer (safe area feel) */}
-            <div className="flex-1" />
-          </div>
-        </div>
+        <MobileFullscreenPlayer
+          currentTrack={currentTrack}
+          isPlaying={isPlaying}
+          progress={progress}
+          duration={duration}
+          volume={volume}
+          isMuted={isMuted}
+          isShuffle={isShuffle}
+          onClose={() => setMobileExpanded(false)}
+          onTogglePlay={togglePlay}
+          onSeek={seek}
+          onVolumeChange={(value) => {
+            setVolume(value);
+            if (value === 0) {
+              setIsMuted(true);
+            } else {
+              setIsMuted(false);
+              setLastVolumeBeforeMute(value);
+            }
+          }}
+          onToggleMute={toggleMute}
+          onToggleShuffle={toggleShuffle}
+          onPrev={playPrev}
+          onNext={playNext}
+          onGoToTrack={goToTrack}
+          onGoToArtist={goToArtist}
+        />
       )}
     </>
   );
