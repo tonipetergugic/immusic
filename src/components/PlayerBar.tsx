@@ -263,48 +263,45 @@ export default function PlayerBar() {
           }}
           className="
             md:hidden
-            w-full h-16
-            bg-[#0B0B0D]/80
-            backdrop-blur-xl
-            border-t border-[#1A1A1C]
-            shadow-[0_-2px_25px_rgba(0,255,198,0.06)]
-            px-4
+            w-full h-[72px]
+            bg-[#0A0A0C]/88
+            backdrop-blur-2xl
+            border-t border-white/8
+            shadow-[0_-8px_30px_rgba(0,0,0,0.32)]
+            px-3.5
             flex items-center justify-between
             text-left
             cursor-pointer
           "
         >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {/* Cover */}
-            <div className="w-11 h-11 rounded-md overflow-hidden bg-neutral-900 shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-neutral-900 ring-1 ring-white/10">
               {currentTrack.cover_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={currentTrack.cover_url}
                   alt={currentTrack.title}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[10px] text-white/40">
+                <div className="flex h-full w-full items-center justify-center text-[10px] text-white/40">
                   No Cover
                 </div>
               )}
             </div>
 
-            {/* Track Info */}
             <div className="min-w-0 flex-1">
-              <div className="text-white/90 text-[13px] font-medium truncate max-w-full">
+              <div className="truncate text-[13px] font-semibold leading-tight text-white/95">
                 {currentTrack.title}
               </div>
-              <div className="text-white/50 text-[11px] truncate">
+              <div className="mt-1 truncate text-[11px] leading-none text-white/55">
                 {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
               </div>
             </div>
           </div>
 
-          {/* Controls (stopPropagation so tap-to-expand doesn't trigger) */}
           <div
-            className="flex items-center gap-3 shrink-0"
+            className="ml-3 flex shrink-0 items-center gap-1.5"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -313,10 +310,13 @@ export default function PlayerBar() {
                 e.stopPropagation();
                 playPrev();
               }}
-              className="text-white/70 hover:text-[#00FFC6] transition-colors"
+              className="
+                inline-flex h-9 w-9 items-center justify-center rounded-full
+                text-white/72 transition-colors hover:text-[#00FFC6]
+              "
               aria-label="Previous"
             >
-              <SkipBack size={20} />
+              <SkipBack size={19} />
             </button>
 
             <button
@@ -326,17 +326,14 @@ export default function PlayerBar() {
                 togglePlay();
               }}
               className="
-                w-11 h-11 rounded-full
-                flex items-center justify-center
-                bg-[#121214]
-                text-white/90
-                hover:text-[#00FFC6]
-                hover:bg-[#00FFC6]/10
-                transition-all
+                inline-flex h-11 w-11 items-center justify-center rounded-full
+                border border-white/10 bg-[#151518] text-white/95
+                shadow-[0_8px_24px_rgba(0,0,0,0.28)]
+                transition-all hover:bg-[#00FFC6]/10 hover:text-[#00FFC6]
               "
               aria-label={isPlaying ? "Pause" : "Play"}
             >
-              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              {isPlaying ? <Pause size={19} /> : <Play size={19} className="ml-[1px]" />}
             </button>
 
             <button
@@ -345,10 +342,13 @@ export default function PlayerBar() {
                 e.stopPropagation();
                 playNext();
               }}
-              className="text-white/70 hover:text-[#00FFC6] transition-colors"
+              className="
+                inline-flex h-9 w-9 items-center justify-center rounded-full
+                text-white/72 transition-colors hover:text-[#00FFC6]
+              "
               aria-label="Next"
             >
-              <SkipForward size={20} />
+              <SkipForward size={19} />
             </button>
           </div>
         </div>
