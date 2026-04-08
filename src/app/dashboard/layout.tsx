@@ -58,7 +58,7 @@ export default async function DashboardLayout({
         </>
       }
       header={
-        <div className="sticky top-0 z-50 flex items-center">
+        <div className="relative z-50 flex items-center">
           <div className="lg:hidden pl-4">
             <MobileSidebarDrawer />
           </div>

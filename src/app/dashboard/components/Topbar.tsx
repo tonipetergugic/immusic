@@ -171,6 +171,7 @@ export default function Topbar({
       className="
         relative z-40
         flex h-16 w-full items-center justify-between
+        pt-[env(safe-area-inset-top)]
         border-b border-[#1A1A1C]
         bg-[#0B0B0D]
         px-4 sm:px-6 lg:h-14 lg:px-8
