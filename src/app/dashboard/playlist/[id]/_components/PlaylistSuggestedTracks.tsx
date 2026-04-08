@@ -39,12 +39,6 @@ type ArtistRow = {
   display_name: string | null;
 };
 
-type ReleaseTrackRow = {
-  id: string;
-  track_id: string;
-  release_id: string;
-};
-
 type SuggestedTrack = {
   id: string;
   title: string;
@@ -55,7 +49,6 @@ type SuggestedTrack = {
   cover_url: string | null;
   genre: string | null;
   release_id: string | null;
-  release_track_id: string | null;
   rating_avg: number | null;
   rating_count: number;
   streams_30d: number;
@@ -77,7 +70,6 @@ function buildSuggestedPlayerTrack(item: SuggestedTrack): PlayerTrack {
       display_name: item.artist_name,
     },
     release_id: item.release_id ?? null,
-    release_track_id: item.release_track_id ?? null,
     rating_avg: item.rating_avg,
     rating_count: item.rating_count,
   };
@@ -142,11 +134,7 @@ export default function PlaylistSuggestedTracks({
           new Set(baseItems.map((item) => item.artist_id).filter(Boolean))
         );
 
-        const [
-          { data: trackMetaRows },
-          { data: artistRows },
-          { data: releaseTrackRows },
-        ] = await Promise.all([
+        const [{ data: trackMetaRows }, { data: artistRows }] = await Promise.all([
           trackIds.length
             ? supabase
                 .from("tracks")
@@ -161,13 +149,6 @@ export default function PlaylistSuggestedTracks({
                 .in("id", artistIds)
                 .returns<ArtistRow[]>()
             : Promise.resolve({ data: [] as ArtistRow[] }),
-          trackIds.length
-            ? supabase
-                .from("release_tracks")
-                .select("id, track_id, release_id")
-                .in("track_id", trackIds)
-                .returns<ReleaseTrackRow[]>()
-            : Promise.resolve({ data: [] as ReleaseTrackRow[] }),
         ]);
 
         if (cancelled) return;
@@ -187,13 +168,6 @@ export default function PlaylistSuggestedTracks({
           (artistRows ?? []).map((row) => [row.id, row.display_name ?? "Unknown artist"])
         );
 
-        const releaseTrackMap = new Map(
-          (releaseTrackRows ?? []).map((row) => [
-            `${row.track_id}:${row.release_id}`,
-            row.id,
-          ])
-        );
-
         const nextItems: SuggestedTrack[] =
           mode === "performance"
             ? (baseItems as PerformanceDiscoveryItem[])
@@ -211,10 +185,6 @@ export default function PlaylistSuggestedTracks({
                   is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
                   genre: trackMetaMap.get(item.track_id)?.genre ?? null,
                   release_id: item.release_id ?? null,
-                  release_track_id:
-                    item.release_id
-                      ? releaseTrackMap.get(`${item.track_id}:${item.release_id}`) ?? null
-                      : null,
                   rating_avg:
                     item.rating_avg !== null && item.rating_avg !== undefined
                       ? Number(item.rating_avg)
@@ -240,10 +210,6 @@ export default function PlaylistSuggestedTracks({
                   is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
                   genre: trackMetaMap.get(item.track_id)?.genre ?? null,
                   release_id: item.release_id ?? null,
-                  release_track_id:
-                    item.release_id
-                      ? releaseTrackMap.get(`${item.track_id}:${item.release_id}`) ?? null
-                      : null,
                   rating_avg:
                     item.rating_avg !== null && item.rating_avg !== undefined
                       ? Number(item.rating_avg)
