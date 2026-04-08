@@ -33,24 +33,26 @@ const LIBRARY_TABS = [
 function LibraryTabs({ currentTab }: { currentTab: string }) {
   return (
     <div className="border-b border-white/5">
-      <nav className="flex gap-6 text-sm">
-        {LIBRARY_TABS.map((tab) => {
-          const isActive = currentTab === tab.key;
-          return (
-            <Link
-              key={tab.key}
-              href={`/dashboard/library?tab=${tab.key}`}
-              className={`pb-3 transition-colors ${
-                isActive
-                  ? "text-white font-medium border-b-2 border-[#00FFC6]"
-                  : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="flex w-max min-w-full gap-5 text-sm sm:gap-6">
+          {LIBRARY_TABS.map((tab) => {
+            const isActive = currentTab === tab.key;
+            return (
+              <Link
+                key={tab.key}
+                href={`/dashboard/library?tab=${tab.key}`}
+                className={`shrink-0 border-b-2 pb-3 transition-colors ${
+                  isActive
+                    ? "border-[#00FFC6] font-medium text-white"
+                    : "border-transparent text-neutral-400 hover:text-white"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 }

@@ -170,11 +170,10 @@ export default function Topbar({
     <div
       className="
         relative z-40
-        flex h-16 w-full items-center justify-between
-        pt-[env(safe-area-inset-top)]
+        flex min-h-[calc(4rem+env(safe-area-inset-top))] w-full items-center justify-between
         border-b border-[#1A1A1C]
         bg-[#0B0B0D]
-        px-4 sm:px-6 lg:h-14 lg:px-8
+        px-4 pt-[env(safe-area-inset-top)] sm:px-6 lg:h-14 lg:min-h-0 lg:px-8 lg:pt-0
         shadow-[0_1px_20px_0_rgba(0,255,198,0.08)]
       "
     >

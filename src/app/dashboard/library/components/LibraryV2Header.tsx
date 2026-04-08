@@ -8,8 +8,8 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
           relative overflow-hidden
           -mx-4 sm:-mx-6 lg:-mx-8
           px-4 sm:px-6 lg:px-8
-          pt-10
-          pb-12
+          pt-6 sm:pt-10
+          pb-7 sm:pb-12
         "
       >
         <div
@@ -44,7 +44,7 @@ export function LibraryV2Header({ currentTab }: { currentTab: string }) {
         />
 
         <div className="relative z-10">
-          <header className="flex min-h-[154px] flex-col justify-start gap-2">
+          <header className="flex min-h-[112px] flex-col justify-start gap-2 sm:min-h-[154px]">
             <h1 className="text-3xl font-semibold tracking-tight text-white">
               Your <span className="text-[#00FFC6]">Library</span>
             </h1>
