@@ -139,7 +139,7 @@ export default function PerformanceDiscoverySection({
                   className="py-2.5 md:py-3.5"
                   leadingSlot={idx + 1}
                   titleSlot={
-                    <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
+                    <>
                       {currentTrack?.id === rowTrack.id && isPlaying ? (
                         <>
                           <div className="flex-1 overflow-hidden md:hidden">
@@ -150,7 +150,7 @@ export default function PerformanceDiscoverySection({
                               {[0, 1].map((copyIndex) => (
                                 <div
                                   key={copyIndex}
-                                  className="inline-flex items-center gap-2 whitespace-nowrap"
+                                  className="inline-flex items-center whitespace-nowrap"
                                   aria-hidden={copyIndex === 1 ? "true" : undefined}
                                 >
                                   <button
@@ -167,23 +167,24 @@ export default function PerformanceDiscoverySection({
                                       if (isBlocked) return;
                                       if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                                     }}
-                                    className={`text-left text-[14px] font-semibold leading-5 transition-colors focus:outline-none whitespace-nowrap ${
+                                    className={`inline-flex items-center gap-2 text-left text-[14px] font-semibold leading-5 transition-colors focus:outline-none whitespace-nowrap ${
                                       isBlocked
                                         ? "text-white/45 cursor-default"
                                         : "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
                                     }`}
                                     title={formatTrackTitle(rowTrack.title, rowTrack.version)}
                                   >
-                                    {formatTrackTitle(rowTrack.title, rowTrack.version)}
+                                    <span className="whitespace-nowrap">
+                                      {formatTrackTitle(rowTrack.title, rowTrack.version)}
+                                    </span>
+                                    {rowTrack.is_explicit ? <ExplicitBadge /> : null}
                                   </button>
-
-                                  {rowTrack.is_explicit ? <ExplicitBadge /> : null}
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          <div className="hidden w-full min-w-0 items-center gap-2 overflow-hidden md:flex">
+                          <div className="hidden w-full min-w-0 overflow-hidden md:block">
                             <button
                               type="button"
                               aria-disabled={isBlocked}
@@ -198,21 +199,22 @@ export default function PerformanceDiscoverySection({
                                 if (isBlocked) return;
                                 if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                               }}
-                              className={`min-w-0 flex-1 text-left text-[14px] font-semibold leading-5 truncate transition-colors focus:outline-none ${
+                              className={`flex w-full min-w-0 items-center gap-2 text-left text-[14px] font-semibold leading-5 transition-colors focus:outline-none ${
                                 isBlocked
                                   ? "text-white/45 cursor-default"
                                   : "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
                               }`}
                               title={formatTrackTitle(rowTrack.title, rowTrack.version)}
                             >
-                              {formatTrackTitle(rowTrack.title, rowTrack.version)}
+                              <span className="min-w-0 truncate">
+                                {formatTrackTitle(rowTrack.title, rowTrack.version)}
+                              </span>
+                              {rowTrack.is_explicit ? <ExplicitBadge /> : null}
                             </button>
-
-                            {rowTrack.is_explicit ? <ExplicitBadge /> : null}
                           </div>
                         </>
                       ) : (
-                        <>
+                        <div className="w-full min-w-0 overflow-hidden">
                           <button
                             type="button"
                             aria-disabled={isBlocked}
@@ -227,20 +229,21 @@ export default function PerformanceDiscoverySection({
                               if (isBlocked) return;
                               if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                             }}
-                            className={`min-w-0 flex-1 text-left text-[14px] font-semibold leading-5 truncate transition-colors focus:outline-none ${
+                            className={`flex w-full min-w-0 items-center gap-2 text-left text-[14px] font-semibold leading-5 transition-colors focus:outline-none ${
                               isBlocked
                                 ? "text-white/45 cursor-default"
                                 : "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
                             }`}
                             title={formatTrackTitle(rowTrack.title, rowTrack.version)}
                           >
-                            {formatTrackTitle(rowTrack.title, rowTrack.version)}
+                            <span className="min-w-0 truncate">
+                              {formatTrackTitle(rowTrack.title, rowTrack.version)}
+                            </span>
+                            {rowTrack.is_explicit ? <ExplicitBadge /> : null}
                           </button>
-
-                          {rowTrack.is_explicit ? <ExplicitBadge /> : null}
-                        </>
+                        </div>
                       )}
-                    </div>
+                    </>
                   }
                   subtitleSlot={
                     artists.length > 0 ? (

@@ -187,7 +187,7 @@ export default function TrackRowBase({
                         {[0, 1].map((copyIndex) => (
                           <div
                             key={copyIndex}
-                            className="inline-flex items-center gap-2 whitespace-nowrap"
+                            className="inline-flex items-center whitespace-nowrap"
                             aria-hidden={copyIndex === 1 ? "true" : undefined}
                           >
                             {to ? (
@@ -200,13 +200,14 @@ export default function TrackRowBase({
                                   e.preventDefault();
                                   e.stopPropagation();
                                 }}
-                                className={`text-left text-[13px] font-semibold leading-tight transition-colors block whitespace-nowrap ${titleToneClasses}`}
+                                className={`inline-flex items-center gap-2 text-left text-[13px] font-semibold leading-tight transition-colors whitespace-nowrap ${titleToneClasses}`}
                               >
-                                {formattedTitle}
+                                <span className="whitespace-nowrap">{formattedTitle}</span>
+                                {track.is_explicit ? <ExplicitBadge /> : null}
                               </Link>
                             ) : (
                               <span
-                                className={`text-left text-[13px] font-semibold leading-tight block whitespace-nowrap ${
+                                className={`inline-flex items-center gap-2 text-left text-[13px] font-semibold leading-tight whitespace-nowrap ${
                                   isBlocked
                                     ? "text-white/45"
                                     : track.status === "performance"
@@ -214,17 +215,16 @@ export default function TrackRowBase({
                                     : "text-white"
                                 }`}
                               >
-                                {formattedTitle}
+                                <span className="whitespace-nowrap">{formattedTitle}</span>
+                                {track.is_explicit ? <ExplicitBadge /> : null}
                               </span>
                             )}
-
-                            {track.is_explicit ? <ExplicitBadge /> : null}
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="hidden w-full min-w-0 items-center gap-2 overflow-hidden md:flex">
+                    <div className="hidden w-full min-w-0 overflow-hidden md:block">
                       {to ? (
                         <Link
                           href={to}
@@ -235,13 +235,14 @@ export default function TrackRowBase({
                             e.preventDefault();
                             e.stopPropagation();
                           }}
-                          className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${titleToneClasses}`}
+                          className={`flex w-full min-w-0 items-center gap-2 text-left text-[13px] font-semibold leading-tight transition-colors ${titleToneClasses}`}
                         >
-                          {formattedTitle}
+                          <span className="min-w-0 truncate">{formattedTitle}</span>
+                          {track.is_explicit ? <ExplicitBadge /> : null}
                         </Link>
                       ) : (
                         <span
-                          className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
+                          className={`flex w-full min-w-0 items-center gap-2 text-left text-[13px] font-semibold leading-tight ${
                             isBlocked
                               ? "text-white/45"
                               : track.status === "performance"
@@ -249,15 +250,14 @@ export default function TrackRowBase({
                               : "text-white"
                           }`}
                         >
-                          {formattedTitle}
+                          <span className="min-w-0 truncate">{formattedTitle}</span>
+                          {track.is_explicit ? <ExplicitBadge /> : null}
                         </span>
                       )}
-
-                      {track.is_explicit ? <ExplicitBadge /> : null}
                     </div>
                   </>
                 ) : (
-                  <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
+                  <div className="w-full min-w-0 overflow-hidden">
                     {to ? (
                       <Link
                         href={to}
@@ -268,13 +268,14 @@ export default function TrackRowBase({
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${titleToneClasses}`}
+                        className={`flex w-full min-w-0 items-center gap-2 text-left text-[13px] font-semibold leading-tight transition-colors ${titleToneClasses}`}
                       >
-                        {formattedTitle}
+                        <span className="min-w-0 truncate">{formattedTitle}</span>
+                        {track.is_explicit ? <ExplicitBadge /> : null}
                       </Link>
                     ) : (
                       <span
-                        className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
+                        className={`flex w-full min-w-0 items-center gap-2 text-left text-[13px] font-semibold leading-tight ${
                           isBlocked
                             ? "text-white/45"
                             : track.status === "performance"
@@ -282,11 +283,10 @@ export default function TrackRowBase({
                             : "text-white"
                         }`}
                       >
-                        {formattedTitle}
+                        <span className="min-w-0 truncate">{formattedTitle}</span>
+                        {track.is_explicit ? <ExplicitBadge /> : null}
                       </span>
                     )}
-
-                    {track.is_explicit ? <ExplicitBadge /> : null}
                   </div>
                 )}
               </>
