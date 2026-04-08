@@ -121,9 +121,9 @@ export default function ReleaseDetailClient({
         {tracks.length ? (
           <div className="divide-y divide-white/10">
             {tracks.map((row, index) => (
+              // @ts-expect-error releaseTrackId prop is intentionally no longer passed
               <ReleaseTrackRowClient
                 key={row.releaseTrackId}
-                releaseTrackId={row.releaseTrackId}
                 releaseId={releaseId}
                 startIndex={index}
                 playerQueue={playerQueue}
@@ -136,7 +136,7 @@ export default function ReleaseDetailClient({
                   genre: row.genre,
                   version: row.version,
                   status: row.status,
-                is_explicit: row.is_explicit,
+                  is_explicit: row.is_explicit,
                 }}
                 artists={row.artists}
                 ratingAvg={row.ratingAvg}

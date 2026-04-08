@@ -10,7 +10,7 @@ import ExplicitBadge from "@/components/ExplicitBadge";
 import { usePlayer } from "@/context/PlayerContext";
 
 export default function ReleaseTrackRowClient({
-  releaseTrackId,
+  releaseTrackId: _releaseTrackId,
   releaseId,
   startIndex,
   playerQueue,
@@ -237,7 +237,6 @@ export default function ReleaseTrackRowClient({
         }
         metaSlot={
           <TrackRatingInline
-            releaseTrackId={releaseTrackId}
             trackId={track.id}
             initialAvg={ratingAvg ?? null}
             initialCount={ratingCount ?? 0}
