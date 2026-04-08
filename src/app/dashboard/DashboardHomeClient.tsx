@@ -143,13 +143,12 @@ export default function DashboardHomeClient({
   }, [performanceItemsFiltered, perfArtistMap, perfReleaseTrackMap, perfTrackMetaMap, supabase, trackArtistsMap]);
 
   const HomeTabs = (
-    <div className="relative border-b border-white/5 pb-1">
-      <div className="overflow-x-auto">
-        <nav
-          role="tablist"
-          aria-label="Home sections"
-          className="flex w-max min-w-full gap-6 text-sm whitespace-nowrap"
-        >
+    <div className="border-b border-white/5 pb-2">
+      <nav
+        role="tablist"
+        aria-label="Home sections"
+        className="grid grid-cols-3 gap-2 sm:gap-3 md:flex md:w-auto md:min-w-0 md:gap-6"
+      >
         {HOME_TABS.map((t) => {
           const isActive = homeTab === t.key;
           return (
@@ -190,26 +189,24 @@ export default function DashboardHomeClient({
                 }
               }}
               onClick={() => setHomeTab(t.key)}
-              className={`py-2 pb-3 border-b-2 transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:text-white ${
+              className={`min-h-[44px] rounded-full border px-4 py-2.5 text-[15px] font-medium transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/40 md:min-h-0 md:rounded-none md:border-x-0 md:border-t-0 md:border-b-2 md:bg-transparent md:px-0 md:py-2 md:pb-3 md:text-sm ${
                 isActive
-                  ? "text-white font-medium border-[#00FFC6]"
-                  : "text-neutral-400 border-transparent hover:text-white"
+                  ? "border-[#00FFC633] bg-[#111112] text-white shadow-[0_0_18px_rgba(0,255,198,0.08)] md:border-[#00FFC6] md:bg-transparent md:shadow-none"
+                  : "border-white/8 bg-white/[0.02] text-neutral-300 hover:text-white hover:border-white/12 md:border-transparent md:bg-transparent"
               }`}
             >
               {t.label}
             </button>
           );
         })}
-        </nav>
-      </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0E0E10] to-transparent lg:hidden" />
+      </nav>
     </div>
   );
 
-  const tabPanelClassName = "space-y-10 pt-2 pb-[calc(env(safe-area-inset-bottom)+120px)]";
+  const tabPanelClassName = "space-y-8 pt-3 pb-[calc(env(safe-area-inset-bottom)+120px)] sm:space-y-10";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <DashboardHeroAndToggle
         discoveryMode={discoveryMode}
         setDiscoveryMode={setDiscoveryMode}

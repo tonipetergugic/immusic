@@ -22,6 +22,9 @@ export default function ArtistHeader({
   const bannerUrl = artist.bannerUrl ?? null;
   const avatarUrl = artist.avatarUrl ?? null;
   const bannerPosY = artist.bannerPosY ?? 50;
+  const avatarPosX = artist.avatarPosX ?? 50;
+  const avatarPosY = artist.avatarPosY ?? 50;
+  const avatarZoom = artist.avatarZoom ?? 120;
 
   return (
     <div className="w-full">
@@ -92,7 +95,12 @@ export default function ArtistHeader({
                 <img
                   src={avatarUrl}
                   alt={artist.displayName}
-                  className="w-52 h-52 md:w-60 md:h-60 rounded-full object-cover border-4 border-white/15 shadow-2xl"
+                  className="w-52 h-52 md:w-60 md:h-60 rounded-full object-cover border-4 border-white/15 shadow-2xl will-change-transform"
+                  style={{
+                    objectPosition: `${avatarPosX}% ${avatarPosY}%`,
+                    transform: `scale(${avatarZoom / 100})`,
+                    transformOrigin: `${avatarPosX}% ${avatarPosY}%`,
+                  }}
                 />
               ) : (
                 <div className="w-44 h-44 md:w-48 md:h-48 rounded-full bg-white/10 border-4 border-white/10" />

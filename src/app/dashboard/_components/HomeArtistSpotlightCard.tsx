@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import {
   Instagram,
   Facebook,
@@ -20,6 +19,9 @@ type SpotlightProfile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  avatar_pos_x: number | null;
+  avatar_pos_y: number | null;
+  avatar_zoom: number | null;
   instagram: string | null;
   tiktok: string | null;
   facebook: string | null;
@@ -78,6 +80,10 @@ export default function HomeArtistSpotlightCard({
     return `${base}${sep}v=${encodeURIComponent(String(updatedAt))}`;
   }, [profile?.avatar_url, profile?.updated_at]);
 
+  const avatarPosX = profile?.avatar_pos_x ?? 50;
+  const avatarPosY = profile?.avatar_pos_y ?? 50;
+  const avatarZoom = profile?.avatar_zoom ?? 100;
+
   const bioText = useMemo(() => {
     const raw = profile?.bio?.trim() ?? "";
     if (!raw) return "No bio yet.";
@@ -128,7 +134,7 @@ export default function HomeArtistSpotlightCard({
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, display_name, bio, avatar_url, instagram, tiktok, facebook, x, updated_at"
+          "id, display_name, bio, avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, instagram, tiktok, facebook, x, updated_at"
         )
         .eq("id", spotlightArtistId)
         .maybeSingle<SpotlightProfile>();
@@ -248,14 +254,18 @@ export default function HomeArtistSpotlightCard({
           ) : (
             <>
               <div>
-                <div className="relative h-[220px] w-full overflow-hidden rounded-[28px] bg-black/30 shadow-[0_14px_34px_rgba(0,0,0,0.30)]">
+                <div className="relative mx-auto aspect-square w-full max-w-[260px] overflow-hidden rounded-[28px] bg-[#0C0C0E] shadow-[0_14px_34px_rgba(0,0,0,0.30)] sm:max-w-[320px] md:max-w-[360px] lg:max-w-[400px]">
                   {avatarUrl ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                       src={avatarUrl}
                       alt={displayName}
-                      fill
-                      sizes="(min-width: 1280px) 340px, 100vw"
-                      className="object-cover object-top"
+                      className="h-full w-full object-cover will-change-transform"
+                      style={{
+                        objectPosition: `${avatarPosX}% ${avatarPosY}%`,
+                        transform: `scale(${avatarZoom / 100})`,
+                        transformOrigin: `${avatarPosX}% ${avatarPosY}%`,
+                      }}
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-white/55">

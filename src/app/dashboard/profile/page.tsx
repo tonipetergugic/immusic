@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import AvatarDropzone from "@/components/AvatarDropzone";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { updateAvatar, deleteAvatar, updateDisplayName } from "@/app/(topbar)/profile/actions";
+import {
+  updateAvatar,
+  updateAvatarPosition,
+  deleteAvatar,
+  updateDisplayName,
+} from "@/app/(topbar)/profile/actions";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import DeleteAvatarModal from "@/components/DeleteAvatarModal";
@@ -17,6 +22,9 @@ function showNotice(message: string) {
 
 export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPosX, setAvatarPosX] = useState<number>(50);
+  const [avatarPosY, setAvatarPosY] = useState<number>(50);
+  const [avatarZoom, setAvatarZoom] = useState<number>(100);
   const [loading, setLoading] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [initialName, setInitialName] = useState("");
@@ -88,7 +96,7 @@ export default function ProfilePage() {
 
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("avatar_url, display_name, role, updated_at")
+          .select("avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, display_name, role, updated_at")
           .eq("id", user.id)
           .single();
 
@@ -100,6 +108,21 @@ export default function ProfilePage() {
             base && ver
               ? `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(ver)}`
               : base
+          );
+          setAvatarPosX(
+            Number.isFinite(profile?.avatar_pos_x)
+              ? Number(profile.avatar_pos_x)
+              : 50
+          );
+          setAvatarPosY(
+            Number.isFinite(profile?.avatar_pos_y)
+              ? Number(profile.avatar_pos_y)
+              : 50
+          );
+          setAvatarZoom(
+            Number.isFinite(profile?.avatar_zoom)
+              ? Number(profile.avatar_zoom)
+              : 100
           );
           setRole(profile?.role ?? null);
           if (profile?.display_name) {
@@ -120,6 +143,14 @@ export default function ProfilePage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!avatarUrl) {
+      setAvatarPosX(50);
+      setAvatarPosY(50);
+      setAvatarZoom(100);
+    }
+  }, [avatarUrl]);
 
   return (
     <ProfileSectionLayout
@@ -229,9 +260,19 @@ export default function ProfilePage() {
         </div>
 
         <div className="lg:justify-self-end">
-          <div className="relative h-[300px] w-[300px] group">
+          <div className="relative h-[280px] w-[280px] group sm:h-[300px] sm:w-[300px]">
             <AvatarDropzone
               avatarUrl={avatarUrl}
+              avatarPosX={avatarPosX}
+              avatarPosY={avatarPosY}
+              avatarZoom={avatarZoom}
+              onPositionChange={(x, y) => {
+                setAvatarPosX(x);
+                setAvatarPosY(y);
+              }}
+              onPositionCommit={async (x, y) => {
+                await updateAvatarPosition(x, y);
+              }}
               onFileSelected={async (file) => {
                 if (!file) return;
                 if (loading) return;
@@ -276,7 +317,10 @@ export default function ProfilePage() {
 
                 const url = publicUrl.publicUrl;
 
-                await updateAvatar(url);
+                await updateAvatar(url, 50, 50, 100);
+                setAvatarPosX(50);
+                setAvatarPosY(50);
+                setAvatarZoom(100);
                 setAvatarUrl(url);
 
                 window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: url } }));
@@ -284,34 +328,6 @@ export default function ProfilePage() {
                 setLoading(false);
               }}
             />
-
-            <div
-              className="
-                pointer-events-none
-                absolute inset-0
-                rounded-xl
-                flex items-center justify-center
-                bg-black/0
-                opacity-0
-                group-hover:opacity-100
-                group-hover:bg-black/35
-                transition
-              "
-            >
-              <span
-                className="
-                  text-xs font-medium
-                  text-white/90
-                  px-3 py-1.5
-                  rounded-full
-                  border border-white/10
-                  bg-black/35
-                  backdrop-blur
-                "
-              >
-                Change avatar
-              </span>
-            </div>
 
             {avatarUrl ? (
               <button

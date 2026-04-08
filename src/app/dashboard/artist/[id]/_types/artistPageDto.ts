@@ -31,6 +31,9 @@ export type ArtistCoreDto = {
   bannerUrl: string | null;
   bannerPosY: number;
   avatarUrl: string | null;
+  avatarPosX: number;
+  avatarPosY: number;
+  avatarZoom: number;
 
   socials: {
     instagram: string | null;

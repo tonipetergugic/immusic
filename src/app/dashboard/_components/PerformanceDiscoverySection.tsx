@@ -64,21 +64,21 @@ export default function PerformanceDiscoverySection({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Performance Discovery</h2>
-            <p className="text-sm text-white/50">
+            <h2 className="text-[22px] font-semibold tracking-[-0.01em] sm:text-xl">Performance Discovery</h2>
+            <p className="text-sm leading-6 text-white/60 sm:leading-5">
               Tracks appear here once they have verified listener engagement and ratings.
             </p>
           </div>
 
-          <div className="w-full md:w-[220px]">
+          <div className="w-full md:w-[240px]">
             <label className="sr-only">Genre</label>
             <AppSelect
               value={performanceGenre}
               onChange={setPerformanceGenre}
               items={performanceGenreItems}
-              className="[&>button]:h-10 [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-sm [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55"
+              className="[&>button]:h-11 [&>button]:min-h-[44px] [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-[15px] [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55 sm:[&>button]:h-10 sm:[&>button]:text-sm"
             />
           </div>
         </div>
@@ -137,6 +137,7 @@ export default function PerformanceDiscoverySection({
                   tracks={perfQueue}
                   coverUrl={coverUrl}
                   coverSize="md"
+                  className="py-3 md:py-3.5"
                   leadingSlot={idx + 1}
                   titleSlot={
                     <div className="flex items-center gap-2 min-w-0">
@@ -154,7 +155,7 @@ export default function PerformanceDiscoverySection({
                           if (isBlocked) return;
                           if (releaseId) routerPush(`/dashboard/release/${releaseId}`);
                         }}
-                        className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
+                        className={`min-w-0 flex-1 text-left text-[14px] font-semibold leading-5 truncate transition-colors focus:outline-none ${
                           isBlocked
                             ? "text-white/45 cursor-default"
                             : "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
@@ -169,7 +170,7 @@ export default function PerformanceDiscoverySection({
                   }
                   subtitleSlot={
                     artists.length > 0 ? (
-                      <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
+                      <div className={`mt-1 text-left text-[13px] truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
                         {artists.map((artistItem, idx2) => (
                           <span key={artistItem.id}>
                             <button
@@ -218,7 +219,7 @@ export default function PerformanceDiscoverySection({
                           if (isBlocked) return;
                           routerPush(`/dashboard/artist/${rowTrack.artist_id}`);
                         }}
-                        className={`mt-1 text-left text-xs truncate transition-colors focus:outline-none ${
+                        className={`mt-1 text-left text-[13px] truncate transition-colors focus:outline-none ${
                           isBlocked
                             ? "text-white/35 cursor-default"
                             : "text-white/60 hover:text-[#00FFC6] hover:underline underline-offset-2 cursor-pointer"
@@ -228,7 +229,7 @@ export default function PerformanceDiscoverySection({
                         {artistName}
                       </button>
                     ) : (
-                      <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>
+                      <div className={`mt-1 text-[13px] truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>
                         Unknown artist
                       </div>
                     )

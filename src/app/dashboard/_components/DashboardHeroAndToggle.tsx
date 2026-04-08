@@ -16,8 +16,8 @@ export default function DashboardHeroAndToggle({
           relative overflow-hidden
           -mx-4 sm:-mx-6 lg:-mx-8
           px-4 sm:px-6 lg:px-8
-          pt-10
-          pb-12
+          pt-8 sm:pt-10
+          pb-10 sm:pb-12
         "
       >
         <div
@@ -54,26 +54,26 @@ export default function DashboardHeroAndToggle({
         <div className="relative z-10">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-white/55">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/55 sm:text-[11px]">
                 Welcome back
               </div>
-              <div className="mt-1 text-3xl sm:text-4xl font-semibold text-white leading-tight">
+              <div className="mt-1 text-[32px] font-semibold leading-[1.04] tracking-[-0.02em] text-white sm:text-4xl sm:leading-tight">
                 <span className="text-[#00FFC6]">Discover</span> and rate new <span className="text-[#00FFC6]">music</span>
               </div>
-              <div className="mt-1 text-sm text-white/50">
+              <div className="mt-2 text-[15px] leading-6 text-white/60 sm:mt-1 sm:text-sm sm:leading-5">
                 <div>Development tracks are looking for feedback.</div>
                 <div>Performance shows proven tracks that stood out.</div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-center">
-            <div className="inline-flex rounded-full border border-[#00FFC622] bg-black/25 p-1 backdrop-blur shadow-[0_0_22px_rgba(0,255,198,0.10)]">
+          <div className="mt-6 flex items-center justify-center sm:mt-7">
+            <div className="inline-flex w-full max-w-md rounded-[20px] border border-[#00FFC622] bg-black/25 p-1.5 backdrop-blur shadow-[0_0_22px_rgba(0,255,198,0.10)] sm:w-auto sm:max-w-none sm:rounded-full sm:p-1">
               <button
                 type="button"
                 onClick={() => setDiscoveryMode("development")}
                 className={[
-                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full border text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                  "cursor-pointer inline-flex min-h-[46px] flex-1 items-center justify-center rounded-full border px-4 py-3 text-[15px] font-semibold transition-all duration-300 active:scale-[0.98] sm:min-h-0 sm:flex-none sm:px-6 sm:py-2.5 sm:text-sm",
                   discoveryMode === "development"
                     ? "bg-[#0B1614] text-white/90 border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
                     : "bg-transparent text-white/70 border-transparent hover:text-white/90",
@@ -86,7 +86,7 @@ export default function DashboardHeroAndToggle({
                 type="button"
                 onClick={() => setDiscoveryMode("performance")}
                 className={[
-                  "cursor-pointer inline-flex items-center justify-center px-6 py-2.5 rounded-full border text-sm font-semibold transition-all duration-300 active:scale-[0.98]",
+                  "cursor-pointer inline-flex min-h-[46px] flex-1 items-center justify-center rounded-full border px-4 py-3 text-[15px] font-semibold transition-all duration-300 active:scale-[0.98] sm:min-h-0 sm:flex-none sm:px-6 sm:py-2.5 sm:text-sm",
                   discoveryMode === "performance"
                     ? "bg-[#0B1614] text-white/90 border-[#00FFC655] shadow-[0_0_18px_rgba(0,255,198,0.18)]"
                     : "bg-transparent text-white/70 border-transparent hover:text-white/90",

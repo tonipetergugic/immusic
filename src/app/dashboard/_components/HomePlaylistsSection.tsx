@@ -33,16 +33,16 @@ export default function HomePlaylistsSection({
   return (
     <div className={wrapperClassName}>
       <div>
-        <h2 className="text-xl font-semibold">{title}</h2>
+        <h2 className="text-[22px] font-semibold tracking-[-0.01em] sm:text-xl">{title}</h2>
         {subtitle ? (
-          <p className="mt-1 text-sm text-white/55">{subtitle}</p>
+          <p className="mt-1 text-sm leading-6 text-white/60 sm:leading-5">{subtitle}</p>
         ) : null}
       </div>
 
       {playlistIds.length === 0 ? (
         <p className="text-white/40">{emptyText}</p>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
+        <div className="flex gap-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:-mx-0 sm:px-0 sm:scroll-px-0">
           {playlistIds.slice(0, 10).map((pid, i) => {
             const pl = playlistsById[pid];
 
@@ -50,7 +50,7 @@ export default function HomePlaylistsSection({
               return (
                 <div
                   key={pid}
-                  className="shrink-0 w-[150px] snap-start bg-[#111112] p-3 rounded-xl border border-transparent"
+                  className="shrink-0 w-[172px] snap-start rounded-2xl border border-transparent bg-[#111112] p-4 sm:w-[188px] lg:w-[156px]"
                 >
                   <div className="w-full aspect-square rounded-xl bg-white/10" />
                   <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
@@ -60,7 +60,7 @@ export default function HomePlaylistsSection({
             }
 
             return (
-              <div key={pid} className="shrink-0 w-[150px] snap-start">
+              <div key={pid} className="shrink-0 w-[172px] snap-start sm:w-[188px] lg:w-[156px]">
                 <PlaylistCard
                   id={pl.id}
                   title={pl.title}

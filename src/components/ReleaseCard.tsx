@@ -49,10 +49,10 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
 
   if (!data) {
     return (
-      <div className="bg-[#111112] p-3 rounded-xl border border-transparent">
-        <div className="w-full aspect-square rounded-xl bg-white/10" />
-        <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
-        <div className="mt-2 h-3 w-1/2 bg-white/10 rounded" />
+      <div className="rounded-2xl border border-transparent bg-[#111112] p-4">
+        <div className="aspect-square w-full rounded-[18px] bg-white/10" />
+        <div className="mt-3 h-4 w-3/4 rounded bg-white/10" />
+        <div className="mt-2 h-3 w-1/2 rounded bg-white/10" />
       </div>
     );
   }
@@ -69,23 +69,24 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
         }
       }}
       className="
-        group relative 
-        bg-[#111112] 
-        p-2 rounded-xl
+        group relative
+        block cursor-pointer
+        rounded-2xl border border-transparent
+        bg-[#111112]
+        p-3
+        outline-none
         transition-all
         hover:scale-[1.015]
-        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-        border border-transparent
         hover:border-[#00FFC622]
-        cursor-pointer
-        block
-        outline-none
+        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
+        focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60
+        focus-visible:ring-offset-2 focus-visible:ring-offset-[#0E0E10]
       "
     >
-      <div className="relative w-full aspect-square rounded-xl overflow-hidden">
+      <div className="relative aspect-square w-full overflow-hidden rounded-[18px]">
         {/* Release type badge (top-right) */}
         {data.release_type && (
-          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md bg-black/65 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/90 border border-white/10 backdrop-blur">
+          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md border border-white/10 bg-black/65 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur">
             {data.release_type}
           </div>
         )}
@@ -98,7 +99,7 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             priority
             className="
-              object-cover rounded-xl
+              object-cover rounded-[18px]
               transition-all duration-300
               group-hover:brightness-110
               group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]
@@ -111,7 +112,7 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
       </div>
 
       <h3
-        className="mt-2 text-[13px] font-semibold text-white/90 truncate"
+        className="mt-3 text-[14px] font-semibold leading-5 text-white/90 truncate"
         title={data.title}
       >
         {data.title}
@@ -121,12 +122,12 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
         <Link
           href={getArtistHref(data.artist_id)}
           onClick={(e) => e.stopPropagation()}
-          className="text-[11px] text-white/50 truncate hover:text-[#00FFC6] transition-colors block"
+          className="block truncate text-xs text-white/55 transition-colors hover:text-[#00FFC6]"
         >
           {data.artist_name ?? "Unknown Artist"}
         </Link>
       ) : (
-        <p className="text-[11px] text-white/50 truncate">
+        <p className="truncate text-xs text-white/55">
           {data.artist_name ?? "Unknown Artist"}
         </p>
       )}

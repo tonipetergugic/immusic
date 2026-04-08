@@ -193,21 +193,21 @@ export default function DevelopmentTracksSection({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Development Tracks</h2>
-          <p className="text-sm text-white/50">
+          <h2 className="text-[22px] font-semibold tracking-[-0.01em] sm:text-xl">Development Tracks</h2>
+          <p className="text-sm leading-6 text-white/60 sm:leading-5">
             All tracks currently in Development Discovery.
           </p>
         </div>
 
-        <div className="w-full md:w-[220px]">
+        <div className="w-full md:w-[240px]">
           <label className="sr-only">Genre</label>
           <AppSelect
             value={devGenre}
             onChange={setDevGenre}
             items={devGenreItems}
-            className="[&>button]:h-10 [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-sm [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55"
+            className="[&>button]:h-11 [&>button]:min-h-[44px] [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-[15px] [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55 sm:[&>button]:h-10 sm:[&>button]:text-sm"
           />
         </div>
       </div>
@@ -265,10 +265,11 @@ export default function DevelopmentTracksSection({
                   tracks={devQueue}
                   coverUrl={coverUrl}
                   coverSize="md"
+                  className="py-3 md:py-3.5"
                   leadingSlot={idx + 1}
                   subtitleSlot={
                     artists.length > 0 ? (
-                      <div className={`mt-1 text-left text-xs truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
+                      <div className={`mt-1 text-left text-[13px] truncate ${isBlocked ? "text-white/35" : "text-white/60"}`}>
                         {artists.map((artistItem, idx2) => (
                           <span key={artistItem.id}>
                             <button
@@ -317,7 +318,7 @@ export default function DevelopmentTracksSection({
                           if (isBlocked) return;
                           routerPush(`/dashboard/artist/${rowTrack.artist_id}`);
                         }}
-                        className={`mt-1 text-left text-xs truncate transition-colors focus:outline-none ${
+                        className={`mt-1 text-left text-[13px] truncate transition-colors focus:outline-none ${
                           isBlocked
                             ? "text-white/35 cursor-default"
                             : "text-white/60 hover:text-[#00FFC6] hover:underline underline-offset-2 cursor-pointer"
@@ -327,7 +328,7 @@ export default function DevelopmentTracksSection({
                         {artist}
                       </button>
                     ) : (
-                      <div className={`mt-1 text-xs truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>
+                      <div className={`mt-1 text-[13px] truncate ${isBlocked ? "text-white/35" : "text-white/40"}`}>
                         Unknown artist
                       </div>
                     )

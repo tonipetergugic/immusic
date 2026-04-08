@@ -169,22 +169,20 @@ export default function Topbar({
   return (
     <div
       className="
-        w-full h-14
-        bg-[#0B0B0D]
+        relative z-40
+        flex h-16 w-full items-center justify-between
         border-b border-[#1A1A1C]
-        flex items-center justify-between
-        px-4 sm:px-6 lg:px-8
+        bg-[#0B0B0D]
+        px-4 sm:px-6 lg:h-14 lg:px-8
         shadow-[0_1px_20px_0_rgba(0,255,198,0.08)]
-        relative
-        z-40
       "
     >
-      <span className="font-semibold tracking-wide text-sm">
+      <span className="min-w-0 truncate pr-3 text-[15px] font-semibold tracking-[0.02em] sm:text-sm">
         <span className="text-white/90">ImMusic</span>
         <span className="text-[#00FFC6]"> · {topbarTitle}</span>
       </span>
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-3 sm:gap-5">
 
         <button
           ref={avatarButtonRef}
@@ -193,12 +191,14 @@ export default function Topbar({
           aria-haspopup="menu"
           aria-expanded={isMenuOpen}
           className="
-            w-9 h-9 rounded-full border border-[#00FFC622]
-            overflow-hidden cursor-pointer
+            flex h-10 w-10 items-center justify-center
+            overflow-hidden rounded-full border border-[#00FFC622]
+            bg-[#1A1A1C]
+            cursor-pointer
             transition-shadow duration-200
             hover:shadow-[0_0_10px_2px_rgba(0,255,198,0.35)]
             focus:outline-none focus:ring-2 focus:ring-[#00FFC6]/40
-            flex items-center justify-center bg-[#1A1A1C]
+            lg:h-9 lg:w-9
           "
         >
           {avatarUrl ? (
@@ -208,7 +208,7 @@ export default function Topbar({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-sm text-[#00FFC6] font-medium">
+            <span className="text-[15px] font-medium text-[#00FFC6] lg:text-sm">
               {(displayName ?? userEmail ?? "?").charAt(0).toUpperCase()}
             </span>
           )}
@@ -227,14 +227,14 @@ export default function Topbar({
           />
         )}
 
-        <span className="hidden md:inline text-white/85 text-sm font-light">
+        <span className="hidden lg:inline text-white/85 text-sm font-light">
           {displayName ?? (userEmail ? userEmail.split("@")[0] : "")}
         </span>
 
         {role === "admin" && (
           <Link
             href="/dashboard/admin"
-            className="text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
+            className="hidden lg:inline text-sm text-[#B3B3B3] transition-colors hover:text-[#00FFC6]"
           >
             Admin Panel
           </Link>

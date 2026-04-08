@@ -8,7 +8,12 @@ import { cookies } from "next/headers";
  * Called AFTER the client uploads the avatar image to Supabase Storage.
  * This action updates profiles.avatar_url securely on the server.
  */
-export async function updateAvatar(avatarUrl: string) {
+export async function updateAvatar(
+  avatarUrl: string,
+  avatarPosX: number = 50,
+  avatarPosY: number = 50,
+  avatarZoom: number = 120
+) {
   if (!avatarUrl) {
     throw new Error("Missing avatarUrl");
   }
@@ -41,7 +46,6 @@ export async function updateAvatar(avatarUrl: string) {
     }
   );
 
-  // Get authenticated user
   const {
     data: { user },
     error: userError,
@@ -52,15 +56,91 @@ export async function updateAvatar(avatarUrl: string) {
     throw new Error("Not authenticated");
   }
 
-  // Update avatar_url in profiles table
+  const x = Number.isFinite(avatarPosX) ? Math.round(avatarPosX) : 50;
+  const y = Number.isFinite(avatarPosY) ? Math.round(avatarPosY) : 50;
+  const z = Number.isFinite(avatarZoom) ? Math.round(avatarZoom) : 120;
+
+  const clampedX = Math.max(0, Math.min(100, x));
+  const clampedY = Math.max(0, Math.min(100, y));
+  const clampedZoom = Math.max(100, Math.min(200, z));
+
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ avatar_url: avatarUrl })
+    .update({
+      avatar_url: avatarUrl,
+      avatar_pos_x: clampedX,
+      avatar_pos_y: clampedY,
+      avatar_zoom: clampedZoom,
+    })
     .eq("id", user.id);
 
   if (updateError) {
     console.error("SERVER ACTION — updateAvatar: Update failed", updateError);
     throw new Error("Failed to update avatar");
+  }
+
+  return { success: true };
+}
+
+export async function updateAvatarPosition(
+  avatarPosX: number,
+  avatarPosY: number
+) {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (err) {
+            console.error("Cookie set error:", err);
+          }
+        },
+        remove(name: string, options: any) {
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch (err) {
+            console.error("Cookie remove error:", err);
+          }
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    console.error("SERVER ACTION — updateAvatarPosition: Unauthorized", userError);
+    throw new Error("Not authenticated");
+  }
+
+  const x = Number.isFinite(avatarPosX) ? Math.round(avatarPosX) : 50;
+  const y = Number.isFinite(avatarPosY) ? Math.round(avatarPosY) : 50;
+
+  const clampedX = Math.max(0, Math.min(100, x));
+  const clampedY = Math.max(0, Math.min(100, y));
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      avatar_pos_x: clampedX,
+      avatar_pos_y: clampedY,
+    })
+    .eq("id", user.id);
+
+  if (updateError) {
+    console.error("SERVER ACTION — updateAvatarPosition: Update failed", updateError);
+    throw new Error("Failed to update avatar position");
   }
 
   return { success: true };
@@ -118,7 +198,7 @@ export async function deleteAvatar() {
   // Set avatar_url = null in database
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ avatar_url: null })
+    .update({ avatar_url: null, avatar_pos_x: 50, avatar_pos_y: 50, avatar_zoom: 120 })
     .eq("id", user.id);
 
   if (updateError) {

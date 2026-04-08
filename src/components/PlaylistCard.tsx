@@ -26,21 +26,21 @@ export default function PlaylistCard({
       href={`/dashboard/playlist/${id}`}
       aria-label={`Open playlist: ${title}`}
       className="
-        group relative 
-        bg-[#111112] 
-        p-2 rounded-xl 
+        group relative
+        block
+        rounded-2xl border border-transparent
+        bg-[#111112]
+        p-3
         transition-all
         hover:scale-[1.015]
-        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
-        border border-transparent
         hover:border-[#00FFC622]
-        block
+        hover:shadow-[0_0_14px_rgba(0,255,198,0.18)]
         focus:outline-none
         focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60
         focus-visible:ring-offset-2 focus-visible:ring-offset-[#0E0E10]
       "
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/5">
+      <div className="relative aspect-square w-full overflow-hidden rounded-[18px] bg-white/5">
         {coverPublicUrl ? (
           <Image
             src={coverPublicUrl}
@@ -53,7 +53,7 @@ export default function PlaylistCard({
         ) : (
           <div
             className="
-              relative h-full rounded-xl overflow-hidden
+              relative h-full rounded-[18px] overflow-hidden
               bg-white/[0.06]
               border border-white/10
             "
@@ -66,7 +66,7 @@ export default function PlaylistCard({
               <div
                 className="
                   inline-flex items-center justify-center
-                  w-9 h-9
+                  w-10 h-10
                   transition-opacity duration-150
                   pointer-events-none
                 "
@@ -104,18 +104,18 @@ export default function PlaylistCard({
 
       </div>
 
-      <div className="mt-2 block">
+      <div className="mt-3 block">
         <h3
-          className="text-[13px] font-semibold text-white/90 truncate"
+          className="text-[14px] font-semibold leading-5 text-white/90 truncate"
           title={title}
         >
           {title}
         </h3>
 
         {description ? (
-          <p className="text-[11px] text-white/50 truncate block">{description}</p>
+          <p className="block truncate text-xs text-white/55">{description}</p>
         ) : (
-          <div className="h-[16px]" />
+          <div className="h-[18px]" />
         )}
       </div>
     </Link>

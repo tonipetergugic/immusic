@@ -36,16 +36,16 @@ export default function HomeReleasesSection({
 
   return (
     <div className={wrapperClassName}>
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <h2 className="text-[22px] font-semibold tracking-[-0.01em] sm:text-xl">{title}</h2>
 
       {validReleaseIds.length === 0 ? (
         <p className="text-white/40">{emptyText}</p>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory">
+        <div className="flex gap-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:-mx-0 sm:px-0 sm:scroll-px-0">
           {validReleaseIds.map((rid) => {
             const data = releasesById[rid]!;
             return (
-              <div key={rid} className="shrink-0 w-[150px] snap-start">
+              <div key={rid} className="shrink-0 w-[172px] snap-start sm:w-[188px] lg:w-[156px]">
                 <ReleaseCard
                   releaseId={rid}
                   data={
