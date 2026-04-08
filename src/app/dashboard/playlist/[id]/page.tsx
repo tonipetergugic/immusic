@@ -90,7 +90,6 @@ type PlaylistTrackRow = {
   release_status: string | null;
   release_cover_path: string | null;
 
-  release_track_id: string | null;
   rating_avg: number | null;
   rating_count: number | null;
   stream_count: number | null;
@@ -230,7 +229,6 @@ export default async function PlaylistPage(
       version,
       release_status,
       release_cover_path,
-      release_track_id,
       rating_avg,
       rating_count,
       stream_count,
@@ -357,7 +355,6 @@ export default async function PlaylistPage(
         console.error("PlaylistPage: skipping track with missing audio_path", {
           playlistId: id,
           trackId: row.track_id,
-          releaseTrackId: row.release_track_id ?? null,
         });
       }
       return [];
@@ -398,7 +395,6 @@ export default async function PlaylistPage(
       ...playerTrack,
       artists,
       release_id: row.release_id ?? null,
-      release_track_id: row.release_track_id ?? null,
       rating_avg: row.rating_avg ?? null,
       rating_count: row.rating_count ?? 0,
       stream_count:

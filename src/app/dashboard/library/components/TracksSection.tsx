@@ -10,7 +10,6 @@ import { usePlayer } from "@/context/PlayerContext";
 
 export type LibraryV2TracksPayload = {
   tracks: PlayerTrack[];
-  releaseTrackIdByTrackId: Record<string, string>;
   ratingByTrackId: Record<string, { avg: number | null; count: number; streams: number }>;
   myStarsByTrackId: Record<string, number | null>;
   eligibilityByTrackId: Record<string, { can_rate: boolean | null; listened_seconds: number | null }>;

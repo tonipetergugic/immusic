@@ -56,7 +56,6 @@ type LibraryTrackNormalized = {
   key: string | null;
   genre: string | null;
   profiles: LibraryTrackProfileRow | LibraryTrackProfileRow[] | null;
-  release_track_id: string | null;
   release_id: string | null;
   rating_avg: number | null;
   rating_count: number;
@@ -104,7 +103,6 @@ export async function loadLibraryV2Tracks({
   userId: string;
 }): Promise<{
   tracks: PlayerTrack[];
-  releaseTrackIdByTrackId: Record<string, string>;
   ratingByTrackId: Record<string, { avg: number | null; count: number; streams: number }>;
   myStarsByTrackId: Record<string, number | null>;
   eligibilityByTrackId: Record<string, { can_rate: boolean | null; listened_seconds: number | null }>;
@@ -153,7 +151,6 @@ export async function loadLibraryV2Tracks({
     console.error("LibraryV2: Failed to load library_tracks:", error);
     return {
       tracks: [],
-      releaseTrackIdByTrackId: {},
       ratingByTrackId: {},
       myStarsByTrackId: {},
       eligibilityByTrackId: {},
@@ -203,7 +200,6 @@ export async function loadLibraryV2Tracks({
           key: trackSource.key ?? null,
           genre: trackSource.genre ?? null,
           profiles: trackSource.profiles ?? null,
-          release_track_id: releaseTrack?.id ? String(releaseTrack.id) : null,
           release_id: releaseTrack?.release_id ? String(releaseTrack.release_id) : null,
           rating_avg: trackSource.rating_avg ?? null,
           rating_count: trackSource.rating_count ?? 0,
@@ -255,17 +251,11 @@ export async function loadLibraryV2Tracks({
     }
   }
 
-  const releaseTrackIdByTrackId: Record<string, string> = {};
   const ratingByTrackId: Record<string, { avg: number | null; count: number; streams: number }> = {};
 
   for (const track of safeUnique) {
     const trackId = String(track.id ?? "");
     if (!trackId) continue;
-
-    if (track.release_track_id) {
-      const releaseTrackId = String(track.release_track_id);
-      releaseTrackIdByTrackId[trackId] = releaseTrackId;
-    }
 
     ratingByTrackId[trackId] = {
       avg: track.rating_avg ?? null,
@@ -392,7 +382,6 @@ export async function loadLibraryV2Tracks({
     return {
       ...track,
       release_id: source?.release_id ?? null,
-      release_track_id: source?.release_track_id ?? null,
       rating_avg: source?.rating_avg ?? null,
       rating_count: source?.rating_count ?? 0,
       stream_count: lifetimeStreamsByTrackId.get(String(track.id)) ?? 0,
@@ -402,7 +391,6 @@ export async function loadLibraryV2Tracks({
 
   return {
     tracks,
-    releaseTrackIdByTrackId,
     ratingByTrackId,
     myStarsByTrackId,
     eligibilityByTrackId,
