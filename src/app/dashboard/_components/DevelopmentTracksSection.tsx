@@ -14,7 +14,6 @@ type DevItemLike = {
 
 type DevQueueTrack = PlayerTrack & {
   release_id?: string | null;
-  release_track_id?: string | null;
   cover_url?: string | null;
   stream_count?: number | null;
   my_stars?: number | null;

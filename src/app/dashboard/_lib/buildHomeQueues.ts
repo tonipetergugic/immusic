@@ -101,7 +101,7 @@ export function buildDevQueue(params: {
       audio_path: it.audio_path ?? null,
       profiles: { display_name: artist },
       release_id: releaseId,
-      release_track_id: it.release_track_id ?? null,
+      release_track_id: null,
       rating_avg: it.rating_avg ?? null,
       rating_count: it.rating_count ?? 0,
       stream_count: it.stream_count ?? 0,

@@ -11,8 +11,7 @@ export type DevelopmentDiscoveryItem = {
   bpm: number | null;
   key: string | null;
 
-  // Rating/Streams (from release_tracks)
-  release_track_id: string | null;
+  // Track-first rating/streams
   rating_avg: number | null;
   rating_count: number;
   stream_count: number;

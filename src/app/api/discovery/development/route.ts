@@ -73,7 +73,7 @@ export async function GET(req: Request) {
   const { data: tracks, error: tracksErr } = trackIds.length
     ? await supabase
         .from("tracks")
-        .select("id,title,audio_path,genre,bpm,key,version,is_explicit")
+        .select("id,title,audio_path,genre,bpm,key,version,is_explicit,rating_avg,rating_count")
         .in("id", trackIds)
     : { data: [], error: null };
 
@@ -110,15 +110,7 @@ export async function GET(req: Request) {
     collabsByTrackId.set(tid, arr);
   });
 
-  // Aggregates + release_track_id nachladen (für Ratings/Streams UI)
-  const { data: releaseTracks, error: rtErr } = trackIds.length
-    ? await supabase
-        .from("release_tracks")
-        .select("id, track_id, release_id, tracks!inner(rating_avg, rating_count)")
-        .in("track_id", trackIds)
-    : { data: [], error: null };
-
-  if (rtErr) debugWarnings.push(`release_tracks: ${rtErr.message}`);
+  // Track-first aggregates are already loaded from tracks; no release_tracks lookup needed here.
 
   const { data: lifetimeRows, error: lifetimeErr } = trackIds.length
     ? await supabase
@@ -129,23 +121,12 @@ export async function GET(req: Request) {
 
   if (lifetimeErr) debugWarnings.push(`analytics_track_lifetime: ${lifetimeErr.message}`);
 
-  // Map: (track_id|release_id) -> release_track row (best match)
-  const rtByTrackRelease = new Map<string, any>();
-  const rtByTrack = new Map<string, any>();
-
   const lifetimeStreamsByTrackId = new Map<string, number>(
     (lifetimeRows ?? []).map((row: any) => [
       String(row.track_id),
       typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0,
     ])
   );
-
-  (releaseTracks ?? []).forEach((rt: any) => {
-    if (rt?.track_id) {
-      if (rt.release_id) rtByTrackRelease.set(`${rt.track_id}|${rt.release_id}`, rt);
-      if (!rtByTrack.has(rt.track_id)) rtByTrack.set(rt.track_id, rt);
-    }
-  });
 
   const trackById = new Map<string, any>((tracks ?? []).map((t: any) => [t.id, t]));
   const releaseById = new Map<string, any>((releases ?? []).map((r: any) => [r.id, r]));
@@ -177,13 +158,6 @@ export async function GET(req: Request) {
     const rel = releaseById.get(r.release_id);
     const prof = profileById.get(r.artist_id);
 
-    const rt =
-      rtByTrackRelease.get(`${r.track_id}|${r.release_id}`) ??
-      rtByTrack.get(r.track_id) ??
-      null;
-
-    const releaseTrackId = rt?.id ?? null;
-
     const ownerArtist = r.artist_id
       ? { id: String(r.artist_id), display_name: String(prof?.display_name ?? "Unknown Artist") }
       : null;
@@ -203,8 +177,7 @@ export async function GET(req: Request) {
       release_id: r.release_id,
       artist_id: r.artist_id,
 
-      // For rating/streams UI
-      release_track_id: null,
+      // Track-first rating/streams UI
       rating_avg: null,
       rating_count: 0,
       stream_count: 0,
@@ -231,9 +204,8 @@ export async function GET(req: Request) {
       },
     };
 
-    item.release_track_id = releaseTrackId;
-    item.rating_avg = rt?.tracks?.rating_avg ?? null;
-    item.rating_count = typeof rt?.tracks?.rating_count === "number" ? rt.tracks.rating_count : 0;
+    item.rating_avg = t?.rating_avg ?? null;
+    item.rating_count = typeof t?.rating_count === "number" ? t.rating_count : 0;
     item.stream_count = lifetimeStreamsByTrackId.get(String(r.track_id)) ?? 0;
     item.my_stars = myStarsByTrackId.get(r.track_id) ?? null;
 

@@ -241,10 +241,9 @@ export default function PlaylistSuggestedTracks({
                   genre: trackMetaMap.get(item.track_id)?.genre ?? null,
                   release_id: item.release_id ?? null,
                   release_track_id:
-                    item.release_track_id ??
-                    (item.release_id
+                    item.release_id
                       ? releaseTrackMap.get(`${item.track_id}:${item.release_id}`) ?? null
-                      : null),
+                      : null,
                   rating_avg:
                     item.rating_avg !== null && item.rating_avg !== undefined
                       ? Number(item.rating_avg)
