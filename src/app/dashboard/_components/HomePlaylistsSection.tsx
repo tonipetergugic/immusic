@@ -42,7 +42,7 @@ export default function HomePlaylistsSection({
       {playlistIds.length === 0 ? (
         <p className="text-white/40">{emptyText}</p>
       ) : (
-        <div className="no-scrollbar flex gap-4 overflow-x-auto scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:-mx-0 sm:px-0 sm:scroll-px-0">
+        <div className="no-scrollbar flex gap-4 overflow-x-auto scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:-mx-0 sm:scroll-px-0 lg:pl-1 lg:pr-0">
           {playlistIds.slice(0, 10).map((pid, i) => {
             const pl = playlistsById[pid];
 
