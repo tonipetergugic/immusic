@@ -16,7 +16,6 @@ export type PlayerTrack = {
     display_name?: string | null;
   };
   release_id?: string | null;
-  release_track_id?: string | null;
   rating_avg?: number | null;
   rating_count?: number | null;
   my_stars?: number | null;

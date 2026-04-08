@@ -80,9 +80,8 @@ export async function getReleaseQueueForPlayerServer(
         bpm: t.bpm ?? null,
         key: t.key ?? null,
         profiles: t.profiles ?? null,
-        // keep linkage fields available for later merge
+        // keep release linkage available for later merge
         release_id: releaseId,
-        release_track_id: row.id ?? null,
       };
     })
     .filter(Boolean) as any[];
@@ -93,7 +92,6 @@ export async function getReleaseQueueForPlayerServer(
   const queue: PlayerTrack[] = mapped.map((pt, idx) => ({
     ...pt,
     release_id: inputs[idx]?.release_id ?? null,
-    release_track_id: inputs[idx]?.release_track_id ?? null,
   }));
 
   return queue;

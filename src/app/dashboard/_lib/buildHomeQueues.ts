@@ -35,7 +35,6 @@ type HomeQueueTrack = {
   audio_path: string | null;
   profiles: { display_name: string };
   release_id: string | null;
-  release_track_id: string | null;
   rating_avg: number | null;
   rating_count: number;
   stream_count: number;
@@ -98,7 +97,6 @@ export function buildDevQueue(params: {
       audio_path: it.audio_path ?? null,
       profiles: { display_name: artist },
       release_id: releaseId,
-      release_track_id: null,
       rating_avg: it.rating_avg ?? null,
       rating_count: it.rating_count ?? 0,
       stream_count: it.stream_count ?? 0,
@@ -174,7 +172,6 @@ export function buildPerfQueue(params: {
       audio_path: audioPath,
       profiles: { display_name: artistName },
       release_id: releaseId,
-      release_track_id: null,
       rating_avg: row.rating_avg ?? null,
       rating_count: row.rating_count ?? 0,
       stream_count: stats?.stream_count ?? (row.streams_30d ?? 0),

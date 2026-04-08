@@ -283,7 +283,6 @@ export default async function ReleaseDetailPage({
         ? { display_name: String(artistProfile.display_name) }
         : undefined,
       release_id: String(releaseId),
-      release_track_id: String(row.id),
     });
 
     return acc;
