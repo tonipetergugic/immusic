@@ -115,7 +115,7 @@ function FullscreenContent({
           <div className="h-11 w-11" aria-hidden="true" />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pt-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pt-3">
           <div className="mx-auto w-full max-w-[430px] shrink-0">
             <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/30 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
               <div className="aspect-square w-full max-h-[40vh] bg-neutral-900">
