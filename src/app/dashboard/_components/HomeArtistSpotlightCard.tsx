@@ -222,15 +222,15 @@ export default function HomeArtistSpotlightCard({
   }
 
   return (
-    <aside className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(17,17,18,0.92),rgba(10,10,11,0.98))] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(0,255,198,0.10),transparent_70%)]" />
+    <aside className="relative overflow-hidden rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(17,17,18,0.92),rgba(10,10,11,0.98))] p-4 sm:p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 sm:h-24 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(0,255,198,0.10),transparent_70%)]" />
 
       <div className="relative">
         <div className="text-[11px] uppercase tracking-[0.18em] text-white/40">
           {isNowPlayingArtist ? "Now playing artist" : "Artist spotlight"}
         </div>
 
-        <div className="mt-2 text-xs text-white/45">
+        <div className="mt-1.5 text-[11px] text-white/45 sm:mt-2 sm:text-xs">
           From{" "}
           <span className="text-white/70">
             {spotlightTrack.title ?? "Untitled track"}
@@ -254,7 +254,7 @@ export default function HomeArtistSpotlightCard({
           ) : (
             <>
               <div>
-                <div className="relative mx-auto aspect-square w-full max-w-[260px] overflow-hidden rounded-[28px] bg-[#0C0C0E] shadow-[0_14px_34px_rgba(0,0,0,0.30)] sm:max-w-[320px] md:max-w-[360px] lg:max-w-[400px]">
+                <div className="relative mx-auto aspect-square w-full max-w-[190px] overflow-hidden rounded-[22px] bg-[#0C0C0E] shadow-[0_14px_34px_rgba(0,0,0,0.30)] sm:max-w-[240px] sm:rounded-[24px] md:max-w-[300px] lg:max-w-[400px] lg:rounded-[28px]">
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -274,28 +274,28 @@ export default function HomeArtistSpotlightCard({
                   )}
                 </div>
 
-                <div className="mt-5">
+                <div className="mt-4 sm:mt-5">
                   {spotlightArtistId ? (
                     <Link
                       href={`/dashboard/artist/${spotlightArtistId}`}
-                      className="block text-[38px] font-semibold leading-[0.98] tracking-[-0.03em] text-white transition-colors hover:text-[#00FFC6]"
+                      className="block text-[28px] font-semibold leading-[1.02] tracking-[-0.03em] text-white transition-colors hover:text-[#00FFC6] sm:text-[32px] md:text-[36px] lg:text-[38px]"
                     >
                       {displayName}
                     </Link>
                   ) : (
-                    <div className="text-[38px] font-semibold leading-[0.98] tracking-[-0.03em] text-white">
+                    <div className="text-[28px] font-semibold leading-[1.02] tracking-[-0.03em] text-white sm:text-[32px] md:text-[36px] lg:text-[38px]">
                       {displayName}
                     </div>
                   )}
 
-                  <div className="mt-3 text-[15px] leading-6 text-white/45">
+                  <div className="mt-2 text-[13px] leading-5 text-white/45 sm:mt-3 sm:text-[15px] sm:leading-6">
                     {isNowPlayingArtist
                       ? "Currently playing on this page"
                       : "Featured from current development list"}
                   </div>
 
                   {canFollow && spotlightArtistId ? (
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                       <FollowArtistButton
                         artistId={spotlightArtistId}
                         isFollowing={isFollowing}
@@ -306,14 +306,14 @@ export default function HomeArtistSpotlightCard({
                 </div>
               </div>
 
-              <div className="mt-5 h-px bg-white/8" />
+              <div className="mt-4 h-px bg-white/8 sm:mt-5" />
 
-              <div className="mt-5">
+              <div className="mt-4 sm:mt-5">
                 <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
                   About
                 </div>
-                <div className="mt-3 max-h-[260px] overflow-y-auto pr-2">
-                  <p className="whitespace-pre-wrap text-sm leading-7 text-white/72">
+                <div className="mt-2.5 max-h-[180px] overflow-y-auto pr-1.5 sm:mt-3 sm:max-h-[220px] sm:pr-2">
+                  <p className="whitespace-pre-wrap text-[13px] leading-6 text-white/72 sm:text-sm sm:leading-7">
                     {hasError ? "Artist details could not be loaded right now." : bioText}
                   </p>
                 </div>
@@ -321,14 +321,14 @@ export default function HomeArtistSpotlightCard({
 
               {socialLinks.length > 0 ? (
                 <>
-                  <div className="mt-5 h-px bg-white/8" />
+                  <div className="mt-4 h-px bg-white/8 sm:mt-5" />
 
-                  <div className="mt-5">
+                  <div className="mt-4 sm:mt-5">
                     <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
                       Socials
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-4">
+                    <div className="mt-2.5 flex flex-wrap items-center gap-3 sm:mt-3 sm:gap-4">
                       {socialLinks.map((social) => {
                         const Icon = social.icon;
 
@@ -339,7 +339,7 @@ export default function HomeArtistSpotlightCard({
                             target="_blank"
                             rel="noreferrer noopener"
                             aria-label={social.label}
-                            className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm"
+                            className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-[13px] sm:text-sm"
                           >
                             <Icon size={18} />
                             {social.label}

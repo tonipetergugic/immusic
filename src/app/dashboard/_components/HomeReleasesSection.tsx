@@ -41,7 +41,7 @@ export default function HomeReleasesSection({
       {validReleaseIds.length === 0 ? (
         <p className="text-white/40">{emptyText}</p>
       ) : (
-        <div className="flex gap-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:-mx-0 sm:px-0 sm:scroll-px-0">
+        <div className="no-scrollbar flex gap-4 overflow-x-auto scroll-smooth pt-2 pb-3 -mx-4 px-4 snap-x snap-mandatory scroll-px-4 sm:-mx-0 sm:px-0 sm:scroll-px-0">
           {validReleaseIds.map((rid) => {
             const data = releasesById[rid]!;
             return (

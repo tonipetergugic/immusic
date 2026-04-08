@@ -48,7 +48,7 @@ function PlaylistRow({
   };
 }) {
   const router = useRouter();
-  const { isTrackPlaybackBlocked } = usePlayer();
+  const { currentTrack, isPlaying, isTrackPlaybackBlocked } = usePlayer();
 
   const currentIndex = tracks.findIndex((t) => t.id === track.id);
   const isBlocked = isTrackPlaybackBlocked(track);
@@ -86,35 +86,119 @@ function PlaylistRow({
           </div>
         }
         titleSlot={
-          <div className="flex items-center gap-2 min-w-0">
-            <button
-              type="button"
-              aria-disabled={isBlocked}
-              tabIndex={isBlocked ? -1 : undefined}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (isBlocked) return;
-                const releaseId = track.release_id ?? null;
-                if (releaseId) router.push(`/dashboard/release/${releaseId}`);
-              }}
-              className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
-                isBlocked
-                  ? "text-white/45 cursor-default"
-                  : track.status === "performance"
-                  ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
-                  : "text-white hover:text-[#00FFC6] cursor-pointer"
-              }`}
-              title={formatTrackTitle(track.title, track.version)}
-            >
-              {formatTrackTitle(track.title, track.version)}
-            </button>
+          <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
+            {currentTrack?.id === track.id && isPlaying ? (
+              <>
+                <div className="flex-1 overflow-hidden md:hidden">
+                  <div
+                    className="flex w-max min-w-max items-center gap-6 whitespace-nowrap will-change-transform"
+                    style={{ animation: "trackTitleMarquee 10s linear infinite" }}
+                  >
+                    {[0, 1].map((copyIndex) => (
+                      <div
+                        key={copyIndex}
+                        className="inline-flex items-center gap-2 whitespace-nowrap"
+                        aria-hidden={copyIndex === 1 ? "true" : undefined}
+                      >
+                        <button
+                          type="button"
+                          aria-disabled={isBlocked}
+                          tabIndex={isBlocked ? -1 : undefined}
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (isBlocked) return;
+                            if (track.release_id) {
+                              router.push(`/dashboard/release/${track.release_id}`);
+                            }
+                          }}
+                          className={`text-left text-[13px] font-semibold transition-colors focus:outline-none whitespace-nowrap ${
+                            isBlocked
+                              ? "text-white/45 cursor-default"
+                              : track.status === "performance"
+                              ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                              : "text-white hover:text-[#00FFC6] cursor-pointer"
+                          }`}
+                          title={formatTrackTitle(track.title, track.version)}
+                        >
+                          {formatTrackTitle(track.title, track.version)}
+                        </button>
 
-            {track.is_explicit ? <ExplicitBadge /> : null}
+                        {track.is_explicit ? <ExplicitBadge /> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="hidden w-full min-w-0 items-center gap-2 overflow-hidden md:flex">
+                  <button
+                    type="button"
+                    aria-disabled={isBlocked}
+                    tabIndex={isBlocked ? -1 : undefined}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (isBlocked) return;
+                      if (track.release_id) {
+                        router.push(`/dashboard/release/${track.release_id}`);
+                      }
+                    }}
+                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
+                      isBlocked
+                        ? "text-white/45 cursor-default"
+                        : track.status === "performance"
+                        ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                        : "text-white hover:text-[#00FFC6] cursor-pointer"
+                    }`}
+                    title={formatTrackTitle(track.title, track.version)}
+                  >
+                    {formatTrackTitle(track.title, track.version)}
+                  </button>
+
+                  {track.is_explicit ? <ExplicitBadge /> : null}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  aria-disabled={isBlocked}
+                  tabIndex={isBlocked ? -1 : undefined}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (isBlocked) return;
+                    if (track.release_id) {
+                      router.push(`/dashboard/release/${track.release_id}`);
+                    }
+                  }}
+                  className={`min-w-0 flex-1 text-left text-[13px] font-semibold truncate transition-colors focus:outline-none ${
+                    isBlocked
+                      ? "text-white/45 cursor-default"
+                      : track.status === "performance"
+                      ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+                      : "text-white hover:text-[#00FFC6] cursor-pointer"
+                  }`}
+                  title={formatTrackTitle(track.title, track.version)}
+                >
+                  {formatTrackTitle(track.title, track.version)}
+                </button>
+
+                {track.is_explicit ? <ExplicitBadge /> : null}
+              </div>
+            )}
           </div>
         }
         subtitleSlot={

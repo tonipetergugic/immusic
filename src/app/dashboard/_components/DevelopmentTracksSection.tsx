@@ -192,11 +192,11 @@ export default function DevelopmentTracksSection({
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-[22px] font-semibold tracking-[-0.01em] sm:text-xl">Development Tracks</h2>
-          <p className="text-sm leading-6 text-white/60 sm:leading-5">
+          <h2 className="text-[20px] font-semibold tracking-[-0.01em] sm:text-xl">Development Tracks</h2>
+          <p className="text-[13px] leading-5 text-white/60 sm:text-sm sm:leading-5">
             All tracks currently in Development Discovery.
           </p>
         </div>
@@ -207,7 +207,7 @@ export default function DevelopmentTracksSection({
             value={devGenre}
             onChange={setDevGenre}
             items={devGenreItems}
-            className="[&>button]:h-11 [&>button]:min-h-[44px] [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-4 [&>button]:text-[15px] [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55 sm:[&>button]:h-10 sm:[&>button]:text-sm"
+            className="[&>button]:h-10 [&>button]:min-h-[42px] [&>button]:rounded-full [&>button]:border-white/10 [&>button]:bg-black/25 [&>button]:px-3.5 [&>button]:text-[14px] [&>button]:text-white/80 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC655] [&>button_svg]:text-white/55 sm:[&>button]:h-10 sm:[&>button]:min-h-[44px] sm:[&>button]:px-4 sm:[&>button]:text-sm"
           />
         </div>
       </div>
@@ -247,7 +247,7 @@ export default function DevelopmentTracksSection({
           </div>
         )
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
+        <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start xl:gap-6">
           <div className="min-w-0">
             {devQueue.map((rowTrack, idx) => {
               const trackId = rowTrack.id;
@@ -265,7 +265,7 @@ export default function DevelopmentTracksSection({
                   tracks={devQueue}
                   coverUrl={coverUrl}
                   coverSize="md"
-                  className="py-3 md:py-3.5"
+                  className="py-2.5 md:py-3.5"
                   leadingSlot={idx + 1}
                   subtitleSlot={
                     artists.length > 0 ? (

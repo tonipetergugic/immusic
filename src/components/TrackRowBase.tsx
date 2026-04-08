@@ -85,6 +85,12 @@ export default function TrackRowBase({
   const { currentTrack, isPlaying, isTrackPlaybackBlocked } = usePlayer();
   const isCurrent = currentTrack?.id === track.id;
   const isBlocked = isTrackPlaybackBlocked(track);
+  const formattedTitle = formatTrackTitle(track.title, track.version ?? null);
+  const titleToneClasses = isBlocked
+    ? "text-white/45 cursor-default"
+    : track.status === "performance"
+    ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
+    : "text-white hover:text-[#00FFC6] cursor-pointer";
 
   return (
     <div
@@ -145,9 +151,9 @@ export default function TrackRowBase({
       </div>
 
       {/* Main: title/artist + meta */}
-      <div className="min-w-0 ml-1 pl-1.5 lg:ml-0.25 lg:pl-0.5 flex flex-col gap-0 justify-self-start">
+      <div className="min-w-0 w-full overflow-hidden ml-1 pl-1.5 lg:ml-0.25 lg:pl-0.5 flex flex-col gap-0">
         {/* Line 1: Title */}
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
           {/* Mobile/Tablet: Now Playing Indicator (nur wenn aktuell & playing) */}
           {isCurrent && isPlaying ? (
             <span aria-hidden="true" className="inline-flex items-end gap-[2px] h-[12px] shrink-0">
@@ -170,43 +176,120 @@ export default function TrackRowBase({
             {titleSlot ? (
               titleSlot
             ) : (
-              <div className="flex items-center gap-2 min-w-0">
-                {to ? (
-                  <Link
-                    href={to}
-                    aria-disabled={isBlocked}
-                    tabIndex={isBlocked ? -1 : undefined}
-                    onClick={(e) => {
-                      if (!isBlocked) return;
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${
-                      isBlocked
-                        ? "text-white/45 cursor-default"
-                        : track.status === "performance"
-                        ? "text-[#00FFC6] hover:text-[#00E0B0] cursor-pointer"
-                        : "text-white hover:text-[#00FFC6] cursor-pointer"
-                    }`}
-                  >
-                    {formatTrackTitle(track.title, track.version ?? null)}
-                  </Link>
-                ) : (
-                  <span
-                    className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
-                      isBlocked
-                        ? "text-white/45"
-                        : track.status === "performance"
-                        ? "text-[#00FFC6]"
-                        : "text-white"
-                    }`}
-                  >
-                    {formatTrackTitle(track.title, track.version ?? null)}
-                  </span>
-                )}
+              <>
+                {isCurrent && isPlaying ? (
+                  <>
+                    <div className="flex-1 overflow-hidden md:hidden">
+                      <div
+                        className="flex w-max min-w-max items-center gap-6 whitespace-nowrap will-change-transform"
+                        style={{ animation: "trackTitleMarquee 10s linear infinite" }}
+                      >
+                        {[0, 1].map((copyIndex) => (
+                          <div
+                            key={copyIndex}
+                            className="inline-flex items-center gap-2 whitespace-nowrap"
+                            aria-hidden={copyIndex === 1 ? "true" : undefined}
+                          >
+                            {to ? (
+                              <Link
+                                href={to}
+                                aria-disabled={isBlocked}
+                                tabIndex={isBlocked ? -1 : undefined}
+                                onClick={(e) => {
+                                  if (!isBlocked) return;
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                                className={`text-left text-[13px] font-semibold leading-tight transition-colors block whitespace-nowrap ${titleToneClasses}`}
+                              >
+                                {formattedTitle}
+                              </Link>
+                            ) : (
+                              <span
+                                className={`text-left text-[13px] font-semibold leading-tight block whitespace-nowrap ${
+                                  isBlocked
+                                    ? "text-white/45"
+                                    : track.status === "performance"
+                                    ? "text-[#00FFC6]"
+                                    : "text-white"
+                                }`}
+                              >
+                                {formattedTitle}
+                              </span>
+                            )}
 
-                {track.is_explicit ? <ExplicitBadge /> : null}
-              </div>
+                            {track.is_explicit ? <ExplicitBadge /> : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="hidden w-full min-w-0 items-center gap-2 overflow-hidden md:flex">
+                      {to ? (
+                        <Link
+                          href={to}
+                          aria-disabled={isBlocked}
+                          tabIndex={isBlocked ? -1 : undefined}
+                          onClick={(e) => {
+                            if (!isBlocked) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${titleToneClasses}`}
+                        >
+                          {formattedTitle}
+                        </Link>
+                      ) : (
+                        <span
+                          className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
+                            isBlocked
+                              ? "text-white/45"
+                              : track.status === "performance"
+                              ? "text-[#00FFC6]"
+                              : "text-white"
+                          }`}
+                        >
+                          {formattedTitle}
+                        </span>
+                      )}
+
+                      {track.is_explicit ? <ExplicitBadge /> : null}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
+                    {to ? (
+                      <Link
+                        href={to}
+                        aria-disabled={isBlocked}
+                        tabIndex={isBlocked ? -1 : undefined}
+                        onClick={(e) => {
+                          if (!isBlocked) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate transition-colors block ${titleToneClasses}`}
+                      >
+                        {formattedTitle}
+                      </Link>
+                    ) : (
+                      <span
+                        className={`min-w-0 flex-1 text-left text-[13px] font-semibold leading-tight truncate block ${
+                          isBlocked
+                            ? "text-white/45"
+                            : track.status === "performance"
+                            ? "text-[#00FFC6]"
+                            : "text-white"
+                        }`}
+                      >
+                        {formattedTitle}
+                      </span>
+                    )}
+
+                    {track.is_explicit ? <ExplicitBadge /> : null}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
