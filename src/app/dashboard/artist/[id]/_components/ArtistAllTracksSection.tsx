@@ -104,19 +104,14 @@ export default function ArtistAllTracksSection({
                     className="flex min-w-0 items-center gap-4 overflow-hidden"
                   >
                     <div className="w-[140px] shrink-0">
-                      {t.releaseTrackId ? (
-                        <TrackRatingInline
-                          releaseTrackId={t.releaseTrackId}
-                          trackId={t.trackId}
-                          initialAvg={t.stats30d.ratingAvg}
-                          initialCount={t.stats30d.ratingsCount}
-                          initialMyStars={t.my_stars}
-                          readOnly={isBlocked}
-                          hideStreams={true}
-                        />
-                      ) : (
-                        <div className="text-xs text-white/40">No ratings yet</div>
-                      )}
+                      <TrackRatingInline
+                        trackId={t.trackId}
+                        initialAvg={t.stats30d.ratingAvg}
+                        initialCount={t.stats30d.ratingsCount}
+                        initialMyStars={t.my_stars}
+                        readOnly={isBlocked}
+                        hideStreams={true}
+                      />
                     </div>
 
                     <div className="hidden min-w-0 flex-1 truncate text-xs text-white/50 tabular-nums sm:block">
