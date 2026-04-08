@@ -115,19 +115,14 @@ export default function ArtistTopTracksSection({
                   >
                     {/* Rating column (fixed width) */}
                     <div className="w-[140px] shrink-0">
-                      {t.releaseTrackId ? (
-                        <TrackRatingInline
-                          releaseTrackId={t.releaseTrackId}
-                          trackId={t.trackId}
-                          initialAvg={t.stats30d.ratingAvg}
-                          initialCount={t.stats30d.ratingsCount}
-                          initialMyStars={t.my_stars}
-                          readOnly={isBlocked}
-                          hideStreams={true}
-                        />
-                      ) : (
-                        <div className="text-xs text-white/40">No ratings yet</div>
-                      )}
+                      <TrackRatingInline
+                        trackId={t.trackId}
+                        initialAvg={t.stats30d.ratingAvg}
+                        initialCount={t.stats30d.ratingsCount}
+                        initialMyStars={t.my_stars}
+                        readOnly={isBlocked}
+                        hideStreams={true}
+                      />
                     </div>
 
                     {/* Streams */}

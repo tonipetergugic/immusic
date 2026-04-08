@@ -310,19 +310,14 @@ export default function PerformanceDiscoverySection({
                     )
                   }
                   metaSlot={
-                    rowTrack.release_track_id ? (
-                      <TrackRatingInline
-                        releaseTrackId={rowTrack.release_track_id}
-                        trackId={rowTrack.id}
-                        initialAvg={rowTrack.rating_avg}
-                        initialCount={rowTrack.rating_count ?? undefined}
-                        initialStreams={rowTrack.stream_count ?? 0}
-                        initialMyStars={rowTrack.my_stars ?? null}
-                        readOnly={isBlocked}
-                      />
-                    ) : (
-                      <span className="text-xs text-white/60">★</span>
-                    )
+                    <TrackRatingInline
+                      trackId={rowTrack.id}
+                      initialAvg={rowTrack.rating_avg}
+                      initialCount={rowTrack.rating_count ?? undefined}
+                      initialStreams={rowTrack.stream_count ?? 0}
+                      initialMyStars={rowTrack.my_stars ?? null}
+                      readOnly={isBlocked}
+                    />
                   }
                   actionsSlot={
                     <TrackOptionsTrigger

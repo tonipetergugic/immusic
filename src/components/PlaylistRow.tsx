@@ -267,20 +267,15 @@ function PlaylistRow({
           )
         }
         metaSlot={
-          track.release_track_id ? (
-            <TrackRatingInline
-              releaseTrackId={track.release_track_id}
-              trackId={track.id}
-              initialAvg={track.rating_avg ?? null}
-              initialCount={track.rating_count ?? 0}
-              initialStreams={track.stream_count ?? 0}
-              initialMyStars={track.my_stars ?? null}
-              readOnly={isBlocked}
-              showStreamsOnDesktopOnly={true}
-            />
-          ) : (
-            <span className="text-xs text-white/60">★</span>
-          )
+          <TrackRatingInline
+            trackId={track.id}
+            initialAvg={track.rating_avg ?? null}
+            initialCount={track.rating_count ?? 0}
+            initialStreams={track.stream_count ?? 0}
+            initialMyStars={track.my_stars ?? null}
+            readOnly={isBlocked}
+            showStreamsOnDesktopOnly={true}
+          />
         }
         bpmSlot={<span>{track.bpm ?? "—"}</span>}
         keySlot={<span>{track.key ?? "—"}</span>}
