@@ -50,7 +50,7 @@ export default function HomePlaylistsSection({
               return (
                 <div
                   key={pid}
-                  className="shrink-0 w-[172px] snap-start rounded-2xl border border-transparent bg-[#111112] p-4 sm:w-[188px] lg:w-[156px]"
+                  className="shrink-0 w-[156px] snap-start rounded-2xl border border-transparent bg-[#111112] p-4 sm:w-[168px] lg:w-[148px]"
                 >
                   <div className="w-full aspect-square rounded-xl bg-white/10" />
                   <div className="mt-3 h-4 w-3/4 bg-white/10 rounded" />
@@ -60,7 +60,7 @@ export default function HomePlaylistsSection({
             }
 
             return (
-              <div key={pid} className="shrink-0 w-[172px] snap-start sm:w-[188px] lg:w-[156px]">
+              <div key={pid} className="shrink-0 w-[156px] snap-start sm:w-[168px] lg:w-[148px]">
                 <PlaylistCard
                   id={pl.id}
                   title={pl.title}

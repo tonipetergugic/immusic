@@ -73,7 +73,7 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
         block cursor-pointer
         rounded-2xl border border-transparent
         bg-[#111112]
-        p-3
+        p-2.5
         outline-none
         transition-all
         hover:scale-[1.015]
@@ -86,7 +86,7 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
       <div className="relative aspect-square w-full overflow-hidden rounded-[18px]">
         {/* Release type badge (top-right) */}
         {data.release_type && (
-          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md border border-white/10 bg-black/65 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur">
+          <div className="pointer-events-none absolute top-2 right-2 z-10 rounded-md border border-white/10 bg-black/65 px-2 py-[3px] text-[9px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur">
             {data.release_type}
           </div>
         )}
@@ -112,7 +112,7 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
       </div>
 
       <h3
-        className="mt-3 text-[14px] font-semibold leading-5 text-white/90 truncate"
+        className="mt-3 text-[13px] font-semibold leading-5 text-white/90 truncate"
         title={data.title}
       >
         {data.title}
@@ -122,12 +122,12 @@ export default function ReleaseCard({ releaseId, data, href }: ReleaseCardProps)
         <Link
           href={getArtistHref(data.artist_id)}
           onClick={(e) => e.stopPropagation()}
-          className="block truncate text-xs text-white/55 transition-colors hover:text-[#00FFC6]"
+          className="block truncate text-[11px] text-white/55 transition-colors hover:text-[#00FFC6]"
         >
           {data.artist_name ?? "Unknown Artist"}
         </Link>
       ) : (
-        <p className="truncate text-xs text-white/55">
+        <p className="truncate text-[11px] text-white/55">
           {data.artist_name ?? "Unknown Artist"}
         </p>
       )}

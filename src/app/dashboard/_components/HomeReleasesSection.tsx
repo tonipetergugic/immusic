@@ -45,7 +45,7 @@ export default function HomeReleasesSection({
           {validReleaseIds.map((rid) => {
             const data = releasesById[rid]!;
             return (
-              <div key={rid} className="shrink-0 w-[172px] snap-start sm:w-[188px] lg:w-[156px]">
+              <div key={rid} className="shrink-0 w-[156px] snap-start sm:w-[168px] lg:w-[148px]">
                 <ReleaseCard
                   releaseId={rid}
                   data={

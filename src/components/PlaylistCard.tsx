@@ -30,7 +30,7 @@ export default function PlaylistCard({
         block
         rounded-2xl border border-transparent
         bg-[#111112]
-        p-3
+        p-2.5
         transition-all
         hover:scale-[1.015]
         hover:border-[#00FFC622]
@@ -48,7 +48,7 @@ export default function PlaylistCard({
             fill
             priority={priority}
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-            className="absolute inset-0 h-full w-full object-cover rounded-xl transition-all duration-300 group-hover:brightness-110 group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]"
+            className="absolute inset-0 h-full w-full rounded-[18px] object-cover transition-all duration-300 group-hover:brightness-110 group-hover:shadow-[0_0_25px_rgba(0,255,198,0.12)]"
           />
         ) : (
           <div
@@ -104,18 +104,18 @@ export default function PlaylistCard({
 
       </div>
 
-      <div className="mt-3 block">
+      <div className="mt-2.5 block">
         <h3
-          className="text-[14px] font-semibold leading-5 text-white/90 truncate"
+          className="text-[13px] font-semibold leading-5 text-white/90 truncate"
           title={title}
         >
           {title}
         </h3>
 
         {description ? (
-          <p className="block truncate text-xs text-white/55">{description}</p>
+          <p className="block truncate text-[11px] text-white/55">{description}</p>
         ) : (
-          <div className="h-[18px]" />
+          <div className="h-[16px]" />
         )}
       </div>
     </Link>
