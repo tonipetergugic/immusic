@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type Body = {
-  release_track_id?: string;
-  releaseTrackId?: string;
   track_id?: string;
   trackId?: string;
   stars?: number;
@@ -62,42 +60,17 @@ export async function POST(req: Request) {
     return err("INVALID_JSON", "Invalid JSON body", 400);
   }
 
-  // ⚠️ DEPRECATED: releaseTrackId is legacy support only
-  // Preferred: use track_id directly
-  const releaseTrackId = body.release_track_id ?? body.releaseTrackId;
   const stars = body.stars;
-
-  // === NEW: support direct track_id ===
   const directTrackId = body.track_id ?? body.trackId;
 
-  if (!directTrackId && !releaseTrackId) {
+  if (!directTrackId) {
     return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
   }
   if (typeof stars !== "number" || !Number.isInteger(stars) || stars < 1 || stars > 5) {
     return err("INVALID_STARS", "stars must be an integer between 1 and 5", 400);
   }
 
-  let trackId: string | null = null;
-
-  if (directTrackId) {
-    trackId = directTrackId;
-  } else if (releaseTrackId) {
-    const { data: releaseTrack, error: rtErr } = await supabase
-      .from("release_tracks")
-      .select("track_id")
-      .eq("id", releaseTrackId)
-      .single();
-
-    if (rtErr) {
-      return err("INTERNAL_ERROR", "Failed to resolve release_track", 500);
-    }
-
-    if (!releaseTrack || !("track_id" in releaseTrack) || !releaseTrack.track_id) {
-      return err("RELEASE_TRACK_NOT_FOUND", "release_track not found", 404);
-    }
-
-    trackId = releaseTrack.track_id as string;
-  }
+  let trackId: string | null = directTrackId;
 
   if (!trackId) {
     return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
@@ -191,55 +164,33 @@ export async function GET(req: Request) {
   const directTrackId =
     searchParams.get("track_id") ?? searchParams.get("trackId");
 
-  // ⚠️ DEPRECATED: releaseTrackId is legacy support only
-  const releaseTrackId =
-    searchParams.get("release_track_id") ?? searchParams.get("releaseTrackId");
-
   let trackId: string | null = null;
   let streamCount = 0;
   let trackStatus: string | null = null;
   let ratingAvg: number | null = null;
   let ratingCount = 0;
 
-  if (directTrackId) {
-    const { data: trackRows, error: trackErr } = await supabase
-      .from("tracks")
-      .select("id, status, rating_avg, rating_count")
-      .eq("id", directTrackId)
-      .limit(1);
-
-    if (trackErr) {
-      return err("INTERNAL_ERROR", "Failed to load track", 500);
-    }
-
-    const track = trackRows && trackRows.length > 0 ? trackRows[0] : null;
-    if (!track) return err("RELEASE_TRACK_NOT_FOUND", "track not found", 404);
-
-    trackId = String((track as any).id);
-    trackStatus = ((track as any).status as string | null) ?? null;
-    ratingAvg = ((track as any).rating_avg as number | null) ?? null;
-    ratingCount = Number((track as any).rating_count ?? 0);
-  } else if (releaseTrackId) {
-    const { data: rtRows, error: rtError } = await supabase
-      .from("release_tracks")
-      .select("id, track_id, tracks(id, artist_id, status, rating_avg, rating_count)")
-      .eq("id", releaseTrackId)
-      .limit(1);
-
-    if (rtError) {
-      return err("INTERNAL_ERROR", "Failed to load release_track", 500);
-    }
-
-    const rt = rtRows && rtRows.length > 0 ? rtRows[0] : null;
-    if (!rt) return err("RELEASE_TRACK_NOT_FOUND", "release_track not found", 404);
-
-    trackId = ((rt as any).track_id as string | undefined) ?? null;
-    trackStatus = ((rt as any).tracks?.status as string | null) ?? null;
-    ratingAvg = ((rt as any).tracks?.rating_avg as number | null) ?? null;
-    ratingCount = Number((rt as any).tracks?.rating_count ?? 0);
-  } else {
+  if (!directTrackId) {
     return err("MISSING_RELEASE_TRACK_ID", "Missing track_id", 400);
   }
+
+  const { data: trackRows, error: trackErr } = await supabase
+    .from("tracks")
+    .select("id, status, rating_avg, rating_count")
+    .eq("id", directTrackId)
+    .limit(1);
+
+  if (trackErr) {
+    return err("INTERNAL_ERROR", "Failed to load track", 500);
+  }
+
+  const track = trackRows && trackRows.length > 0 ? trackRows[0] : null;
+  if (!track) return err("RELEASE_TRACK_NOT_FOUND", "track not found", 404);
+
+  trackId = String((track as any).id);
+  trackStatus = ((track as any).status as string | null) ?? null;
+  ratingAvg = ((track as any).rating_avg as number | null) ?? null;
+  ratingCount = Number((track as any).rating_count ?? 0);
 
   if (trackId) {
     const { data: lifetimeRows, error: lifetimeErr } = await supabase
@@ -304,7 +255,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     summary: {
-      release_track_id: releaseTrackId ?? null,
       track_id: trackId ?? null,
       track_status: trackStatus ?? null,
       rating_avg: ratingAvg,

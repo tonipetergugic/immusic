@@ -19,7 +19,6 @@ type ApiErrorCode =
 type RatingsGetOk = {
   ok: true;
   summary: {
-    release_track_id: string;
     track_id: string | null;
     track_status: string | null;
     rating_avg: number | null;
@@ -37,7 +36,6 @@ type RatingsGetOk = {
 type RatingsErr = { ok: false; error: string; code?: ApiErrorCode };
 
 type TrackRatingInlineProps = {
-  releaseTrackId?: string;
   trackId: string;
 
   // Optional initial rendering (avoid "empty" before GET resolves)

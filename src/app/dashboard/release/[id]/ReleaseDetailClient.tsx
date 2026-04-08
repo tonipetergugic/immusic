@@ -121,7 +121,6 @@ export default function ReleaseDetailClient({
         {tracks.length ? (
           <div className="divide-y divide-white/10">
             {tracks.map((row, index) => (
-              // @ts-expect-error releaseTrackId prop is intentionally no longer passed
               <ReleaseTrackRowClient
                 key={row.releaseTrackId}
                 releaseId={releaseId}
