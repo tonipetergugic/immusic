@@ -11,8 +11,8 @@ import { usePlayer } from "@/context/PlayerContext";
 export type LibraryV2TracksPayload = {
   tracks: PlayerTrack[];
   releaseTrackIdByTrackId: Record<string, string>;
-  ratingByReleaseTrackId: Record<string, { avg: number | null; count: number; streams: number }>;
-  myStarsByReleaseTrackId: Record<string, number | null>;
+  ratingByTrackId: Record<string, { avg: number | null; count: number; streams: number }>;
+  myStarsByTrackId: Record<string, number | null>;
   eligibilityByTrackId: Record<string, { can_rate: boolean | null; listened_seconds: number | null }>;
   windowOpenByTrackId: Record<string, boolean | null>;
 };
@@ -20,9 +20,8 @@ export type LibraryV2TracksPayload = {
 export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) {
   const [trackData, setTrackData] = useState<PlayerTrack[]>(payload.tracks);
   const { isTrackPlaybackBlocked } = usePlayer();
-  const releaseTrackIdByTrackId = payload.releaseTrackIdByTrackId;
-  const ratingByReleaseTrackId = payload.ratingByReleaseTrackId;
-  const myStarsByReleaseTrackId = payload.myStarsByReleaseTrackId;
+  const ratingByTrackId = payload.ratingByTrackId;
+  const myStarsByTrackId = payload.myStarsByTrackId;
   const eligibilityByTrackId = payload.eligibilityByTrackId;
   const windowOpenByTrackId = payload.windowOpenByTrackId;
 
@@ -54,7 +53,6 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
           <div className="min-w-0 flex flex-col">
             {trackData.map((track, index) => {
-              const releaseTrackId = releaseTrackIdByTrackId[String(track.id)];
               const isBlocked = isTrackPlaybackBlocked(track);
               return (
                 <TrackRowBase
@@ -73,31 +71,28 @@ export function TracksSection({ payload }: { payload: LibraryV2TracksPayload }) 
                       disableLinks={isBlocked}
                     />
                   }
-                  metaSlot={
-                    releaseTrackIdByTrackId[String(track.id)] ? (() => {
-                      const rid = releaseTrackIdByTrackId[String(track.id)];
-                      const summary = ratingByReleaseTrackId[rid] ?? { avg: null, count: 0, streams: 0 };
-                      const myStars = myStarsByReleaseTrackId[rid] ?? null;
-                      const elig = eligibilityByTrackId[String(track.id)] ?? { can_rate: null, listened_seconds: null };
+                  metaSlot={(() => {
+                    const trackId = String(track.id);
+                    const summary = ratingByTrackId[trackId] ?? { avg: null, count: 0, streams: 0 };
+                    const myStars = myStarsByTrackId[trackId] ?? null;
+                    const elig = eligibilityByTrackId[trackId] ?? { can_rate: null, listened_seconds: null };
 
-                      return (
-                        <TrackRatingInline
-                          releaseTrackId={rid}
-                          trackId={String(track.id)}
-                          initialAvg={summary.avg}
-                          initialCount={summary.count}
-                          initialStreams={summary.streams}
-                          initialMyStars={myStars}
-                          readOnly={isBlocked}
-                          initialEligibility={{
-                            window_open: windowOpenByTrackId[String(track.id)] ?? null,
-                            can_rate: elig.can_rate,
-                            listened_seconds: elig.listened_seconds,
-                          }}
-                        />
-                      );
-                    })() : null
-                  }
+                    return (
+                      <TrackRatingInline
+                        trackId={trackId}
+                        initialAvg={summary.avg}
+                        initialCount={summary.count}
+                        initialStreams={summary.streams}
+                        initialMyStars={myStars}
+                        readOnly={isBlocked}
+                        initialEligibility={{
+                          window_open: windowOpenByTrackId[trackId] ?? null,
+                          can_rate: elig.can_rate,
+                          listened_seconds: elig.listened_seconds,
+                        }}
+                      />
+                    );
+                  })()}
                   bpmSlot={
                     <span className="tabular-nums">
                       {track.bpm ?? "—"}

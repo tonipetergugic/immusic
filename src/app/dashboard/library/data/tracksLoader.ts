@@ -105,8 +105,8 @@ export async function loadLibraryV2Tracks({
 }): Promise<{
   tracks: PlayerTrack[];
   releaseTrackIdByTrackId: Record<string, string>;
-  ratingByReleaseTrackId: Record<string, { avg: number | null; count: number; streams: number }>;
-  myStarsByReleaseTrackId: Record<string, number | null>;
+  ratingByTrackId: Record<string, { avg: number | null; count: number; streams: number }>;
+  myStarsByTrackId: Record<string, number | null>;
   eligibilityByTrackId: Record<string, { can_rate: boolean | null; listened_seconds: number | null }>;
   windowOpenByTrackId: Record<string, boolean | null>;
 }> {
@@ -154,8 +154,8 @@ export async function loadLibraryV2Tracks({
     return {
       tracks: [],
       releaseTrackIdByTrackId: {},
-      ratingByReleaseTrackId: {},
-      myStarsByReleaseTrackId: {},
+      ratingByTrackId: {},
+      myStarsByTrackId: {},
       eligibilityByTrackId: {},
       windowOpenByTrackId: {},
     };
@@ -256,7 +256,7 @@ export async function loadLibraryV2Tracks({
   }
 
   const releaseTrackIdByTrackId: Record<string, string> = {};
-  const ratingByReleaseTrackId: Record<string, { avg: number | null; count: number; streams: number }> = {};
+  const ratingByTrackId: Record<string, { avg: number | null; count: number; streams: number }> = {};
 
   for (const track of safeUnique) {
     const trackId = String(track.id ?? "");
@@ -265,16 +265,16 @@ export async function loadLibraryV2Tracks({
     if (track.release_track_id) {
       const releaseTrackId = String(track.release_track_id);
       releaseTrackIdByTrackId[trackId] = releaseTrackId;
-
-      ratingByReleaseTrackId[releaseTrackId] = {
-        avg: track.rating_avg ?? null,
-        count: track.rating_count ?? 0,
-        streams: lifetimeStreamsByTrackId.get(trackId) ?? 0,
-      };
     }
+
+    ratingByTrackId[trackId] = {
+      avg: track.rating_avg ?? null,
+      count: track.rating_count ?? 0,
+      streams: lifetimeStreamsByTrackId.get(trackId) ?? 0,
+    };
   }
 
-  const myStarsByReleaseTrackId: Record<string, number | null> = {};
+  const myStarsByTrackId: Record<string, number | null> = {};
   if (trackIds.length > 0) {
     const { data: myRows, error: myErr } = await supabase
       .from("track_ratings")
@@ -290,11 +290,8 @@ export async function loadLibraryV2Tracks({
         const trackId = String(row.track_id ?? "");
         if (!trackId) continue;
 
-        const releaseTrackId = releaseTrackIdByTrackId[trackId];
-        if (!releaseTrackId) continue;
-
-        if (myStarsByReleaseTrackId[releaseTrackId] === undefined) {
-          myStarsByReleaseTrackId[releaseTrackId] = row.stars ?? null;
+        if (myStarsByTrackId[trackId] === undefined) {
+          myStarsByTrackId[trackId] = row.stars ?? null;
         }
       }
     }
@@ -406,8 +403,8 @@ export async function loadLibraryV2Tracks({
   return {
     tracks,
     releaseTrackIdByTrackId,
-    ratingByReleaseTrackId,
-    myStarsByReleaseTrackId,
+    ratingByTrackId,
+    myStarsByTrackId,
     eligibilityByTrackId,
     windowOpenByTrackId,
   };
