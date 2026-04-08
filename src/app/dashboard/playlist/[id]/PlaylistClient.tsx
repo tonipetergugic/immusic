@@ -190,41 +190,24 @@ export default function PlaylistClient({
   async function handleTrackAdded(newPlayerTrack: PlaylistClientTrack) {
     if (!isOwner) return;
 
-  const [trackMetaResult, lifetimeResult, releaseTrackResult, ratingsResponse] =
-    await Promise.all([
-      supabase
-        .from("tracks")
-        .select("id, version, rating_avg, rating_count")
-        .eq("id", newPlayerTrack.id)
-        .maybeSingle(),
-      supabase
-        .from("analytics_track_lifetime")
-        .select("track_id, streams_lifetime")
-        .eq("track_id", newPlayerTrack.id)
-        .maybeSingle(),
-      supabase
-        .from("release_tracks")
-        .select(
-          `
-      id,
-      track_id,
-      release_id,
-      releases!inner(
-        id,
-        status,
-        published_at,
-        created_at
-      )
-      `
-        )
-        .eq("track_id", newPlayerTrack.id)
-        .eq("releases.status", "published"),
-      fetch(`/api/ratings?trackId=${encodeURIComponent(newPlayerTrack.id)}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-      }),
-    ]);
+    const [trackMetaResult, lifetimeResult, ratingsResponse] =
+      await Promise.all([
+        supabase
+          .from("tracks")
+          .select("id, version, rating_avg, rating_count")
+          .eq("id", newPlayerTrack.id)
+          .maybeSingle(),
+        supabase
+          .from("analytics_track_lifetime")
+          .select("track_id, streams_lifetime")
+          .eq("track_id", newPlayerTrack.id)
+          .maybeSingle(),
+        fetch(`/api/ratings?trackId=${encodeURIComponent(newPlayerTrack.id)}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        }),
+      ]);
 
     if (trackMetaResult.error) {
       console.error("Failed to load track ratings for added track:", trackMetaResult.error);
@@ -234,18 +217,11 @@ export default function PlaylistClient({
       console.error("Failed to load lifetime streams for added track:", lifetimeResult.error);
     }
 
-    if (releaseTrackResult.error) {
-      console.error(
-        "Failed to load published release_tracks for added track:",
-        releaseTrackResult.error
-      );
+    if (!ratingsResponse.ok && ratingsResponse.status !== 401) {
+      console.error("Failed to load rating state for added track:", {
+        status: ratingsResponse.status,
+      });
     }
-
-  if (!ratingsResponse.ok && ratingsResponse.status !== 401) {
-    console.error("Failed to load rating state for added track:", {
-      status: ratingsResponse.status,
-    });
-  }
 
     const trackMeta = (trackMetaResult.data ?? null) as {
       id: string;
@@ -259,79 +235,16 @@ export default function PlaylistClient({
       streams_lifetime: number | null;
     } | null;
 
-    const releaseTrackRows = (releaseTrackResult.data ?? []) as Array<{
-      id: string;
-      track_id: string;
-      release_id: string;
-      releases:
-        | {
-            id: string;
-            status: string | null;
-            published_at: string | null;
-            created_at: string | null;
-          }
-        | {
-            id: string;
-            status: string | null;
-            published_at: string | null;
-            created_at: string | null;
-          }[]
-        | null;
-    }>;
+    const ratingsJson = ratingsResponse.ok
+      ? ((await ratingsResponse.json()) as
+          | { ok: true; my_stars: number | null }
+          | { ok: false; error: string; code?: string })
+      : null;
 
-  const ratingsJson = ratingsResponse.ok
-    ? ((await ratingsResponse.json()) as
-        | { ok: true; my_stars: number | null }
-        | { ok: false; error: string; code?: string })
-    : null;
-
-  const nextMyStars =
-    ratingsJson && "ok" in ratingsJson && ratingsJson.ok === true
-      ? ratingsJson.my_stars ?? null
-      : newPlayerTrack.my_stars ?? null;
-
-    const bestReleaseTrack = releaseTrackRows.reduce(
-      (best, row) => {
-        const rel = Array.isArray(row.releases)
-          ? (row.releases[0] ?? null)
-          : (row.releases ?? null);
-
-        if (!rel?.id) return best;
-
-        const next = {
-          release_track_id: String(row.id),
-          release_id: String(row.release_id),
-          published_at: rel.published_at ? String(rel.published_at) : null,
-          created_at: rel.created_at ? String(rel.created_at) : null,
-        };
-
-        if (!best) return next;
-
-        const nextPublished = next.published_at ?? "";
-        const bestPublished = best.published_at ?? "";
-
-        if (nextPublished > bestPublished) return next;
-        if (nextPublished < bestPublished) return best;
-
-        const nextCreated = next.created_at ?? "";
-        const bestCreated = best.created_at ?? "";
-
-        if (nextCreated > bestCreated) return next;
-        if (nextCreated < bestCreated) return best;
-
-        if (next.release_track_id > best.release_track_id) return next;
-
-        return best;
-      },
-      null as
-        | null
-        | {
-            release_track_id: string;
-            release_id: string;
-            published_at: string | null;
-            created_at: string | null;
-          }
-    );
+    const nextMyStars =
+      ratingsJson && "ok" in ratingsJson && ratingsJson.ok === true
+        ? ratingsJson.my_stars ?? null
+        : newPlayerTrack.my_stars ?? null;
 
     const fallbackStreamCount =
       typeof newPlayerTrack.stream_count === "number"
@@ -340,10 +253,8 @@ export default function PlaylistClient({
 
     const enriched: PlayerTrack = {
       ...newPlayerTrack,
-    version: trackMeta?.version ?? newPlayerTrack.version ?? null,
-      release_id: newPlayerTrack.release_id ?? bestReleaseTrack?.release_id ?? null,
-      release_track_id:
-        newPlayerTrack.release_track_id ?? bestReleaseTrack?.release_track_id ?? null,
+      version: trackMeta?.version ?? newPlayerTrack.version ?? null,
+      release_id: newPlayerTrack.release_id ?? null,
       rating_avg:
         typeof trackMeta?.rating_avg === "number"
           ? trackMeta.rating_avg
@@ -352,7 +263,7 @@ export default function PlaylistClient({
         typeof trackMeta?.rating_count === "number"
           ? trackMeta.rating_count
           : newPlayerTrack.rating_count ?? 0,
-    my_stars: nextMyStars,
+      my_stars: nextMyStars,
       ...(typeof lifetimeRow?.streams_lifetime === "number"
         ? { stream_count: lifetimeRow.streams_lifetime }
         : { stream_count: fallbackStreamCount }),
