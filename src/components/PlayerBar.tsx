@@ -473,19 +473,16 @@ export default function PlayerBar() {
                   </div>
                 )}
 
-                {currentTrack.release_track_id ? (
-                  <div className="mt-4 flex justify-center">
-                    <TrackRatingInline
-                      releaseTrackId={currentTrack.release_track_id}
-                      trackId={currentTrack.id}
-                      initialAvg={currentTrack.rating_avg ?? null}
-                      initialCount={currentTrack.rating_count ?? 0}
-                      initialStreams={(currentTrack as any).stream_count ?? 0}
-                      initialMyStars={currentTrack.my_stars ?? null}
-                      showStreamsOnDesktopOnly={false}
-                    />
-                  </div>
-                ) : null}
+                <div className="mt-4 flex justify-center">
+                  <TrackRatingInline
+                    trackId={currentTrack.id}
+                    initialAvg={currentTrack.rating_avg ?? null}
+                    initialCount={currentTrack.rating_count ?? 0}
+                    initialStreams={(currentTrack as any).stream_count ?? 0}
+                    initialMyStars={currentTrack.my_stars ?? null}
+                    showStreamsOnDesktopOnly={false}
+                  />
+                </div>
               </div>
             </div>
 

@@ -37,7 +37,7 @@ type RatingsGetOk = {
 type RatingsErr = { ok: false; error: string; code?: ApiErrorCode };
 
 type TrackRatingInlineProps = {
-  releaseTrackId: string;
+  releaseTrackId?: string;
   trackId: string;
 
   // Optional initial rendering (avoid "empty" before GET resolves)
@@ -87,7 +87,6 @@ function mapNotice(code?: ApiErrorCode, raw?: string) {
 }
 
 function TrackRatingInline({
-  releaseTrackId,
   trackId,
   initialAvg = null,
   initialCount = 0,
@@ -222,15 +221,14 @@ function TrackRatingInline({
   const awaitingInitialUserState = !isReadOnly && !hasInitial && !hydrated;
 
   useEffect(() => {
-    if (!releaseTrackId) return;
     if (isReadOnly) return;
 
     // If the parent provided initial summary, we skip the initial refresh.
     if (hasInitial) return;
 
-    // Run only once per releaseTrackId to avoid loops in playlists / rerenders.
-    if (didInitialFetchRef.current === releaseTrackId) return;
-    didInitialFetchRef.current = releaseTrackId;
+    // Run only once per trackId to avoid loops in playlists / rerenders.
+    if (didInitialFetchRef.current === trackId) return;
+    didInitialFetchRef.current = trackId;
 
     const ac = new AbortController();
     void refresh(ac.signal);
@@ -239,7 +237,7 @@ function TrackRatingInline({
       ac.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [releaseTrackId, isReadOnly, hasInitial]);
+  }, [trackId, isReadOnly, hasInitial]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px), (pointer: coarse)");
@@ -307,8 +305,6 @@ function TrackRatingInline({
       setSubmitting(false);
     }
   }
-
-  if (!releaseTrackId) return null;
 
   const shownAvg = hydrated ? avg : initialAvg;
   const shownCount = hydrated ? count : initialCount;
