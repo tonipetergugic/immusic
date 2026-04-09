@@ -10,7 +10,7 @@ export default function AppShell({
   header,
   children,
   mainClassName =
-    "flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]",
+    "flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable]",
   innerClassName = "w-full max-w-[1200px] mx-auto px-3 pb-40 sm:px-4 lg:px-6 lg:pb-48",
 }: {
   sidebar?: ReactNode;
@@ -20,7 +20,7 @@ export default function AppShell({
   innerClassName?: string;
 }) {
   return (
-    <div className="flex h-[100dvh] w-full bg-[#0E0E10] text-white overflow-hidden">
+    <div className="flex h-[100svh] min-h-[100svh] w-full bg-[#0E0E10] text-white overflow-hidden">
       {sidebar}
 
       <div className="flex flex-col flex-1 overflow-hidden">
