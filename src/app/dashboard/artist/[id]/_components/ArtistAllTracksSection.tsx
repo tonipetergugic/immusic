@@ -55,11 +55,16 @@ export default function ArtistAllTracksSection({
   return (
     <div className="w-full px-0 mt-6 pb-6 overflow-x-hidden touch-pan-y min-w-0">
       <div className="flex items-end justify-between gap-4 mb-3">
-        <h2 className="text-3xl font-bold text-white">
-          More <span className="text-[#00FFC6]">Tracks</span> by{" "}
-          <span className="text-[#00FFC6]">{fallbackDisplayName}</span>
+        <h2 className="text-[30px] sm:text-3xl font-bold text-white whitespace-nowrap">
+          <span className="sm:hidden">
+            More <span className="text-[#00FFC6]">Tracks</span>
+          </span>
+          <span className="hidden sm:inline">
+            More <span className="text-[#00FFC6]">Tracks</span> by{" "}
+            <span className="text-[#00FFC6]">{fallbackDisplayName}</span>
+          </span>
         </h2>
-        <div className="min-w-[220px] text-right text-sm text-[#B3B3B3]">
+        <div className="min-w-0 text-right text-xs sm:text-sm text-[#B3B3B3] whitespace-nowrap">
           {allTracks.length > 0 ? `${allTracks.length} Tracks` : ""}
         </div>
       </div>

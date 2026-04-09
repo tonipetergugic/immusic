@@ -132,19 +132,19 @@ export default function ArtistHeader({
 
       {/* Actions + Social (inline) + Bio */}
       <div className="w-full px-0 mt-6">
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center justify-between gap-4">
           {/* Socials (bigger) */}
-          <div className="flex flex-wrap items-center gap-5">
+          <div className="flex min-w-0 items-center gap-4 overflow-x-auto whitespace-nowrap scrollbar-none">
             {artist.socials.instagram ? (
               <a
                 href={artist.socials.instagram}
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Instagram"
-                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-base"
+                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm sm:text-base shrink-0"
               >
-                <Instagram size={20} />
-                Instagram
+                <Instagram size={20} className="shrink-0" />
+                <span className="hidden sm:inline">Instagram</span>
               </a>
             ) : null}
 
@@ -154,10 +154,10 @@ export default function ArtistHeader({
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="TikTok"
-                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-base"
+                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm sm:text-base shrink-0"
               >
-                <Music2 size={20} />
-                TikTok
+                <Music2 size={20} className="shrink-0" />
+                <span className="hidden sm:inline">TikTok</span>
               </a>
             ) : null}
 
@@ -167,10 +167,10 @@ export default function ArtistHeader({
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Facebook"
-                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-base"
+                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm sm:text-base shrink-0"
               >
-                <Facebook size={20} />
-                Facebook
+                <Facebook size={20} className="shrink-0" />
+                <span className="hidden sm:inline">Facebook</span>
               </a>
             ) : null}
 
@@ -180,16 +180,16 @@ export default function ArtistHeader({
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="X"
-                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-base"
+                className="flex items-center gap-2 text-[#B3B3B3] hover:text-[#00FFC6] transition-colors text-sm sm:text-base shrink-0"
               >
-                <Twitter size={20} />
-                X
+                <Twitter size={20} className="shrink-0" />
+                <span>X</span>
               </a>
             ) : null}
           </div>
 
           {/* Actions (right) */}
-          <div className="min-w-[220px] flex justify-end">
+          <div className="flex shrink-0 justify-end">
             <ArtistHeaderActions
               artistId={artist.id}
               artistName={artist.displayName}
