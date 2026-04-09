@@ -41,6 +41,12 @@ type ArtistCollaboratorRow = {
   display_name: string | null;
 };
 
+type TrackListenStateRow = {
+  track_id: string | null;
+  listened_seconds: number | null;
+  can_rate: boolean | null;
+};
+
 type ArtistMembershipRow = {
   track_id: string | null;
 };
@@ -315,6 +321,34 @@ export default async function ArtistV2Page({
     myStarsByTrackId.set(trackId, row.stars ?? null);
   }
 
+  const listenStateByTrackId = new Map<
+    string,
+    { can_rate: boolean | null; listened_seconds: number | null }
+  >();
+
+  if (viewerId && resolvedTrackIds.length > 0) {
+    const { data: listenStateRows, error: listenStateError } = await supabase
+      .from("track_listen_state")
+      .select("track_id, listened_seconds, can_rate")
+      .eq("user_id", viewerId)
+      .in("track_id", resolvedTrackIds);
+
+    if (listenStateError) {
+      console.error("Failed to load artist-page track listen state:", listenStateError);
+    }
+
+    for (const row of (listenStateRows ?? []) as TrackListenStateRow[]) {
+      const trackId = String(row.track_id ?? "");
+      if (!trackId) continue;
+
+      listenStateByTrackId.set(trackId, {
+        can_rate: typeof row.can_rate === "boolean" ? row.can_rate : false,
+        listened_seconds:
+          typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
+      });
+    }
+  }
+
   const buildTrackDto = (
     trackId: string,
     stats: TopTracksRow | null
@@ -379,6 +413,12 @@ export default async function ArtistV2Page({
         ratingAvg: stats?.rating_avg ?? null,
       },
       my_stars: myStarsByTrackId.get(trackId) ?? null,
+      eligibility: {
+        window_open: true,
+        can_rate: listenStateByTrackId.get(trackId)?.can_rate ?? false,
+        listened_seconds:
+          listenStateByTrackId.get(trackId)?.listened_seconds ?? 0,
+      },
     };
   };
 

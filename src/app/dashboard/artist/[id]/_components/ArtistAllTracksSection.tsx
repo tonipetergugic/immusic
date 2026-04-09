@@ -114,6 +114,12 @@ export default function ArtistAllTracksSection({
                         initialAvg={t.stats30d.ratingAvg}
                         initialCount={t.stats30d.ratingsCount}
                         initialMyStars={t.my_stars}
+                        initialEligibility={{
+                          window_open: t.eligibility?.window_open ?? true,
+                          can_rate: t.eligibility?.can_rate ?? false,
+                          listened_seconds:
+                            t.eligibility?.listened_seconds ?? 0,
+                        }}
                         readOnly={isBlocked}
                         hideStreams={true}
                       />

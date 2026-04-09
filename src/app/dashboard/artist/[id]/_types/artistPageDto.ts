@@ -96,4 +96,9 @@ export type TopTrackDto = {
   };
 
   my_stars: number | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
 };
