@@ -63,42 +63,51 @@ export async function GET(req: Request) {
 
   const rows = (candidates ?? []) as unknown as CandidateRow[];
 
-  const trackIds = rows.map((r) => r.track_id).filter(Boolean);
+  const trackIds = Array.from(new Set(rows.map((r) => r.track_id).filter(Boolean)));
   const releaseIds = Array.from(new Set(rows.map((r) => r.release_id).filter(Boolean)));
   const artistIds = Array.from(new Set(rows.map((r) => r.artist_id).filter(Boolean)));
 
   const debugWarnings: string[] = [];
 
   // Optional: Metadaten nachladen (wenn Spalten/Tables abweichen, Feed bleibt trotzdem nutzbar)
-  const { data: tracks, error: tracksErr } = trackIds.length
-    ? await supabase
-        .from("tracks")
-        .select("id,title,audio_path,genre,bpm,key,version,is_explicit,rating_avg,rating_count")
-        .in("id", trackIds)
-    : { data: [], error: null };
+  const [
+    { data: tracks, error: tracksErr },
+    { data: releases, error: releasesErr },
+    { data: profiles, error: profilesErr },
+    { data: collabs, error: collabsErr },
+    { data: lifetimeRows, error: lifetimeErr },
+  ] = await Promise.all([
+    trackIds.length
+      ? supabase
+          .from("tracks")
+          .select("id,title,audio_path,genre,bpm,key,version,is_explicit,rating_avg,rating_count")
+          .in("id", trackIds)
+      : Promise.resolve({ data: [], error: null }),
+    releaseIds.length
+      ? supabase.from("releases").select("id,cover_path").in("id", releaseIds)
+      : Promise.resolve({ data: [], error: null }),
+    artistIds.length
+      ? supabase.from("profiles").select("id,display_name").in("id", artistIds)
+      : Promise.resolve({ data: [], error: null }),
+    trackIds.length
+      ? supabase
+          .from("track_collaborators")
+          .select("track_id, profiles:profile_id ( id, display_name )")
+          .in("track_id", trackIds)
+      : Promise.resolve({ data: [], error: null }),
+    trackIds.length
+      ? supabase
+          .from("analytics_track_lifetime")
+          .select("track_id, streams_lifetime")
+          .in("track_id", trackIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (tracksErr) debugWarnings.push(`tracks: ${tracksErr.message}`);
-
-  const { data: releases, error: releasesErr } = releaseIds.length
-    ? await supabase.from("releases").select("id,cover_path").in("id", releaseIds)
-    : { data: [], error: null };
-
   if (releasesErr) debugWarnings.push(`releases: ${releasesErr.message}`);
-
-  const { data: profiles, error: profilesErr } = artistIds.length
-    ? await supabase.from("profiles").select("id,display_name").in("id", artistIds)
-    : { data: [], error: null };
-
   if (profilesErr) debugWarnings.push(`profiles: ${profilesErr.message}`);
-
-  const { data: collabs, error: collabsErr } = trackIds.length
-    ? await supabase
-        .from("track_collaborators")
-        .select("track_id, profiles:profile_id ( id, display_name )")
-        .in("track_id", trackIds)
-    : { data: [], error: null };
-
   if (collabsErr) debugWarnings.push(`track_collaborators: ${collabsErr.message}`);
+  if (lifetimeErr) debugWarnings.push(`analytics_track_lifetime: ${lifetimeErr.message}`);
 
   const collabsByTrackId = new Map<string, { id: string; display_name: string }[]>();
   (collabs ?? []).forEach((row: any) => {
@@ -111,15 +120,6 @@ export async function GET(req: Request) {
   });
 
   // Track-first aggregates are already loaded from tracks; no release_tracks lookup needed here.
-
-  const { data: lifetimeRows, error: lifetimeErr } = trackIds.length
-    ? await supabase
-        .from("analytics_track_lifetime")
-        .select("track_id, streams_lifetime")
-        .in("track_id", trackIds)
-    : { data: [], error: null };
-
-  if (lifetimeErr) debugWarnings.push(`analytics_track_lifetime: ${lifetimeErr.message}`);
 
   const lifetimeStreamsByTrackId = new Map<string, number>(
     (lifetimeRows ?? []).map((row: any) => [
@@ -137,15 +137,35 @@ export async function GET(req: Request) {
   // My stars + eligibility (batched) – keyed by track_id
   const myStarsByTrackId = new Map<string, number>();
 
-  const { data: myRatings, error: myRatingsErr } = trackIds.length
-    ? await supabase
-        .from("track_ratings")
-        .select("track_id, stars")
-        .eq("user_id", user.id)
-        .in("track_id", trackIds)
-    : { data: [], error: null };
+  const [
+    { data: myRatings, error: myRatingsErr },
+    { data: meProfile, error: meProfileErr },
+    { data: listenStateRows, error: listenStateErr },
+  ] = await Promise.all([
+    trackIds.length
+      ? supabase
+          .from("track_ratings")
+          .select("track_id, stars")
+          .eq("user_id", user.id)
+          .in("track_id", trackIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle(),
+    trackIds.length
+      ? supabase
+          .from("track_listen_state")
+          .select("track_id, listened_seconds, can_rate")
+          .eq("user_id", user.id)
+          .in("track_id", trackIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (myRatingsErr) debugWarnings.push(`track_ratings: ${myRatingsErr.message}`);
+  if (meProfileErr) debugWarnings.push(`profiles(role): ${meProfileErr.message}`);
+  if (listenStateErr) debugWarnings.push(`track_listen_state: ${listenStateErr.message}`);
 
   (myRatings ?? []).forEach((r: any) => {
     if (r?.track_id && typeof r.stars === "number") {
@@ -153,25 +173,7 @@ export async function GET(req: Request) {
     }
   });
 
-  const { data: meProfile, error: meProfileErr } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (meProfileErr) debugWarnings.push(`profiles(role): ${meProfileErr.message}`);
-
   const isListener = (meProfile as any)?.role === "listener";
-
-  const { data: listenStateRows, error: listenStateErr } = trackIds.length
-    ? await supabase
-        .from("track_listen_state")
-        .select("track_id, listened_seconds, can_rate")
-        .eq("user_id", user.id)
-        .in("track_id", trackIds)
-    : { data: [], error: null };
-
-  if (listenStateErr) debugWarnings.push(`track_listen_state: ${listenStateErr.message}`);
 
   const listenStateByTrackId = new Map<
     string,
