@@ -80,13 +80,12 @@ export default function PlaylistTrackList({
     <div className="mt-3">
         <div
           className="
-            grid
-            grid-cols-[16px_56px_1fr_36px]
+            hidden lg:grid
             lg:grid-cols-[40px_80px_1fr_56px_56px_180px_80px]
             items-center
-            gap-x-2 md:gap-x-3
+            gap-x-3
             text-xs text-white/35 uppercase tracking-wide
-            px-3 sm:px-4 py-1.5
+            px-4 py-1.5
             border-b border-white/10
           "
         >

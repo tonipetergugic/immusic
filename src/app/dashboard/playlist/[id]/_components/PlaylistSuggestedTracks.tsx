@@ -82,7 +82,7 @@ export default function PlaylistSuggestedTracks({
   onTrackAdded,
 }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const { isTrackPlaybackBlocked } = usePlayer();
+  const { currentTrack, isPlaying, isTrackPlaybackBlocked } = usePlayer();
 
   const [mode, setMode] = useState<DiscoveryMode>("performance");
   const [items, setItems] = useState<SuggestedTrack[]>([]);
@@ -309,7 +309,7 @@ export default function PlaylistSuggestedTracks({
         {Array.from({ length: 5 }).map((_, index) => (
           <span
             key={index}
-            className={index < fullStars ? "text-[#00FFC6]" : "text-white/25"}
+            className={index < fullStars ? "text-[#00FFC6]/60" : "text-white/20"}
           >
             ★
           </span>
@@ -325,7 +325,7 @@ export default function PlaylistSuggestedTracks({
 
         {item.rating_count > 0 ? (
           <span className="tabular-nums whitespace-nowrap">
-            <span className="font-semibold text-[#00FFC6]">
+            <span className="font-semibold text-[#00FFC6]/70">
               Ø {Number(item.rating_avg ?? 0).toFixed(1)}
             </span>{" "}
             <span className="text-white/50">({item.rating_count})</span>
@@ -333,12 +333,6 @@ export default function PlaylistSuggestedTracks({
         ) : (
           <span className="whitespace-nowrap text-white/40">No ratings</span>
         )}
-
-        <span className="text-white/30">·</span>
-
-        <span className="whitespace-nowrap text-white/50">
-          {item.streams_30d} streams
-        </span>
       </div>
     );
   }
@@ -443,6 +437,8 @@ export default function PlaylistSuggestedTracks({
 
             const track = buildSuggestedPlayerTrack(item);
             const isBlocked = isTrackPlaybackBlocked(track);
+            const isCurrent = currentTrack?.id === track.id;
+            const isNowPlaying = isCurrent && isPlaying;
 
             return (
               <TrackRowBase
@@ -454,22 +450,74 @@ export default function PlaylistSuggestedTracks({
                 coverSize="sm"
                 className="border-b-0 px-0 grid-cols-[40px_56px_minmax(0,1fr)_0px] lg:grid-cols-[40px_56px_minmax(0,1fr)_0px]"
                 titleSlot={
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={`min-w-0 flex-1 text-left text-[14px] font-semibold truncate ${
-                        isBlocked
-                          ? "text-white/45"
-                          : track.status === "performance"
-                          ? "text-[#00FFC6]"
-                          : "text-white"
-                      }`}
-                      title={formatTrackTitle(item.title, item.version)}
-                    >
-                      {formatTrackTitle(item.title, item.version)}
-                    </span>
+                  <>
+                    {isNowPlaying ? (
+                      <>
+                        <div className="min-w-0 overflow-hidden md:hidden">
+                          <div
+                            className={`inline-flex w-max min-w-max items-center gap-6 whitespace-nowrap will-change-transform ${
+                              isBlocked
+                                ? "text-white/45"
+                                : track.status === "performance"
+                                ? "text-[#00FFC6]"
+                                : "text-white"
+                            }`}
+                            style={{ animation: "trackTitleMarquee 10s linear infinite" }}
+                            title={formatTrackTitle(item.title, item.version)}
+                          >
+                            {[0, 1].map((copyIndex) => (
+                              <div
+                                key={copyIndex}
+                                className="inline-flex items-center gap-2 whitespace-nowrap"
+                                aria-hidden={copyIndex === 1 ? "true" : undefined}
+                              >
+                                <span className="text-left text-[14px] font-semibold whitespace-nowrap">
+                                  {formatTrackTitle(item.title, item.version)}
+                                </span>
+                                {item.is_explicit ? <ExplicitBadge /> : null}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
-                    {item.is_explicit ? <ExplicitBadge /> : null}
-                  </div>
+                        <div className="hidden min-w-0 overflow-hidden md:block">
+                          <div
+                            className={`inline-flex max-w-full items-center gap-2 whitespace-nowrap ${
+                              isBlocked
+                                ? "text-white/45"
+                                : track.status === "performance"
+                                ? "text-[#00FFC6]"
+                                : "text-white"
+                            }`}
+                            title={formatTrackTitle(item.title, item.version)}
+                          >
+                            <span className="min-w-0 truncate text-left text-[14px] font-semibold">
+                              {formatTrackTitle(item.title, item.version)}
+                            </span>
+                            {item.is_explicit ? <ExplicitBadge /> : null}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="min-w-0 overflow-hidden">
+                        <div
+                          className={`inline-flex max-w-full items-center gap-2 whitespace-nowrap ${
+                            isBlocked
+                              ? "text-white/45"
+                              : track.status === "performance"
+                              ? "text-[#00FFC6]"
+                              : "text-white"
+                          }`}
+                          title={formatTrackTitle(item.title, item.version)}
+                        >
+                          <span className="min-w-0 truncate text-left text-[14px] font-semibold">
+                            {formatTrackTitle(item.title, item.version)}
+                          </span>
+                          {item.is_explicit ? <ExplicitBadge /> : null}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 }
                 subtitleSlot={
                   <span

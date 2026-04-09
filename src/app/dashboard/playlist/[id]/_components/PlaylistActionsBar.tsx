@@ -58,14 +58,14 @@ export default function PlaylistActionsBar({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div
         className="
-          flex items-center gap-6
+          flex items-center gap-4
           mt-0
-          pl-[36px] sm:pl-[44px] lg:pl-[56px]
+          pl-2 sm:pl-[44px] lg:pl-[56px]
         "
       >
         {/* PLAY (standard) */}
         {tracks && tracks.length > 0 ? (
-          <div className="transition-all duration-200 hover:scale-105 hover:drop-shadow-[0_0_6px_rgba(0,255,198,0.6)]">
+          <div className="scale-[0.82] origin-left transition-all duration-200 hover:scale-[0.86] sm:scale-100 sm:hover:scale-105 sm:hover:drop-shadow-[0_0_6px_rgba(0,255,198,0.6)]">
             <PlayOverlayButton
               variant="standalone"
               size="lg"
@@ -83,18 +83,17 @@ export default function PlaylistActionsBar({
               pointer-events-auto
               rounded-full border border-[#00FFC622] bg-black/35
               flex items-center justify-center
-              w-20 h-20
+              w-16 h-16 sm:w-20 sm:h-20
               cursor-not-allowed
               shadow-[0_0_18px_rgba(0,255,198,0.12)]
             "
           >
-            <Play className="w-8 h-8 text-[#00FFC6]/35" />
+            <Play className="w-6 h-6 sm:w-8 sm:h-8 text-[#00FFC6]/35" />
           </button>
         )}
 
-        {/* SECONDARY ACTIONS */}
         {isOwner ? (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-4">
             {/* ADD TRACK */}
             <button
               onClick={onAddTrack}
@@ -217,6 +216,24 @@ export default function PlaylistActionsBar({
               ) : null}
             </div>
           </div>
+        ) : !isOwner ? (
+          <button
+            type="button"
+            onClick={onToggleSaveToLibrary}
+            disabled={saveBusy}
+            className="
+              inline-flex items-center justify-center
+              h-10 w-[170px] rounded-full
+              bg-transparent border border-[#2A2A2D]
+              text-[#B3B3B3] text-sm font-medium
+              hover:text-white hover:border-[#3A3A3D]
+              transition cursor-pointer
+              disabled:opacity-60 disabled:cursor-wait
+              sm:hidden
+            "
+          >
+            {isSavedToLibrary ? "Remove from library" : "Save to library"}
+          </button>
         ) : null}
       </div>
 
@@ -227,7 +244,7 @@ export default function PlaylistActionsBar({
             onClick={onToggleSaveToLibrary}
             disabled={saveBusy}
             className="
-              inline-flex items-center justify-center
+              hidden sm:inline-flex items-center justify-center
               h-10 px-4 rounded-full
               bg-transparent border border-[#2A2A2D]
               text-[#B3B3B3] text-sm font-medium

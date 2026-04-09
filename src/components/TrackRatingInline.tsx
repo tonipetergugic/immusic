@@ -499,7 +499,12 @@ function TrackRatingInline({
 
       {shownCount && shownCount > 0 ? (
         <span className="tabular-nums whitespace-nowrap">
-          <span className="text-[#00FFC6] font-semibold">
+          <span
+            className={[
+              "font-semibold",
+              alreadyRated ? "text-[#00FFC6]/70" : "text-[#00FFC6]",
+            ].join(" ")}
+          >
             Ø {Number(shownAvg ?? 0).toFixed(1)}
           </span>{" "}
           <span className="text-white/50">
@@ -510,17 +515,26 @@ function TrackRatingInline({
         <span className="text-neutral-600 whitespace-nowrap">No ratings</span>
       )}
 
-      <span className="text-xs text-white/30">·</span>
-
       {!hideStreams ? (
-        <span
-          className={[
-            "text-xs text-white/50 whitespace-nowrap",
-            showStreamsOnDesktopOnly ? "hidden md:inline" : "",
-          ].join(" ")}
-        >
-          {shownStreams ?? 0} streams
-        </span>
+        <>
+          <span
+            className={[
+              "text-xs text-white/30",
+              showStreamsOnDesktopOnly ? "hidden md:inline" : "",
+            ].join(" ")}
+          >
+            ·
+          </span>
+
+          <span
+            className={[
+              "text-xs text-white/50 whitespace-nowrap",
+              showStreamsOnDesktopOnly ? "hidden md:inline" : "",
+            ].join(" ")}
+          >
+            {shownStreams ?? 0} streams
+          </span>
+        </>
       ) : null}
     </div>
   );

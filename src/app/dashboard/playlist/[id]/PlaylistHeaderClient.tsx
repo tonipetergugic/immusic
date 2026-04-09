@@ -237,7 +237,7 @@ export default function PlaylistHeaderClient({
       />
 
       {/* CONTENT */}
-      <div className="relative z-10 pt-10 pb-14 px-10">
+      <div className="relative z-10 px-4 pt-6 pb-8 sm:px-6 sm:pt-8 sm:pb-10 lg:px-10 lg:pt-10 lg:pb-14">
         <input
           ref={fileInputRef}
           type="file"
@@ -254,7 +254,7 @@ export default function PlaylistHeaderClient({
           <BackLink />
         </div>
 
-        <div className="flex flex-col md:flex-row items-start md:items-end gap-8">
+        <div className="flex flex-col items-start gap-5 md:flex-row md:items-end md:gap-8">
           {/* COVER */}
           <div
             className={`
@@ -267,7 +267,7 @@ export default function PlaylistHeaderClient({
               onDragOver={isOwner ? onCoverDragOver : undefined}
               onDrop={isOwner ? onCoverDrop : undefined}
               className={`
-                group relative w-[240px] h-[240px] md:w-[320px] md:h-[320px]
+                group relative h-[180px] w-[180px] sm:h-[220px] sm:w-[220px] md:h-[320px] md:w-[320px]
                 rounded-xl overflow-hidden
                 border border-[#1A1A1C] bg-gradient-to-br from-neutral-900 to-neutral-800
                 flex items-center justify-center
@@ -280,7 +280,7 @@ export default function PlaylistHeaderClient({
                   alt={playlist.title}
                   fill
                   priority
-                  sizes="(min-width: 768px) 320px, 240px"
+                  sizes="(min-width: 768px) 320px, (min-width: 640px) 220px, 180px"
                   className="object-cover rounded-xl"
                 />
               ) : (
@@ -343,9 +343,9 @@ export default function PlaylistHeaderClient({
               ref={fitTitle.ref}
               className="
                 font-semibold text-white tracking-tight leading-tight
-                text-[34px] sm:text-5xl md:text-6xl lg:text-5xl xl:text-7xl
-                max-w-[70vw] md:max-w-[600px]
-                whitespace-nowrap overflow-hidden text-ellipsis
+                text-[28px] sm:text-5xl md:text-6xl lg:text-5xl xl:text-7xl
+                max-w-full md:max-w-[600px]
+                overflow-hidden text-ellipsis whitespace-nowrap
               "
             >
               {playlist.title}

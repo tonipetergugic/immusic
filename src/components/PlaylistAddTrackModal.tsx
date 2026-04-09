@@ -257,9 +257,9 @@ export default function PlaylistAddTrackModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 overflow-y-auto">
-      <div className="w-full max-w-[560px] rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)] max-h-[calc(100dvh-2rem)] overflow-y-auto">
-        <div className="mb-4">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm px-3 pt-6 pb-[104px] md:px-4 md:py-4">
+      <div className="flex w-full max-w-[560px] flex-col overflow-hidden rounded-t-2xl md:rounded-2xl border border-white/10 bg-white/[0.03] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_50px_rgba(0,0,0,0.55)] max-h-[calc(100dvh-7.5rem)] md:max-h-[calc(100dvh-2rem)]">
+        <div className="shrink-0 p-5 sm:p-7 pb-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-[22px] font-semibold tracking-tight text-white">
               Add <span className="text-[#00FFC6]">Track</span> to{" "}
@@ -278,7 +278,7 @@ export default function PlaylistAddTrackModal({
           />
         </div>
 
-        <div className="min-h-[320px] max-h-[440px] space-y-3 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 sm:px-7 pb-4">
           {isLoading && (
             <p className="text-sm text-white/60">Lade veröffentlichte Tracks...</p>
           )}
@@ -339,10 +339,10 @@ export default function PlaylistAddTrackModal({
             })}
         </div>
 
-        <div className="mt-5 flex justify-end">
+        <div className="shrink-0 border-t border-white/10 px-5 sm:px-7 py-4 flex justify-end">
           <button
             onClick={onClose}
-            className="inline-flex items-center justify-center cursor-pointer rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-white/70 transition hover:text-white hover:border-[#00FFC6]/50 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
+            className="inline-flex w-full sm:w-auto items-center justify-center cursor-pointer rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-white/70 transition hover:text-white hover:border-[#00FFC6]/50 hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60"
           >
             Close
           </button>
