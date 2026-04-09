@@ -127,9 +127,8 @@ export default function DashboardHomeClient({
     return buildDevQueue({
       devItems,
       supabase,
-      trackArtistsMap,
     }) as unknown as PlayerTrack[];
-  }, [devItems, supabase, trackArtistsMap]);
+  }, [devItems, supabase]);
 
   const perfQueue = useMemo(() => {
     return buildPerfQueue({
@@ -284,6 +283,7 @@ export default function DashboardHomeClient({
             performanceItems={performanceItems}
             perfQueue={perfQueue}
             perfTrackMetaMap={perfTrackMetaMap}
+            perfTrackStatsMap={perfTrackStatsMap}
             routerPush={(href) => router.push(href)}
           />
         ) : null}

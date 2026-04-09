@@ -27,11 +27,26 @@ type LifetimeRow = {
 type PerfTrackStats = {
   stream_count: number;
   my_stars: number | null;
+  eligibility: {
+    window_open: boolean | null;
+    can_rate: boolean | null;
+    listened_seconds: number | null;
+  };
 };
 
 type MyRatingRow = {
   track_id: string;
   stars: number | null;
+};
+
+type ProfileRoleRow = {
+  role: string | null;
+};
+
+type ListenStateRow = {
+  track_id: string;
+  listened_seconds: number | null;
+  can_rate: boolean | null;
 };
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -203,13 +218,59 @@ export function usePerformanceDiscovery({
             }
           }
 
+          let isListener = false;
+
+          if (user?.id) {
+            const { data: meProfile, error: meProfileErr } = await supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            if (!meProfileErr && meProfile) {
+              isListener = ((meProfile as ProfileRoleRow).role ?? null) === "listener";
+            }
+          }
+
+          const listenStateByTrackId = new Map<
+            string,
+            { can_rate: boolean | null; listened_seconds: number | null }
+          >();
+
+          if (trackIds.length > 0 && user?.id) {
+            const { data: listenRows, error: listenErr } = await supabase
+              .from("track_listen_state")
+              .select("track_id, listened_seconds, can_rate")
+              .eq("user_id", user.id)
+              .in("track_id", trackIds);
+
+            if (!listenErr && listenRows) {
+              for (const row of (listenRows ?? []) as ListenStateRow[]) {
+                if (!row?.track_id) continue;
+
+                listenStateByTrackId.set(String(row.track_id), {
+                  can_rate: typeof row.can_rate === "boolean" ? row.can_rate : null,
+                  listened_seconds:
+                    typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
+                });
+              }
+            }
+          }
+
           if (trackIds.length > 0) {
             const map: Record<string, PerfTrackStats> = {};
 
             for (const trackId of trackIds) {
+              const listenState = listenStateByTrackId.get(String(trackId));
+
               map[trackId] = {
                 stream_count: lifetimeStreamsByTrackId.get(String(trackId)) ?? 0,
                 my_stars: myStarsByTrackId.get(String(trackId)) ?? null,
+                eligibility: {
+                  window_open: true,
+                  can_rate: isListener ? (listenState?.can_rate ?? false) : false,
+                  listened_seconds: isListener ? (listenState?.listened_seconds ?? 0) : 0,
+                },
               };
             }
 

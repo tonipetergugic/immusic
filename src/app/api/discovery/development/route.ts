@@ -134,7 +134,7 @@ export async function GET(req: Request) {
 
   const visibleRows = rows;
 
-  // My stars (optional) – keyed by track_id
+  // My stars + eligibility (batched) – keyed by track_id
   const myStarsByTrackId = new Map<string, number>();
 
   const { data: myRatings, error: myRatingsErr } = trackIds.length
@@ -151,6 +151,41 @@ export async function GET(req: Request) {
     if (r?.track_id && typeof r.stars === "number") {
       myStarsByTrackId.set(r.track_id, r.stars);
     }
+  });
+
+  const { data: meProfile, error: meProfileErr } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (meProfileErr) debugWarnings.push(`profiles(role): ${meProfileErr.message}`);
+
+  const isListener = (meProfile as any)?.role === "listener";
+
+  const { data: listenStateRows, error: listenStateErr } = trackIds.length
+    ? await supabase
+        .from("track_listen_state")
+        .select("track_id, listened_seconds, can_rate")
+        .eq("user_id", user.id)
+        .in("track_id", trackIds)
+    : { data: [], error: null };
+
+  if (listenStateErr) debugWarnings.push(`track_listen_state: ${listenStateErr.message}`);
+
+  const listenStateByTrackId = new Map<
+    string,
+    { can_rate: boolean | null; listened_seconds: number | null }
+  >();
+
+  (listenStateRows ?? []).forEach((row: any) => {
+    if (!row?.track_id) return;
+
+    listenStateByTrackId.set(String(row.track_id), {
+      can_rate: typeof row.can_rate === "boolean" ? row.can_rate : null,
+      listened_seconds:
+        typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
+    });
   });
 
   const items = visibleRows.map((r) => {
@@ -172,6 +207,8 @@ export async function GET(req: Request) {
       ).values(),
     );
 
+    const listenState = listenStateByTrackId.get(String(r.track_id));
+
     const item: any = {
       track_id: r.track_id,
       release_id: r.release_id,
@@ -182,6 +219,11 @@ export async function GET(req: Request) {
       rating_count: 0,
       stream_count: 0,
       my_stars: null,
+      eligibility: {
+        window_open: true,
+        can_rate: isListener ? (listenState?.can_rate ?? false) : false,
+        listened_seconds: isListener ? (listenState?.listened_seconds ?? 0) : 0,
+      },
 
       title: t?.title ?? "",
       artist_name: prof?.display_name ?? null,

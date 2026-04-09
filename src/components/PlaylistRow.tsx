@@ -27,6 +27,11 @@ type PlaylistRowTrack = PlayerTrack & {
   rating_count?: number | null;
   stream_count?: number | null;
   my_stars?: number | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
 };
 
 function PlaylistRow({
@@ -273,6 +278,11 @@ function PlaylistRow({
             initialCount={track.rating_count ?? 0}
             initialStreams={track.stream_count ?? 0}
             initialMyStars={track.my_stars ?? null}
+            initialEligibility={{
+              window_open: track.eligibility?.window_open ?? true,
+              can_rate: track.eligibility?.can_rate ?? false,
+              listened_seconds: track.eligibility?.listened_seconds ?? 0,
+            }}
             readOnly={isBlocked}
             showStreamsOnDesktopOnly={true}
           />

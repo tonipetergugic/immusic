@@ -7,6 +7,7 @@ export type ArtistMini = { id: string; display_name: string };
 type DevQueueSourceItem = DevelopmentDiscoveryItem & {
   version?: string | null;
   is_explicit?: boolean | null;
+  artists?: { id: string; display_name: string }[];
 };
 
 type PerfTrackStats = {
@@ -56,9 +57,8 @@ function uniqArtists(list: ArtistMini[]) {
 export function buildDevQueue(params: {
   devItems: DevQueueSourceItem[];
   supabase: SupabaseClient;
-  trackArtistsMap: Record<string, ArtistMini[]>;
 }): HomeQueueTrack[] {
-  const { devItems, supabase, trackArtistsMap } = params;
+  const { devItems, supabase } = params;
 
   return (devItems ?? []).slice(0, 20).map((it) => {
     const trackId = it.track_id;
@@ -74,16 +74,18 @@ export function buildDevQueue(params: {
       ? supabase.storage.from("tracks").getPublicUrl(it.audio_path).data.publicUrl
       : null;
 
+    const apiArtists = Array.isArray(it.artists)
+      ? it.artists.map((artistItem) => ({
+          id: String(artistItem.id),
+          display_name: String(artistItem.display_name ?? "Unknown Artist"),
+        }))
+      : [];
+
     const ownerId = String(it.artist_id ?? "");
     const ownerName = String(it.artist_name ?? "—");
     const owner = ownerId ? [{ id: ownerId, display_name: ownerName }] : [];
 
-    const collabs = (trackArtistsMap?.[trackId] ?? []).map((artistItem) => ({
-      id: String(artistItem.id),
-      display_name: String(artistItem.display_name ?? "Unknown Artist"),
-    }));
-
-    const artists = uniqArtists([...owner, ...collabs]);
+    const artists = uniqArtists([...owner, ...apiArtists]);
 
     const queueItem: HomeQueueTrack = {
       id: trackId,

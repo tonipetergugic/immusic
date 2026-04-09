@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
+export const revalidate = 60;
 
 export async function GET(req: Request) {
   try {
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
     const dayKey = now.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
     const currentBucket = dayOfYear(now) % 7; // weekly rotation
 
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabasePublicServerClient();
 
     const baseCount = Math.floor(limit * 0.8);
     const boostCount = limit - baseCount;
@@ -46,7 +47,7 @@ export async function GET(req: Request) {
     if (baseError) {
       return NextResponse.json(
         { ok: false, error: baseError.message, items: [] },
-        { status: 500, headers: { "Cache-Control": "no-store" } }
+        { status: 500 }
       );
     }
 
@@ -62,7 +63,7 @@ export async function GET(req: Request) {
     if (boostError) {
       return NextResponse.json(
         { ok: false, error: boostError.message, items: [] },
-        { status: 500, headers: { "Cache-Control": "no-store" } }
+        { status: 500 }
       );
     }
 
@@ -98,7 +99,7 @@ export async function GET(req: Request) {
     if (tracksError) {
       return NextResponse.json(
         { ok: false, error: tracksError.message, items: [] },
-        { status: 500, headers: { "Cache-Control": "no-store" } }
+        { status: 500 }
       );
     }
 
@@ -117,13 +118,13 @@ export async function GET(req: Request) {
         },
         items: visibleItems,
       },
-      { status: 200, headers: { "Cache-Control": "no-store" } }
+      { status: 200 }
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json(
       { ok: false, error: msg, items: [] },
-      { status: 500, headers: { "Cache-Control": "no-store" } }
+      { status: 500 }
     );
   }
 }

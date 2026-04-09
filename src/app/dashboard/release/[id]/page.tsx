@@ -41,6 +41,12 @@ type MyTrackRatingRow = {
   created_at: string | null;
 };
 
+type TrackListenStateRow = {
+  track_id: string | null;
+  listened_seconds: number | null;
+  can_rate: boolean | null;
+};
+
 export default async function ReleaseDetailPage({
   params,
 }: {
@@ -218,17 +224,35 @@ export default async function ReleaseDetailPage({
   );
 
   const myStarsByTrackId = new Map<string, number | null>();
+  const listenStateByTrackId = new Map<
+    string,
+    { can_rate: boolean | null; listened_seconds: number | null }
+  >();
 
   if (user?.id && trackIds.length > 0) {
-    const { data: myRatingRows, error: myRatingsError } = await supabase
-      .from("track_ratings")
-      .select("track_id, stars, created_at")
-      .eq("user_id", user.id)
-      .in("track_id", trackIds)
-      .order("created_at", { ascending: false });
+    const [
+      { data: myRatingRows, error: myRatingsError },
+      { data: listenStateRows, error: listenStateError },
+    ] = await Promise.all([
+      supabase
+        .from("track_ratings")
+        .select("track_id, stars, created_at")
+        .eq("user_id", user.id)
+        .in("track_id", trackIds)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("track_listen_state")
+        .select("track_id, listened_seconds, can_rate")
+        .eq("user_id", user.id)
+        .in("track_id", trackIds),
+    ]);
 
     if (myRatingsError) {
       throw myRatingsError;
+    }
+
+    if (listenStateError) {
+      throw listenStateError;
     }
 
     for (const row of (myRatingRows ?? []) as MyTrackRatingRow[]) {
@@ -238,6 +262,17 @@ export default async function ReleaseDetailPage({
       if (!myStarsByTrackId.has(trackId)) {
         myStarsByTrackId.set(trackId, row.stars ?? null);
       }
+    }
+
+    for (const row of (listenStateRows ?? []) as TrackListenStateRow[]) {
+      const trackId = String(row.track_id ?? "");
+      if (!trackId) continue;
+
+      listenStateByTrackId.set(trackId, {
+        can_rate: typeof row.can_rate === "boolean" ? row.can_rate : false,
+        listened_seconds:
+          typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
+      });
     }
   }
 
@@ -307,6 +342,13 @@ export default async function ReleaseDetailPage({
       ratingCount: t?.rating_count ?? null,
       streamCount: lifetimeStreamsByTrackId.get(String(t?.id ?? "")) ?? 0,
       myStars: myStarsByTrackId.get(String(t?.id ?? "")) ?? null,
+      eligibility: {
+        window_open: true,
+        can_rate:
+          listenStateByTrackId.get(String(t?.id ?? ""))?.can_rate ?? false,
+        listened_seconds:
+          listenStateByTrackId.get(String(t?.id ?? ""))?.listened_seconds ?? 0,
+      },
       artists: buildArtistsList({
         primaryArtist: Array.isArray(t?.artist) ? t.artist[0] ?? null : t?.artist ?? null,
         resolvedArtists: trackArtistsByTrackId.get(String(t?.id ?? "")) ?? [],

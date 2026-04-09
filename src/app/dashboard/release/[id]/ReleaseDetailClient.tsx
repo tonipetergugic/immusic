@@ -26,6 +26,11 @@ type ReleaseDetailTrack = {
   ratingCount: number | null;
   streamCount: number;
   myStars: number | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
   artists: Artist[];
 };
 
@@ -142,6 +147,7 @@ export default function ReleaseDetailClient({
                 ratingCount={row.ratingCount}
                 streamCount={row.streamCount}
                 myStars={row.myStars}
+                eligibility={row.eligibility}
                 releaseCoverUrl={releaseCoverUrl}
                 isActive={row.trackId === selectedTrack?.trackId}
                 onSelect={() => setSelectedTrackId(row.trackId)}

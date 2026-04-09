@@ -6,6 +6,10 @@ export type DevelopmentDiscoveryItem = {
   title: string;
   artist_name: string | null;
   cover_path: string | null;
+  artists?: {
+    id: string;
+    display_name: string;
+  }[];
   audio_path: string;
   genre: string | null;
   bpm: number | null;
@@ -16,6 +20,11 @@ export type DevelopmentDiscoveryItem = {
   rating_count: number;
   stream_count: number;
   my_stars: number | null;
+  eligibility: {
+    window_open: boolean | null;
+    can_rate: boolean | null;
+    listened_seconds: number | null;
+  };
 
   exposure: {
     target_listeners: number;

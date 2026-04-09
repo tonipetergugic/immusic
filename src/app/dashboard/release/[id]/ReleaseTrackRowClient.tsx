@@ -20,6 +20,7 @@ export default function ReleaseTrackRowClient({
   ratingCount,
   streamCount,
   myStars,
+  eligibility,
   releaseCoverUrl,
   isActive,
   onSelect,
@@ -43,6 +44,11 @@ export default function ReleaseTrackRowClient({
   ratingCount: number | null;
   streamCount: number;
   myStars: number | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
   releaseCoverUrl: string | null;
   isActive: boolean;
   onSelect: () => void;
@@ -240,6 +246,11 @@ export default function ReleaseTrackRowClient({
             initialCount={ratingCount ?? 0}
             initialStreams={streamCount ?? 0}
             initialMyStars={myStars}
+            initialEligibility={{
+              window_open: eligibility?.window_open ?? true,
+              can_rate: eligibility?.can_rate ?? false,
+              listened_seconds: eligibility?.listened_seconds ?? 0,
+            }}
             readOnly={isBlocked}
             showStreamsOnDesktopOnly={true}
           />

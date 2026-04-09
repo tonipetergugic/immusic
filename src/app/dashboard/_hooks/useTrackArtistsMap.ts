@@ -37,8 +37,11 @@ export function useTrackArtistsMap({
   const [trackArtistsMap, setTrackArtistsMap] = useState<Record<string, Artist[]>>({});
 
   useEffect(() => {
-    const sourceItems =
-      discoveryMode === "performance" ? performanceItems ?? [] : devItems ?? [];
+    if (discoveryMode !== "performance") {
+      return;
+    }
+
+    const sourceItems = performanceItems ?? [];
 
     const trackIds = Array.from(
       new Set(

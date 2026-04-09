@@ -18,6 +18,11 @@ import type { PlayerTrack } from "@/types/playerTrack";
 
 type PlaylistClientTrack = PlayerTrack & {
   stream_count?: number | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
 };
 
 /**

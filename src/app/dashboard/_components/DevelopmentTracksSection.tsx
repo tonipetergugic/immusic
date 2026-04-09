@@ -10,6 +10,11 @@ import { usePlayer } from "@/context/PlayerContext";
 
 type DevItemLike = {
   genre?: string | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
 };
 
 type DevQueueTrack = PlayerTrack & {
@@ -339,6 +344,12 @@ export default function DevelopmentTracksSection({
                       initialCount={rowTrack.rating_count ?? undefined}
                       initialStreams={rowTrack.stream_count ?? 0}
                       initialMyStars={rowTrack.my_stars}
+                      initialEligibility={{
+                        window_open: devItems[idx]?.eligibility?.window_open ?? true,
+                        can_rate: devItems[idx]?.eligibility?.can_rate ?? false,
+                        listened_seconds:
+                          devItems[idx]?.eligibility?.listened_seconds ?? 0,
+                      }}
                       readOnly={isBlocked}
                     />
                   }

@@ -20,10 +20,7 @@ export type PerformanceDiscoveryItem = {
 };
 
 export async function fetchPerformanceDiscovery(limit = 30) {
-  const res = await fetch(
-    `/api/discovery/performance?limit=${limit}`,
-    { cache: "no-store" }
-  );
+  const res = await fetch(`/api/discovery/performance?limit=${limit}`);
 
   if (!res.ok) {
     throw new Error("Failed to fetch performance discovery");

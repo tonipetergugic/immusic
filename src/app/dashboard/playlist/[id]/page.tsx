@@ -103,6 +103,12 @@ type ExplicitTrackRow = {
   is_explicit: boolean | null;
 };
 
+type TrackListenStateRow = {
+  track_id: string;
+  listened_seconds: number | null;
+  can_rate: boolean | null;
+};
+
 type TrackArtistsResolvedRow = {
   track_id: string | null;
   artists:
@@ -408,27 +414,66 @@ export default async function PlaylistPage(
     .map((t) => t.id)
     .filter(Boolean) as string[];
 
-  let finalTracks = convertedTracks;
+  let finalTracks = convertedTracks.map((t) => ({
+    ...t,
+    eligibility: {
+      window_open: true,
+      can_rate: false,
+      listened_seconds: 0,
+    },
+  }));
 
   if (user && trackIds.length > 0) {
-    const { data: myRatings, error: myRatingsError } = await supabase
-      .from("track_ratings")
-      .select("track_id, stars")
-      .eq("user_id", user.id)
-      .in("track_id", trackIds);
+    const [{ data: myRatings, error: myRatingsError }, { data: listenStateRows, error: listenStateError }] =
+      await Promise.all([
+        supabase
+          .from("track_ratings")
+          .select("track_id, stars")
+          .eq("user_id", user.id)
+          .in("track_id", trackIds),
+        supabase
+          .from("track_listen_state")
+          .select("track_id, listened_seconds, can_rate")
+          .eq("user_id", user.id)
+          .in("track_id", trackIds),
+      ]);
 
     if (myRatingsError) {
       console.error("Failed to load user ratings", myRatingsError);
-    } else {
-      const myRatingMap = new Map(
-        myRatings?.map((r) => [r.track_id, r.stars]) ?? []
-      );
+    }
 
-      finalTracks = convertedTracks.map((t) => ({
+    if (listenStateError) {
+      console.error("Failed to load track listen state", listenStateError);
+    }
+
+    const myRatingMap = new Map(
+      myRatings?.map((r) => [r.track_id, r.stars]) ?? []
+    );
+
+    const listenStateMap = new Map(
+      ((listenStateRows ?? []) as TrackListenStateRow[]).map((row) => [
+        row.track_id,
+        {
+          can_rate: typeof row.can_rate === "boolean" ? row.can_rate : false,
+          listened_seconds:
+            typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
+        },
+      ])
+    );
+
+    finalTracks = convertedTracks.map((t) => {
+      const listenState = listenStateMap.get(t.id);
+
+      return {
         ...t,
         my_stars: myRatingMap.get(t.id) ?? null,
-      }));
-    }
+        eligibility: {
+          window_open: true,
+          can_rate: listenState?.can_rate ?? false,
+          listened_seconds: listenState?.listened_seconds ?? 0,
+        },
+      };
+    });
   }
 
   return (

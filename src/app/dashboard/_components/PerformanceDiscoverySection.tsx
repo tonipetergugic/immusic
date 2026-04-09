@@ -19,6 +19,17 @@ type PerfTrackMetaMap = Record<
   }
 >;
 
+type PerfTrackStatsMap = Record<
+  string,
+  {
+    eligibility?: {
+      window_open?: boolean | null;
+      can_rate?: boolean | null;
+      listened_seconds?: number | null;
+    };
+  }
+>;
+
 type PerfQueueTrack = PlayerTrack & {
   release_id?: string | null;
   stream_count?: number | null;
@@ -36,6 +47,7 @@ type Props = {
 
   perfQueue: PerfQueueTrack[];
   perfTrackMetaMap: PerfTrackMetaMap;
+  perfTrackStatsMap: PerfTrackStatsMap;
 
   routerPush: (href: string) => void;
 };
@@ -49,6 +61,7 @@ export default function PerformanceDiscoverySection({
   performanceItems,
   perfQueue,
   perfTrackMetaMap,
+  perfTrackStatsMap,
   routerPush,
 }: Props) {
   const { currentTrack, isPlaying, isTrackPlaybackBlocked } = usePlayer();
@@ -318,6 +331,14 @@ export default function PerformanceDiscoverySection({
                       initialCount={rowTrack.rating_count ?? undefined}
                       initialStreams={rowTrack.stream_count ?? 0}
                       initialMyStars={rowTrack.my_stars ?? null}
+                      initialEligibility={{
+                        window_open:
+                          perfTrackStatsMap?.[trackId]?.eligibility?.window_open ?? true,
+                        can_rate:
+                          perfTrackStatsMap?.[trackId]?.eligibility?.can_rate ?? false,
+                        listened_seconds:
+                          perfTrackStatsMap?.[trackId]?.eligibility?.listened_seconds ?? 0,
+                      }}
                       readOnly={isBlocked}
                     />
                   }
