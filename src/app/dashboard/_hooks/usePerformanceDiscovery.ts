@@ -4,21 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PerformanceDiscoveryItem } from "@/lib/discovery/fetchPerformanceDiscovery.client";
 
-type TrackMetaRow = {
-  id: string;
-  bpm: number | null;
-  key: string | null;
-  genre: string | null;
-  audio_path: string | null;
-  version: string | null;
-  is_explicit: boolean | null;
-};
-
-type ProfileRow = {
-  id: string;
-  display_name: string | null;
-};
-
 type LifetimeRow = {
   track_id: string;
   streams_lifetime: number | null;
@@ -114,14 +99,6 @@ export function usePerformanceDiscovery({
         if (!cancelled) setPerformanceItems(items);
 
         try {
-          const artistIds = Array.from(
-            new Set(
-              (items ?? [])
-                .map((x) => x.artist_id)
-                .filter((id): id is string => Boolean(id))
-            )
-          );
-
           const trackIds = Array.from(
             new Set(
               (items ?? [])
@@ -130,57 +107,44 @@ export function usePerformanceDiscovery({
             )
           );
 
+          const artistMap: Record<string, string> = {};
+          const trackMetaMap: Record<
+            string,
+            {
+              bpm: number | null;
+              key: string | null;
+              genre: string | null;
+              audio_path: string | null;
+              version: string | null;
+              is_explicit: boolean | null;
+            }
+          > = {};
+
+          for (const item of items ?? []) {
+            if (item.artist_id && item.artist_name) {
+              artistMap[item.artist_id] = item.artist_name;
+            }
+
+            if (item.track_id) {
+              trackMetaMap[item.track_id] = {
+                bpm: item.bpm ?? null,
+                key: item.key ?? null,
+                genre: item.genre ?? null,
+                audio_path: item.audio_path ?? null,
+                version: item.version ?? null,
+                is_explicit: item.is_explicit ?? null,
+              };
+            }
+          }
+
+          if (!cancelled) {
+            setPerfArtistMap(artistMap);
+            setPerfTrackMetaMap(trackMetaMap);
+          }
+
           const {
             data: { user },
           } = await supabase.auth.getUser();
-
-          if (trackIds.length > 0) {
-            const { data: tmeta, error: tmetaErr } = await supabase
-              .from("tracks")
-              .select("id, title, bpm, key, genre, audio_path, version, is_explicit")
-              .in("id", trackIds);
-
-            if (!tmetaErr && tmeta) {
-              const m: Record<
-                string,
-                {
-                  bpm: number | null;
-                  key: string | null;
-                  genre: string | null;
-                  audio_path: string | null;
-                  version: string | null;
-                  is_explicit: boolean | null;
-                }
-              > = {};
-              for (const t of (tmeta ?? []) as TrackMetaRow[]) {
-                if (!t?.id) continue;
-                m[t.id] = {
-                  bpm: t.bpm ?? null,
-                  key: t.key ?? null,
-                  genre: t.genre ?? null,
-                  audio_path: t.audio_path ?? null,
-                  version: t.version ?? null,
-                  is_explicit: t.is_explicit ?? false,
-                };
-              }
-              if (!cancelled) setPerfTrackMetaMap(m);
-            }
-          }
-
-          if (artistIds.length > 0) {
-            const { data: profs, error: profErr } = await supabase
-              .from("profiles")
-              .select("id, display_name")
-              .in("id", artistIds);
-
-            if (!profErr && profs) {
-              const map: Record<string, string> = {};
-              for (const r of (profs ?? []) as ProfileRow[]) {
-                if (r?.id) map[r.id] = r.display_name ?? "Unknown Artist";
-              }
-              if (!cancelled) setPerfArtistMap(map);
-            }
-          }
 
           const lifetimeStreamsByTrackId = new Map<string, number>();
 

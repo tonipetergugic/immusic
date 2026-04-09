@@ -14,6 +14,8 @@ export type DevelopmentDiscoveryItem = {
   genre: string | null;
   bpm: number | null;
   key: string | null;
+  version?: string | null;
+  is_explicit?: boolean | null;
 
   // Track-first rating/streams
   rating_avg: number | null;

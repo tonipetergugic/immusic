@@ -27,18 +27,6 @@ type Props = {
 
 type DiscoveryMode = "performance" | "development";
 
-type TrackMetaRow = {
-  id: string;
-  genre: string | null;
-  version: string | null;
-  is_explicit: boolean | null;
-};
-
-type ArtistRow = {
-  id: string;
-  display_name: string | null;
-};
-
 type SuggestedTrack = {
   id: string;
   title: string;
@@ -126,48 +114,6 @@ export default function PlaylistSuggestedTracks({
                   !excluded.has(item.track_id)
               );
 
-        const trackIds = Array.from(
-          new Set(baseItems.map((item) => item.track_id).filter(Boolean))
-        );
-
-        const artistIds = Array.from(
-          new Set(baseItems.map((item) => item.artist_id).filter(Boolean))
-        );
-
-        const [{ data: trackMetaRows }, { data: artistRows }] = await Promise.all([
-          trackIds.length
-            ? supabase
-                .from("tracks")
-                .select("id, genre, version, is_explicit")
-                .in("id", trackIds)
-                .returns<TrackMetaRow[]>()
-            : Promise.resolve({ data: [] as TrackMetaRow[] }),
-          artistIds.length
-            ? supabase
-                .from("profiles")
-                .select("id, display_name")
-                .in("id", artistIds)
-                .returns<ArtistRow[]>()
-            : Promise.resolve({ data: [] as ArtistRow[] }),
-        ]);
-
-        if (cancelled) return;
-
-        const trackMetaMap = new Map(
-          (trackMetaRows ?? []).map((row) => [
-            row.id,
-            {
-              genre: row.genre ?? null,
-              version: row.version ?? null,
-              is_explicit: row.is_explicit ?? null,
-            },
-          ])
-        );
-
-        const artistMap = new Map(
-          (artistRows ?? []).map((row) => [row.id, row.display_name ?? "Unknown artist"])
-        );
-
         const nextItems: SuggestedTrack[] =
           mode === "performance"
             ? (baseItems as PerformanceDiscoveryItem[])
@@ -175,15 +121,15 @@ export default function PlaylistSuggestedTracks({
                   id: item.track_id,
                   title: item.track_title?.trim() || "Untitled track",
                   artist_id: item.artist_id,
-                  artist_name: artistMap.get(item.artist_id) ?? "Unknown artist",
+                  artist_name: item.artist_name ?? "Unknown artist",
                   cover_url: item.release_cover_path
                     ? supabase.storage
                         .from("release_covers")
                         .getPublicUrl(item.release_cover_path).data.publicUrl ?? null
                     : null,
-                  version: trackMetaMap.get(item.track_id)?.version ?? null,
-                  is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
-                  genre: trackMetaMap.get(item.track_id)?.genre ?? null,
+                  version: item.version ?? null,
+                  is_explicit: !!item.is_explicit,
+                  genre: item.genre ?? null,
                   release_id: item.release_id ?? null,
                   rating_avg:
                     item.rating_avg !== null && item.rating_avg !== undefined
@@ -199,16 +145,15 @@ export default function PlaylistSuggestedTracks({
                   id: item.track_id,
                   title: item.title?.trim() || "Untitled track",
                   artist_id: item.artist_id,
-                  artist_name:
-                    artistMap.get(item.artist_id) ?? item.artist_name ?? "Unknown artist",
+                  artist_name: item.artist_name ?? "Unknown artist",
                   cover_url: item.cover_path
                     ? supabase.storage
                         .from("release_covers")
                         .getPublicUrl(item.cover_path).data.publicUrl ?? null
                     : null,
-                  version: trackMetaMap.get(item.track_id)?.version ?? null,
-                  is_explicit: !!trackMetaMap.get(item.track_id)?.is_explicit,
-                  genre: trackMetaMap.get(item.track_id)?.genre ?? null,
+                  version: item.version ?? null,
+                  is_explicit: !!item.is_explicit,
+                  genre: item.genre ?? null,
                   release_id: item.release_id ?? null,
                   rating_avg:
                     item.rating_avg !== null && item.rating_avg !== undefined

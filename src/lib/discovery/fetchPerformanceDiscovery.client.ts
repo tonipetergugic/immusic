@@ -8,6 +8,13 @@ export type PerformanceDiscoveryItem = {
   track_title: string;
   release_title: string;
   release_cover_path: string | null;
+  artist_name: string | null;
+  genre: string | null;
+  version: string | null;
+  is_explicit: boolean | null;
+  audio_path: string | null;
+  bpm: number | null;
+  key: string | null;
   exposure_status: string;
   exposure_completed_at: string | null;
   listeners_30d: number;

@@ -87,14 +87,31 @@ export async function GET(req: Request) {
 
     const items = [...baseWithSource, ...boostWithSource];
 
-    const trackIds = items.map((item: any) => item.track_id).filter(Boolean);
+    const trackIds = Array.from(
+      new Set(items.map((item: any) => item.track_id).filter(Boolean))
+    );
 
-    const { data: tracks, error: tracksError } = trackIds.length
-      ? await supabase
-          .from("tracks")
-          .select("id,is_explicit")
-          .in("id", trackIds)
-      : { data: [], error: null };
+    const artistIds = Array.from(
+      new Set(items.map((item: any) => item.artist_id).filter(Boolean))
+    );
+
+    const [
+      { data: tracks, error: tracksError },
+      { data: profiles, error: profilesError },
+    ] = await Promise.all([
+      trackIds.length
+        ? await supabase
+            .from("tracks")
+            .select("id,bpm,key,genre,audio_path,version,is_explicit")
+            .in("id", trackIds)
+        : Promise.resolve({ data: [], error: null }),
+      artistIds.length
+        ? await supabase
+            .from("profiles")
+            .select("id,display_name")
+            .in("id", artistIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
 
     if (tracksError) {
       return NextResponse.json(
@@ -103,9 +120,35 @@ export async function GET(req: Request) {
       );
     }
 
-    const trackById = new Map<string, any>((tracks ?? []).map((track: any) => [track.id, track]));
+    if (profilesError) {
+      return NextResponse.json(
+        { ok: false, error: profilesError.message, items: [] },
+        { status: 500 }
+      );
+    }
 
-    const visibleItems = items;
+    const trackById = new Map<string, any>(
+      (tracks ?? []).map((track: any) => [track.id, track])
+    );
+
+    const profileById = new Map<string, any>(
+      (profiles ?? []).map((profile: any) => [profile.id, profile])
+    );
+
+    const visibleItems = items.map((item: any) => {
+      const track = trackById.get(item.track_id);
+
+      return {
+        ...item,
+        artist_name: profileById.get(item.artist_id)?.display_name ?? null,
+        genre: track?.genre ?? null,
+        version: track?.version ?? null,
+        is_explicit: track?.is_explicit ?? null,
+        audio_path: track?.audio_path ?? null,
+        bpm: track?.bpm ?? null,
+        key: track?.key ?? null,
+      };
+    });
 
     return NextResponse.json(
       {
