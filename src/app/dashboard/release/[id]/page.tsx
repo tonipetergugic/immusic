@@ -347,14 +347,14 @@ export default async function ReleaseDetailPage({
         />
 
         {/* CONTENT */}
-        <div className="relative px-4 md:px-8 pt-8 pb-12">
+        <div className="relative px-4 sm:px-6 md:px-8 pt-5 sm:pt-6 md:pt-8 pb-8 sm:pb-10 md:pb-12">
           <div className="mb-6">
             <BackLink />
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-end gap-8">
+          <div className="flex flex-col items-center text-center gap-5 sm:gap-6 lg:flex-row lg:items-end lg:text-left lg:gap-8">
             {/* Cover */}
-            <div className="shrink-0 relative group">
+            <div className="shrink-0 relative group mx-auto lg:mx-0">
               {coverUrl ? (
                 <Image
                   src={coverUrl}
@@ -362,10 +362,10 @@ export default async function ReleaseDetailPage({
                   width={320}
                   height={320}
                   priority
-                  className="rounded-xl shadow-2xl object-cover w-[220px] h-[220px] md:w-[280px] md:h-[280px]"
+                  className="rounded-xl shadow-2xl object-cover w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] md:w-[320px] md:h-[320px] lg:w-[280px] lg:h-[280px]"
                 />
               ) : (
-                <div className="rounded-xl bg-neutral-800 w-[220px] h-[220px] md:w-[280px] md:h-[280px] shadow-2xl" />
+                <div className="rounded-xl bg-neutral-800 w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] md:w-[320px] md:h-[320px] lg:w-[280px] lg:h-[280px] shadow-2xl" />
               )}
               {playerQueue.length > 0 && (
                 <PlayOverlayButton
@@ -378,8 +378,8 @@ export default async function ReleaseDetailPage({
             </div>
 
             {/* Title / Meta */}
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-white/70 font-medium mb-2">
+            <div className="w-full min-w-0 lg:flex-1">
+              <div className="mb-2 text-sm sm:text-base lg:text-sm text-white/70 font-medium">
                 {release.release_type ? (
                   <span className="capitalize">{release.release_type}</span>
                 ) : (
@@ -387,11 +387,11 @@ export default async function ReleaseDetailPage({
                 )}
               </div>
 
-              <h1 className="text-6xl md:text-8xl font-black text-white leading-none break-words">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-white leading-[0.95] break-words">
                 {release.title}
               </h1>
 
-              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/75">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[15px] sm:text-base lg:justify-start lg:text-sm text-white/75">
                   {release.artist_id ? (
                     <Link
                       href={`/dashboard/artist/${release.artist_id}`}
@@ -412,17 +412,13 @@ export default async function ReleaseDetailPage({
                     </>
                   ) : null}
 
-                  <span className="text-white/40">•</span>
-                  <span>
-                    {trackCount} {trackCount === 1 ? "track" : "tracks"}
-                  </span>
-
-                  {formattedDuration ? (
-                    <>
-                      <span className="text-white/40">•</span>
-                      <span>{formattedDuration}</span>
-                    </>
-                  ) : null}
+                  <>
+                    <span className="text-white/40">•</span>
+                    <span>
+                      {trackCount} {trackCount === 1 ? "track" : "tracks"}
+                      {formattedDuration ? ` • ${formattedDuration}` : ""}
+                    </span>
+                  </>
               </div>
             </div>
           </div>
