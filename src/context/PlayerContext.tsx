@@ -372,8 +372,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
       syncQueueState(activeQueue, nextIndex);
 
+      setCurrentTrack((prev) => {
+        if (prev && prev.id === track.id) {
+          return { ...prev, ...track };
+        }
+        return track;
+      });
+
       if (isNewTrack) {
-        setCurrentTrack(track);
         audio.src = track.audio_url;
         audio.currentTime = 0;
         sessionIdRef.current = crypto.randomUUID();

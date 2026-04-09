@@ -126,29 +126,37 @@ export default function PlayerBar() {
           </div>
 
           <div className="flex min-w-0 flex-col">
-            {currentTrack.release_id ? (
-              <button
-                type="button"
-                onClick={goToTrack}
-                className="truncate text-left text-[14px] font-semibold leading-tight text-white/95 transition-colors hover:text-[#00FFC6]"
-                title={title}
-              >
-                {title}
-              </button>
-            ) : (
-              <span
-                className="truncate text-[14px] font-semibold leading-tight text-white/95"
-                title={title}
-              >
-                {title}
-              </span>
-            )}
+            <div className="flex min-w-0 items-center gap-2">
+              {currentTrack.release_id ? (
+                <button
+                  type="button"
+                  onClick={goToTrack}
+                  className="cursor-pointer truncate text-left text-[14px] font-semibold leading-tight text-white/95 transition-colors hover:text-[#00FFC6]"
+                  title={title}
+                >
+                  {title}
+                </button>
+              ) : (
+                <span
+                  className="truncate text-[14px] font-semibold leading-tight text-white/95"
+                  title={title}
+                >
+                  {title}
+                </span>
+              )}
+
+              {currentTrack.is_explicit ? (
+                <span className="inline-flex h-[18px] shrink-0 items-center justify-center rounded-md border border-white/12 bg-white/[0.05] px-1.5 text-[10px] font-semibold leading-none text-white/70">
+                  E
+                </span>
+              ) : null}
+            </div>
 
             {currentTrack?.artist_id && currentTrack?.profiles?.display_name ? (
               <button
                 type="button"
                 onClick={goToArtist}
-                className="mt-1 truncate text-left text-[12px] leading-none text-white/55 transition-colors hover:text-[#00FFC6]"
+                className="mt-1 cursor-pointer truncate text-left text-[12px] leading-none text-white/55 transition-colors hover:text-[#00FFC6]"
                 title={currentTrack.profiles.display_name}
               >
                 {currentTrack.profiles.display_name}
@@ -161,12 +169,12 @@ export default function PlayerBar() {
           </div>
         </div>
 
-        <div className="flex w-[42%] flex-col items-center gap-2.5">
-          <div className="flex items-center gap-3.5">
+        <div className="flex w-[42%] flex-col items-center gap-0,5">
+          <div className="flex items-center gap-3.5 pt-1">
             <button
               type="button"
               onClick={toggleShuffle}
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+              className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-colors ${
                 isShuffle
                   ? "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#00FFC6]"
                   : "border-white/8 bg-white/[0.03] text-white/68 hover:text-[#00FFC6]"
@@ -181,7 +189,7 @@ export default function PlayerBar() {
               type="button"
               onClick={playPrev}
               className="
-                inline-flex h-10 w-10 items-center justify-center rounded-full
+                inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full
                 text-white/72 transition-colors hover:text-[#00FFC6]
               "
               aria-label="Previous"
@@ -193,7 +201,7 @@ export default function PlayerBar() {
               type="button"
               onClick={togglePlay}
               className="
-                inline-flex h-12 w-12 items-center justify-center rounded-full
+                inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-full
                 border border-white/10 bg-[#151518] text-white/95
                 shadow-[0_10px_28px_rgba(0,0,0,0.28)]
                 transition-all hover:bg-[#00FFC6]/10 hover:text-[#00FFC6]
@@ -207,7 +215,7 @@ export default function PlayerBar() {
               type="button"
               onClick={playNext}
               className="
-                inline-flex h-10 w-10 items-center justify-center rounded-full
+                inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full
                 text-white/72 transition-colors hover:text-[#00FFC6]
               "
               aria-label="Next"
@@ -245,7 +253,7 @@ export default function PlayerBar() {
             type="button"
             onClick={toggleMute}
             className="
-              inline-flex h-9 w-9 items-center justify-center rounded-full
+              inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full
               border border-white/8 bg-white/[0.03]
               text-white/72 transition-colors hover:text-[#00FFC6]
             "
@@ -298,23 +306,31 @@ export default function PlayerBar() {
           </div>
 
           <div className="min-w-0 flex-1">
-            {currentTrack.release_id ? (
-              <button
-                type="button"
-                onClick={goToTrack}
-                className="block w-full truncate text-left text-[13px] font-semibold leading-tight text-white/95 transition-colors hover:text-[#00FFC6]"
-                title={title}
-              >
-                {title}
-              </button>
-            ) : (
-              <div
-                className="truncate text-[13px] font-semibold leading-tight text-white/95"
-                title={title}
-              >
-                {title}
-              </div>
-            )}
+            <div className="flex min-w-0 items-center gap-2">
+              {currentTrack.release_id ? (
+                <button
+                  type="button"
+                  onClick={goToTrack}
+                  className="block truncate text-left text-[13px] font-semibold leading-tight text-white/95 transition-colors hover:text-[#00FFC6]"
+                  title={title}
+                >
+                  {title}
+                </button>
+              ) : (
+                <div
+                  className="truncate text-[13px] font-semibold leading-tight text-white/95"
+                  title={title}
+                >
+                  {title}
+                </div>
+              )}
+
+              {currentTrack.is_explicit ? (
+                <span className="inline-flex h-4 shrink-0 items-center justify-center rounded-md border border-white/12 bg-white/[0.05] px-1.5 text-[9px] font-semibold leading-none text-white/70">
+                  E
+                </span>
+              ) : null}
+            </div>
 
             {currentTrack?.artist_id && currentTrack?.profiles?.display_name ? (
               <button
@@ -449,9 +465,18 @@ export default function PlayerBar() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13px] font-semibold leading-tight text-white/95">
-                {title}
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="truncate text-[13px] font-semibold leading-tight text-white/95">
+                  {title}
+                </div>
+
+                {currentTrack.is_explicit ? (
+                  <span className="inline-flex h-4 shrink-0 items-center justify-center rounded-md border border-white/12 bg-white/[0.05] px-1.5 text-[9px] font-semibold leading-none text-white/70">
+                    E
+                  </span>
+                ) : null}
               </div>
+
               <div className="mt-1 truncate text-[11px] leading-none text-white/55">
                 {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
               </div>
