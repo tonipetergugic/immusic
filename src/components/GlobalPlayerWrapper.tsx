@@ -53,20 +53,9 @@ export default function GlobalPlayerWrapper({
         </div>
       )}
 
-      <div className="pb-24">{children}</div>
+      <div className="pb-[72px] md:pb-20">{children}</div>
 
-      <div
-        className="
-          h-24
-          fixed bottom-0 left-0 right-0 z-50
-          border-t border-[#1A1A1C]
-          bg-[#0B0B0D]/80
-          backdrop-blur-xl
-          shadow-[0_-2px_25px_rgba(0,255,198,0.06)]
-          flex items-center
-          px-6
-        "
-      >
+      <div className="fixed inset-x-0 bottom-0 z-40">
         <PlayerBar />
       </div>
       </PlayerProvider>
