@@ -118,7 +118,6 @@ export function buildPerfQueue(params: {
   perfTrackStatsMap: Record<string, PerfTrackStats>;
   perfTrackMetaMap: Record<string, PerfTrackMeta>;
   supabase: SupabaseClient;
-  trackArtistsMap: Record<string, ArtistMini[]>;
 }): HomeQueueTrack[] {
   const {
     performanceItemsFiltered,
@@ -126,7 +125,6 @@ export function buildPerfQueue(params: {
     perfTrackStatsMap,
     perfTrackMetaMap,
     supabase,
-    trackArtistsMap,
   } = params;
 
   return (performanceItemsFiltered ?? []).map((it) => {
@@ -155,12 +153,14 @@ export function buildPerfQueue(params: {
     const ownerName = String(artistName ?? "Unknown Artist");
     const owner = ownerId ? [{ id: ownerId, display_name: ownerName }] : [];
 
-    const collabs = (trackArtistsMap?.[trackId] ?? []).map((artistItem) => ({
-      id: String(artistItem.id),
-      display_name: String(artistItem.display_name ?? "Unknown Artist"),
-    }));
+    const apiArtists = Array.isArray(row.artists)
+      ? row.artists.map((artistItem) => ({
+          id: String(artistItem.id),
+          display_name: String(artistItem.display_name ?? "Unknown Artist"),
+        }))
+      : [];
 
-    const artists = uniqArtists([...owner, ...collabs]);
+    const artists = uniqArtists([...owner, ...apiArtists]);
 
     const queueItem: HomeQueueTrack = {
       id: trackId,

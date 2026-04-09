@@ -8,6 +8,10 @@ export type PerformanceDiscoveryItem = {
   track_title: string;
   release_title: string;
   release_cover_path: string | null;
+  artists?: {
+    id: string;
+    display_name: string;
+  }[];
   artist_name: string | null;
   genre: string | null;
   version: string | null;

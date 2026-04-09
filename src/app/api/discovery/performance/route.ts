@@ -113,6 +113,13 @@ export async function GET(req: Request) {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
+    const { data: trackArtistsRows, error: trackArtistsError } = trackIds.length
+      ? await supabase
+          .from("track_artists_resolved")
+          .select("track_id, artists")
+          .in("track_id", trackIds)
+      : { data: [], error: null };
+
     if (tracksError) {
       return NextResponse.json(
         { ok: false, error: tracksError.message, items: [] },
@@ -127,6 +134,13 @@ export async function GET(req: Request) {
       );
     }
 
+    if (trackArtistsError) {
+      return NextResponse.json(
+        { ok: false, error: trackArtistsError.message, items: [] },
+        { status: 500 }
+      );
+    }
+
     const trackById = new Map<string, any>(
       (tracks ?? []).map((track: any) => [track.id, track])
     );
@@ -134,6 +148,29 @@ export async function GET(req: Request) {
     const profileById = new Map<string, any>(
       (profiles ?? []).map((profile: any) => [profile.id, profile])
     );
+
+    const trackArtistsByTrackId = new Map<string, { id: string; display_name: string }[]>();
+
+    for (const row of (trackArtistsRows ?? []) as any[]) {
+      const trackId = String(row?.track_id ?? "");
+      if (!trackId) continue;
+
+      const artists = Array.isArray(row?.artists)
+        ? row.artists
+            .map((artist: any) => {
+              const artistId = String(artist?.id ?? "");
+              if (!artistId) return null;
+
+              return {
+                id: artistId,
+                display_name: String(artist?.display_name ?? "Unknown Artist"),
+              };
+            })
+            .filter((artist: { id: string; display_name: string } | null): artist is { id: string; display_name: string } => artist !== null)
+        : [];
+
+      trackArtistsByTrackId.set(trackId, artists);
+    }
 
     const visibleItems = items.map((item: any) => {
       const track = trackById.get(item.track_id);
@@ -147,6 +184,7 @@ export async function GET(req: Request) {
         audio_path: track?.audio_path ?? null,
         bpm: track?.bpm ?? null,
         key: track?.key ?? null,
+        artists: trackArtistsByTrackId.get(String(item.track_id)) ?? [],
       };
     });
 

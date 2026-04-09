@@ -6,7 +6,6 @@ import { fetchPerformanceDiscovery } from "@/lib/discovery/fetchPerformanceDisco
 import type { DevelopmentDiscoveryItem } from "@/lib/discovery/fetchDevelopmentDiscovery.client";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PlayerTrack } from "@/types/playerTrack";
-import { useTrackArtistsMap } from "./_hooks/useTrackArtistsMap";
 import { useDevelopmentDiscovery } from "./_hooks/useDevelopmentDiscovery";
 import { usePerformanceDiscovery } from "./_hooks/usePerformanceDiscovery";
 import { buildDevQueue, buildPerfQueue } from "./_lib/buildHomeQueues";
@@ -63,7 +62,6 @@ export default function DashboardHomeClient({
 
   const devCacheRef = useRef<Record<string, DevelopmentDiscoveryItem[]>>({});
   const devPromiseRef = useRef<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>({});
-  const lastArtistsSigRef = useRef<string>("");
 
   const {
     devItems,
@@ -87,14 +85,6 @@ export default function DashboardHomeClient({
     discoveryMode,
     supabase,
     fetchPerformanceDiscovery,
-  });
-
-  const trackArtistsMap = useTrackArtistsMap({
-    discoveryMode,
-    devItems,
-    performanceItems,
-    supabase,
-    lastArtistsSigRef,
   });
 
   useEffect(() => {
@@ -137,9 +127,8 @@ export default function DashboardHomeClient({
       perfTrackStatsMap,
       perfTrackMetaMap,
       supabase,
-      trackArtistsMap,
     }) as unknown as PlayerTrack[];
-  }, [performanceItemsFiltered, perfArtistMap, perfTrackStatsMap, perfTrackMetaMap, supabase, trackArtistsMap]);
+  }, [performanceItemsFiltered, perfArtistMap, perfTrackStatsMap, perfTrackMetaMap, supabase]);
 
   const HomeTabs = (
     <div className="border-b border-white/5 pb-2">
