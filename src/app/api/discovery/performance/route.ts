@@ -98,6 +98,7 @@ export async function GET(req: Request) {
     const [
       { data: tracks, error: tracksError },
       { data: profiles, error: profilesError },
+      { data: lifetimeRows, error: lifetimeError },
     ] = await Promise.all([
       trackIds.length
         ? await supabase
@@ -110,6 +111,12 @@ export async function GET(req: Request) {
             .from("profiles")
             .select("id,display_name")
             .in("id", artistIds)
+        : Promise.resolve({ data: [], error: null }),
+      trackIds.length
+        ? await supabase
+            .from("analytics_track_lifetime")
+            .select("track_id,streams_lifetime")
+            .in("track_id", trackIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -134,6 +141,13 @@ export async function GET(req: Request) {
       );
     }
 
+    if (lifetimeError) {
+      return NextResponse.json(
+        { ok: false, error: lifetimeError.message, items: [] },
+        { status: 500 }
+      );
+    }
+
     if (trackArtistsError) {
       return NextResponse.json(
         { ok: false, error: trackArtistsError.message, items: [] },
@@ -147,6 +161,13 @@ export async function GET(req: Request) {
 
     const profileById = new Map<string, any>(
       (profiles ?? []).map((profile: any) => [profile.id, profile])
+    );
+
+    const lifetimeByTrackId = new Map<string, number>(
+      (lifetimeRows ?? []).map((row: any) => [
+        String(row?.track_id ?? ""),
+        typeof row?.streams_lifetime === "number" ? row.streams_lifetime : 0,
+      ])
     );
 
     const trackArtistsByTrackId = new Map<string, { id: string; display_name: string }[]>();
@@ -178,6 +199,7 @@ export async function GET(req: Request) {
       return {
         ...item,
         artist_name: profileById.get(item.artist_id)?.display_name ?? null,
+        streams_lifetime: lifetimeByTrackId.get(String(item.track_id)) ?? 0,
         genre: track?.genre ?? null,
         version: track?.version ?? null,
         is_explicit: track?.is_explicit ?? null,

@@ -63,6 +63,10 @@ export default function PlaylistClient({
 
   const [localPlaylist, setLocalPlaylist] = useState(playlist);
   const [playerTracks, setPlayerTracks] = useState<PlaylistClientTrack[]>(initialPlayerTracks);
+  const existingTrackIds = useMemo(
+    () => playerTracks.map((track) => track.id),
+    [playerTracks]
+  );
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -336,7 +340,7 @@ export default function PlaylistClient({
         <div className="min-w-0 xl:sticky xl:top-4">
           <PlaylistSuggestedTracks
             playlistId={localPlaylist.id}
-            existingTrackIds={playerTracks.map((track) => track.id)}
+            existingTrackIds={existingTrackIds}
             isOwner={isOwner}
             onTrackAdded={handleTrackAdded}
           />

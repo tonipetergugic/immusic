@@ -4,11 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PerformanceDiscoveryItem } from "@/lib/discovery/fetchPerformanceDiscovery.client";
 
-type LifetimeRow = {
-  track_id: string;
-  streams_lifetime: number | null;
-};
-
 type PerfTrackStats = {
   stream_count: number;
   my_stars: number | null;
@@ -108,6 +103,7 @@ export function usePerformanceDiscovery({
           );
 
           const artistMap: Record<string, string> = {};
+          const publicStreamCountByTrackId: Record<string, number> = {};
           const trackMetaMap: Record<
             string,
             {
@@ -126,6 +122,9 @@ export function usePerformanceDiscovery({
             }
 
             if (item.track_id) {
+              publicStreamCountByTrackId[item.track_id] =
+                typeof item.streams_lifetime === "number" ? item.streams_lifetime : 0;
+
               trackMetaMap[item.track_id] = {
                 bpm: item.bpm ?? null,
                 key: item.key ?? null,
@@ -145,25 +144,6 @@ export function usePerformanceDiscovery({
           const {
             data: { user },
           } = await supabase.auth.getUser();
-
-          const lifetimeStreamsByTrackId = new Map<string, number>();
-
-          if (trackIds.length > 0) {
-            const { data: lifetimeRows, error: lifetimeErr } = await supabase
-              .from("analytics_track_lifetime")
-              .select("track_id, streams_lifetime")
-              .in("track_id", trackIds);
-
-            if (!lifetimeErr && lifetimeRows) {
-              for (const row of (lifetimeRows ?? []) as LifetimeRow[]) {
-                if (!row?.track_id) continue;
-                lifetimeStreamsByTrackId.set(
-                  String(row.track_id),
-                  typeof row.streams_lifetime === "number" ? row.streams_lifetime : 0
-                );
-              }
-            }
-          }
 
           const myStarsByTrackId = new Map<string, number>();
 
@@ -228,7 +208,7 @@ export function usePerformanceDiscovery({
               const listenState = listenStateByTrackId.get(String(trackId));
 
               map[trackId] = {
-                stream_count: lifetimeStreamsByTrackId.get(String(trackId)) ?? 0,
+                stream_count: publicStreamCountByTrackId[String(trackId)] ?? 0,
                 my_stars: myStarsByTrackId.get(String(trackId)) ?? null,
                 eligibility: {
                   window_open: true,

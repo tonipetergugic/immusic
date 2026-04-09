@@ -23,6 +23,7 @@ export type PerformanceDiscoveryItem = {
   exposure_completed_at: string | null;
   listeners_30d: number;
   streams_30d: number;
+  streams_lifetime: number | null;
   listened_seconds_30d: number;
   listened_minutes_30d: number;
   rating_count: number;
