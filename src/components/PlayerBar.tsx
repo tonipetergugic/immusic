@@ -13,6 +13,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import MobileFullscreenPlayer from "@/components/MobileFullscreenPlayer";
+import { formatTrackTitle } from "@/lib/formatTrackTitle";
 
 function formatTime(seconds: number): string {
   if (!seconds || Number.isNaN(seconds)) return "0:00";
@@ -39,6 +40,7 @@ export default function PlayerBar() {
   } = usePlayer();
 
   const router = useRouter();
+  const title = formatTrackTitle(currentTrack?.title ?? "", currentTrack?.version ?? null);
 
   const [isMuted, setIsMuted] = useState(false);
   const [lastVolumeBeforeMute, setLastVolumeBeforeMute] = useState(1);
@@ -124,12 +126,38 @@ export default function PlayerBar() {
           </div>
 
           <div className="flex min-w-0 flex-col">
-            <span className="truncate text-[14px] font-semibold leading-tight text-white/95">
-              {currentTrack.title}
-            </span>
-            <span className="mt-1 truncate text-[12px] leading-none text-white/55">
-              {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
-            </span>
+            {currentTrack.release_id ? (
+              <button
+                type="button"
+                onClick={goToTrack}
+                className="truncate text-left text-[14px] font-semibold leading-tight text-white/95 transition-colors hover:text-[#00FFC6]"
+                title={title}
+              >
+                {title}
+              </button>
+            ) : (
+              <span
+                className="truncate text-[14px] font-semibold leading-tight text-white/95"
+                title={title}
+              >
+                {title}
+              </span>
+            )}
+
+            {currentTrack?.artist_id && currentTrack?.profiles?.display_name ? (
+              <button
+                type="button"
+                onClick={goToArtist}
+                className="mt-1 truncate text-left text-[12px] leading-none text-white/55 transition-colors hover:text-[#00FFC6]"
+                title={currentTrack.profiles.display_name}
+              >
+                {currentTrack.profiles.display_name}
+              </button>
+            ) : (
+              <span className="mt-1 truncate text-[12px] leading-none text-white/55">
+                {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
+              </span>
+            )}
           </div>
         </div>
 
@@ -270,12 +298,38 @@ export default function PlayerBar() {
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-semibold leading-tight text-white/95">
-              {currentTrack.title}
-            </div>
-            <div className="mt-1 truncate text-[11px] leading-none text-white/55">
-              {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
-            </div>
+            {currentTrack.release_id ? (
+              <button
+                type="button"
+                onClick={goToTrack}
+                className="block w-full truncate text-left text-[13px] font-semibold leading-tight text-white/95 transition-colors hover:text-[#00FFC6]"
+                title={title}
+              >
+                {title}
+              </button>
+            ) : (
+              <div
+                className="truncate text-[13px] font-semibold leading-tight text-white/95"
+                title={title}
+              >
+                {title}
+              </div>
+            )}
+
+            {currentTrack?.artist_id && currentTrack?.profiles?.display_name ? (
+              <button
+                type="button"
+                onClick={goToArtist}
+                className="mt-1 block w-full truncate text-left text-[11px] leading-none text-white/55 transition-colors hover:text-[#00FFC6]"
+                title={currentTrack.profiles.display_name}
+              >
+                {currentTrack.profiles.display_name}
+              </button>
+            ) : (
+              <div className="mt-1 truncate text-[11px] leading-none text-white/55">
+                {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
+              </div>
+            )}
           </div>
         </div>
 
@@ -396,7 +450,7 @@ export default function PlayerBar() {
 
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13px] font-semibold leading-tight text-white/95">
-                {currentTrack.title}
+                {title}
               </div>
               <div className="mt-1 truncate text-[11px] leading-none text-white/55">
                 {currentTrack?.profiles?.display_name ?? "Unknown Artist"}
