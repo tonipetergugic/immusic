@@ -35,14 +35,23 @@ export async function GET(req: Request) {
     const baseCount = Math.floor(limit * 0.8);
     const boostCount = limit - baseCount;
 
-    // 1) Base ranking (score_v1)
-    const { data: baseItems, error: baseError } = await supabase
-      .from("performance_discovery_candidates")
-      .select("*")
-      .order("score_v1", { ascending: false })
-      .order("exposure_completed_at", { ascending: true })
-      .order("track_id", { ascending: true })
-      .limit(baseCount);
+    const [
+      { data: baseItems, error: baseError },
+      { data: boostItems, error: boostError },
+    ] = await Promise.all([
+      supabase
+        .from("performance_discovery_candidates")
+        .select("*")
+        .order("score_v1", { ascending: false })
+        .order("exposure_completed_at", { ascending: true })
+        .order("track_id", { ascending: true })
+        .limit(baseCount),
+      supabase
+        .from("performance_discovery_boost_pool")
+        .select("*")
+        .order("boost_priority", { ascending: false })
+        .limit(limit * 2), // overfetch to avoid duplicates
+    ]);
 
     if (baseError) {
       return NextResponse.json(
@@ -51,21 +60,14 @@ export async function GET(req: Request) {
       );
     }
 
-    const usedIds = new Set((baseItems ?? []).map((i) => i.track_id));
-
-    // 2) Boost pool
-    const { data: boostItems, error: boostError } = await supabase
-      .from("performance_discovery_boost_pool")
-      .select("*")
-      .order("boost_priority", { ascending: false })
-      .limit(limit * 2); // overfetch to avoid duplicates
-
     if (boostError) {
       return NextResponse.json(
         { ok: false, error: boostError.message, items: [] },
         { status: 500 }
       );
     }
+
+    const usedIds = new Set((baseItems ?? []).map((i) => i.track_id));
 
     const finalBoostItems = (boostItems ?? [])
       .filter((i) => !usedIds.has(i.track_id))
@@ -99,33 +101,33 @@ export async function GET(req: Request) {
       { data: tracks, error: tracksError },
       { data: profiles, error: profilesError },
       { data: lifetimeRows, error: lifetimeError },
+      { data: trackArtistsRows, error: trackArtistsError },
     ] = await Promise.all([
       trackIds.length
-        ? await supabase
+        ? supabase
             .from("tracks")
             .select("id,bpm,key,genre,audio_path,version,is_explicit")
             .in("id", trackIds)
         : Promise.resolve({ data: [], error: null }),
       artistIds.length
-        ? await supabase
+        ? supabase
             .from("profiles")
             .select("id,display_name")
             .in("id", artistIds)
         : Promise.resolve({ data: [], error: null }),
       trackIds.length
-        ? await supabase
+        ? supabase
             .from("analytics_track_lifetime")
             .select("track_id,streams_lifetime")
             .in("track_id", trackIds)
         : Promise.resolve({ data: [], error: null }),
+      trackIds.length
+        ? supabase
+            .from("track_artists_resolved")
+            .select("track_id, artists")
+            .in("track_id", trackIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
-
-    const { data: trackArtistsRows, error: trackArtistsError } = trackIds.length
-      ? await supabase
-          .from("track_artists_resolved")
-          .select("track_id, artists")
-          .in("track_id", trackIds)
-      : { data: [], error: null };
 
     if (tracksError) {
       return NextResponse.json(
