@@ -61,12 +61,16 @@ async function addPlaylistToHome(moduleId: string, playlistId: string) {
 
   const { data: pl, error: plError } = await supabase
     .from("playlists")
-    .select("title")
+    .select("title, is_public")
     .eq("id", playlistId)
     .single();
 
   if (plError || !pl?.title) {
     throw new Error("Failed to load playlist title for home insert.");
+  }
+
+  if (!pl.is_public) {
+    throw new Error("Only public playlists can be added to Home.");
   }
 
   const { error: insErr } = await supabase.from("home_module_items").insert({
@@ -169,35 +173,31 @@ export default async function AdminPlaylistsPage({
     (homePlaylistsRaw ?? []).map((pl: any) => [pl.id, pl])
   );
 
-  const homePlaylists =
+  const homePlaylistsAll =
     homeItems
       ?.map((item) => {
         const playlist = homePlaylistsById.get(item.item_id);
         if (!playlist) return null;
 
-        if (mode === "performance" && !playlist.is_public) return null;
-
         return { ...playlist, homeItemId: item.id, position: item.position };
       })
       .filter((pl): pl is NonNullable<typeof pl> => Boolean(pl)) ?? [];
+
+  const homePlaylists = homePlaylistsAll.filter((pl) => pl.is_public);
+  const ineligiblePinned = homePlaylistsAll.filter((pl) => !pl.is_public);
 
   // 2) Load ONLY a bounded set of newest playlists for "Available"
   //    (prevents full-table scans / payload explosion)
   const AVAILABLE_LIMIT = 200;
 
-  let availableQuery = supabase
+  const { data: availableRaw, error: availableErr } = await supabase
     .from("playlists")
     .select(
       "id, title, is_public, created_at, cover_url, profiles:created_by(display_name, email)"
     )
+    .eq("is_public", true)
     .order("created_at", { ascending: false })
     .limit(AVAILABLE_LIMIT);
-
-  if (mode === "performance") {
-    availableQuery = availableQuery.eq("is_public", true);
-  }
-
-  const { data: availableRaw, error: availableErr } = await availableQuery;
 
   if (availableErr) {
     throw new Error(
@@ -268,6 +268,62 @@ export default async function AdminPlaylistsPage({
               Drag to reorder. Only items on Home are sortable.
             </p>
           </div>
+
+          {ineligiblePinned.length > 0 ? (
+            <div className="mb-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
+              <div className="text-xs font-semibold text-yellow-200">
+                Not eligible for Home ({ineligiblePinned.length})
+              </div>
+              <div className="mt-2 flex flex-col gap-2">
+                {ineligiblePinned.map((pl) => {
+                  const creatorName = getCreatorName(pl?.profiles);
+                  const coverSrc = getPlaylistCoverSrc(pl.cover_url);
+
+                  return (
+                    <form
+                      key={pl.id}
+                      action={async () => {
+                        "use server";
+                        await removePlaylistFromHome(moduleId, pl.id);
+                      }}
+                      className="flex items-center justify-between rounded-md bg-black/30 px-3 py-2 min-h-[72px]"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {coverSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={coverSrc}
+                            alt=""
+                            className="h-14 w-14 shrink-0 rounded-md object-cover border border-white/10"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <CoverPlaceholder size={56} />
+                        )}
+
+                        <div className="min-w-0">
+                          <div className="text-sm text-white truncate">{pl.title}</div>
+                          {creatorName ? (
+                            <div className="text-xs text-white/60 truncate">{creatorName}</div>
+                          ) : null}
+                          <div className="text-[11px] text-yellow-200/70">
+                            Private playlists cannot stay on public Home.
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-24 h-8 self-center text-xs rounded-md flex items-center justify-center bg-red-500/10 text-red-300 hover:bg-red-500/20 transition"
+                      >
+                        Remove
+                      </button>
+                    </form>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           {homePlaylists.length > 0 ? (
             <HomePlaylistsDndList

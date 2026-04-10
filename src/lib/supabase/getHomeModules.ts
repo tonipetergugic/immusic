@@ -1,7 +1,13 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 
-export type HomeModuleType = "release" | "playlist" | "mixed";
+export type HomeModuleType =
+  | "release"
+  | "playlist"
+  | "mixed"
+  | "performance_release"
+  | "performance_playlist";
+
 export type HomeItemType = "release" | "playlist";
 
 export type HomeModuleItemRow = {
@@ -21,34 +27,26 @@ export type HomeModuleRow = {
 };
 
 export async function getHomeModules() {
-  const totalStart = Date.now();
-  const logStep = (label: string, startedAt: number) => {
-    console.log(`[get-home-modules] ${label}: ${Date.now() - startedAt}ms`);
-  };
-
-  const supabase = await createSupabaseServerClient();
-  const modulesStart = Date.now();
+  const supabase = createSupabasePublicServerClient();
 
   const { data: modules, error: modulesError } = await supabase
     .from("home_modules")
     .select("id,title,module_type,position,is_active")
     .eq("is_active", true)
     .order("position", { ascending: true });
-  logStep("home_modules query", modulesStart);
 
   if (modulesError) throw modulesError;
 
   const moduleIds = (modules ?? []).map((m) => m.id);
-  if (moduleIds.length === 0) return { modules: [], itemsByModuleId: new Map<string, HomeModuleItemRow[]>() };
-
-  const itemsStart = Date.now();
+  if (moduleIds.length === 0) {
+    return { modules: [], itemsByModuleId: new Map<string, HomeModuleItemRow[]>() };
+  }
 
   const { data: items, error: itemsError } = await supabase
     .from("home_module_items")
     .select("id,module_id,item_type,item_id,position")
     .in("module_id", moduleIds)
     .order("position", { ascending: true });
-  logStep("home_module_items query", itemsStart);
 
   if (itemsError) throw itemsError;
 
@@ -59,6 +57,5 @@ export async function getHomeModules() {
     itemsByModuleId.set(it.module_id, arr);
   }
 
-  logStep("getHomeModules total", totalStart);
   return { modules: (modules ?? []) as HomeModuleRow[], itemsByModuleId };
 }

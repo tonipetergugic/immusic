@@ -48,10 +48,10 @@ async function addReleaseToHome(releaseId: string, moduleType: string) {
 
   const relResult = (await supabase
     .from("releases")
-    .select("title")
+    .select("title, status")
     .eq("id", releaseId)
     .single()) as {
-      data: { title: string } | null;
+      data: { title: string; status: string | null } | null;
       error: any;
     };
 
@@ -60,6 +60,10 @@ async function addReleaseToHome(releaseId: string, moduleType: string) {
 
   if (relError || !rel?.title) {
     throw new Error("Failed to load release title for home insert.");
+  }
+
+  if (rel.status !== "published") {
+    throw new Error("Only published releases can be added to Home.");
   }
 
   // @ts-expect-error - getSupabaseAdmin() has typing issues with insert
@@ -191,8 +195,16 @@ export default async function AdminReleasesPage({
   // If your variable name is different (e.g. `mode`), keep it consistent.
   const eligibleReleaseIds =
     mode === "performance"
-      ? new Set((releases ?? []).map((r: any) => r.id).filter((id: string) => hasPerformance.has(id)))
-      : new Set((releases ?? []).map((r: any) => r.id).filter((id: string) => !hasPerformance.has(id)));
+      ? new Set(
+          (releases ?? [])
+            .filter((r: any) => r.status === "published" && hasPerformance.has(r.id))
+            .map((r: any) => r.id)
+        )
+      : new Set(
+          (releases ?? [])
+            .filter((r: any) => r.status === "published" && !hasPerformance.has(r.id))
+            .map((r: any) => r.id)
+        );
 
   const homeReleasesAll =
     homeItems
@@ -328,7 +340,7 @@ export default async function AdminReleasesPage({
                             <div className="text-xs text-white/60 truncate">{artistName}</div>
                           ) : null}
                           <div className="text-[11px] text-yellow-200/70">
-                            Hidden in this mode — remove it from Home.
+                            Not eligible for public Home in this mode — remove it from Home.
                           </div>
                         </div>
                       </div>
