@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
+export const revalidate = 60;
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicServerClient();
 
   const { data, error } = await supabase
     .from("tracks")

@@ -27,7 +27,6 @@ async function fetchReleaseQueueForPlayer(releaseId: string) {
   const res = await fetch(`/api/releases/${releaseId}/queue`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
-    cache: "no-store",
   });
 
   if (!res.ok) {

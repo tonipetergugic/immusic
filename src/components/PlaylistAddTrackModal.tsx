@@ -85,7 +85,6 @@ export default function PlaylistAddTrackModal({
       setErrorMessage(null);
       const res = await fetch("/api/tracks/published", {
         method: "GET",
-        cache: "no-store",
       });
 
       if (isCancelled) {

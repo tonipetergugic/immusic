@@ -1,8 +1,12 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import PublicProfileView from "./_components/PublicProfileView";
 import type { PublicProfile, PublicPlaylist } from "./_types/public-profile";
+
+function isHttpUrl(value: string) {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
 
 export default async function PublicProfileV2Page({
   params,
@@ -13,15 +17,6 @@ export default async function PublicProfileV2Page({
   if (!profileId) notFound();
 
   const cookieStore = await cookies();
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = host ? `${proto}://${host}` : "";
-
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,22 +82,48 @@ export default async function PublicProfileV2Page({
 
   const isFollowingInitial = canFollow ? (followingEdgeCount ?? 0) > 0 : false;
 
-  // 2) Playlists (server-first via existing endpoint, no schema guessing)
+  // 2) Playlists (server-first, same logic as existing API route)
   let playlists: PublicPlaylist[] = [];
 
-  if (origin) {
-    try {
-      const plRes = await fetch(`${origin}/api/profiles/${profileId}/playlists`, {
-        cache: "no-store",
-        headers: cookieHeader ? { cookie: cookieHeader } : undefined,
-      });
+  try {
+    let playlistsQuery = supabase
+      .from("playlists")
+      .select("id, title, description, cover_url, is_public, created_at")
+      .eq("created_by", profileId)
+      .order("created_at", { ascending: false });
 
-      const plJson = await plRes.json().catch(() => ({}));
-      playlists = plRes.ok ? (plJson?.playlists ?? []) : [];
-    } catch (error) {
-      console.error("Failed to load public profile playlists:", error);
-      playlists = [];
+    if (!isSelf) {
+      playlistsQuery = playlistsQuery.eq("is_public", true);
     }
+
+    const { data: playlistRows, error: playlistsError } = await playlistsQuery;
+
+    if (playlistsError) {
+      console.error("Failed to load public profile playlists:", playlistsError);
+      playlists = [];
+    } else {
+      playlists = ((playlistRows ?? []) as PublicPlaylist[]).map((pl) => {
+        const raw = pl.cover_url ?? null;
+
+        if (raw && isHttpUrl(raw)) {
+          return { ...pl, cover_url: raw };
+        }
+
+        if (raw) {
+          const publicUrl =
+            supabase.storage
+              .from("playlist-covers")
+              .getPublicUrl(raw).data.publicUrl ?? null;
+
+          return { ...pl, cover_url: publicUrl };
+        }
+
+        return { ...pl, cover_url: null };
+      });
+    }
+  } catch (error) {
+    console.error("Failed to load public profile playlists:", error);
+    playlists = [];
   }
 
   return (
