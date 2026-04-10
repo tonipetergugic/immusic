@@ -10,12 +10,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const layoutStart = Date.now();
+  const logStep = (label: string, startedAt: number) => {
+    console.log(`[dashboard-layout-ssr] ${label}: ${Date.now() - startedAt}ms`);
+  };
+
   const supabase = await createSupabaseServerClient();
 
+  const getUserStart = Date.now();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  logStep("auth.getUser", getUserStart);
 
+  const profileFetchStart = Date.now();
   let topbarProps: {
     userEmail: string | null;
     displayName: string | null;
@@ -45,6 +53,9 @@ export default async function DashboardLayout({
       avatarUpdatedAt: profile?.updated_at ?? null,
     };
   }
+
+  logStep("profile lookup", profileFetchStart);
+  logStep("dashboard layout total", layoutStart);
 
   return (
     <AppShell
