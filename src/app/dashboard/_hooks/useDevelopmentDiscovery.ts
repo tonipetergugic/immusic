@@ -22,18 +22,25 @@ function getErrorMessage(
 
 type Params = {
   discoveryMode: "development" | "performance";
+  isEnabled: boolean;
   devGenre: string;
   devCacheRef: MutableRefObject<Record<string, DevelopmentDiscoveryItem[]>>;
   devPromiseRef: MutableRefObject<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>;
 };
 
-export function useDevelopmentDiscovery({ discoveryMode, devGenre, devCacheRef, devPromiseRef }: Params) {
+export function useDevelopmentDiscovery({
+  discoveryMode,
+  isEnabled,
+  devGenre,
+  devCacheRef,
+  devPromiseRef,
+}: Params) {
   const [devItems, setDevItems] = useState<DevelopmentDiscoveryItem[]>([]);
   const [devLoading, setDevLoading] = useState(false);
   const [devError, setDevError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (discoveryMode !== "development") return;
+    if (!isEnabled || discoveryMode !== "development") return;
 
     let cancelled = false;
 
@@ -124,7 +131,7 @@ export function useDevelopmentDiscovery({ discoveryMode, devGenre, devCacheRef, 
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode, devGenre]);
+  }, [discoveryMode, isEnabled, devGenre]);
 
   return {
     devItems,

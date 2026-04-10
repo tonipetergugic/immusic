@@ -36,12 +36,14 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 type Params = {
   discoveryMode: "development" | "performance";
+  isEnabled: boolean;
   supabase: SupabaseClient;
   fetchPerformanceDiscovery: (limit: number) => Promise<PerformanceDiscoveryItem[]>;
 };
 
 export function usePerformanceDiscovery({
   discoveryMode,
+  isEnabled,
   supabase,
   fetchPerformanceDiscovery,
 }: Params) {
@@ -68,7 +70,7 @@ export function usePerformanceDiscovery({
   const perfCacheRef = useRef<PerformanceDiscoveryItem[] | null>(null);
 
   useEffect(() => {
-    if (discoveryMode !== "performance") return;
+    if (!isEnabled || discoveryMode !== "performance") return;
 
     let cancelled = false;
 
@@ -146,13 +148,39 @@ export function usePerformanceDiscovery({
           } = await supabase.auth.getUser();
 
           const myStarsByTrackId = new Map<string, number>();
+          const listenStateByTrackId = new Map<
+            string,
+            { can_rate: boolean | null; listened_seconds: number | null }
+          >();
 
-          if (trackIds.length > 0 && user?.id) {
-            const { data: myRatings, error: myRatingsErr } = await supabase
-              .from("track_ratings")
-              .select("track_id, stars")
-              .eq("user_id", user.id)
-              .in("track_id", trackIds);
+          let isListener = false;
+
+          if (user?.id) {
+            const [
+              { data: myRatings, error: myRatingsErr },
+              { data: meProfile, error: meProfileErr },
+              { data: listenRows, error: listenErr },
+            ] = await Promise.all([
+              trackIds.length > 0
+                ? supabase
+                    .from("track_ratings")
+                    .select("track_id, stars")
+                    .eq("user_id", user.id)
+                    .in("track_id", trackIds)
+                : Promise.resolve({ data: [], error: null }),
+              supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", user.id)
+                .maybeSingle(),
+              trackIds.length > 0
+                ? supabase
+                    .from("track_listen_state")
+                    .select("track_id, listened_seconds, can_rate")
+                    .eq("user_id", user.id)
+                    .in("track_id", trackIds)
+                : Promise.resolve({ data: [], error: null }),
+            ]);
 
             if (!myRatingsErr && myRatings) {
               for (const row of (myRatings ?? []) as MyRatingRow[]) {
@@ -160,33 +188,10 @@ export function usePerformanceDiscovery({
                 myStarsByTrackId.set(String(row.track_id), row.stars);
               }
             }
-          }
-
-          let isListener = false;
-
-          if (user?.id) {
-            const { data: meProfile, error: meProfileErr } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", user.id)
-              .maybeSingle();
 
             if (!meProfileErr && meProfile) {
               isListener = ((meProfile as ProfileRoleRow).role ?? null) === "listener";
             }
-          }
-
-          const listenStateByTrackId = new Map<
-            string,
-            { can_rate: boolean | null; listened_seconds: number | null }
-          >();
-
-          if (trackIds.length > 0 && user?.id) {
-            const { data: listenRows, error: listenErr } = await supabase
-              .from("track_listen_state")
-              .select("track_id, listened_seconds, can_rate")
-              .eq("user_id", user.id)
-              .in("track_id", trackIds);
 
             if (!listenErr && listenRows) {
               for (const row of (listenRows ?? []) as ListenStateRow[]) {
@@ -236,7 +241,7 @@ export function usePerformanceDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode, supabase, fetchPerformanceDiscovery]);
+  }, [discoveryMode, isEnabled, supabase, fetchPerformanceDiscovery]);
 
   return {
     performanceItems,

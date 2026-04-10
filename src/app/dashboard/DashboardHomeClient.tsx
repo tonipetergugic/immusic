@@ -69,6 +69,7 @@ export default function DashboardHomeClient({
     devError,
   } = useDevelopmentDiscovery({
     discoveryMode,
+    isEnabled: homeTab === "tracks",
     devGenre,
     devCacheRef,
     devPromiseRef,
@@ -83,6 +84,7 @@ export default function DashboardHomeClient({
     perfTrackMetaMap,
   } = usePerformanceDiscovery({
     discoveryMode,
+    isEnabled: homeTab === "tracks",
     supabase,
     fetchPerformanceDiscovery,
   });
