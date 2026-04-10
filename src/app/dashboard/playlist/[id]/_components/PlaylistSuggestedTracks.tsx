@@ -135,11 +135,16 @@ export default function PlaylistSuggestedTracks({
                   title: item.track_title?.trim() || "Untitled track",
                   artist_id: item.artist_id,
                   artist_name: item.artist_name ?? "Unknown artist",
-                  cover_url: item.release_cover_path
-                    ? supabase.storage
-                        .from("release_covers")
-                        .getPublicUrl(item.release_cover_path).data.publicUrl ?? null
-                    : null,
+                  cover_url:
+                    item.release_cover_preview_path || item.release_cover_path
+                      ? supabase.storage
+                          .from("release_covers")
+                          .getPublicUrl(
+                            item.release_cover_preview_path ??
+                              item.release_cover_path ??
+                              ""
+                          ).data.publicUrl ?? null
+                      : null,
                   version: item.version ?? null,
                   is_explicit: !!item.is_explicit,
                   genre: item.genre ?? null,
@@ -159,11 +164,14 @@ export default function PlaylistSuggestedTracks({
                   title: item.title?.trim() || "Untitled track",
                   artist_id: item.artist_id,
                   artist_name: item.artist_name ?? "Unknown artist",
-                  cover_url: item.cover_path
-                    ? supabase.storage
-                        .from("release_covers")
-                        .getPublicUrl(item.cover_path).data.publicUrl ?? null
-                    : null,
+                  cover_url:
+                    item.cover_preview_path || item.cover_path
+                      ? supabase.storage
+                          .from("release_covers")
+                          .getPublicUrl(
+                            item.cover_preview_path ?? item.cover_path ?? ""
+                          ).data.publicUrl ?? null
+                      : null,
                   version: item.version ?? null,
                   is_explicit: !!item.is_explicit,
                   genre: item.genre ?? null,

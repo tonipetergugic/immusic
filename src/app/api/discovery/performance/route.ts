@@ -97,9 +97,14 @@ export async function GET(req: Request) {
       new Set(items.map((item: any) => item.artist_id).filter(Boolean))
     );
 
+    const releaseIds = Array.from(
+      new Set(items.map((item: any) => item.release_id).filter(Boolean))
+    );
+
     const [
       { data: tracks, error: tracksError },
       { data: profiles, error: profilesError },
+      { data: releases, error: releasesError },
       { data: lifetimeRows, error: lifetimeError },
       { data: trackArtistsRows, error: trackArtistsError },
     ] = await Promise.all([
@@ -114,6 +119,12 @@ export async function GET(req: Request) {
             .from("profiles")
             .select("id,display_name")
             .in("id", artistIds)
+        : Promise.resolve({ data: [], error: null }),
+      releaseIds.length
+        ? supabase
+            .from("releases")
+            .select("id,cover_path,cover_preview_path")
+            .in("id", releaseIds)
         : Promise.resolve({ data: [], error: null }),
       trackIds.length
         ? supabase
@@ -143,6 +154,13 @@ export async function GET(req: Request) {
       );
     }
 
+    if (releasesError) {
+      return NextResponse.json(
+        { ok: false, error: releasesError.message, items: [] },
+        { status: 500 }
+      );
+    }
+
     if (lifetimeError) {
       return NextResponse.json(
         { ok: false, error: lifetimeError.message, items: [] },
@@ -163,6 +181,10 @@ export async function GET(req: Request) {
 
     const profileById = new Map<string, any>(
       (profiles ?? []).map((profile: any) => [profile.id, profile])
+    );
+
+    const releaseById = new Map<string, any>(
+      (releases ?? []).map((release: any) => [release.id, release])
     );
 
     const lifetimeByTrackId = new Map<string, number>(
@@ -197,10 +219,13 @@ export async function GET(req: Request) {
 
     const visibleItems = items.map((item: any) => {
       const track = trackById.get(item.track_id);
+      const release = releaseById.get(item.release_id);
 
       return {
         ...item,
         artist_name: profileById.get(item.artist_id)?.display_name ?? null,
+        release_cover_path: release?.cover_path ?? item.release_cover_path ?? null,
+        release_cover_preview_path: release?.cover_preview_path ?? null,
         streams_lifetime: lifetimeByTrackId.get(String(item.track_id)) ?? 0,
         genre: track?.genre ?? null,
         version: track?.version ?? null,

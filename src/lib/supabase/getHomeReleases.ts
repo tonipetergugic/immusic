@@ -17,7 +17,7 @@ export async function getHomeReleases(releaseIds: string[]) {
 
   const { data, error } = await supabase
     .from("releases")
-    .select("id,title,cover_path,artist_id,release_type,profiles:artist_id(display_name)")
+    .select("id,title,cover_path,cover_preview_path,artist_id,release_type,profiles:artist_id(display_name)")
     .in("id", releaseIds);
 
   if (error || !data) return {} as Record<string, HomeReleaseCard>;
@@ -27,10 +27,12 @@ export async function getHomeReleases(releaseIds: string[]) {
   for (const rel of data as any[]) {
     let cover_url: string | null = null;
 
-    if (rel.cover_path) {
+    const preferredCoverPath = rel.cover_preview_path ?? rel.cover_path ?? null;
+
+    if (preferredCoverPath) {
       const { data: pub } = supabase.storage
         .from("release_covers")
-        .getPublicUrl(rel.cover_path);
+        .getPublicUrl(preferredCoverPath);
       cover_url = pub?.publicUrl ?? null;
     }
 

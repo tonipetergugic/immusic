@@ -98,7 +98,7 @@ export default async function ArtistV2Page({
 
     supabase
       .from("releases")
-      .select("id, title, cover_path, release_type, created_at")
+      .select("id, title, cover_path, cover_preview_path, release_type, created_at")
       .eq("artist_id", artistId)
       .eq("status", "published")
       .order("created_at", { ascending: false }),
@@ -229,10 +229,30 @@ export default async function ArtistV2Page({
       .filter(Boolean)
   );
 
+  const releaseCoverPathsById = new Map<
+    string,
+    { cover_path: string | null; cover_preview_path: string | null }
+  >(
+    ((releasesData ?? []) as Array<{
+      id: string;
+      cover_path: string | null;
+      cover_preview_path: string | null;
+    }>).map((row) => [
+      String(row.id),
+      {
+        cover_path: row.cover_path ?? null,
+        cover_preview_path: row.cover_preview_path ?? null,
+      },
+    ])
+  );
+
   const releases = (releasesData ?? []).map((r) => {
-      const coverUrl = r.cover_path
-        ? supabase.storage.from("release_covers").getPublicUrl(r.cover_path).data
-            .publicUrl
+      const preferredCoverPath = r.cover_preview_path ?? r.cover_path ?? null;
+
+      const coverUrl = preferredCoverPath
+        ? supabase.storage
+            .from("release_covers")
+            .getPublicUrl(preferredCoverPath).data.publicUrl
         : null;
 
       return {
@@ -424,9 +444,20 @@ export default async function ArtistV2Page({
 
     if (!audioUrl) return null;
 
-    const coverUrl = d.cover_path
-      ? supabase.storage.from("release_covers").getPublicUrl(d.cover_path).data
-          .publicUrl ?? null
+    const releaseCoverPaths = d.release_id
+      ? releaseCoverPathsById.get(String(d.release_id))
+      : null;
+
+    const preferredCoverPath =
+      releaseCoverPaths?.cover_preview_path ??
+      releaseCoverPaths?.cover_path ??
+      d.cover_path ??
+      null;
+
+    const coverUrl = preferredCoverPath
+      ? supabase.storage
+          .from("release_covers")
+          .getPublicUrl(preferredCoverPath).data.publicUrl ?? null
       : null;
 
     const ownerId = String(d.owner_id ?? "");

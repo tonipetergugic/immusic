@@ -22,18 +22,6 @@ type TrackOption = {
   player: PlayerTrack | null;
 };
 
-type PlaylistTrackInsertArtistRow = {
-  display_name: string | null;
-};
-
-type PlaylistTrackInsertTrackRow = {
-  id: string;
-  bpm: number | null;
-  key: string | null;
-  genre: string | null;
-  artist?: PlaylistTrackInsertArtistRow | PlaylistTrackInsertArtistRow[] | null;
-};
-
 type PlaylistAddTrackModalProps = {
   playlistId: string;
   open: boolean;
@@ -41,16 +29,6 @@ type PlaylistAddTrackModalProps = {
   onTrackAdded?: (track: PlayerTrack) => void;
   existingTrackIds?: string[];
 };
-
-const PLAYLIST_TRACK_SELECT = `
-  position,
-  tracks:tracks!playlist_tracks_track_id_fkey (
-    *,
-    artist:profiles!tracks_artist_id_fkey (
-      display_name
-    )
-  )
-`;
 
 export default function PlaylistAddTrackModal({
   playlistId,
@@ -173,15 +151,13 @@ export default function PlaylistAddTrackModal({
 
       const nextPosition = (lastRow?.position ?? 0) + 1;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("playlist_tracks")
         .insert({
           playlist_id: playlistId,
           track_id: option.raw.id,
           position: nextPosition,
-        })
-        .select(PLAYLIST_TRACK_SELECT)
-        .single();
+        });
 
       if (error) {
         console.error("Failed to add track to playlist:", error);
@@ -190,49 +166,37 @@ export default function PlaylistAddTrackModal({
         return;
       }
 
-      if (data?.tracks) {
-        try {
-          const trackRecord: PlaylistTrackInsertTrackRow | null = Array.isArray(data.tracks)
-            ? (data.tracks[0] ?? null)
-            : (data.tracks ?? null);
+      try {
+        const res = await fetch(`/api/tracks/${option.raw.id}/player`, {
+          method: "GET",
+        });
 
-          if (!trackRecord?.id) {
-            throw new Error("Invalid inserted track payload");
-          }
-
-          const res = await fetch(`/api/tracks/${trackRecord.id}/player`, {
-            method: "GET",
-          });
-
-          if (!res.ok) {
-            throw new Error(`Failed to load playerTrack (${res.status})`);
-          }
-
-          const json = await res.json();
-          const playerTrack = json?.playerTrack;
-          if (!playerTrack?.id) {
-            throw new Error("Invalid playerTrack payload");
-          }
-
-          // Merge missing fields from the DB track record (insert select) to avoid "reload-only" UI data.
-          const mergedPlayerTrack = {
-            ...playerTrack,
-            genre: playerTrack.genre ?? trackRecord.genre ?? null,
-            bpm: playerTrack.bpm ?? trackRecord.bpm ?? null,
-            key: playerTrack.key ?? trackRecord.key ?? null,
-          };
-
-          onTrackAdded?.(mergedPlayerTrack);
-        } catch (err) {
-          console.error("Track conversion failed:", err);
-          if (option.player) {
-            onTrackAdded?.(option.player);
-          }
+        if (!res.ok) {
+          throw new Error(`Failed to load playerTrack (${res.status})`);
         }
-      } else {
-        if (option.player) {
-          onTrackAdded?.(option.player);
+
+        const json = await res.json();
+        const playerTrack = json?.playerTrack;
+
+        if (!playerTrack?.id) {
+          throw new Error("Invalid playerTrack payload");
         }
+
+        const mergedPlayerTrack = {
+          ...playerTrack,
+          cover_url: playerTrack.cover_url ?? option.raw.cover_url ?? null,
+          genre: playerTrack.genre ?? option.raw.genre ?? null,
+          bpm: playerTrack.bpm ?? option.raw.bpm ?? null,
+          key: playerTrack.key ?? option.raw.key ?? null,
+          is_explicit:
+            typeof playerTrack.is_explicit === "boolean"
+              ? playerTrack.is_explicit
+              : option.raw.is_explicit,
+        };
+
+        onTrackAdded?.(mergedPlayerTrack);
+      } catch (err) {
+        console.error("Track conversion failed:", err);
       }
 
       setActionId(null);

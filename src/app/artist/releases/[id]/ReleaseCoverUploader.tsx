@@ -12,6 +12,71 @@ type Props = {
   onReleaseModified?: () => void;
 };
 
+const PREVIEW_SIZE = 256;
+
+function stripExtension(filename: string) {
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex <= 0) return filename;
+  return filename.slice(0, lastDotIndex);
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Failed to load image."));
+    image.src = src;
+  });
+}
+
+async function createSquareCoverPreview(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = PREVIEW_SIZE;
+    canvas.height = PREVIEW_SIZE;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Failed to create preview canvas.");
+    }
+
+    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+    const sourceX = Math.floor((image.naturalWidth - sourceSize) / 2);
+    const sourceY = Math.floor((image.naturalHeight - sourceSize) / 2);
+
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceSize,
+      sourceSize,
+      0,
+      0,
+      PREVIEW_SIZE,
+      PREVIEW_SIZE
+    );
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", 0.82);
+    });
+
+    if (!blob) {
+      throw new Error("Failed to encode preview image.");
+    }
+
+    const safeBaseName = stripExtension(file.name) || "cover-preview";
+
+    return new File([blob], `${safeBaseName}.jpg`, {
+      type: "image/jpeg",
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function ReleaseCoverUploader({
   releaseId,
   initialCoverUrl,
@@ -27,49 +92,71 @@ export default function ReleaseCoverUploader({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function uploadFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Please upload an image file.");
+      return;
+    }
+
     setErrorMsg(null);
     setCoverPending("uploading");
-    let uploadedFilePath: string | null = null;
+
+    let uploadedOriginalFilePath: string | null = null;
+    let uploadedPreviewFilePath: string | null = null;
 
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const filePath = `${releaseId}/${crypto.randomUUID()}.${ext}`;
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const originalFilePath = `${releaseId}/${crypto.randomUUID()}.${ext}`;
+      const previewFilePath = `${releaseId}/preview/${crypto.randomUUID()}.jpg`;
 
-      const { error: uploadError } = await supabase.storage
+      const previewFile = await createSquareCoverPreview(file);
+
+      const { error: originalUploadError } = await supabase.storage
         .from("release_covers")
-        .upload(filePath, file, { upsert: true });
+        .upload(originalFilePath, file, { upsert: true });
 
-      uploadedFilePath = filePath;
-
-      if (uploadError) {
-        console.error(uploadError);
-        setErrorMsg("Upload failed. Please try again.");
-        return;
+      if (originalUploadError) {
+        throw originalUploadError;
       }
 
-      await updateReleaseCoverAction(releaseId, filePath);
+      uploadedOriginalFilePath = originalFilePath;
+
+      const { error: previewUploadError } = await supabase.storage
+        .from("release_covers")
+        .upload(previewFilePath, previewFile, { upsert: true });
+
+      if (previewUploadError) {
+        throw previewUploadError;
+      }
+
+      uploadedPreviewFilePath = previewFilePath;
+
+      await updateReleaseCoverAction(releaseId, originalFilePath, previewFilePath);
       onReleaseModified?.();
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("release_covers").getPublicUrl(filePath);
+      } = supabase.storage.from("release_covers").getPublicUrl(originalFilePath);
 
       setCoverUrl(publicUrl);
       onCoverUrlChange?.(publicUrl);
     } catch (e) {
       console.error(e);
 
-      if (uploadedFilePath) {
+      const rollbackPaths = [uploadedOriginalFilePath, uploadedPreviewFilePath].filter(
+        (path): path is string => Boolean(path)
+      );
+
+      if (rollbackPaths.length > 0) {
         const { error: rollbackError } = await supabase.storage
           .from("release_covers")
-          .remove([uploadedFilePath]);
+          .remove(rollbackPaths);
 
         if (rollbackError) {
-          console.error("Failed to rollback uploaded cover file:", rollbackError);
+          console.error("Failed to rollback uploaded cover files:", rollbackError);
         }
       }
 
-      setErrorMsg("Cover update not allowed for this release.");
+      setErrorMsg("Cover update failed. Please try again.");
     } finally {
       setCoverPending(null);
     }

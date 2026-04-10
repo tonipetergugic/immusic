@@ -23,6 +23,7 @@ type LibraryReleaseSourceRow = {
   id: string | null;
   title: string | null;
   cover_path: string | null;
+  cover_preview_path: string | null;
   release_type: string | null;
   release_date: string | null;
   artist_id: string | null;
@@ -66,6 +67,7 @@ export async function loadLibraryV2Releases({
       id,
       title,
       cover_path,
+      cover_preview_path,
       release_type,
       release_date,
       artist_id,
@@ -92,11 +94,16 @@ export async function loadLibraryV2Releases({
         const item: LibraryReleaseListItem = {
           id: String(release.id),
           title: release.title ?? null,
-          coverUrl: release.cover_path
-            ? supabase.storage
-                .from("release_covers")
-                .getPublicUrl(release.cover_path).data.publicUrl ?? null
-            : null,
+          coverUrl: (() => {
+            const preferredCoverPath =
+              release.cover_preview_path ?? release.cover_path ?? null;
+
+            return preferredCoverPath
+              ? supabase.storage
+                  .from("release_covers")
+                  .getPublicUrl(preferredCoverPath).data.publicUrl ?? null
+              : null;
+          })(),
           releaseType: release.release_type ?? null,
           releaseDate: release.release_date ?? null,
           artistId: release.artist_id ?? null,

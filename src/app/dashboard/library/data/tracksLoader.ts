@@ -11,6 +11,7 @@ type LibraryTrackProfileRow = {
 type LibraryReleaseRow = {
   id: string | null;
   cover_path: string | null;
+  cover_preview_path: string | null;
 };
 
 type LibraryReleaseTrackRow = {
@@ -138,7 +139,8 @@ export async function loadLibraryV2Tracks({
           release_id,
           releases:releases!release_tracks_release_id_fkey(
             id,
-            cover_path
+            cover_path,
+            cover_preview_path
           )
         )
       )
@@ -181,10 +183,13 @@ export async function loadLibraryV2Tracks({
 
         const audio_url = audio?.publicUrl ?? null;
 
-        const cover_url = release?.cover_path
+        const preferredCoverPath =
+          release?.cover_preview_path ?? release?.cover_path ?? null;
+
+        const cover_url = preferredCoverPath
           ? supabase.storage
               .from("release_covers")
-              .getPublicUrl(release.cover_path).data.publicUrl ?? null
+              .getPublicUrl(preferredCoverPath).data.publicUrl ?? null
           : null;
 
         return {

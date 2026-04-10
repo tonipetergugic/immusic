@@ -84,7 +84,10 @@ export async function GET(req: Request) {
           .in("id", trackIds)
       : Promise.resolve({ data: [], error: null }),
     releaseIds.length
-      ? supabase.from("releases").select("id,cover_path").in("id", releaseIds)
+      ? supabase
+          .from("releases")
+          .select("id,cover_path,cover_preview_path")
+          .in("id", releaseIds)
       : Promise.resolve({ data: [], error: null }),
     artistIds.length
       ? supabase.from("profiles").select("id,display_name").in("id", artistIds)
@@ -230,6 +233,7 @@ export async function GET(req: Request) {
       title: t?.title ?? "",
       artist_name: prof?.display_name ?? null,
       cover_path: rel?.cover_path ?? null,
+      cover_preview_path: rel?.cover_preview_path ?? null,
       audio_path: t?.audio_path ?? "",
       genre: t?.genre ?? null,
       bpm: t?.bpm ?? null,

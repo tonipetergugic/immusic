@@ -43,6 +43,7 @@ export async function GET() {
             id,
             status,
             cover_path,
+            cover_preview_path,
             published_at,
             created_at
           )
@@ -62,6 +63,7 @@ export async function GET() {
     {
       id: string;
       cover_path: string | null;
+      cover_preview_path: string | null;
       published_at: string | null;
       created_at: string | null;
     }
@@ -76,6 +78,9 @@ export async function GET() {
     const next = {
       id: String(rel.id),
       cover_path: rel.cover_path ? String(rel.cover_path) : null,
+      cover_preview_path: rel.cover_preview_path
+        ? String(rel.cover_preview_path)
+        : null,
       published_at: rel.published_at ? String(rel.published_at) : null,
       created_at: rel.created_at ? String(rel.created_at) : null,
     };
@@ -125,9 +130,14 @@ export async function GET() {
         ? (row.artist_profile[0] ?? null)
         : (row.artist_profile ?? null);
 
+      const preferredCoverPath =
+        releaseObj?.cover_preview_path ?? releaseObj?.cover_path ?? null;
+
       const cover_url =
-        releaseObj?.cover_path
-          ? supabase.storage.from("release_covers").getPublicUrl(releaseObj.cover_path).data.publicUrl ?? null
+        preferredCoverPath
+          ? supabase.storage
+              .from("release_covers")
+              .getPublicUrl(preferredCoverPath).data.publicUrl ?? null
           : null;
 
       return {

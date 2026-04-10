@@ -66,8 +66,10 @@ export function buildDevQueue(params: {
     const artist = it.artist_name ?? "—";
     const releaseId = it.release_id;
 
-    const coverUrl = it.cover_path
-      ? supabase.storage.from("release_covers").getPublicUrl(it.cover_path).data.publicUrl
+    const preferredCoverPath = it.cover_preview_path ?? it.cover_path ?? null;
+
+    const coverUrl = preferredCoverPath
+      ? supabase.storage.from("release_covers").getPublicUrl(preferredCoverPath).data.publicUrl
       : null;
 
     const audioUrl = it.audio_path
@@ -136,8 +138,11 @@ export function buildPerfQueue(params: {
 
     const artistName = perfArtistMap[artistId] ?? "Unknown Artist";
 
-    const coverUrl = row.release_cover_path
-      ? supabase.storage.from("release_covers").getPublicUrl(row.release_cover_path).data.publicUrl
+    const preferredCoverPath =
+      row.release_cover_preview_path ?? row.release_cover_path ?? null;
+
+    const coverUrl = preferredCoverPath
+      ? supabase.storage.from("release_covers").getPublicUrl(preferredCoverPath).data.publicUrl
       : null;
 
     const audioPath = perfTrackMetaMap?.[trackId]?.audio_path ?? null;

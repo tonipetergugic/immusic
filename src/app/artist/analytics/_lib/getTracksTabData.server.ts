@@ -210,7 +210,10 @@ export async function getTracksTabData(args: {
   };
 
   const loadPublishedCoverPathByTrackIds = async (trackIds: string[]) => {
-    const coverPathByTrackId = new Map<string, string | null>();
+    const coverPathByTrackId = new Map<
+      string,
+      { cover_path: string | null; cover_preview_path: string | null }
+    >();
 
     if (!trackIds.length) return coverPathByTrackId;
 
@@ -223,6 +226,7 @@ export async function getTracksTabData(args: {
         id,
         status,
         cover_path,
+        cover_preview_path,
         published_at,
         created_at
       )
@@ -240,6 +244,7 @@ export async function getTracksTabData(args: {
             id: string | null;
             status: string | null;
             cover_path: string | null;
+            cover_preview_path: string | null;
             published_at: string | null;
             created_at: string | null;
           }
@@ -247,6 +252,7 @@ export async function getTracksTabData(args: {
             id: string | null;
             status: string | null;
             cover_path: string | null;
+            cover_preview_path: string | null;
             published_at: string | null;
             created_at: string | null;
           }[]
@@ -258,6 +264,7 @@ export async function getTracksTabData(args: {
       {
         release_id: string;
         cover_path: string | null;
+        cover_preview_path: string | null;
         published_at: string | null;
         created_at: string | null;
       }
@@ -273,6 +280,9 @@ export async function getTracksTabData(args: {
       const next = {
         release_id: String(release.id),
         cover_path: release.cover_path ? String(release.cover_path) : null,
+        cover_preview_path: release.cover_preview_path
+          ? String(release.cover_preview_path)
+          : null,
         published_at: release.published_at ? String(release.published_at) : null,
         created_at: release.created_at ? String(release.created_at) : null,
       };
@@ -310,7 +320,10 @@ export async function getTracksTabData(args: {
     });
 
     bestByTrackId.forEach((value, key) => {
-      coverPathByTrackId.set(key, value.cover_path);
+      coverPathByTrackId.set(key, {
+        cover_path: value.cover_path,
+        cover_preview_path: value.cover_preview_path,
+      });
     });
 
     return coverPathByTrackId;
@@ -335,7 +348,11 @@ export async function getTracksTabData(args: {
   const topTracks: TopTrackRow[] = sortedTopAgg.slice(0, 20).map((r) => ({
     track_id: r.track_id,
     title: titleById.get(r.track_id) || "Unknown track",
-    cover_url: toPublicCoverUrl(coverPathByTrackId.get(r.track_id) ?? null),
+    cover_url: toPublicCoverUrl(
+      coverPathByTrackId.get(r.track_id)?.cover_preview_path ??
+        coverPathByTrackId.get(r.track_id)?.cover_path ??
+        null
+    ),
     streams: Number(r.streams ?? 0),
     unique_listeners: Number(r.unique_listeners ?? 0),
     listened_seconds: Number(r.listened_seconds ?? 0),
@@ -349,7 +366,11 @@ export async function getTracksTabData(args: {
       {
         track_id: r.track_id,
         title: titleById.get(r.track_id) || "Unknown track",
-        cover_url: toPublicCoverUrl(coverPathByTrackId.get(r.track_id) ?? null),
+        cover_url: toPublicCoverUrl(
+          coverPathByTrackId.get(r.track_id)?.cover_preview_path ??
+            coverPathByTrackId.get(r.track_id)?.cover_path ??
+            null
+        ),
         streams: Number(r.streams ?? 0),
         unique_listeners: Number(r.unique_listeners ?? 0),
         listened_seconds: Number(r.listened_seconds ?? 0),

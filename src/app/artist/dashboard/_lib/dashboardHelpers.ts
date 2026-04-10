@@ -6,10 +6,13 @@ export function formatNumber(value: number) {
 
 export function getCoverUrl(
   supabase: SupabaseClient,
-  coverPath: string | null
+  preferredCoverPath: string | null,
+  fallbackCoverPath?: string | null
 ) {
-  if (!coverPath) return null;
+  const resolvedCoverPath = preferredCoverPath ?? fallbackCoverPath ?? null;
+  if (!resolvedCoverPath) return null;
+
   return supabase.storage
     .from("release_covers")
-    .getPublicUrl(coverPath).data.publicUrl;
+    .getPublicUrl(resolvedCoverPath).data.publicUrl;
 }

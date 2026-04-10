@@ -11,6 +11,7 @@ const __DEV__ = process.env.NODE_ENV !== "production";
 type ReleaseJoin = {
   status: string | null;
   cover_path: string | null;
+  cover_preview_path: string | null;
 };
 
 type ArtistJoin = {
@@ -89,6 +90,7 @@ type PlaylistTrackRow = {
 
   release_status: string | null;
   release_cover_path: string | null;
+  release_cover_preview_path: string | null;
 
   rating_avg: number | null;
   rating_count: number | null;
@@ -215,7 +217,7 @@ export default async function PlaylistPage(
   };
 
   // Playlist-Tracks laden
-  const { data: playlistTracks } = await supabase
+  const { data: playlistTracks, error: playlistTracksError } = await supabase
     .from("playlist_tracks_resolved")
     .select(
       `
@@ -235,6 +237,7 @@ export default async function PlaylistPage(
       version,
       release_status,
       release_cover_path,
+      release_cover_preview_path,
       rating_avg,
       rating_count,
       stream_count,
@@ -245,6 +248,10 @@ export default async function PlaylistPage(
     .eq("playlist_id", id)
     .order("position", { ascending: true })
     .returns<PlaylistTrackRow[]>();
+
+  if (playlistTracksError) {
+    throw playlistTracksError;
+  }
 
   let visiblePlaylistTracks = playlistTracks ?? [];
 
@@ -260,8 +267,23 @@ export default async function PlaylistPage(
     )
   );
 
-  const [analyticsLifetimeRes, explicitRes, trackArtistsResolvedRes] =
-    playlistTrackIds.length > 0 || visibleTrackIds.length > 0
+  const visibleReleaseIds = Array.from(
+    new Set(
+      visiblePlaylistTracks
+        .map((row) => String(row.release_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const [
+    analyticsLifetimeRes,
+    explicitRes,
+    trackArtistsResolvedRes,
+    releasePreviewRes,
+  ] =
+    playlistTrackIds.length > 0 ||
+    visibleTrackIds.length > 0 ||
+    visibleReleaseIds.length > 0
       ? await Promise.all([
           playlistTrackIds.length > 0
             ? supabase
@@ -283,8 +305,16 @@ export default async function PlaylistPage(
                 .select("track_id, artists")
                 .in("track_id", visibleTrackIds)
             : Promise.resolve({ data: [], error: null }),
+
+          visibleReleaseIds.length > 0
+            ? supabase
+                .from("releases")
+                .select("id, cover_preview_path")
+                .in("id", visibleReleaseIds)
+            : Promise.resolve({ data: [], error: null }),
         ])
       : [
+          { data: [], error: null },
           { data: [], error: null },
           { data: [], error: null },
           { data: [], error: null },
@@ -308,6 +338,19 @@ export default async function PlaylistPage(
   );
 
   const { data: explicitRows, error: explicitError } = explicitRes;
+
+  const { data: releasePreviewRows, error: releasePreviewError } = releasePreviewRes;
+
+  if (releasePreviewError) {
+    throw releasePreviewError;
+  }
+
+  const releasePreviewById = new Map(
+    (releasePreviewRows ?? []).map((row: { id: string; cover_preview_path: string | null }) => [
+      String(row.id),
+      row.cover_preview_path ?? null,
+    ])
+  );
 
   if (explicitError) {
     console.error("Failed to load explicit flags for playlist tracks", explicitError);
@@ -353,11 +396,17 @@ export default async function PlaylistPage(
   }
 
   const convertedTracks: PlayerTrack[] = visiblePlaylistTracks.flatMap((row) => {
+    const preferredCoverPath =
+      releasePreviewById.get(String(row.release_id ?? "")) ??
+      row.release_cover_preview_path ??
+      row.release_cover_path ??
+      null;
+
     const cover_url =
-      row.release_cover_path
+      preferredCoverPath
         ? supabase.storage
             .from("release_covers")
-            .getPublicUrl(row.release_cover_path).data.publicUrl ?? null
+            .getPublicUrl(preferredCoverPath).data.publicUrl ?? null
         : null;
 
     const audio_url =
@@ -485,6 +534,14 @@ export default async function PlaylistPage(
     });
   }
 
+  const initialExistingTrackIds = Array.from(
+    new Set(
+      visiblePlaylistTracks
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
   return (
     <div className="flex w-full overflow-x-hidden touch-pan-y min-w-0">
       {/* Content */}
@@ -495,6 +552,7 @@ export default async function PlaylistPage(
           <PlaylistClient
             playlist={playlistForClient}
             initialPlayerTracks={finalTracks}
+            initialExistingTrackIds={initialExistingTrackIds}
             user={user}
             initialSaved={initialSaved}
           />

@@ -6,6 +6,7 @@ export type DevelopmentDiscoveryItem = {
   title: string;
   artist_name: string | null;
   cover_path: string | null;
+  cover_preview_path: string | null;
   artists?: {
     id: string;
     display_name: string;

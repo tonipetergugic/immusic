@@ -3,7 +3,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function updateReleaseCoverAction(releaseId: string, newFilePath: string) {
+export async function updateReleaseCoverAction(
+  releaseId: string,
+  newCoverPath: string,
+  newCoverPreviewPath: string
+) {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -17,7 +21,7 @@ export async function updateReleaseCoverAction(releaseId: string, newFilePath: s
 
   const { data: release, error: fetchError } = await supabase
     .from("releases")
-    .select("id, status, artist_id, cover_path")
+    .select("id, status, artist_id, cover_path, cover_preview_path")
     .eq("id", releaseId)
     .single();
 
@@ -33,19 +37,16 @@ export async function updateReleaseCoverAction(releaseId: string, newFilePath: s
     throw new Error("Cover can only be changed while the release is draft.");
   }
 
-  if (release.cover_path && release.cover_path !== newFilePath) {
-    const { error: removeError } = await supabase.storage
-      .from("release_covers")
-      .remove([release.cover_path]);
-
-    if (removeError) {
-      throw new Error("Failed to remove existing cover.");
-    }
-  }
+  const previousPaths = [release.cover_path, release.cover_preview_path].filter(
+    (path): path is string => Boolean(path)
+  );
 
   const { data: updatedRelease, error: updateError } = await supabase
     .from("releases")
-    .update({ cover_path: newFilePath })
+    .update({
+      cover_path: newCoverPath,
+      cover_preview_path: newCoverPreviewPath,
+    })
     .eq("id", releaseId)
     .eq("status", "draft")
     .select("id")
@@ -57,6 +58,20 @@ export async function updateReleaseCoverAction(releaseId: string, newFilePath: s
 
   if (!updatedRelease) {
     throw new Error("Cover can only be changed while the release is draft.");
+  }
+
+  const obsoletePaths = previousPaths.filter(
+    (path) => path !== newCoverPath && path !== newCoverPreviewPath
+  );
+
+  if (obsoletePaths.length > 0) {
+    const { error: removeError } = await supabase.storage
+      .from("release_covers")
+      .remove(obsoletePaths);
+
+    if (removeError) {
+      console.error("Failed to remove obsolete cover files:", removeError);
+    }
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);
@@ -76,7 +91,7 @@ export async function deleteReleaseCoverAction(releaseId: string) {
 
   const { data: release, error: fetchError } = await supabase
     .from("releases")
-    .select("id, status, artist_id, cover_path")
+    .select("id, status, artist_id, cover_path, cover_preview_path")
     .eq("id", releaseId)
     .single();
 
@@ -92,19 +107,16 @@ export async function deleteReleaseCoverAction(releaseId: string) {
     throw new Error("Cover can only be changed while the release is draft.");
   }
 
-  if (release.cover_path) {
-    const { error: removeError } = await supabase.storage
-      .from("release_covers")
-      .remove([release.cover_path]);
-
-    if (removeError) {
-      throw new Error("Failed to remove existing cover.");
-    }
-  }
+  const pathsToRemove = [release.cover_path, release.cover_preview_path].filter(
+    (path): path is string => Boolean(path)
+  );
 
   const { data: updatedRelease, error: updateError } = await supabase
     .from("releases")
-    .update({ cover_path: null })
+    .update({
+      cover_path: null,
+      cover_preview_path: null,
+    })
     .eq("id", releaseId)
     .eq("status", "draft")
     .select("id")
@@ -116,6 +128,16 @@ export async function deleteReleaseCoverAction(releaseId: string) {
 
   if (!updatedRelease) {
     throw new Error("Cover can only be changed while the release is draft.");
+  }
+
+  if (pathsToRemove.length > 0) {
+    const { error: removeError } = await supabase.storage
+      .from("release_covers")
+      .remove(pathsToRemove);
+
+    if (removeError) {
+      console.error("Failed to remove cover files:", removeError);
+    }
   }
 
   revalidatePath(`/artist/releases/${releaseId}`);

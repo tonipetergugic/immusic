@@ -48,11 +48,13 @@ type PlaylistClientTrack = PlayerTrack & {
 export default function PlaylistClient({
   playlist,
   initialPlayerTracks,
+  initialExistingTrackIds,
   user,
   initialSaved,
 }: {
   playlist: Playlist;
   initialPlayerTracks: PlaylistClientTrack[];
+  initialExistingTrackIds: string[];
   user: User | null;
   initialSaved: boolean;
 }) {
@@ -63,10 +65,7 @@ export default function PlaylistClient({
 
   const [localPlaylist, setLocalPlaylist] = useState(playlist);
   const [playerTracks, setPlayerTracks] = useState<PlaylistClientTrack[]>(initialPlayerTracks);
-  const existingTrackIds = useMemo(
-    () => playerTracks.map((track) => track.id),
-    [playerTracks]
-  );
+  const [existingTrackIds, setExistingTrackIds] = useState<string[]>(initialExistingTrackIds);
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -194,10 +193,15 @@ export default function PlaylistClient({
     }
 
     setPlayerTracks((prev) => prev.filter((t) => t.id !== trackId));
+    setExistingTrackIds((prev) => prev.filter((id) => id !== trackId));
   }
 
   async function handleTrackAdded(newPlayerTrack: PlaylistClientTrack) {
     if (!isOwner) return;
+
+    setExistingTrackIds((prev) =>
+      prev.includes(newPlayerTrack.id) ? prev : [...prev, newPlayerTrack.id]
+    );
 
     const [trackMetaResult, lifetimeResult, ratingsResponse] =
       await Promise.all([
@@ -384,7 +388,7 @@ export default function PlaylistClient({
         }}
         addOpen={addOpen}
         setAddOpen={setAddOpen}
-        existingTrackIds={playerTracks.map((t) => t.id)}
+        existingTrackIds={existingTrackIds}
         onTrackAdded={handleTrackAdded}
       />
     </div>

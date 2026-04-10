@@ -68,6 +68,7 @@ export default async function ArtistDashboardPage() {
   type ResolvedTrackRow = {
     track_id: string;
     track_title: string | null;
+    release_id: string | null;
     cover_path: string | null;
   };
 
@@ -89,6 +90,11 @@ export default async function ArtistDashboardPage() {
   type TrackReleaseRow = {
     track_id: string;
     release_id: string | null;
+  };
+
+  type ReleasePreviewRow = {
+    id: string;
+    cover_preview_path: string | null;
   };
 
   const { data: topRatedRaw, error: topRatedError } = await supabase
@@ -147,7 +153,7 @@ export default async function ArtistDashboardPage() {
     analyticsTrackIds.length > 0
       ? await supabase
           .from("artist_top_tracks_resolved")
-          .select("track_id, track_title, cover_path")
+          .select("track_id, track_title, release_id, cover_path")
           .in("track_id", analyticsTrackIds)
       : { data: [], error: null };
 
@@ -159,6 +165,33 @@ export default async function ArtistDashboardPage() {
     ((topTrackDetailsRaw ?? []) as ResolvedTrackRow[]).map((row) => [
       row.track_id,
       row,
+    ])
+  );
+
+  const topTrackReleaseIds = Array.from(
+    new Set(
+      ((topTrackDetailsRaw ?? []) as ResolvedTrackRow[])
+        .map((row) => String(row.release_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const { data: releasePreviewRowsRaw, error: releasePreviewRowsError } =
+    topTrackReleaseIds.length > 0
+      ? await supabase
+          .from("releases")
+          .select("id, cover_preview_path")
+          .in("id", topTrackReleaseIds)
+      : { data: [], error: null };
+
+  if (releasePreviewRowsError) {
+    throw releasePreviewRowsError;
+  }
+
+  const releasePreviewById = new Map(
+    ((releasePreviewRowsRaw ?? []) as ReleasePreviewRow[]).map((row) => [
+      row.id,
+      row.cover_preview_path ?? null,
     ])
   );
 
@@ -250,7 +283,11 @@ export default async function ArtistDashboardPage() {
         key: `p-${row.track_id}-${index}`,
         title: details.track_title ?? "Untitled Track",
         streams: row.streams ?? 0,
-        coverUrl: getCoverUrl(supabase, details.cover_path),
+        coverUrl: getCoverUrl(
+          supabase,
+          releasePreviewById.get(String(details.release_id ?? "")) ?? null,
+          details.cover_path
+        ),
       },
     ];
   });
@@ -265,7 +302,11 @@ export default async function ArtistDashboardPage() {
         title: details.track_title ?? "Untitled Track",
         rating: row.rating_avg,
         ratingCount: row.ratings_count ?? 0,
-        coverUrl: getCoverUrl(supabase, details.cover_path),
+        coverUrl: getCoverUrl(
+          supabase,
+          releasePreviewById.get(String(details.release_id ?? "")) ?? null,
+          details.cover_path
+        ),
       },
     ];
   });

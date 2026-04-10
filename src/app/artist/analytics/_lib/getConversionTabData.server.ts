@@ -48,7 +48,10 @@ export async function getConversionTabData(args: {
   };
 
   const loadPublishedCoverPathByTrackIds = async (trackIds: string[]) => {
-    const coverPathByTrackId = new Map<string, string | null>();
+    const coverPathByTrackId = new Map<
+      string,
+      { cover_path: string | null; cover_preview_path: string | null }
+    >();
 
     if (!trackIds.length) return coverPathByTrackId;
 
@@ -61,6 +64,7 @@ export async function getConversionTabData(args: {
         id,
         status,
         cover_path,
+        cover_preview_path,
         published_at,
         created_at
       )
@@ -78,6 +82,7 @@ export async function getConversionTabData(args: {
             id: string | null;
             status: string | null;
             cover_path: string | null;
+            cover_preview_path: string | null;
             published_at: string | null;
             created_at: string | null;
           }
@@ -85,6 +90,7 @@ export async function getConversionTabData(args: {
             id: string | null;
             status: string | null;
             cover_path: string | null;
+            cover_preview_path: string | null;
             published_at: string | null;
             created_at: string | null;
           }[]
@@ -96,6 +102,7 @@ export async function getConversionTabData(args: {
       {
         release_id: string;
         cover_path: string | null;
+        cover_preview_path: string | null;
         published_at: string | null;
         created_at: string | null;
       }
@@ -111,6 +118,9 @@ export async function getConversionTabData(args: {
       const next = {
         release_id: String(release.id),
         cover_path: release.cover_path ? String(release.cover_path) : null,
+        cover_preview_path: release.cover_preview_path
+          ? String(release.cover_preview_path)
+          : null,
         published_at: release.published_at ? String(release.published_at) : null,
         created_at: release.created_at ? String(release.created_at) : null,
       };
@@ -148,7 +158,10 @@ export async function getConversionTabData(args: {
     });
 
     bestByTrackId.forEach((value, key) => {
-      coverPathByTrackId.set(key, value.cover_path);
+      coverPathByTrackId.set(key, {
+        cover_path: value.cover_path,
+        cover_preview_path: value.cover_preview_path,
+      });
     });
 
     return coverPathByTrackId;
@@ -258,7 +271,11 @@ export async function getConversionTabData(args: {
       return {
         track_id: tid,
         title: titleByEligibleId.get(tid) || "Unknown track",
-        cover_url: toPublicCoverUrl(coverPathByEligibleTrackId.get(tid) ?? null),
+        cover_url: toPublicCoverUrl(
+          coverPathByEligibleTrackId.get(tid)?.cover_preview_path ??
+            coverPathByEligibleTrackId.get(tid)?.cover_path ??
+            null
+        ),
         listeners,
         saves,
         conversion_pct,
