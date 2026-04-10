@@ -1,5 +1,5 @@
 import "server-only";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 
 export type HomePlaylistCard = {
   id: string;
@@ -11,7 +11,7 @@ export type HomePlaylistCard = {
 export async function getHomePlaylists(playlistIds: string[]) {
   if (playlistIds.length === 0) return {} as Record<string, HomePlaylistCard>;
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicServerClient();
 
   const { data, error } = await supabase
     .from("playlists")
@@ -47,7 +47,7 @@ export async function getLatestHomePlaylistIds(args: { limit: number; excludeIds
   const excludeIds = (args.excludeIds ?? []).filter(Boolean);
   if (limit <= 0) return [] as string[];
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicServerClient();
 
   const applyExclude = (q: any) => {
     if (excludeIds.length === 0) return q;
@@ -58,6 +58,7 @@ export async function getLatestHomePlaylistIds(args: { limit: number; excludeIds
     supabase
       .from("playlists")
       .select("id")
+      .eq("is_public", true)
       .order("created_at", { ascending: false })
       .limit(limit)
   );
