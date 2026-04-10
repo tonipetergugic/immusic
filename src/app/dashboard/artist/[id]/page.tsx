@@ -351,14 +351,27 @@ export default async function ArtistV2Page({
     )
   );
 
-  const { data: myRatingsRows, error: myRatingsError } =
+  const [myRatingsRes, listenStateRes] =
     viewerId && resolvedTrackIds.length > 0
-      ? await supabase
-          .from("track_ratings")
-          .select("track_id, stars")
-          .eq("user_id", viewerId)
-          .in("track_id", resolvedTrackIds)
-      : { data: [], error: null };
+      ? await Promise.all([
+          supabase
+            .from("track_ratings")
+            .select("track_id, stars")
+            .eq("user_id", viewerId)
+            .in("track_id", resolvedTrackIds),
+
+          supabase
+            .from("track_listen_state")
+            .select("track_id, listened_seconds, can_rate")
+            .eq("user_id", viewerId)
+            .in("track_id", resolvedTrackIds),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  const { data: myRatingsRows, error: myRatingsError } = myRatingsRes;
 
   if (myRatingsError) {
     console.error("Failed to load artist-page user ratings:", myRatingsError);
@@ -380,27 +393,21 @@ export default async function ArtistV2Page({
     { can_rate: boolean | null; listened_seconds: number | null }
   >();
 
-  if (viewerId && resolvedTrackIds.length > 0) {
-    const { data: listenStateRows, error: listenStateError } = await supabase
-      .from("track_listen_state")
-      .select("track_id, listened_seconds, can_rate")
-      .eq("user_id", viewerId)
-      .in("track_id", resolvedTrackIds);
+  const { data: listenStateRows, error: listenStateError } = listenStateRes;
 
-    if (listenStateError) {
-      console.error("Failed to load artist-page track listen state:", listenStateError);
-    }
+  if (listenStateError) {
+    console.error("Failed to load artist-page track listen state:", listenStateError);
+  }
 
-    for (const row of (listenStateRows ?? []) as TrackListenStateRow[]) {
-      const trackId = String(row.track_id ?? "");
-      if (!trackId) continue;
+  for (const row of (listenStateRows ?? []) as TrackListenStateRow[]) {
+    const trackId = String(row.track_id ?? "");
+    if (!trackId) continue;
 
-      listenStateByTrackId.set(trackId, {
-        can_rate: typeof row.can_rate === "boolean" ? row.can_rate : false,
-        listened_seconds:
-          typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
-      });
-    }
+    listenStateByTrackId.set(trackId, {
+      can_rate: typeof row.can_rate === "boolean" ? row.can_rate : false,
+      listened_seconds:
+        typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
+    });
   }
 
   const buildTrackDto = (
