@@ -73,27 +73,100 @@ export default async function ArtistV2Page({
   } = await supabase.auth.getUser();
 
   const viewerId = user?.id ?? null;
+  const isSelf = !!viewerId && viewerId === artistId;
+  const canFollow = !!viewerId && !isSelf;
+  const canSave = !!viewerId;
 
-  // A) Artist Core (Guard)
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select(
-      "id, display_name, bio, city, country, instagram, tiktok, facebook, x, banner_url, banner_pos_y, avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, updated_at"
-    )
-    .eq("id", artistId)
-    .single();
+  const [
+    profileRes,
+    releasesRes,
+    playlistsRes,
+    topTracksRawRes,
+    membershipTrackRowsRes,
+    followStateRes,
+    saveStateRes,
+    followersRes,
+    followingRes,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, display_name, bio, city, country, instagram, tiktok, facebook, x, banner_url, banner_pos_y, avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, updated_at"
+      )
+      .eq("id", artistId)
+      .single(),
+
+    supabase
+      .from("releases")
+      .select("id, title, cover_path, release_type, created_at")
+      .eq("artist_id", artistId)
+      .eq("status", "published")
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("playlists")
+      .select("id, title, cover_url, created_at")
+      .eq("created_by", artistId)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("analytics_artist_top_tracks_30d")
+      .select(
+        `
+      track_id,
+      streams:streams_30d,
+      unique_listeners:listeners_30d,
+      listened_seconds:listened_seconds_30d,
+      ratings_count:ratings_count_30d,
+      rating_avg:rating_avg_30d
+    `
+      )
+      .eq("artist_id", artistId)
+      .order("streams_30d", { ascending: false })
+      .limit(20),
+
+    supabase
+      .from("analytics_artist_track_memberships")
+      .select("track_id")
+      .eq("artist_id", artistId),
+
+    canFollow
+      ? supabase
+          .from("follows")
+          .select("follower_id")
+          .eq("follower_id", viewerId!)
+          .eq("following_id", artistId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+
+    canSave
+      ? supabase
+          .from("library_artists")
+          .select("artist_id")
+          .eq("user_id", viewerId!)
+          .eq("artist_id", artistId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+
+    supabase
+      .from("follows")
+      .select("*", { count: "exact", head: true })
+      .eq("following_id", artistId),
+
+    supabase
+      .from("follows")
+      .select("*", { count: "exact", head: true })
+      .eq("follower_id", artistId),
+  ]);
+
+  const { data: profile, error: profileError } = profileRes;
 
   if (profileError || !profile) return notFound();
 
   const artistProfile = profile as ArtistProfileRow;
 
-  // D) Releases (published)
-  const { data: releasesData, error: releasesError } = await supabase
-    .from("releases")
-    .select("id, title, cover_path, release_type, created_at")
-    .eq("artist_id", artistId)
-    .eq("status", "published")
-    .order("created_at", { ascending: false });
+  const { data: releasesData, error: releasesError } = releasesRes;
 
   if (releasesError) {
     // Hard fail vermeiden: Seite soll stabil bleiben.
@@ -103,6 +176,39 @@ export default async function ArtistV2Page({
   const releaseIds = (releasesData ?? [])
     .map((r) => String(r.id))
     .filter(Boolean);
+
+  const { data: playlistsData, error: playlistsError } = playlistsRes;
+
+  if (playlistsError) {
+    // optionaler Content → fallback auf leer
+  }
+
+  type TopTracksRow = {
+    track_id: string;
+    streams: number | null;
+    unique_listeners: number | null;
+    listened_seconds: number | null;
+    ratings_count: number | null;
+    rating_avg: number | null;
+  };
+
+  const { data: topTracksRaw, error: topTracksRawError } = topTracksRawRes;
+
+  const topTracksRawApi: TopTracksRow[] =
+    !topTracksRawError && Array.isArray(topTracksRaw)
+      ? (topTracksRaw as TopTracksRow[])
+      : [];
+
+  const analyticsTrackIds = topTracksRawApi
+    .map((t) => String(t.track_id ?? ""))
+    .filter(Boolean);
+
+  const { data: membershipTrackRows, error: membershipTrackRowsError } =
+    membershipTrackRowsRes;
+
+  if (membershipTrackRowsError) {
+    // membership tracks sind optionaler Zusatzcontent → fallback ohne membership merge.
+  }
 
   const { data: explicitReleaseRows, error: explicitReleaseError } =
     releaseIds.length > 0
@@ -139,18 +245,6 @@ export default async function ArtistV2Page({
       };
     });
 
-  // E) Playlists (public)
-  const { data: playlistsData, error: playlistsError } = await supabase
-    .from("playlists")
-    .select("id, title, cover_url, created_at")
-    .eq("created_by", artistId)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
-
-  if (playlistsError) {
-    // optionaler Content → fallback auf leer
-  }
-
   const playlists = (playlistsData ?? []).map((p) => {
     const coverUrl = p.cover_url
       ? supabase.storage.from("playlist-covers").getPublicUrl(p.cover_url).data
@@ -165,51 +259,6 @@ export default async function ArtistV2Page({
     };
   });
 
-  // F) Top Tracks (30d): 1) Ranking/Stats, 2) Resolved Details
-  type TopTracksRow = {
-    track_id: string;
-    streams: number | null;
-    unique_listeners: number | null;
-    listened_seconds: number | null;
-    ratings_count: number | null;
-    rating_avg: number | null;
-  };
-
-  const { data: topTracksRaw, error: topTracksRawError } = await supabase
-    .from("analytics_artist_top_tracks_30d")
-    .select(
-      `
-      track_id,
-      streams:streams_30d,
-      unique_listeners:listeners_30d,
-      listened_seconds:listened_seconds_30d,
-      ratings_count:ratings_count_30d,
-      rating_avg:rating_avg_30d
-    `
-    )
-    .eq("artist_id", artistId)
-    .order("streams_30d", { ascending: false })
-    .limit(20);
-
-  const topTracksRawApi: TopTracksRow[] =
-    !topTracksRawError && Array.isArray(topTracksRaw)
-      ? (topTracksRaw as TopTracksRow[])
-      : [];
-
-  const analyticsTrackIds = topTracksRawApi
-    .map((t) => String(t.track_id ?? ""))
-    .filter(Boolean);
-
-  const { data: membershipTrackRows, error: membershipTrackRowsError } =
-    await supabase
-      .from("analytics_artist_track_memberships")
-      .select("track_id")
-      .eq("artist_id", artistId);
-
-  if (membershipTrackRowsError) {
-    // membership tracks sind optionaler Zusatzcontent → fallback ohne membership merge.
-  }
-
   const collaboratorTrackIds = (
     (membershipTrackRows ?? []) as ArtistMembershipRow[]
   )
@@ -218,25 +267,6 @@ export default async function ArtistV2Page({
 
   const artistTrackIds = Array.from(
     new Set([...analyticsTrackIds, ...collaboratorTrackIds])
-  );
-
-  const { data: explicitTrackRows, error: explicitTrackError } =
-    artistTrackIds.length > 0
-      ? await supabase
-          .from("tracks")
-          .select("id, is_explicit")
-          .in("id", artistTrackIds)
-      : { data: [], error: null };
-
-  if (explicitTrackError) {
-    // Top tracks bleiben nutzbar, nur ohne explicit map fallback.
-  }
-
-  const explicitByTrackId = new Map<string, boolean>(
-    ((explicitTrackRows ?? []) as ExplicitTrackRow[]).map((row) => [
-      String(row.id),
-      !!row.is_explicit,
-    ])
   );
 
   type TopTrackResolvedRow = {
@@ -256,34 +286,58 @@ export default async function ArtistV2Page({
     track_status: string | null;
   };
 
+  const [explicitTracksRes, topTracksResolvedRes] =
+    artistTrackIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("tracks")
+            .select("id, is_explicit")
+            .in("id", artistTrackIds),
+
+          supabase
+            .from("artist_top_tracks_resolved")
+            .select(
+              `
+              track_id,
+              release_id,
+              track_title,
+              track_version,
+              bpm,
+              key,
+              genre,
+              audio_path,
+              release_title,
+              cover_path,
+              owner_id,
+              owner_name,
+              collaborators,
+              track_status
+            `
+            )
+            .in("track_id", artistTrackIds),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  const { data: explicitTrackRows, error: explicitTrackError } = explicitTracksRes;
+
+  if (explicitTrackError) {
+    // Top tracks bleiben nutzbar, nur ohne explicit map fallback.
+  }
+
+  const explicitByTrackId = new Map<string, boolean>(
+    ((explicitTrackRows ?? []) as ExplicitTrackRow[]).map((row) => [
+      String(row.id),
+      !!row.is_explicit,
+    ])
+  );
+
   let topTracksResolved: TopTrackResolvedRow[] = [];
 
-  if (artistTrackIds.length > 0) {
-    const { data, error } = await supabase
-      .from("artist_top_tracks_resolved")
-      .select(
-        `
-        track_id,
-        release_id,
-        track_title,
-        track_version,
-        bpm,
-        key,
-        genre,
-        audio_path,
-        release_title,
-        cover_path,
-        owner_id,
-        owner_name,
-        collaborators,
-        track_status
-      `
-      )
-      .in("track_id", artistTrackIds);
-
-    if (!error && Array.isArray(data)) {
-      topTracksResolved = data as TopTrackResolvedRow[];
-    }
+  if (!topTracksResolvedRes.error && Array.isArray(topTracksResolvedRes.data)) {
+    topTracksResolved = topTracksResolvedRes.data as TopTrackResolvedRow[];
   }
 
   const detailsByTrackId = new Map<string, TopTrackResolvedRow>();
@@ -443,50 +497,10 @@ export default async function ArtistV2Page({
     ...visibleCollaboratorFallbackTracks,
   ].slice(0, 15);
 
-  // B) Viewer Context
-  const isSelf = !!viewerId && viewerId === artistId;
-
-  const canFollow = !!viewerId && !isSelf;
-  const canSave = !!viewerId;
-
-  // C) Initial States (conditional)
-  const [followStateRes, saveStateRes] = await Promise.all([
-    canFollow
-      ? supabase
-          .from("follows")
-          .select("follower_id")
-          .eq("follower_id", viewerId!)
-          .eq("following_id", artistId)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-
-    canSave
-      ? supabase
-          .from("library_artists")
-          .select("artist_id")
-          .eq("user_id", viewerId!)
-          .eq("artist_id", artistId)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-
   const isFollowing =
     canFollow && !followStateRes.error && !!followStateRes.data;
 
   const isSaved = canSave && !saveStateRes.error && !!saveStateRes.data;
-
-  // D) Counts (parallel)
-  const [followersRes, followingRes] = await Promise.all([
-    supabase
-      .from("follows")
-      .select("*", { count: "exact", head: true })
-      .eq("following_id", artistId),
-
-    supabase
-      .from("follows")
-      .select("*", { count: "exact", head: true })
-      .eq("follower_id", artistId),
-  ]);
 
   const followers = followersRes.count ?? 0;
   const following = followingRes.count ?? 0;
