@@ -246,7 +246,15 @@ export default function PlaylistClient({
 
     const ratingsJson = ratingsResponse.ok
       ? ((await ratingsResponse.json()) as
-          | { ok: true; my_stars: number | null }
+          | {
+              ok: true;
+              my_stars: number | null;
+              eligibility?: {
+                window_open?: boolean | null;
+                can_rate?: boolean | null;
+                listened_seconds?: number | null;
+              };
+            }
           | { ok: false; error: string; code?: string })
       : null;
 
@@ -254,6 +262,15 @@ export default function PlaylistClient({
       ratingsJson && "ok" in ratingsJson && ratingsJson.ok === true
         ? ratingsJson.my_stars ?? null
         : newPlayerTrack.my_stars ?? null;
+
+    const nextEligibility =
+      ratingsJson && "ok" in ratingsJson && ratingsJson.ok === true
+        ? {
+            window_open: ratingsJson.eligibility?.window_open ?? true,
+            can_rate: ratingsJson.eligibility?.can_rate ?? false,
+            listened_seconds: ratingsJson.eligibility?.listened_seconds ?? 0,
+          }
+        : newPlayerTrack.eligibility;
 
     const fallbackStreamCount =
       typeof newPlayerTrack.stream_count === "number"
@@ -273,6 +290,7 @@ export default function PlaylistClient({
           ? trackMeta.rating_count
           : newPlayerTrack.rating_count ?? 0,
       my_stars: nextMyStars,
+      eligibility: nextEligibility,
       ...(typeof lifetimeRow?.streams_lifetime === "number"
         ? { stream_count: lifetimeRow.streams_lifetime }
         : { stream_count: fallbackStreamCount }),

@@ -193,6 +193,16 @@ function FullscreenContent({
                       initialCount={currentTrack.rating_count ?? 0}
                       initialStreams={(currentTrack as any).stream_count ?? 0}
                       initialMyStars={currentTrack.my_stars ?? null}
+                      initialEligibility={
+                        currentTrack.eligibility
+                          ? {
+                              window_open: currentTrack.eligibility.window_open ?? true,
+                              can_rate: currentTrack.eligibility.can_rate ?? false,
+                              listened_seconds:
+                                currentTrack.eligibility.listened_seconds ?? 0,
+                            }
+                          : undefined
+                      }
                       showStreamsOnDesktopOnly={false}
                     />
                   </div>

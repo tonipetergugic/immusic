@@ -19,5 +19,10 @@ export type PlayerTrack = {
   rating_avg?: number | null;
   rating_count?: number | null;
   my_stars?: number | null;
+  eligibility?: {
+    window_open?: boolean | null;
+    can_rate?: boolean | null;
+    listened_seconds?: number | null;
+  };
 };
 
