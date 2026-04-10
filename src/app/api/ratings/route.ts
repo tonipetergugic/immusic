@@ -192,34 +192,7 @@ export async function GET(req: Request) {
   ratingAvg = ((track as any).rating_avg as number | null) ?? null;
   ratingCount = Number((track as any).rating_count ?? 0);
 
-  if (trackId) {
-    const { data: lifetimeRows, error: lifetimeErr } = await supabase
-      .from("analytics_track_lifetime")
-      .select("streams_lifetime")
-      .eq("track_id", trackId)
-      .limit(1);
-
-    if (lifetimeErr) {
-      return err("INTERNAL_ERROR", "Failed to load track lifetime streams", 500);
-    }
-
-    const lifetimeRow = lifetimeRows && lifetimeRows.length > 0 ? lifetimeRows[0] : null;
-    streamCount = Number((lifetimeRow as any)?.streams_lifetime ?? 0);
-  }
-
   let my_stars: number | null = null;
-  if (user && trackId) {
-    const { data: myRows } = await supabase
-      .from("track_ratings")
-      .select("stars")
-      .eq("user_id", user.id)
-      .eq("track_id", trackId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    my_stars = myRows && myRows.length > 0 ? (myRows[0]?.stars ?? null) : null;
-  }
-
   let window_open: boolean | null = null;
   let can_rate: boolean | null = null;
   let listened_seconds: number | null = null;
@@ -228,28 +201,69 @@ export async function GET(req: Request) {
   // Damit der Client (TrackRatingInline) nicht blockiert, liefern wir window_open immer true.
   window_open = true;
 
-  if (user && trackId) {
-    // ROLE GATE: Only listeners can rate (UI eligibility)
-    const { data: meProfile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
+  if (trackId) {
+    const [lifetimeRes, myRatingsRes, meProfileRes, listenStateRes] =
+      await Promise.all([
+        supabase
+          .from("analytics_track_lifetime")
+          .select("streams_lifetime")
+          .eq("track_id", trackId)
+          .limit(1),
 
+        user
+          ? supabase
+              .from("track_ratings")
+              .select("stars")
+              .eq("user_id", user.id)
+              .eq("track_id", trackId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+          : Promise.resolve({ data: [], error: null }),
+
+        user
+          ? supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", user.id)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+
+        user
+          ? supabase
+              .from("track_listen_state")
+              .select("listened_seconds, can_rate")
+              .eq("user_id", user.id)
+              .eq("track_id", trackId)
+              .limit(1)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+    const { data: lifetimeRows, error: lifetimeErr } = lifetimeRes;
+
+    if (lifetimeErr) {
+      return err("INTERNAL_ERROR", "Failed to load track lifetime streams", 500);
+    }
+
+    const lifetimeRow =
+      lifetimeRows && lifetimeRows.length > 0 ? lifetimeRows[0] : null;
+    streamCount = Number((lifetimeRow as any)?.streams_lifetime ?? 0);
+
+    const { data: myRows } = myRatingsRes;
+    my_stars =
+      myRows && myRows.length > 0 ? (myRows[0]?.stars ?? null) : null;
+
+    const { data: meProfile } = meProfileRes;
     const myRole = (meProfile as any)?.role as string | null;
 
-    const { data: lsRows } = await supabase
-      .from("track_listen_state")
-      .select("listened_seconds, can_rate")
-      .eq("user_id", user.id)
-      .eq("track_id", trackId)
-      .limit(1);
-
+    const { data: lsRows } = listenStateRes;
     const ls = lsRows && lsRows.length > 0 ? lsRows[0] : null;
-    listened_seconds = typeof (ls as any)?.listened_seconds === "number" ? (ls as any).listened_seconds : 0;
+    listened_seconds =
+      typeof (ls as any)?.listened_seconds === "number"
+        ? (ls as any).listened_seconds
+        : 0;
 
     // If not listener -> force can_rate false
-    can_rate = myRole === "listener" ? Boolean((ls as any)?.can_rate) : false;
+    can_rate = user ? (myRole === "listener" ? Boolean((ls as any)?.can_rate) : false) : null;
   }
 
   return NextResponse.json({

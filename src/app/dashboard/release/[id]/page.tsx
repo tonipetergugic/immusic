@@ -169,24 +169,35 @@ export default async function ReleaseDetailPage({
     .map((row) => getTrack(row)?.id)
     .filter((value): value is string => typeof value === "string");
 
-  let trackArtistsResolvedRows: {
+  const [trackArtistsResolvedRes, analyticsLifetimeRes] =
+    trackIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("track_artists_resolved")
+            .select("track_id, artists")
+            .in("track_id", trackIds),
+
+          supabase
+            .from("analytics_track_lifetime")
+            .select("track_id, streams_lifetime")
+            .in("track_id", trackIds),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  const { data: resolvedArtistsData, error: resolvedArtistsError } =
+    trackArtistsResolvedRes;
+
+  if (resolvedArtistsError) {
+    throw resolvedArtistsError;
+  }
+
+  const trackArtistsResolvedRows: {
     track_id: string | null;
     artists: ResolvedArtistRow[] | null;
-  }[] = [];
-
-  if (trackIds.length > 0) {
-    const { data: resolvedArtistsData, error: resolvedArtistsError } =
-      await supabase
-        .from("track_artists_resolved")
-        .select("track_id, artists")
-        .in("track_id", trackIds);
-
-    if (resolvedArtistsError) {
-      throw resolvedArtistsError;
-    }
-
-    trackArtistsResolvedRows = resolvedArtistsData ?? [];
-  }
+  }[] = resolvedArtistsData ?? [];
 
   const trackArtistsByTrackId = new Map<string, ResolvedArtistRow[]>();
 
@@ -200,21 +211,15 @@ export default async function ReleaseDetailPage({
     );
   }
 
-  let lifetimeRows: { track_id: string; streams_lifetime: number | null }[] = [];
+  const { data: analyticsLifetimeRows, error: analyticsLifetimeError } =
+    analyticsLifetimeRes;
 
-  if (trackIds.length > 0) {
-    const { data: analyticsLifetimeRows, error: analyticsLifetimeError } =
-      await supabase
-        .from("analytics_track_lifetime")
-        .select("track_id, streams_lifetime")
-        .in("track_id", trackIds);
-
-    if (analyticsLifetimeError) {
-      throw analyticsLifetimeError;
-    }
-
-    lifetimeRows = analyticsLifetimeRows ?? [];
+  if (analyticsLifetimeError) {
+    throw analyticsLifetimeError;
   }
+
+  const lifetimeRows: { track_id: string; streams_lifetime: number | null }[] =
+    analyticsLifetimeRows ?? [];
 
   const lifetimeStreamsByTrackId = new Map(
     lifetimeRows.map((row) => [

@@ -246,25 +246,59 @@ export default async function PlaylistPage(
     .order("position", { ascending: true })
     .returns<PlaylistTrackRow[]>();
 
-  const playlistLifetimeTrackIds = Array.from(
-    new Set((playlistTracks ?? []).map((row) => row.track_id).filter(Boolean))
+  let visiblePlaylistTracks = playlistTracks ?? [];
+
+  const playlistTrackIds = Array.from(
+    new Set(visiblePlaylistTracks.map((row) => row.track_id).filter(Boolean))
   );
 
-  let lifetimeRows: { track_id: string; streams_lifetime: number | null }[] = [];
+  const visibleTrackIds = Array.from(
+    new Set(
+      visiblePlaylistTracks
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
 
-  if (playlistLifetimeTrackIds.length > 0) {
-    const { data: analyticsLifetimeRows, error: analyticsLifetimeError } =
-      await supabase
-        .from("analytics_track_lifetime")
-        .select("track_id, streams_lifetime")
-        .in("track_id", playlistLifetimeTrackIds);
+  const [analyticsLifetimeRes, explicitRes, trackArtistsResolvedRes] =
+    playlistTrackIds.length > 0 || visibleTrackIds.length > 0
+      ? await Promise.all([
+          playlistTrackIds.length > 0
+            ? supabase
+                .from("analytics_track_lifetime")
+                .select("track_id, streams_lifetime")
+                .in("track_id", playlistTrackIds)
+            : Promise.resolve({ data: [], error: null }),
 
-    if (analyticsLifetimeError) {
-      throw analyticsLifetimeError;
-    }
+          playlistTrackIds.length > 0
+            ? supabase
+                .from("tracks")
+                .select("id, is_explicit")
+                .in("id", playlistTrackIds)
+            : Promise.resolve({ data: [], error: null }),
 
-    lifetimeRows = analyticsLifetimeRows ?? [];
+          visibleTrackIds.length > 0
+            ? supabase
+                .from("track_artists_resolved")
+                .select("track_id, artists")
+                .in("track_id", visibleTrackIds)
+            : Promise.resolve({ data: [], error: null }),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  const { data: analyticsLifetimeRows, error: analyticsLifetimeError } =
+    analyticsLifetimeRes;
+
+  if (analyticsLifetimeError) {
+    throw analyticsLifetimeError;
   }
+
+  const lifetimeRows: { track_id: string; streams_lifetime: number | null }[] =
+    analyticsLifetimeRows ?? [];
 
   const lifetimeStreamsByTrackId = new Map(
     lifetimeRows.map((row) => [
@@ -273,18 +307,7 @@ export default async function PlaylistPage(
     ])
   );
 
-  let visiblePlaylistTracks = playlistTracks ?? [];
-
-  const playlistTrackIds = Array.from(
-    new Set(visiblePlaylistTracks.map((row) => row.track_id).filter(Boolean))
-  );
-
-  const { data: explicitRows, error: explicitError } = playlistTrackIds.length
-    ? await supabase
-        .from("tracks")
-        .select("id, is_explicit")
-        .in("id", playlistTrackIds)
-    : { data: [], error: null };
+  const { data: explicitRows, error: explicitError } = explicitRes;
 
   if (explicitError) {
     console.error("Failed to load explicit flags for playlist tracks", explicitError);
@@ -296,29 +319,15 @@ export default async function PlaylistPage(
     explicitTrackRows.map((row) => [String(row.id), !!row.is_explicit])
   );
 
-  const visibleTrackIds = Array.from(
-    new Set(
-      visiblePlaylistTracks
-        .map((row) => String(row.track_id ?? ""))
-        .filter(Boolean)
-    )
-  );
+  const { data: resolvedArtistRows, error: resolvedArtistRowsError } =
+    trackArtistsResolvedRes;
 
-  let trackArtistsResolvedRows: TrackArtistsResolvedRow[] = [];
-
-  if (visibleTrackIds.length > 0) {
-    const { data: resolvedArtistRows, error: resolvedArtistRowsError } =
-      await supabase
-        .from("track_artists_resolved")
-        .select("track_id, artists")
-        .in("track_id", visibleTrackIds);
-
-    if (resolvedArtistRowsError) {
-      throw resolvedArtistRowsError;
-    }
-
-    trackArtistsResolvedRows = resolvedArtistRows ?? [];
+  if (resolvedArtistRowsError) {
+    throw resolvedArtistRowsError;
   }
+
+  const trackArtistsResolvedRows: TrackArtistsResolvedRow[] =
+    resolvedArtistRows ?? [];
 
   const trackArtistsByTrackId = new Map<string, CollabArtist[]>();
 
