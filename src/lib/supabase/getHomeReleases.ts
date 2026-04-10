@@ -57,44 +57,22 @@ export async function getLatestHomeReleaseIds(args: {
   if (limit <= 0) return [] as string[];
 
   const supabase = await createSupabaseServerClient();
-  const fetchLimit = limit;
-
-  // Helper to apply exclusion in a PostgREST-friendly way
   const applyExclude = (q: any) => {
     if (excludeIds.length === 0) return q;
-    // PostgREST expects: not.in.(...)
-    // UUIDs work without quotes in most setups; keep minimal and consistent.
     return q.not("id", "in", `(${excludeIds.join(",")})`);
   };
 
-  // We don't assume which timestamp column exists.
-  // Try common columns in order; if a column doesn't exist, Supabase will error -> we try next.
-  const orderCandidates = ["release_date", "published_at", "created_at"] as const;
-
-  for (const col of orderCandidates) {
-    const q = applyExclude(
-      supabase
-        .from("releases")
-        .select("id")
-        .order(col as any, { ascending: false })
-        .limit(fetchLimit)
-    );
-
-    const { data, error } = await q;
-
-    if (!error && data) {
-      const candidateIds = (data as any[]).map((r) => r.id).filter(Boolean);
-      return candidateIds.slice(0, limit);
-    }
-  }
-
-  // Final fallback: no ordering (still returns something, but may not be "newest")
-  const { data: fallback, error: fallbackErr } = await applyExclude(
-    supabase.from("releases").select("id").limit(fetchLimit)
+  const { data, error } = await applyExclude(
+    supabase
+      .from("releases")
+      .select("id")
+      .order("release_date", { ascending: false, nullsFirst: false })
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(limit)
   );
 
-  if (fallbackErr || !fallback) return [] as string[];
-  const fallbackIds = (fallback as any[]).map((r) => r.id).filter(Boolean);
-  return fallbackIds.slice(0, limit);
+  if (error || !data) return [] as string[];
+  return (data as any[]).map((r) => r.id).filter(Boolean);
 }
 
