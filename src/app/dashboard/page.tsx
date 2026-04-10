@@ -25,6 +25,11 @@ type PerformancePlaylistRow = {
 };
 
 export default async function DashboardPage() {
+  const dashboardStart = Date.now();
+  const logStep = (label: string, startedAt: number) => {
+    console.log(`[dashboard-ssr] ${label}: ${Date.now() - startedAt}ms`);
+  };
+
   const homeModulesPromise = getHomeModules();
   const perfSupabase = await createSupabaseServerClient();
 
@@ -40,6 +45,7 @@ export default async function DashboardPage() {
       .order("exposure_completed_at", { ascending: true })
       .order("track_id", { ascending: true }),
   ]);
+  logStep("initial modules + performance candidates", dashboardStart);
 
   const modules = rawModules as HomeModule[];
 
@@ -119,6 +125,8 @@ export default async function DashboardPage() {
     10 - (highlightedPerformancePlaylistId ? 1 : 0)
   );
 
+  const blockTwoStart = Date.now();
+
   const [
     { data: releaseTrackRows, error: releaseTrackErr },
     autoPlaylistIds,
@@ -144,6 +152,7 @@ export default async function DashboardPage() {
           .limit(performancePlaylistAutoLimit + (highlightedPerformancePlaylistId ? 1 : 0))
       : Promise.resolve({ data: [], error: null }),
   ]);
+  logStep("release tracks + playlist ids + performance playlists", blockTwoStart);
 
   if (releaseTrackErr) {
     throw new Error(
@@ -195,6 +204,8 @@ export default async function DashboardPage() {
       .find((id): id is string => Boolean(id) && !performanceReleaseIdSet.has(id)) ?? null;
 
   const autoReleaseLimit = Math.max(0, 10 - (highlightedReleaseId ? 1 : 0));
+  const autoReleaseStart = Date.now();
+
   const autoReleaseIds =
     autoReleaseLimit > 0
       ? (await getLatestHomeReleaseIds({
@@ -207,6 +218,8 @@ export default async function DashboardPage() {
           .filter((id) => !performanceReleaseIdSet.has(id))
           .slice(0, autoReleaseLimit)
       : [];
+
+  logStep("auto release ids", autoReleaseStart);
 
   const releaseIds = [
     ...(highlightedReleaseId ? [highlightedReleaseId] : []),
@@ -256,10 +269,15 @@ export default async function DashboardPage() {
 
   const allPlaylistIds = Array.from(new Set([...devPlaylistIds, ...performancePlaylistIds]));
 
+  const finalHydrationStart = Date.now();
+
   const [releasesById, playlistsById] = await Promise.all([
     getHomeReleases(allReleaseIds),
     getHomePlaylists(allPlaylistIds),
   ]);
+
+  logStep("final release + playlist hydration", finalHydrationStart);
+  logStep("dashboard total", dashboardStart);
 
   const devPlaylistIdsFiltered = devPlaylistIds.filter((id) => Boolean(playlistsById[id]));
 
