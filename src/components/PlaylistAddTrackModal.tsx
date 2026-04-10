@@ -203,7 +203,6 @@ export default function PlaylistAddTrackModal({
 
           const res = await fetch(`/api/tracks/${trackRecord.id}/player`, {
             method: "GET",
-            cache: "no-store",
           });
 
           if (!res.ok) {

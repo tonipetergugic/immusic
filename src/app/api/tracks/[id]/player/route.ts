@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 import { toPlayerTrack } from "@/lib/playerTrack";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
+export const revalidate = 60;
 
 export async function GET(
   _req: Request,
@@ -14,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: "Missing track id" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicServerClient();
 
   const { data: releaseTrackRows, error: releaseTrackErr } = await supabase
     .from("release_tracks")

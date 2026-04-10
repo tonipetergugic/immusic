@@ -1,6 +1,6 @@
  "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
@@ -79,11 +79,24 @@ export default function PlaylistSuggestedTracks({
   const [actionId, setActionId] = useState<string | null>(null);
   const [modalTrack, setModalTrack] = useState<PlayerTrack | null>(null);
 
+  const itemsCacheRef = useRef<Partial<Record<DiscoveryMode, SuggestedTrack[]>>>({});
+
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
+        const cachedItems = itemsCacheRef.current[mode];
+
+        if (cachedItems) {
+          if (!cancelled) {
+            setItems(cachedItems);
+            setErrorMessage(null);
+            setIsLoading(false);
+          }
+          return;
+        }
+
         setIsLoading(true);
         setErrorMessage(null);
 
@@ -165,6 +178,7 @@ export default function PlaylistSuggestedTracks({
                 }))
                 .slice(0, 5);
 
+        itemsCacheRef.current[mode] = nextItems;
         setItems(nextItems);
       } catch (error) {
         console.error("Failed to load suggested playlist tracks:", error);
@@ -215,7 +229,6 @@ export default function PlaylistSuggestedTracks({
 
       const res = await fetch(`/api/tracks/${item.id}/player`, {
         method: "GET",
-        cache: "no-store",
       });
 
       if (!res.ok) {
@@ -355,7 +368,6 @@ export default function PlaylistSuggestedTracks({
             async function getQueue() {
               const res = await fetch(`/api/tracks/${item.id}/player`, {
                 method: "GET",
-                cache: "no-store",
               });
 
               if (!res.ok) {
