@@ -28,9 +28,9 @@ export default function Topbar({
   avatarUrl: initialAvatarUrl = null,
   avatarUpdatedAt: initialAvatarUpdatedAt = null,
 }: TopbarProps) {
-  const userEmail = initialUserEmail;
+  const [userEmail, setUserEmail] = useState<string | null>(initialUserEmail);
   const [displayName, setDisplayName] = useState<string | null>(initialDisplayName);
-  const role = initialRole;
+  const [role, setRole] = useState<string | null>(initialRole);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     versionedUrl(initialAvatarUrl, initialAvatarUpdatedAt)
   );
@@ -85,6 +85,46 @@ export default function Topbar({
             : null;
 
   useEffect(() => {
+    let isActive = true;
+
+    async function loadTopbarIdentity() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!isActive) return;
+
+      if (!user) {
+        setUserEmail(null);
+        setDisplayName(null);
+        setRole(null);
+        setAvatarUrl(null);
+        return;
+      }
+
+      setUserEmail(user.email ?? null);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, display_name, avatar_url, updated_at")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!isActive) return;
+
+      setDisplayName(profile?.display_name ?? null);
+      setRole(profile?.role ?? null);
+      setAvatarUrl(versionedUrl(profile?.avatar_url ?? null, profile?.updated_at ?? null));
+    }
+
+    void loadTopbarIdentity();
+
+    return () => {
+      isActive = false;
+    };
+  }, [supabase]);
+
+  useEffect(() => {
     if (role) {
       window.dispatchEvent(new CustomEvent("roleUpdated", { detail: role }));
     }
@@ -123,7 +163,6 @@ export default function Topbar({
         return;
       }
 
-      // local cache-bust ohne DB-Refetch
       setAvatarUrl(versionedUrl(nextUrl, new Date().toISOString()));
     }
 
@@ -183,7 +222,6 @@ export default function Topbar({
       </span>
 
       <div className="flex items-center gap-3 sm:gap-5">
-
         <button
           ref={avatarButtonRef}
           type="button"
