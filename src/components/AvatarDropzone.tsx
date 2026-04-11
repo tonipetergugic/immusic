@@ -426,7 +426,7 @@ return (
                 }}
               />
 
-              <div className="pointer-events-none absolute inset-[6%] rounded-full border border-white/25 shadow-[0_0_0_9999px_rgba(0,0,0,0.58)]" />
+              <div className="pointer-events-none absolute inset-[2%] rounded-full border border-white/25 shadow-[0_0_0_9999px_rgba(0,0,0,0.58)]" />
             </div>
           </div>
 
