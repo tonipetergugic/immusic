@@ -33,7 +33,7 @@ export default async function PublicProfileV2Page({
   // 1) Profile (server-first)
   const { data: profile, error: pErr } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, updated_at")
+    .select("id, display_name, avatar_url, avatar_path, role, updated_at")
     .eq("id", profileId)
     .maybeSingle<PublicProfile>();
 
@@ -46,6 +46,15 @@ export default async function PublicProfileV2Page({
     // explicit not found
     notFound();
   }
+
+  const resolvedProfile: PublicProfile = {
+    ...profile,
+    avatar_url: profile.avatar_path
+      ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl ??
+        profile.avatar_url ??
+        null
+      : profile.avatar_url ?? null,
+  };
 
   // viewer (server-first)
   const {
@@ -128,7 +137,7 @@ export default async function PublicProfileV2Page({
 
   return (
     <PublicProfileView
-      profile={profile}
+      profile={resolvedProfile}
       playlists={playlists}
       profileId={profileId}
       canFollow={canFollow}

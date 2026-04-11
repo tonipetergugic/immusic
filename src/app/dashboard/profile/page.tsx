@@ -20,6 +20,84 @@ function showNotice(message: string) {
   );
 }
 
+function buildAvatarPublicUrl(path: string | null | undefined) {
+  if (!path) return null;
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return null;
+
+  const normalizedPath = path
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `${baseUrl}/storage/v1/object/public/avatars/${normalizedPath}`;
+}
+
+function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(img);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Image could not be loaded."));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+async function createAvatarPreviewFile(
+  file: File,
+  outputSize: number = 160
+): Promise<File> {
+  const img = await loadImageFromFile(file);
+
+  if (!img.naturalWidth || !img.naturalHeight) {
+    throw new Error("Invalid image dimensions.");
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Canvas context is not available.");
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.drawImage(img, 0, 0, outputSize, outputSize);
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((value) => {
+      if (!value) {
+        reject(new Error("Avatar preview export failed."));
+        return;
+      }
+
+      resolve(value);
+    }, "image/jpeg", 0.86);
+  });
+
+  const baseName = file.name.replace(/\.[^.]+$/, "") || "avatar";
+
+  return new File([blob], `${baseName}-preview.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
+
 export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarPosX, setAvatarPosX] = useState<number>(50);
@@ -39,11 +117,12 @@ export default function ProfilePage() {
   // Helper: best-effort cleanup of old files in a bucket prefix, keeping only the newest uploaded file
   async function cleanupOtherFilesInPrefix(params: {
     bucket: string;
-    prefix: string; // e.g. `${user.id}`
-    keepFullPath: string; // e.g. `${user.id}/xyz.png`
+    prefix: string;
+    keepFullPaths: string[];
   }) {
     try {
-      const { bucket, prefix, keepFullPath } = params;
+      const { bucket, prefix, keepFullPaths } = params;
+      const keepSet = new Set(keepFullPaths.filter(Boolean));
 
       const { data: listed, error: listErr } = await supabase.storage
         .from(bucket)
@@ -57,7 +136,7 @@ export default function ProfilePage() {
       const toDelete =
         (listed ?? [])
           .map((f) => `${prefix}/${f.name}`)
-          .filter((fullPath) => fullPath !== keepFullPath);
+          .filter((fullPath) => !keepSet.has(fullPath));
 
       if (toDelete.length === 0) return;
 
@@ -96,12 +175,18 @@ export default function ProfilePage() {
 
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, display_name, role, updated_at")
+          .select(
+            "avatar_url, avatar_path, avatar_pos_x, avatar_pos_y, avatar_zoom, display_name, role, updated_at"
+          )
           .eq("id", user.id)
           .single();
 
         if (!error && isMounted) {
-          const base = profile?.avatar_url ?? null;
+          const base =
+            buildAvatarPublicUrl(profile?.avatar_path ?? null) ??
+            profile?.avatar_url ??
+            null;
+
           const ver = profile?.updated_at ? String(profile.updated_at) : null;
 
           setAvatarUrl(
@@ -274,58 +359,115 @@ export default function ProfilePage() {
                 await updateAvatarPosition(x, y);
               }}
               onFileSelected={async (file) => {
-                if (!file) return;
-                if (loading) return;
+                if (!file || loading) return;
 
                 setLoading(true);
 
-                const {
-                  data: { user },
-                } = await supabase.auth.getUser();
+                const uploadedPaths: string[] = [];
 
-                if (!user?.id) {
-                  showNotice("You must be logged in.");
-                  return;
-                }
+                try {
+                  const {
+                    data: { user },
+                  } = await supabase.auth.getUser();
 
-                const ext = (file.name.split(".").pop() || "png").toLowerCase();
-                const filePath = `${user.id}/${Date.now()}.${ext}`;
+                  if (!user?.id) {
+                    showNotice("You must be logged in.");
+                    return;
+                  }
 
-                const { error: uploadError } = await supabase.storage
-                  .from("avatars")
-                  .upload(filePath, file, {
-                    upsert: false,
-                    contentType: file.type || undefined,
+                  const previewFile = await createAvatarPreviewFile(file, 160);
+
+                  const timestamp = Date.now();
+                  const originalPath = `${user.id}/${timestamp}-original.jpg`;
+                  const previewPath = `${user.id}/${timestamp}-preview.jpg`;
+
+                  const { error: originalUploadError } = await supabase.storage
+                    .from("avatars")
+                    .upload(originalPath, file, {
+                      upsert: false,
+                      contentType: file.type || "image/jpeg",
+                    });
+
+                  if (originalUploadError) {
+                    console.error("Avatar original upload error:", originalUploadError);
+                    showNotice("Upload failed.");
+                    return;
+                  }
+
+                  uploadedPaths.push(originalPath);
+
+                  const { error: previewUploadError } = await supabase.storage
+                    .from("avatars")
+                    .upload(previewPath, previewFile, {
+                      upsert: false,
+                      contentType: previewFile.type || "image/jpeg",
+                    });
+
+                  if (previewUploadError) {
+                    console.error("Avatar preview upload error:", previewUploadError);
+                    await supabase.storage.from("avatars").remove(uploadedPaths);
+                    showNotice("Upload failed.");
+                    return;
+                  }
+
+                  uploadedPaths.push(previewPath);
+
+                  const { data: originalPublicUrl } = supabase.storage
+                    .from("avatars")
+                    .getPublicUrl(originalPath);
+
+                  const { data: previewPublicUrl } = supabase.storage
+                    .from("avatars")
+                    .getPublicUrl(previewPath);
+
+                  const originalUrl = originalPublicUrl.publicUrl;
+                  const previewUrl = previewPublicUrl.publicUrl;
+
+                  await updateAvatar({
+                    avatarPath: originalPath,
+                    avatarPreviewPath: previewPath,
+                    avatarUrl: originalUrl,
+                    avatarPosX: 50,
+                    avatarPosY: 50,
+                    avatarZoom: 100,
                   });
 
-                if (uploadError) {
-                  console.error("Avatar upload error:", uploadError);
+                  await cleanupOtherFilesInPrefix({
+                    bucket: "avatars",
+                    prefix: user.id,
+                    keepFullPaths: [originalPath, previewPath],
+                  });
+
+                  setAvatarPosX(50);
+                  setAvatarPosY(50);
+                  setAvatarZoom(100);
+                  setAvatarUrl(originalUrl);
+
+                  window.dispatchEvent(
+                    new CustomEvent("avatarUpdated", {
+                      detail: {
+                        avatar_url: originalUrl,
+                        avatar_preview_url: previewUrl,
+                      },
+                    })
+                  );
+                } catch (error) {
+                  console.error("Avatar upload error:", error);
+
+                  if (uploadedPaths.length > 0) {
+                    const { error: rollbackError } = await supabase.storage
+                      .from("avatars")
+                      .remove(uploadedPaths);
+
+                    if (rollbackError) {
+                      console.error("Avatar upload rollback error:", rollbackError);
+                    }
+                  }
+
                   showNotice("Upload failed.");
+                } finally {
                   setLoading(false);
-                  return;
                 }
-
-                await cleanupOtherFilesInPrefix({
-                  bucket: "avatars",
-                  prefix: user.id,
-                  keepFullPath: filePath,
-                });
-
-                const { data: publicUrl } = supabase.storage
-                  .from("avatars")
-                  .getPublicUrl(filePath);
-
-                const url = publicUrl.publicUrl;
-
-                await updateAvatar(url, 50, 50, 100);
-                setAvatarPosX(50);
-                setAvatarPosY(50);
-                setAvatarZoom(100);
-                setAvatarUrl(url);
-
-                window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatar_url: url } }));
-
-                setLoading(false);
               }}
             />
 

@@ -17,6 +17,43 @@ type ProfileRow = {
   role: string | null;
 };
 
+type ProfileQueryRow = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  avatar_path: string | null;
+  avatar_preview_path: string | null;
+  role: string | null;
+};
+
+function buildAvatarPublicUrl(path: string | null | undefined) {
+  if (!path) return null;
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return null;
+
+  const normalizedPath = path
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `${baseUrl}/storage/v1/object/public/avatars/${normalizedPath}`;
+}
+
+function toModalProfile(row: ProfileQueryRow): ProfileRow {
+  return {
+    id: row.id,
+    display_name: row.display_name ?? null,
+    avatar_url:
+      buildAvatarPublicUrl(row.avatar_preview_path) ??
+      buildAvatarPublicUrl(row.avatar_path) ??
+      row.avatar_url ??
+      null,
+    role: row.role ?? null,
+  };
+}
+
 export default function FollowCountsClient({
   profileId,
   followerCount,
@@ -164,17 +201,17 @@ export default function FollowCountsClient({
 
         const { data: profs, error: pErr } = await supabase
           .from("profiles")
-          .select("id, display_name, avatar_url, role")
+          .select("id, display_name, avatar_url, avatar_path, avatar_preview_path, role")
           .in("id", ids);
 
         if (pErr) throw pErr;
 
-        const typedProfiles: ProfileRow[] = Array.isArray(profs)
-          ? (profs as ProfileRow[])
+        const typedProfiles: ProfileQueryRow[] = Array.isArray(profs)
+          ? (profs as ProfileQueryRow[])
           : [];
 
         const map = new Map<string, ProfileRow>(
-          typedProfiles.map((p) => [p.id, p])
+          typedProfiles.map((p) => [p.id, toModalProfile(p)])
         );
 
         setModalProfiles(
@@ -198,17 +235,17 @@ export default function FollowCountsClient({
 
         const { data: profs, error: pErr } = await supabase
           .from("profiles")
-          .select("id, display_name, avatar_url, role")
+          .select("id, display_name, avatar_url, avatar_path, avatar_preview_path, role")
           .in("id", ids);
 
         if (pErr) throw pErr;
 
-        const typedProfiles: ProfileRow[] = Array.isArray(profs)
-          ? (profs as ProfileRow[])
+        const typedProfiles: ProfileQueryRow[] = Array.isArray(profs)
+          ? (profs as ProfileQueryRow[])
           : [];
 
         const map = new Map<string, ProfileRow>(
-          typedProfiles.map((p) => [p.id, p])
+          typedProfiles.map((p) => [p.id, toModalProfile(p)])
         );
 
         setModalProfiles(

@@ -3,17 +3,51 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+type UpdateAvatarInput = {
+  avatarPath: string;
+  avatarPreviewPath: string | null;
+  avatarUrl: string;
+  avatarPosX?: number;
+  avatarPosY?: number;
+  avatarZoom?: number;
+};
+
+function extractAvatarStoragePathFromPublicUrl(
+  publicUrl: string | null | undefined
+) {
+  if (!publicUrl) return null;
+
+  try {
+    const url = new URL(publicUrl);
+    const marker = "/storage/v1/object/public/avatars/";
+    const markerIndex = url.pathname.indexOf(marker);
+
+    if (markerIndex === -1) return null;
+
+    const encodedPath = url.pathname.slice(markerIndex + marker.length);
+    return decodeURIComponent(encodedPath);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * updateAvatar
  * Called AFTER the client uploads the avatar image to Supabase Storage.
  * This action updates profiles.avatar_url securely on the server.
  */
-export async function updateAvatar(
-  avatarUrl: string,
-  avatarPosX: number = 50,
-  avatarPosY: number = 50,
-  avatarZoom: number = 120
-) {
+export async function updateAvatar({
+  avatarPath,
+  avatarPreviewPath,
+  avatarUrl,
+  avatarPosX = 50,
+  avatarPosY = 50,
+  avatarZoom = 120,
+}: UpdateAvatarInput) {
+  if (!avatarPath) {
+    throw new Error("Missing avatarPath");
+  }
+
   if (!avatarUrl) {
     throw new Error("Missing avatarUrl");
   }
@@ -67,6 +101,8 @@ export async function updateAvatar(
   const { error: updateError } = await supabase
     .from("profiles")
     .update({
+      avatar_path: avatarPath,
+      avatar_preview_path: avatarPreviewPath,
       avatar_url: avatarUrl,
       avatar_pos_x: clampedX,
       avatar_pos_y: clampedY,
@@ -185,25 +221,57 @@ export async function deleteAvatar() {
     throw new Error("Not authenticated");
   }
 
-  // Delete file in bucket
-  const { error: deleteError } = await supabase.storage
-    .from("avatars")
-    .remove([`${user.id}/avatar.png`]);
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("avatar_path, avatar_preview_path, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (deleteError) {
-    console.error("SERVER ACTION — deleteAvatar: Delete failed", deleteError);
-    throw new Error("Failed to delete avatar file");
+  if (profileError) {
+    console.error("SERVER ACTION — deleteAvatar: Profile read failed", profileError);
+    throw new Error("Failed to load avatar paths");
   }
 
-  // Set avatar_url = null in database
+  const legacyAvatarPath = extractAvatarStoragePathFromPublicUrl(
+    profile?.avatar_url ?? null
+  );
+
+  const pathsToDelete = Array.from(
+    new Set(
+      [
+        profile?.avatar_path ?? null,
+        profile?.avatar_preview_path ?? null,
+        legacyAvatarPath,
+      ].filter((value): value is string => Boolean(value))
+    )
+  );
+
+  if (pathsToDelete.length > 0) {
+    const { error: deleteError } = await supabase.storage
+      .from("avatars")
+      .remove(pathsToDelete);
+
+    if (deleteError) {
+      console.error("SERVER ACTION — deleteAvatar: Delete failed", deleteError);
+      throw new Error("Failed to delete avatar file");
+    }
+  }
+
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ avatar_url: null, avatar_pos_x: 50, avatar_pos_y: 50, avatar_zoom: 120 })
+    .update({
+      avatar_url: null,
+      avatar_path: null,
+      avatar_preview_path: null,
+      avatar_pos_x: 50,
+      avatar_pos_y: 50,
+      avatar_zoom: 120,
+    })
     .eq("id", user.id);
 
   if (updateError) {
     console.error("SERVER ACTION — deleteAvatar: DB update failed", updateError);
-    throw new Error("Failed to clear avatar_url");
+    throw new Error("Failed to clear avatar");
   }
 
   return { success: true };

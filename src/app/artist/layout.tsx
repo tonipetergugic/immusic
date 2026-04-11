@@ -42,9 +42,20 @@ export default async function ArtistLayout({
   if (user) {
     const { data: profileRow } = await supabase
       .from("profiles")
-      .select("role, display_name, avatar_url, banner_url, updated_at, artist_onboarding_status")
+      .select(
+        "role, display_name, avatar_url, avatar_path, avatar_preview_path, banner_url, updated_at, artist_onboarding_status"
+      )
       .eq("id", user.id)
       .single();
+
+    const preferredAvatarPath =
+      profileRow?.avatar_preview_path ?? profileRow?.avatar_path ?? null;
+
+    const topbarAvatarUrl = preferredAvatarPath
+      ? supabase.storage.from("avatars").getPublicUrl(preferredAvatarPath).data.publicUrl ??
+        profileRow?.avatar_url ??
+        null
+      : profileRow?.avatar_url ?? null;
 
     profile = profileRow
       ? {
@@ -58,7 +69,7 @@ export default async function ArtistLayout({
       userEmail: user.email ?? null,
       displayName: profileRow?.display_name ?? null,
       role: profileRow?.role ?? null,
-      avatarUrl: profileRow?.avatar_url ?? null,
+      avatarUrl: topbarAvatarUrl,
       avatarUpdatedAt: profileRow?.updated_at ?? null,
       artistOnboardingStatus: profileRow?.artist_onboarding_status ?? null,
     };

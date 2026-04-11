@@ -13,6 +13,21 @@ function versionedUrl(base: string | null, updatedAt: string | null | undefined)
   return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(updatedAt)}`;
 }
 
+function buildAvatarPublicUrl(path: string | null | undefined) {
+  if (!path) return null;
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return null;
+
+  const normalizedPath = path
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `${baseUrl}/storage/v1/object/public/avatars/${normalizedPath}`;
+}
+
 type TopbarProps = {
   userEmail?: string | null;
   displayName?: string | null;
@@ -106,15 +121,23 @@ export default function Topbar({
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, display_name, avatar_url, updated_at")
+        .select(
+          "role, display_name, avatar_url, avatar_path, avatar_preview_path, updated_at"
+        )
         .eq("id", user.id)
         .maybeSingle();
 
       if (!isActive) return;
 
+      const preferredAvatarUrl =
+        buildAvatarPublicUrl(profile?.avatar_preview_path ?? null) ??
+        buildAvatarPublicUrl(profile?.avatar_path ?? null) ??
+        profile?.avatar_url ??
+        null;
+
       setDisplayName(profile?.display_name ?? null);
       setRole(profile?.role ?? null);
-      setAvatarUrl(versionedUrl(profile?.avatar_url ?? null, profile?.updated_at ?? null));
+      setAvatarUrl(versionedUrl(preferredAvatarUrl, profile?.updated_at ?? null));
     }
 
     void loadTopbarIdentity();
@@ -153,10 +176,15 @@ export default function Topbar({
   useEffect(() => {
     function handleAvatarUpdate(e: Event) {
       const custom = e as CustomEvent;
-      const nextUrl =
-        custom.detail && typeof custom.detail === "object" && "avatar_url" in custom.detail
-          ? (custom.detail.avatar_url as string | null)
+      const detail =
+        custom.detail && typeof custom.detail === "object"
+          ? (custom.detail as {
+              avatar_url?: string | null;
+              avatar_preview_url?: string | null;
+            })
           : null;
+
+      const nextUrl = detail?.avatar_preview_url ?? detail?.avatar_url ?? null;
 
       if (!nextUrl) {
         setAvatarUrl(null);

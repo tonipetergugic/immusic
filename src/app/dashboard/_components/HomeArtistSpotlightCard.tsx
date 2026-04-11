@@ -19,6 +19,7 @@ type SpotlightProfile = {
   display_name: string | null;
   bio: string | null;
   avatar_url: string | null;
+  avatar_path: string | null;
   avatar_pos_x: number | null;
   avatar_pos_y: number | null;
   avatar_zoom: number | null;
@@ -34,6 +35,21 @@ type SocialLink = {
   href: string;
   icon: LucideIcon;
 };
+
+function buildAvatarPublicUrl(path: string | null | undefined) {
+  if (!path) return null;
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return null;
+
+  const normalizedPath = path
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `${baseUrl}/storage/v1/object/public/avatars/${normalizedPath}`;
+}
 
 export default function HomeArtistSpotlightCard({
   tracks,
@@ -70,7 +86,11 @@ export default function HomeArtistSpotlightCard({
     "Unknown artist";
 
   const avatarUrl = useMemo(() => {
-    const base = profile?.avatar_url ?? null;
+    const base =
+      buildAvatarPublicUrl(profile?.avatar_path ?? null) ??
+      profile?.avatar_url ??
+      null;
+
     const updatedAt = profile?.updated_at ?? null;
 
     if (!base) return null;
@@ -78,7 +98,7 @@ export default function HomeArtistSpotlightCard({
 
     const sep = String(base).includes("?") ? "&" : "?";
     return `${base}${sep}v=${encodeURIComponent(String(updatedAt))}`;
-  }, [profile?.avatar_url, profile?.updated_at]);
+  }, [profile?.avatar_path, profile?.avatar_url, profile?.updated_at]);
 
   const avatarPosX = profile?.avatar_pos_x ?? 50;
   const avatarPosY = profile?.avatar_pos_y ?? 50;
@@ -134,7 +154,7 @@ export default function HomeArtistSpotlightCard({
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, display_name, bio, avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, instagram, tiktok, facebook, x, updated_at"
+          "id, display_name, bio, avatar_url, avatar_path, avatar_pos_x, avatar_pos_y, avatar_zoom, instagram, tiktok, facebook, x, updated_at"
         )
         .eq("id", spotlightArtistId)
         .maybeSingle<SpotlightProfile>();

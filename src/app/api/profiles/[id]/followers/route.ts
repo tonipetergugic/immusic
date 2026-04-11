@@ -2,6 +2,27 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+function resolveAvatarUrl(
+  supabase: any,
+  row: {
+    avatar_url: string | null;
+    avatar_path: string | null;
+    avatar_preview_path: string | null;
+  }
+) {
+  const preferredPath = row.avatar_preview_path ?? row.avatar_path ?? null;
+
+  if (!preferredPath) {
+    return row.avatar_url ?? null;
+  }
+
+  return (
+    supabase.storage.from("avatars").getPublicUrl(preferredPath).data.publicUrl ??
+    row.avatar_url ??
+    null
+  );
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -49,7 +70,7 @@ export async function GET(
   // 2) profiles for those ids
   const { data: profs, error: pErr } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role")
+    .select("id, display_name, avatar_url, avatar_path, avatar_preview_path, role")
     .in("id", ids);
 
   if (pErr) {
@@ -57,7 +78,18 @@ export async function GET(
   }
 
   // keep original order
-  const map = new Map<string, any>(((profs as any) ?? []).map((p: any) => [p.id, p]));
+  const map = new Map<string, any>(
+    ((profs as any) ?? []).map((p: any) => [
+      p.id,
+      {
+        id: p.id,
+        display_name: p.display_name ?? null,
+        avatar_url: resolveAvatarUrl(supabase, p),
+        role: p.role ?? null,
+      },
+    ])
+  );
+
   const profiles = ids.map((id: string) => map.get(id)).filter(Boolean);
 
   // 3) viewer following state for these ids (only if logged in)

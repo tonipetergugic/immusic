@@ -38,7 +38,7 @@ async function createSquareAvatarFile(params: {
   zoom: number;
   outputSize?: number;
 }): Promise<File> {
-  const { file, posX, posY, zoom, outputSize = 1200 } = params;
+  const { file, posX, posY, zoom, outputSize = 1024 } = params;
 
   const img = await loadImageFromFile(file);
 
@@ -253,12 +253,12 @@ export default function AvatarDropzone({
       setIsSavingCrop(true);
 
       const squareFile = await createSquareAvatarFile({
-      file: draftFile,
-      posX: draftPosX,
-      posY: draftPosY,
-      zoom: draftZoom,
-      outputSize: 1200,
-    });
+        file: draftFile,
+        posX: draftPosX,
+        posY: draftPosY,
+        zoom: draftZoom,
+        outputSize: 1024,
+      });
 
       await onFileSelected(squareFile);
       closeCropper();
@@ -348,7 +348,7 @@ return (
       </div>
 
       <div className="text-xs leading-5 text-white/45">
-        Recommended: use a square image (1:1), at least 1200 × 1200 px. Keep the face centered and leave a bit of space around the head for cropping.
+        Recommended: use a square image (1:1), at least 1024 × 1024 px. Keep the face centered and leave a bit of space around the head for cropping.
       </div>
     </div>
 

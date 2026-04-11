@@ -2,6 +2,7 @@ export type PublicProfile = {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+  avatar_path: string | null;
   role: string | null;
   updated_at: string | null;
 };

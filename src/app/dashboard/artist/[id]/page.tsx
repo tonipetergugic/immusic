@@ -17,6 +17,7 @@ type ArtistProfileRow = {
   banner_url: string | null;
   banner_pos_y: number | null;
   avatar_url: string | null;
+  avatar_path: string | null;
   avatar_pos_x: number | null;
   avatar_pos_y: number | null;
   avatar_zoom: number | null;
@@ -91,7 +92,7 @@ export default async function ArtistV2Page({
     supabase
       .from("profiles")
       .select(
-        "id, display_name, bio, city, country, instagram, tiktok, facebook, x, banner_url, banner_pos_y, avatar_url, avatar_pos_x, avatar_pos_y, avatar_zoom, updated_at"
+        "id, display_name, bio, city, country, instagram, tiktok, facebook, x, banner_url, banner_pos_y, avatar_url, avatar_path, avatar_pos_x, avatar_pos_y, avatar_zoom, updated_at"
       )
       .eq("id", artistId)
       .single(),
@@ -553,10 +554,15 @@ export default async function ArtistV2Page({
       bannerUrl: artistProfile.banner_url ?? null,
       bannerPosY: artistProfile.banner_pos_y ?? 50,
       avatarUrl: (() => {
-        const base = artistProfile.avatar_url ?? null;
+        const base = artistProfile.avatar_path
+          ? supabase.storage.from("avatars").getPublicUrl(artistProfile.avatar_path).data
+              .publicUrl ?? artistProfile.avatar_url ?? null
+          : artistProfile.avatar_url ?? null;
+
         const updatedAt = artistProfile.updated_at ?? null;
         if (!base) return null;
         if (!updatedAt) return base;
+
         const sep = String(base).includes("?") ? "&" : "?";
         return `${base}${sep}v=${encodeURIComponent(String(updatedAt))}`;
       })(),
