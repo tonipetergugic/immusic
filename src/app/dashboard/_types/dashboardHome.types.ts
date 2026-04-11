@@ -30,6 +30,4 @@ export type DashboardHomeClientProps = {
   playlistsById: Record<string, HomePlaylistCard>;
   homeReleaseIds: string[];
   homePlaylistIds: string[];
-  performanceReleaseIds: string[];
-  performancePlaylistIds: string[];
 };

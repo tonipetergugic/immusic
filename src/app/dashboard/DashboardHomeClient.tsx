@@ -19,8 +19,16 @@ import DevelopmentTracksSection from "./_components/DevelopmentTracksSection";
 import PerformanceDiscoverySection from "./_components/PerformanceDiscoverySection";
 import DashboardHeroAndToggle from "./_components/DashboardHeroAndToggle";
 import type { DashboardHomeClientProps } from "./_types/dashboardHome.types";
+import { useViewerRole } from "@/context/ViewerRoleContext";
 
 type HomeTabKey = "releases" | "playlists" | "tracks";
+
+type PerformanceHomePayload = {
+  releasesById: DashboardHomeClientProps["releasesById"];
+  playlistsById: DashboardHomeClientProps["playlistsById"];
+  performanceReleaseIds: string[];
+  performancePlaylistIds: string[];
+};
 
 const HOME_TABS: { key: HomeTabKey; label: string }[] = [
   { key: "releases", label: "Releases" },
@@ -48,11 +56,11 @@ export default function DashboardHomeClient({
   playlistsById,
   homeReleaseIds,
   homePlaylistIds,
-  performanceReleaseIds,
-  performancePlaylistIds,
 }: DashboardHomeClientProps) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
+
+  const { isListener } = useViewerRole();
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
   const [homeTab, setHomeTab] = useState<HomeTabKey>("releases");
@@ -62,6 +70,14 @@ export default function DashboardHomeClient({
 
   const devCacheRef = useRef<Record<string, DevelopmentDiscoveryItem[]>>({});
   const devPromiseRef = useRef<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>({});
+
+  const performanceHomeCacheRef = useRef<PerformanceHomePayload | null>(null);
+  const performanceHomePromiseRef = useRef<Promise<PerformanceHomePayload> | null>(null);
+
+  const [performanceHomeData, setPerformanceHomeData] =
+    useState<PerformanceHomePayload | null>(null);
+  const [performanceHomeLoading, setPerformanceHomeLoading] = useState(false);
+  const [performanceHomeError, setPerformanceHomeError] = useState<string | null>(null);
 
   const {
     devItems,
@@ -85,6 +101,7 @@ export default function DashboardHomeClient({
   } = usePerformanceDiscovery({
     discoveryMode,
     isEnabled: homeTab === "tracks",
+    isListener,
     supabase,
     fetchPerformanceDiscovery,
   });
@@ -100,6 +117,78 @@ export default function DashboardHomeClient({
     tabFocusRef.current = null;
   }, [homeTab]);
 
+  useEffect(() => {
+    if (discoveryMode !== "performance") return;
+    if (homeTab !== "releases" && homeTab !== "playlists") return;
+
+    if (performanceHomeCacheRef.current) {
+      setPerformanceHomeData(performanceHomeCacheRef.current);
+      setPerformanceHomeLoading(false);
+      setPerformanceHomeError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setPerformanceHomeLoading(true);
+    setPerformanceHomeError(null);
+
+    const request =
+      performanceHomePromiseRef.current ??
+      (async () => {
+        const res = await fetch("/api/dashboard/performance-home", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch performance home");
+        }
+
+        const json = await res.json();
+
+        if (!json.ok) {
+          throw new Error(json.error ?? "Unknown API error");
+        }
+
+        return {
+          releasesById: json.releasesById ?? {},
+          playlistsById: json.playlistsById ?? {},
+          performanceReleaseIds: Array.isArray(json.performanceReleaseIds)
+            ? json.performanceReleaseIds
+            : [],
+          performancePlaylistIds: Array.isArray(json.performancePlaylistIds)
+            ? json.performancePlaylistIds
+            : [],
+        } satisfies PerformanceHomePayload;
+      })();
+
+    performanceHomePromiseRef.current = request;
+
+    request
+      .then((payload) => {
+        performanceHomeCacheRef.current = payload;
+        if (cancelled) return;
+        setPerformanceHomeData(payload);
+        setPerformanceHomeLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setPerformanceHomeError(
+          error instanceof Error ? error.message : "Failed to load performance home"
+        );
+        setPerformanceHomeLoading(false);
+      })
+      .finally(() => {
+        if (performanceHomePromiseRef.current === request) {
+          performanceHomePromiseRef.current = null;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [discoveryMode, homeTab]);
+
   const releaseModule = home.modules.find((m) => m.module_type === "release") ?? null;
   const playlistModule =
     home.modules.find((m) => m.module_type === "playlist") ?? null;
@@ -114,6 +203,11 @@ export default function DashboardHomeClient({
     performanceGenre,
     perfTrackMetaMap
   );
+
+  const performanceHomeReleaseIds = performanceHomeData?.performanceReleaseIds ?? [];
+  const performanceHomePlaylistIds = performanceHomeData?.performancePlaylistIds ?? [];
+  const performanceHomeReleasesById = performanceHomeData?.releasesById ?? {};
+  const performanceHomePlaylistsById = performanceHomeData?.playlistsById ?? {};
 
   const devQueue = useMemo(() => {
     return buildDevQueue({
@@ -244,24 +338,36 @@ export default function DashboardHomeClient({
         ) : null}
 
         {discoveryMode === "performance" && homeTab === "releases" ? (
-          <HomeReleasesSection
-            title="Performance Releases"
-            releaseIds={performanceReleaseIds}
-            releasesById={releasesById}
-            showWhenEmpty={false}
-            wrapperClassName="space-y-4 pb-2"
-          />
+          performanceHomeLoading && !performanceHomeData ? (
+            <p className="text-white/40">Loading performance releases...</p>
+          ) : performanceHomeError && !performanceHomeData ? (
+            <p className="text-white/40">{performanceHomeError}</p>
+          ) : (
+            <HomeReleasesSection
+              title="Performance Releases"
+              releaseIds={performanceHomeReleaseIds}
+              releasesById={performanceHomeReleasesById}
+              showWhenEmpty={false}
+              wrapperClassName="space-y-4 pb-2"
+            />
+          )
         ) : null}
 
         {discoveryMode === "performance" && homeTab === "playlists" ? (
-          <HomePlaylistsSection
-            title="Performance Playlists"
-            subtitle="Selected performance playlists — featuring the strongest, newest, or highlighted playlists made only from performance tracks."
-            playlistIds={performancePlaylistIds}
-            playlistsById={playlistsById}
-            showWhenEmpty={false}
-            wrapperClassName="space-y-4 pb-2"
-          />
+          performanceHomeLoading && !performanceHomeData ? (
+            <p className="text-white/40">Loading performance playlists...</p>
+          ) : performanceHomeError && !performanceHomeData ? (
+            <p className="text-white/40">{performanceHomeError}</p>
+          ) : (
+            <HomePlaylistsSection
+              title="Performance Playlists"
+              subtitle="Selected performance playlists — featuring the strongest, newest, or highlighted playlists made only from performance tracks."
+              playlistIds={performanceHomePlaylistIds}
+              playlistsById={performanceHomePlaylistsById}
+              showWhenEmpty={false}
+              wrapperClassName="space-y-4 pb-2"
+            />
+          )
         ) : null}
 
         {discoveryMode === "performance" && homeTab === "tracks" ? (

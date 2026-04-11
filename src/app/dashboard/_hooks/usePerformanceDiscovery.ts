@@ -19,10 +19,6 @@ type MyRatingRow = {
   stars: number | null;
 };
 
-type ProfileRoleRow = {
-  role: string | null;
-};
-
 type ListenStateRow = {
   track_id: string;
   listened_seconds: number | null;
@@ -37,6 +33,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 type Params = {
   discoveryMode: "development" | "performance";
   isEnabled: boolean;
+  isListener: boolean;
   supabase: SupabaseClient;
   fetchPerformanceDiscovery: (limit: number) => Promise<PerformanceDiscoveryItem[]>;
 };
@@ -44,6 +41,7 @@ type Params = {
 export function usePerformanceDiscovery({
   discoveryMode,
   isEnabled,
+  isListener,
   supabase,
   fetchPerformanceDiscovery,
 }: Params) {
@@ -153,44 +151,30 @@ export function usePerformanceDiscovery({
             { can_rate: boolean | null; listened_seconds: number | null }
           >();
 
-          let isListener = false;
-
           if (user?.id) {
-            const [
-              { data: myRatings, error: myRatingsErr },
-              { data: meProfile, error: meProfileErr },
-              { data: listenRows, error: listenErr },
-            ] = await Promise.all([
-              trackIds.length > 0
-                ? supabase
-                    .from("track_ratings")
-                    .select("track_id, stars")
-                    .eq("user_id", user.id)
-                    .in("track_id", trackIds)
-                : Promise.resolve({ data: [], error: null }),
-              supabase
-                .from("profiles")
-                .select("role")
-                .eq("id", user.id)
-                .maybeSingle(),
-              trackIds.length > 0
-                ? supabase
-                    .from("track_listen_state")
-                    .select("track_id, listened_seconds, can_rate")
-                    .eq("user_id", user.id)
-                    .in("track_id", trackIds)
-                : Promise.resolve({ data: [], error: null }),
-            ]);
+            const [{ data: myRatings, error: myRatingsErr }, { data: listenRows, error: listenErr }] =
+              await Promise.all([
+                trackIds.length > 0
+                  ? supabase
+                      .from("track_ratings")
+                      .select("track_id, stars")
+                      .eq("user_id", user.id)
+                      .in("track_id", trackIds)
+                  : Promise.resolve({ data: [], error: null }),
+                trackIds.length > 0 && isListener
+                  ? supabase
+                      .from("track_listen_state")
+                      .select("track_id, listened_seconds, can_rate")
+                      .eq("user_id", user.id)
+                      .in("track_id", trackIds)
+                  : Promise.resolve({ data: [], error: null }),
+              ]);
 
             if (!myRatingsErr && myRatings) {
               for (const row of (myRatings ?? []) as MyRatingRow[]) {
                 if (!row?.track_id || typeof row.stars !== "number") continue;
                 myStarsByTrackId.set(String(row.track_id), row.stars);
               }
-            }
-
-            if (!meProfileErr && meProfile) {
-              isListener = ((meProfile as ProfileRoleRow).role ?? null) === "listener";
             }
 
             if (!listenErr && listenRows) {
@@ -241,7 +225,7 @@ export function usePerformanceDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode, isEnabled, supabase, fetchPerformanceDiscovery]);
+  }, [discoveryMode, isEnabled, isListener, supabase, fetchPerformanceDiscovery]);
 
   return {
     performanceItems,
