@@ -13,6 +13,7 @@ type Props = {
 };
 
 const PREVIEW_SIZE = 256;
+const ORIGINAL_SIZE = 1024;
 
 function stripExtension(filename: string) {
   const lastDotIndex = filename.lastIndexOf(".");
@@ -29,19 +30,28 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function createSquareCoverPreview(file: File) {
+async function createSquareCoverFile(params: {
+  file: File;
+  outputSize: number;
+  quality: number;
+  fallbackBaseName: string;
+}) {
+  const { file, outputSize, quality, fallbackBaseName } = params;
   const objectUrl = URL.createObjectURL(file);
 
   try {
     const image = await loadImage(objectUrl);
     const canvas = document.createElement("canvas");
-    canvas.width = PREVIEW_SIZE;
-    canvas.height = PREVIEW_SIZE;
+    canvas.width = outputSize;
+    canvas.height = outputSize;
 
     const context = canvas.getContext("2d");
     if (!context) {
-      throw new Error("Failed to create preview canvas.");
+      throw new Error("Failed to create cover canvas.");
     }
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
 
     const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
     const sourceX = Math.floor((image.naturalWidth - sourceSize) / 2);
@@ -55,26 +65,45 @@ async function createSquareCoverPreview(file: File) {
       sourceSize,
       0,
       0,
-      PREVIEW_SIZE,
-      PREVIEW_SIZE
+      outputSize,
+      outputSize
     );
 
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, "image/jpeg", 0.82);
+      canvas.toBlob(resolve, "image/jpeg", quality);
     });
 
     if (!blob) {
-      throw new Error("Failed to encode preview image.");
+      throw new Error("Failed to encode cover image.");
     }
 
-    const safeBaseName = stripExtension(file.name) || "cover-preview";
+    const safeBaseName = stripExtension(file.name) || fallbackBaseName;
 
     return new File([blob], `${safeBaseName}.jpg`, {
       type: "image/jpeg",
+      lastModified: Date.now(),
     });
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+async function createSquareCoverOriginal(file: File) {
+  return createSquareCoverFile({
+    file,
+    outputSize: ORIGINAL_SIZE,
+    quality: 0.87,
+    fallbackBaseName: "cover-original",
+  });
+}
+
+async function createSquareCoverPreview(file: File) {
+  return createSquareCoverFile({
+    file,
+    outputSize: PREVIEW_SIZE,
+    quality: 0.82,
+    fallbackBaseName: "cover-preview",
+  });
 }
 
 export default function ReleaseCoverUploader({
@@ -104,15 +133,18 @@ export default function ReleaseCoverUploader({
     let uploadedPreviewFilePath: string | null = null;
 
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const originalFilePath = `${releaseId}/${crypto.randomUUID()}.${ext}`;
+      const originalFilePath = `${releaseId}/${crypto.randomUUID()}.jpg`;
       const previewFilePath = `${releaseId}/preview/${crypto.randomUUID()}.jpg`;
 
+      const originalFile = await createSquareCoverOriginal(file);
       const previewFile = await createSquareCoverPreview(file);
 
       const { error: originalUploadError } = await supabase.storage
         .from("release_covers")
-        .upload(originalFilePath, file, { upsert: true });
+        .upload(originalFilePath, originalFile, {
+          upsert: true,
+          contentType: "image/jpeg",
+        });
 
       if (originalUploadError) {
         throw originalUploadError;
@@ -122,7 +154,10 @@ export default function ReleaseCoverUploader({
 
       const { error: previewUploadError } = await supabase.storage
         .from("release_covers")
-        .upload(previewFilePath, previewFile, { upsert: true });
+        .upload(previewFilePath, previewFile, {
+          upsert: true,
+          contentType: "image/jpeg",
+        });
 
       if (previewUploadError) {
         throw previewUploadError;
