@@ -6,6 +6,91 @@ import BannerPreview from "./BannerPreview";
 import { setBannerPosYAction, setBannerUrlAction } from "./bannerActions";
 import { Trash2 } from "lucide-react";
 
+const BANNER_WIDTH = 1600;
+const BANNER_HEIGHT = 1200;
+
+function stripExtension(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, "");
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Failed to load image."));
+    image.src = src;
+  });
+}
+
+async function createNormalizedBannerFile(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = BANNER_WIDTH;
+    canvas.height = BANNER_HEIGHT;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Failed to create banner canvas.");
+    }
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+
+    const targetRatio = BANNER_WIDTH / BANNER_HEIGHT;
+    const sourceRatio = image.naturalWidth / image.naturalHeight;
+
+    let sourceWidth = image.naturalWidth;
+    let sourceHeight = image.naturalHeight;
+    let sourceX = 0;
+    let sourceY = 0;
+
+    if (sourceRatio > targetRatio) {
+      sourceHeight = image.naturalHeight;
+      sourceWidth = Math.round(sourceHeight * targetRatio);
+      sourceX = Math.floor((image.naturalWidth - sourceWidth) / 2);
+      sourceY = 0;
+    } else {
+      sourceWidth = image.naturalWidth;
+      sourceHeight = Math.round(sourceWidth / targetRatio);
+      sourceX = 0;
+      sourceY = Math.floor((image.naturalHeight - sourceHeight) / 2);
+    }
+
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      BANNER_WIDTH,
+      BANNER_HEIGHT
+    );
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", 0.87);
+    });
+
+    if (!blob) {
+      throw new Error("Failed to encode banner image.");
+    }
+
+    const safeBaseName = stripExtension(file.name) || "banner";
+
+    return new File([blob], `${safeBaseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function BannerUpload({
   userId,
   currentBannerUrl,
@@ -41,6 +126,7 @@ export default function BannerUpload({
         .list(prefix, { limit: 100, offset: 0 });
 
       if (listErr) {
+        console.error("[banner cleanup] list failed:", listErr);
         return;
       }
 
@@ -53,10 +139,10 @@ export default function BannerUpload({
 
       const { error: delErr } = await supabase.storage.from(bucket).remove(toDelete);
       if (delErr) {
-        return;
+        console.error("[banner cleanup] remove failed:", delErr);
       }
-
-    } catch {
+    } catch (error) {
+      console.error("[banner cleanup] unexpected error:", error);
     }
   }
 
@@ -66,19 +152,55 @@ export default function BannerUpload({
     setUploading(true);
     setErrorMessage(null);
 
+    let uploadedPath: string | null = null;
+
     try {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
-      const filePath = `${userId}/banner-${crypto.randomUUID()}.${safeExt}`;
+      const { data: freshProfile, error: freshProfileError } = await supabase
+        .from("profiles")
+        .select("banner_path, banner_url")
+        .eq("id", userId)
+        .single<{
+          banner_path: string | null;
+          banner_url: string | null;
+        }>();
+
+      if (freshProfileError) {
+        console.error("Failed to load current banner paths:", freshProfileError);
+      }
+
+      const normalizedFile = await createNormalizedBannerFile(file);
+      const filePath = `${userId}/banner-${crypto.randomUUID()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("profile-banners")
-        .upload(filePath, file, { upsert: false });
+        .upload(filePath, normalizedFile, {
+          upsert: false,
+          contentType: "image/jpeg",
+        });
 
       if (uploadError) {
         setErrorMessage(uploadError.message);
         return;
       }
+
+      uploadedPath = filePath;
+
+      const { data: publicData } = supabase.storage
+        .from("profile-banners")
+        .getPublicUrl(filePath);
+
+      if (!publicData?.publicUrl) {
+        if (uploadedPath) {
+          await supabase.storage.from("profile-banners").remove([uploadedPath]);
+        }
+        setErrorMessage("No public URL returned from Supabase.");
+        return;
+      }
+
+      await setBannerUrlAction({
+        bannerPath: filePath,
+        bannerUrl: publicData.publicUrl,
+      });
 
       await cleanupOtherFilesInPrefix({
         bucket: "profile-banners",
@@ -86,20 +208,19 @@ export default function BannerUpload({
         keepFullPath: filePath,
       });
 
-      const { data: publicData } = supabase.storage
-        .from("profile-banners")
-        .getPublicUrl(filePath);
-
-      if (!publicData?.publicUrl) {
-        setErrorMessage("No public URL returned from Supabase.");
-        return;
-      }
-
-      await setBannerUrlAction(publicData.publicUrl);
-
       window.location.href = "/artist/profile?banner-updated=1";
     } catch (err: any) {
       console.error("Banner upload unexpected error:", err);
+
+      if (uploadedPath) {
+        const { error: rollbackError } = await supabase.storage
+          .from("profile-banners")
+          .remove([uploadedPath]);
+
+        if (rollbackError) {
+          console.error("Banner upload rollback failed:", rollbackError);
+        }
+      }
 
       if (err instanceof Error) {
         setErrorMessage(err.message);
@@ -267,7 +388,7 @@ export default function BannerUpload({
             <div className="text-base font-semibold text-white/70">
               Click or drag & drop to upload
             </div>
-            <div className="text-sm text-white/40">JPG/PNG • Recommended 1600×400</div>
+            <div className="text-sm text-white/40">JPG/PNG • Recommended 1600×1200 or larger</div>
           </div>
         ) : null}
 
@@ -396,14 +517,24 @@ export default function BannerUpload({
                   try {
                     await setBannerUrlAction(null);
 
-                    const { data: listed } = await supabase.storage
+                    const { data: listed, error: listError } = await supabase.storage
                       .from("profile-banners")
                       .list(userId, { limit: 100, offset: 0 });
+
+                    if (listError) {
+                      console.error("Banner delete list failed:", listError);
+                    }
 
                     const toDelete = (listed ?? []).map((f) => `${userId}/${f.name}`);
 
                     if (toDelete.length > 0) {
-                      await supabase.storage.from("profile-banners").remove(toDelete);
+                      const { error: removeError } = await supabase.storage
+                        .from("profile-banners")
+                        .remove(toDelete);
+
+                      if (removeError) {
+                        console.error("Banner delete remove failed:", removeError);
+                      }
                     }
 
                     setIsDeleteModalOpen(false);

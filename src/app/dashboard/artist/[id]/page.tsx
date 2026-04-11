@@ -16,6 +16,7 @@ type ArtistProfileRow = {
   facebook: string | null;
   x: string | null;
   banner_url: string | null;
+  banner_path: string | null;
   banner_pos_y: number | null;
   avatar_url: string | null;
   avatar_path: string | null;
@@ -93,7 +94,7 @@ export default async function ArtistV2Page({
     supabase
       .from("profiles")
       .select(
-        "id, display_name, bio, city, country, instagram, tiktok, facebook, x, banner_url, banner_pos_y, avatar_url, avatar_path, avatar_pos_x, avatar_pos_y, avatar_zoom, updated_at"
+        "id, display_name, bio, city, country, instagram, tiktok, facebook, x, banner_url, banner_path, banner_pos_y, avatar_url, avatar_path, avatar_pos_x, avatar_pos_y, avatar_zoom, updated_at"
       )
       .eq("id", artistId)
       .single(),
@@ -554,7 +555,10 @@ export default async function ArtistV2Page({
       bio: artistProfile.bio ?? null,
       city: artistProfile.city ?? null,
       country: artistProfile.country ?? null,
-      bannerUrl: artistProfile.banner_url ?? null,
+      bannerUrl: artistProfile.banner_path
+        ? supabase.storage.from("profile-banners").getPublicUrl(artistProfile.banner_path)
+            .data.publicUrl ?? artistProfile.banner_url ?? null
+        : artistProfile.banner_url ?? null,
       bannerPosY: artistProfile.banner_pos_y ?? 50,
       avatarUrl: (() => {
         const base = artistProfile.avatar_path

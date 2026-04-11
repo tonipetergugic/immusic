@@ -19,6 +19,7 @@ type ProfileRow = {
   facebook: string | null;
   x: string | null;
   banner_url: string | null;
+  banner_path: string | null;
   banner_pos_y: number | null;
 };
 
@@ -45,7 +46,7 @@ export default async function ArtistProfilePage({
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, country, city, bio, instagram, tiktok, facebook, x, banner_url, banner_pos_y"
+      "id, display_name, country, city, bio, instagram, tiktok, facebook, x, banner_url, banner_path, banner_pos_y"
     )
     .eq("id", user.id)
     .single<ProfileRow>();
@@ -57,6 +58,11 @@ export default async function ArtistProfilePage({
   if (!profile) {
     throw new Error("Profile not found");
   }
+
+  const resolvedBannerUrl = profile.banner_path
+    ? supabase.storage.from("profile-banners").getPublicUrl(profile.banner_path).data
+        .publicUrl ?? profile.banner_url ?? null
+    : profile.banner_url ?? null;
 
   const params = await searchParams;
   const successMessage =
@@ -99,7 +105,7 @@ export default async function ArtistProfilePage({
           <div className="mt-6">
             <BannerUpload
               userId={profile.id}
-              currentBannerUrl={profile.banner_url}
+              currentBannerUrl={resolvedBannerUrl}
               currentBannerPosY={
                 Number.isFinite(profile.banner_pos_y)
                   ? (profile.banner_pos_y as number)

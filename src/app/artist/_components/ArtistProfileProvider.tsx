@@ -5,6 +5,7 @@ import React, { createContext, useContext } from "react";
 type ArtistProfileValue = {
   displayName: string | null;
   bannerUrl: string | null;
+  bannerPosY: number | null;
   artistOnboardingStatus: string | null;
 };
 

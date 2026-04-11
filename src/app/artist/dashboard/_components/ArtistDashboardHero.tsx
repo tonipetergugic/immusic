@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useArtistProfile } from "@/app/artist/_components/ArtistProfileProvider";
 
 export default function ArtistDashboardHero() {
-  const { displayName, bannerUrl } = useArtistProfile();
+  const { displayName, bannerUrl, bannerPosY } = useArtistProfile();
 
   const artistName = displayName?.trim() ? displayName : "Artist";
+
+  const resolvedBannerPosY = Number.isFinite(bannerPosY) ? Number(bannerPosY) : 50;
 
   const isProfileComplete = !!displayName?.trim() && !!bannerUrl;
 
@@ -15,13 +17,12 @@ export default function ArtistDashboardHero() {
       <div className="rounded-xl bg-[#121216] border border-white/5 overflow-hidden">
         <div className="relative h-56 md:h-72">
         {bannerUrl ? (
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `url(${bannerUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
+          <img
+            src={bannerUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: `50% ${resolvedBannerPosY}%` }}
+            draggable={false}
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-[#00FFC6]/15 via-white/5 to-[#00FFC6]/10" />

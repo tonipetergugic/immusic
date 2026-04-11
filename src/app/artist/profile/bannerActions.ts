@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function setBannerUrlAction(url: string | null) {
+type UpdateBannerInput = {
+  bannerPath: string;
+  bannerUrl: string;
+} | null;
+
+export async function setBannerUrlAction(input: UpdateBannerInput) {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -23,7 +28,11 @@ export async function setBannerUrlAction(url: string | null) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ banner_url: url, updated_at: updatedAt })
+    .update({
+      banner_path: input?.bannerPath ?? null,
+      banner_url: input?.bannerUrl ?? null,
+      updated_at: updatedAt,
+    })
     .eq("id", user.id);
 
   if (error) {

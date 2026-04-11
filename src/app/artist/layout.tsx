@@ -16,11 +16,13 @@ export default async function ArtistLayout({
   } = await supabase.auth.getUser();
 
   let profile:
-    | {
-        display_name: string | null;
-        banner_url: string | null;
-        artist_onboarding_status: string | null;
-      }
+      | {
+          display_name: string | null;
+          banner_url: string | null;
+          banner_path: string | null;
+          banner_pos_y: number | null;
+          artist_onboarding_status: string | null;
+        }
     | null = null;
 
   let topbarProps: {
@@ -43,7 +45,7 @@ export default async function ArtistLayout({
     const { data: profileRow } = await supabase
       .from("profiles")
       .select(
-        "role, display_name, avatar_url, avatar_path, avatar_preview_path, banner_url, updated_at, artist_onboarding_status"
+        "role, display_name, avatar_url, avatar_path, avatar_preview_path, banner_url, banner_path, banner_pos_y, updated_at, artist_onboarding_status"
       )
       .eq("id", user.id)
       .single();
@@ -57,10 +59,17 @@ export default async function ArtistLayout({
         null
       : profileRow?.avatar_url ?? null;
 
+    const artistBannerUrl = profileRow?.banner_path
+      ? supabase.storage.from("profile-banners").getPublicUrl(profileRow.banner_path).data
+          .publicUrl ?? profileRow?.banner_url ?? null
+      : profileRow?.banner_url ?? null;
+
     profile = profileRow
       ? {
           display_name: profileRow.display_name ?? null,
-          banner_url: profileRow.banner_url ?? null,
+          banner_url: artistBannerUrl,
+          banner_path: profileRow.banner_path ?? null,
+          banner_pos_y: profileRow.banner_pos_y ?? 50,
           artist_onboarding_status: profileRow.artist_onboarding_status ?? null,
         }
       : null;
@@ -103,6 +112,7 @@ export default async function ArtistLayout({
         value={{
           displayName: profile?.display_name ?? null,
           bannerUrl: profile?.banner_url ?? null,
+          bannerPosY: profile?.banner_pos_y ?? 50,
           artistOnboardingStatus: profile?.artist_onboarding_status ?? null,
         }}
       >
