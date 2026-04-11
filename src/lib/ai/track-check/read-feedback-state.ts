@@ -106,11 +106,22 @@ export async function readFeedbackState(params: {
 
   const analysisStatus = (queueRow as QueueRow).status ?? null;
 
-  const { data: creditRow, error: creditErr } = await supabase
-    .from("artist_credits")
-    .select("balance")
-    .eq("profile_id", userId)
-    .maybeSingle();
+  const [
+    { data: creditRow, error: creditErr },
+    { data: unlockRow, error: unlockErr },
+  ] = await Promise.all([
+    supabase
+      .from("artist_credits")
+      .select("balance")
+      .eq("profile_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("track_ai_feedback_unlocks")
+      .select("id, audio_hash")
+      .eq("queue_id", queueId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
 
   if (creditErr) {
     return { ok: false, error: "credits_fetch_failed", status: 500 };
@@ -118,13 +129,6 @@ export async function readFeedbackState(params: {
 
   const creditBalance =
     typeof (creditRow as any)?.balance === "number" ? (creditRow as any).balance : 0;
-
-  const { data: unlockRow, error: unlockErr } = await supabase
-    .from("track_ai_feedback_unlocks")
-    .select("id, audio_hash")
-    .eq("queue_id", queueId)
-    .eq("user_id", userId)
-    .maybeSingle();
 
   if (unlockErr) {
     return { ok: false, error: "unlock_fetch_failed", status: 500 };
