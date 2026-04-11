@@ -49,11 +49,20 @@ export default function ProcessingClient({ credits, queueId }: Props) {
   const timerRef = useRef<number | null>(null);
   const kickoffInFlightRef = useRef(false);
   const transientFailureCountRef = useRef(0);
+  const pollModeRef = useRef<"queued" | "processing">("queued");
 
   useEffect(() => {
-    const POLL_MS = 5000;
+    const QUEUED_POLL_MS = 5000;
+    const PROCESSING_POLL_MS = 15000;
     const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
     const MAX_TRANSIENT_FAILURES = 3;
+
+    function scheduleNextPoll() {
+      const delay =
+        pollModeRef.current === "processing" ? PROCESSING_POLL_MS : QUEUED_POLL_MS;
+
+      timerRef.current = window.setTimeout(tick, delay);
+    }
 
     let cancelled = false;
 
@@ -68,6 +77,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
     setVisualStep(0);
     kickoffInFlightRef.current = false;
     transientFailureCountRef.current = 0;
+    pollModeRef.current = "queued";
 
     startedAtRef.current = Date.now();
 
@@ -92,7 +102,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
           transientFailureCountRef.current += 1;
 
           if (transientFailureCountRef.current < MAX_TRANSIENT_FAILURES) {
-            timerRef.current = window.setTimeout(tick, POLL_MS);
+            scheduleNextPoll();
             return;
           }
 
@@ -121,12 +131,14 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         }
 
         if (statusData.reason === "processing") {
+          pollModeRef.current = "processing";
           setRunningUiState("running");
-          timerRef.current = window.setTimeout(tick, POLL_MS);
+          scheduleNextPoll();
           return;
         }
 
         setRunningUiState((current) => (current === "running" ? "running" : "queued"));
+        pollModeRef.current = "queued";
 
         if (!kickoffInFlightRef.current) {
           kickoffInFlightRef.current = true;
@@ -170,6 +182,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
               }
 
               if (data.reason === "processing_in_progress") {
+                pollModeRef.current = "processing";
                 setRunningUiState("running");
               }
             })
@@ -182,14 +195,14 @@ export default function ProcessingClient({ credits, queueId }: Props) {
         }
 
         if (cancelled) return;
-        timerRef.current = window.setTimeout(tick, POLL_MS);
+        scheduleNextPoll();
       } catch {
         if (cancelled) return;
 
         transientFailureCountRef.current += 1;
 
         if (transientFailureCountRef.current < MAX_TRANSIENT_FAILURES) {
-          timerRef.current = window.setTimeout(tick, POLL_MS);
+          scheduleNextPoll();
           return;
         }
 
@@ -203,6 +216,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
       cancelled = true;
       kickoffInFlightRef.current = false;
       transientFailureCountRef.current = 0;
+      pollModeRef.current = "queued";
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
