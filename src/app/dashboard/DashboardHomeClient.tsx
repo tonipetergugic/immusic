@@ -21,7 +21,7 @@ import DashboardHeroAndToggle from "./_components/DashboardHeroAndToggle";
 import type { DashboardHomeClientProps } from "./_types/dashboardHome.types";
 import { useViewerRole } from "@/context/ViewerRoleContext";
 
-type HomeTabKey = "releases" | "playlists" | "tracks";
+type HomeTabKey = "tracks" | "releases" | "playlists";
 
 type PerformanceHomePayload = {
   releasesById: DashboardHomeClientProps["releasesById"];
@@ -31,9 +31,9 @@ type PerformanceHomePayload = {
 };
 
 const HOME_TABS: { key: HomeTabKey; label: string }[] = [
+  { key: "tracks", label: "Tracks" },
   { key: "releases", label: "Releases" },
   { key: "playlists", label: "Playlists" },
-  { key: "tracks", label: "Tracks" },
 ];
 
 function getNextHomeTabKey(
@@ -41,7 +41,7 @@ function getNextHomeTabKey(
   direction: "left" | "right"
 ): HomeTabKey {
   const currentIndex = HOME_TABS.findIndex((tab) => tab.key === current);
-  if (currentIndex === -1) return "releases";
+  if (currentIndex === -1) return "tracks";
 
   if (direction === "right") {
     return HOME_TABS[(currentIndex + 1) % HOME_TABS.length].key;
@@ -63,7 +63,7 @@ export default function DashboardHomeClient({
   const { isListener, userId } = useViewerRole();
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
-  const [homeTab, setHomeTab] = useState<HomeTabKey>("releases");
+  const [homeTab, setHomeTab] = useState<HomeTabKey>("tracks");
   const [devGenre, setDevGenre] = useState<string>("all");
   const [performanceGenre, setPerformanceGenre] = useState<string>("all");
   const tabFocusRef = useRef<HomeTabKey | null>(null);
