@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PerformanceDiscoveryItem } from "@/lib/discovery/fetchPerformanceDiscovery.client";
 
 type PerfTrackStats = {
@@ -14,15 +13,17 @@ type PerfTrackStats = {
   };
 };
 
-type MyRatingRow = {
-  track_id: string;
-  stars: number | null;
-};
-
-type ListenStateRow = {
-  track_id: string;
-  listened_seconds: number | null;
-  can_rate: boolean | null;
+type PerformanceMetaResponse = {
+  ok: boolean;
+  error?: string;
+  myStarsByTrackId?: Record<string, number | null>;
+  listenStateByTrackId?: Record<
+    string,
+    {
+      can_rate: boolean | null;
+      listened_seconds: number | null;
+    }
+  >;
 };
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -35,7 +36,6 @@ type Params = {
   isEnabled: boolean;
   isListener: boolean;
   viewerUserId: string | null;
-  supabase: SupabaseClient;
   fetchPerformanceDiscovery: (limit: number) => Promise<PerformanceDiscoveryItem[]>;
 };
 
@@ -44,7 +44,6 @@ export function usePerformanceDiscovery({
   isEnabled,
   isListener,
   viewerUserId,
-  supabase,
   fetchPerformanceDiscovery,
 }: Params) {
   const [performanceItems, setPerformanceItems] = useState<PerformanceDiscoveryItem[]>([]);
@@ -149,42 +148,48 @@ export function usePerformanceDiscovery({
             { can_rate: boolean | null; listened_seconds: number | null }
           >();
 
-          if (viewerUserId) {
-            const [{ data: myRatings, error: myRatingsErr }, { data: listenRows, error: listenErr }] =
-              await Promise.all([
-                trackIds.length > 0
-                  ? supabase
-                      .from("track_ratings")
-                      .select("track_id, stars")
-                      .eq("user_id", viewerUserId)
-                      .in("track_id", trackIds)
-                  : Promise.resolve({ data: [], error: null }),
-                trackIds.length > 0 && isListener
-                  ? supabase
-                      .from("track_listen_state")
-                      .select("track_id, listened_seconds, can_rate")
-                      .eq("user_id", viewerUserId)
-                      .in("track_id", trackIds)
-                  : Promise.resolve({ data: [], error: null }),
-              ]);
+          if (viewerUserId && trackIds.length > 0) {
+            try {
+              const metaRes = await fetch("/api/discovery/performance/meta", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                cache: "no-store",
+                body: JSON.stringify({
+                  trackIds,
+                  includeListenState: isListener,
+                }),
+              });
 
-            if (!myRatingsErr && myRatings) {
-              for (const row of (myRatings ?? []) as MyRatingRow[]) {
-                if (!row?.track_id || typeof row.stars !== "number") continue;
-                myStarsByTrackId.set(String(row.track_id), row.stars);
+              if (metaRes.ok) {
+                const metaJson = (await metaRes.json()) as PerformanceMetaResponse;
+
+                if (metaJson.ok) {
+                  const myStarsRecord = metaJson.myStarsByTrackId ?? {};
+                  const listenStateRecord = metaJson.listenStateByTrackId ?? {};
+
+                  for (const [trackId, stars] of Object.entries(myStarsRecord)) {
+                    if (typeof stars !== "number") continue;
+                    myStarsByTrackId.set(String(trackId), stars);
+                  }
+
+                  for (const [trackId, listenState] of Object.entries(listenStateRecord)) {
+                    listenStateByTrackId.set(String(trackId), {
+                      can_rate:
+                        typeof listenState?.can_rate === "boolean"
+                          ? listenState.can_rate
+                          : null,
+                      listened_seconds:
+                        typeof listenState?.listened_seconds === "number"
+                          ? listenState.listened_seconds
+                          : 0,
+                    });
+                  }
+                }
               }
-            }
-
-            if (!listenErr && listenRows) {
-              for (const row of (listenRows ?? []) as ListenStateRow[]) {
-                if (!row?.track_id) continue;
-
-                listenStateByTrackId.set(String(row.track_id), {
-                  can_rate: typeof row.can_rate === "boolean" ? row.can_rate : null,
-                  listened_seconds:
-                    typeof row.listened_seconds === "number" ? row.listened_seconds : 0,
-                });
-              }
+            } catch {
+              // ignore meta errors so public performance feed still renders
             }
           }
 
@@ -223,7 +228,7 @@ export function usePerformanceDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode, isEnabled, isListener, viewerUserId, supabase, fetchPerformanceDiscovery]);
+  }, [discoveryMode, isEnabled, isListener, viewerUserId, fetchPerformanceDiscovery]);
 
   return {
     performanceItems,
@@ -234,4 +239,3 @@ export function usePerformanceDiscovery({
     perfTrackMetaMap,
   };
 }
-

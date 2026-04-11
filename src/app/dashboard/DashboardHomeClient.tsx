@@ -103,7 +103,6 @@ export default function DashboardHomeClient({
     isEnabled: homeTab === "tracks",
     isListener,
     viewerUserId: userId,
-    supabase,
     fetchPerformanceDiscovery,
   });
 
