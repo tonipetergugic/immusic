@@ -87,6 +87,8 @@ export default function DashboardHomeClient({
     discoveryMode,
     isEnabled: homeTab === "tracks",
     devGenre,
+    isListener,
+    viewerUserId: userId,
     devCacheRef,
     devPromiseRef,
   });

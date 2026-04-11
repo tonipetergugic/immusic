@@ -12,6 +12,19 @@ type ErrorResponse = {
   details?: string;
 };
 
+type DevelopmentMetaResponse = {
+  ok: boolean;
+  error?: string;
+  myStarsByTrackId?: Record<string, number | null>;
+  listenStateByTrackId?: Record<
+    string,
+    {
+      can_rate: boolean | null;
+      listened_seconds: number | null;
+    }
+  >;
+};
+
 function getErrorMessage(
   err: unknown,
   fallback: string
@@ -24,6 +37,8 @@ type Params = {
   discoveryMode: "development" | "performance";
   isEnabled: boolean;
   devGenre: string;
+  isListener: boolean;
+  viewerUserId: string | null;
   devCacheRef: MutableRefObject<Record<string, DevelopmentDiscoveryItem[]>>;
   devPromiseRef: MutableRefObject<Record<string, Promise<DevelopmentDiscoveryItem[]> | null>>;
 };
@@ -32,6 +47,8 @@ export function useDevelopmentDiscovery({
   discoveryMode,
   isEnabled,
   devGenre,
+  isListener,
+  viewerUserId,
   devCacheRef,
   devPromiseRef,
 }: Params) {
@@ -88,7 +105,7 @@ export function useDevelopmentDiscovery({
         if (devGenre && devGenre !== "all") qs.set("genre", devGenre);
 
         const p = (async () => {
-          const r = await fetch(`/api/discovery/development?${qs.toString()}`, {
+          const r = await fetch(`/api/dashboard/development-feed?${qs.toString()}`, {
             method: "GET",
             credentials: "include",
           });
@@ -104,7 +121,65 @@ export function useDevelopmentDiscovery({
             );
           }
 
-          return data.items ?? [];
+          let nextItems = data.items ?? [];
+
+          const trackIds = nextItems
+            .map((item) => item.track_id)
+            .filter((value): value is string => typeof value === "string" && value.length > 0);
+
+          if (viewerUserId && trackIds.length > 0) {
+            try {
+              const metaRes = await fetch("/api/dashboard/development-meta", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                cache: "no-store",
+                body: JSON.stringify({
+                  trackIds,
+                  includeListenState: isListener,
+                }),
+              });
+
+              if (metaRes.ok) {
+                const metaJson = (await metaRes.json()) as DevelopmentMetaResponse;
+
+                if (metaJson.ok) {
+                  const myStarsRecord = metaJson.myStarsByTrackId ?? {};
+                  const listenStateRecord = metaJson.listenStateByTrackId ?? {};
+
+                  nextItems = nextItems.map((item) => {
+                    const metaListenState = listenStateRecord[item.track_id];
+
+                    return {
+                      ...item,
+                      my_stars:
+                        typeof myStarsRecord[item.track_id] === "number"
+                          ? myStarsRecord[item.track_id]
+                          : null,
+                      eligibility: {
+                        ...item.eligibility,
+                        can_rate: isListener
+                          ? typeof metaListenState?.can_rate === "boolean"
+                            ? metaListenState.can_rate
+                            : false
+                          : false,
+                        listened_seconds: isListener
+                          ? typeof metaListenState?.listened_seconds === "number"
+                            ? metaListenState.listened_seconds
+                            : 0
+                          : 0,
+                      },
+                    };
+                  });
+                }
+              }
+            } catch {
+              // ignore meta errors so development feed still renders
+            }
+          }
+
+          return nextItems;
         })();
 
         devPromiseRef.current[cacheKey] = p;
@@ -131,7 +206,7 @@ export function useDevelopmentDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode, isEnabled, devGenre]);
+  }, [discoveryMode, isEnabled, devGenre, isListener, viewerUserId]);
 
   return {
     devItems,
