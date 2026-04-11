@@ -7,6 +7,8 @@ type LibraryPlaylistRow = {
   title: string;
   description: string | null;
   cover_url: string | null;
+  cover_path: string | null;
+  cover_preview_path: string | null;
   created_by: string | null;
   created_at: string;
   is_public: boolean;
@@ -73,7 +75,9 @@ export async function loadLibraryV2Playlists({
     ...playlist,
     cover_url: buildPlaylistCoverUrlServer({
       supabase,
-      cover_path: playlist.cover_url ?? null,
+      cover_preview_path: playlist.cover_preview_path ?? null,
+      cover_path: playlist.cover_path ?? null,
+      cover_url: playlist.cover_url ?? null,
     }),
   }));
 }

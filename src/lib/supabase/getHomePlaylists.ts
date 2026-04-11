@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
+import { buildPlaylistCoverUrlServer } from "@/lib/playlistCovers.server";
 
 export type HomePlaylistCard = {
   id: string;
@@ -15,7 +16,7 @@ export async function getHomePlaylists(playlistIds: string[]) {
 
   const { data, error } = await supabase
     .from("playlists")
-    .select("id,title,description,cover_url")
+    .select("id,title,description,cover_url,cover_path,cover_preview_path")
     .in("id", playlistIds)
     .eq("is_public", true);
 
@@ -24,12 +25,12 @@ export async function getHomePlaylists(playlistIds: string[]) {
   const byId: Record<string, HomePlaylistCard> = {};
 
   for (const p of data as any[]) {
-    const cover_url =
-      p?.cover_url
-        ? supabase.storage
-            .from("playlist-covers")
-            .getPublicUrl(p.cover_url).data.publicUrl ?? null
-        : null;
+    const cover_url = buildPlaylistCoverUrlServer({
+      supabase,
+      cover_preview_path: p?.cover_preview_path ?? null,
+      cover_path: p?.cover_path ?? null,
+      cover_url: p?.cover_url ?? null,
+    });
 
     byId[p.id] = {
       id: p.id,

@@ -19,6 +19,103 @@ type PlaylistOwnerJoin = {
   } | null;
 };
 
+const ORIGINAL_SIZE = 1024;
+const PREVIEW_SIZE = 256;
+
+function stripExtension(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, "");
+}
+
+function uniqueNonEmptyPaths(paths: Array<string | null | undefined>) {
+  return Array.from(new Set(paths.filter((value): value is string => Boolean(value))));
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Failed to load image."));
+    image.src = src;
+  });
+}
+
+async function createSquarePlaylistCoverFile(params: {
+  file: File;
+  outputSize: number;
+  quality: number;
+  fallbackBaseName: string;
+}) {
+  const { file, outputSize, quality, fallbackBaseName } = params;
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Failed to create cover canvas.");
+    }
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+
+    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+    const sourceX = Math.floor((image.naturalWidth - sourceSize) / 2);
+    const sourceY = Math.floor((image.naturalHeight - sourceSize) / 2);
+
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceSize,
+      sourceSize,
+      0,
+      0,
+      outputSize,
+      outputSize
+    );
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", quality);
+    });
+
+    if (!blob) {
+      throw new Error("Failed to encode cover image.");
+    }
+
+    const safeBaseName = stripExtension(file.name) || fallbackBaseName;
+
+    return new File([blob], `${safeBaseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function createSquarePlaylistCoverOriginal(file: File) {
+  return createSquarePlaylistCoverFile({
+    file,
+    outputSize: ORIGINAL_SIZE,
+    quality: 0.87,
+    fallbackBaseName: "playlist-cover-original",
+  });
+}
+
+async function createSquarePlaylistCoverPreview(file: File) {
+  return createSquarePlaylistCoverFile({
+    file,
+    outputSize: PREVIEW_SIZE,
+    quality: 0.82,
+    fallbackBaseName: "playlist-cover-preview",
+  });
+}
+
 export default function PlaylistHeaderClient({
   playlist,
   playerTracks,
@@ -39,55 +136,115 @@ export default function PlaylistHeaderClient({
 
   async function replaceCover(file: File) {
     if (!isOwner) return;
+    if (!file.type.startsWith("image/")) return;
 
     setCoverBusy(true);
+
+    const uploadedPaths: string[] = [];
+
     try {
-      // load fresh cover_url (relative path) from DB to delete safely
       const { data: fresh, error: freshErr } = await supabase
         .from("playlists")
-        .select("cover_url")
+        .select("cover_url, cover_path, cover_preview_path")
         .eq("id", playlist.id)
-        .single<{ cover_url: string | null }>();
+        .single<{
+          cover_url: string | null;
+          cover_path: string | null;
+          cover_preview_path: string | null;
+        }>();
 
       if (freshErr) {
-        console.error("Failed to load current cover_url:", freshErr);
+        console.error("Failed to load current playlist cover paths:", freshErr);
       }
 
-      const currentRel = fresh?.cover_url ?? null;
+      const currentPaths = uniqueNonEmptyPaths([
+        fresh?.cover_url ?? null,
+        fresh?.cover_path ?? null,
+        fresh?.cover_preview_path ?? null,
+      ]);
 
-      if (currentRel) {
-        const { error: removeErr } = await supabase.storage
-          .from("playlist-covers")
-          .remove([currentRel]);
+      const originalFile = await createSquarePlaylistCoverOriginal(file);
+      const previewFile = await createSquarePlaylistCoverPreview(file);
 
-        if (removeErr) {
-          console.error("Failed to remove old cover from storage:", removeErr);
-        }
-      }
+      const timestamp = Date.now();
+      const originalPath = `${playlist.id}/cover-${timestamp}-original.jpg`;
+      const previewPath = `${playlist.id}/preview/cover-${timestamp}-preview.jpg`;
 
-      const ext = file.name.split(".").pop() || "jpg";
-      const newRel = `${playlist.id}/cover-${Date.now()}.${ext}`;
-
-      const { error: uploadErr } = await supabase.storage
+      const { error: originalUploadErr } = await supabase.storage
         .from("playlist-covers")
-        .upload(newRel, file, { upsert: false });
+        .upload(originalPath, originalFile, {
+          upsert: false,
+          contentType: "image/jpeg",
+        });
 
-      if (uploadErr) {
-        console.error("Cover upload failed:", uploadErr);
+      if (originalUploadErr) {
+        console.error("Playlist cover original upload failed:", originalUploadErr);
         return;
       }
+
+      uploadedPaths.push(originalPath);
+
+      const { error: previewUploadErr } = await supabase.storage
+        .from("playlist-covers")
+        .upload(previewPath, previewFile, {
+          upsert: false,
+          contentType: "image/jpeg",
+        });
+
+      if (previewUploadErr) {
+        console.error("Playlist cover preview upload failed:", previewUploadErr);
+        await supabase.storage.from("playlist-covers").remove(uploadedPaths);
+        return;
+      }
+
+      uploadedPaths.push(previewPath);
 
       const { error: dbErr } = await supabase
         .from("playlists")
-        .update({ cover_url: newRel })
+        .update({
+          cover_url: originalPath,
+          cover_path: originalPath,
+          cover_preview_path: previewPath,
+        })
         .eq("id", playlist.id);
 
       if (dbErr) {
-        console.error("Cover DB update failed:", dbErr);
+        console.error("Playlist cover DB update failed:", dbErr);
+
+        const { error: rollbackErr } = await supabase.storage
+          .from("playlist-covers")
+          .remove(uploadedPaths);
+
+        if (rollbackErr) {
+          console.error("Playlist cover rollback failed:", rollbackErr);
+        }
+
         return;
       }
 
-      onCoverUpdated(newRel);
+      if (currentPaths.length > 0) {
+        const { error: removeErr } = await supabase.storage
+          .from("playlist-covers")
+          .remove(currentPaths);
+
+        if (removeErr) {
+          console.error("Failed to remove old playlist covers from storage:", removeErr);
+        }
+      }
+
+      onCoverUpdated(originalPath);
+    } catch (error) {
+      console.error("Playlist cover replace failed:", error);
+
+      if (uploadedPaths.length > 0) {
+        const { error: rollbackErr } = await supabase.storage
+          .from("playlist-covers")
+          .remove(uploadedPaths);
+
+        if (rollbackErr) {
+          console.error("Playlist cover rollback failed:", rollbackErr);
+        }
+      }
     } finally {
       setCoverBusy(false);
     }
@@ -98,38 +255,51 @@ export default function PlaylistHeaderClient({
     if (coverBusy) return false;
 
     setCoverBusy(true);
+
     try {
       const { data: fresh, error: freshErr } = await supabase
         .from("playlists")
-        .select("cover_url")
+        .select("cover_url, cover_path, cover_preview_path")
         .eq("id", playlist.id)
-        .single<{ cover_url: string | null }>();
+        .single<{
+          cover_url: string | null;
+          cover_path: string | null;
+          cover_preview_path: string | null;
+        }>();
 
       if (freshErr) {
-        console.error("Failed to load current cover_url:", freshErr);
+        console.error("Failed to load current playlist cover paths:", freshErr);
       }
 
-      const currentRel = fresh?.cover_url ?? null;
+      const pathsToDelete = uniqueNonEmptyPaths([
+        fresh?.cover_url ?? null,
+        fresh?.cover_path ?? null,
+        fresh?.cover_preview_path ?? null,
+      ]);
 
       const { error: dbErr } = await supabase
         .from("playlists")
-        .update({ cover_url: null })
+        .update({
+          cover_url: null,
+          cover_path: null,
+          cover_preview_path: null,
+        })
         .eq("id", playlist.id);
 
       if (dbErr) {
-        console.error("Cover DB clear failed:", dbErr);
+        console.error("Playlist cover DB clear failed:", dbErr);
         return false;
       }
 
       onCoverUpdated(null);
 
-      if (currentRel) {
+      if (pathsToDelete.length > 0) {
         const { error: removeErr } = await supabase.storage
           .from("playlist-covers")
-          .remove([currentRel]);
+          .remove(pathsToDelete);
 
         if (removeErr) {
-          console.error("Failed to remove cover from storage:", removeErr);
+          console.error("Failed to remove playlist covers from storage:", removeErr);
         }
       }
 

@@ -70,6 +70,11 @@ type PlaylistJoin = import("@/types/database").Playlist & {
   owner: PlaylistOwnerJoin | null;
 };
 
+type PlaylistCoverFields = {
+  cover_path: string | null;
+  cover_preview_path: string | null;
+};
+
 type PlaylistTrackRow = {
   playlist_track_id: string;
   playlist_id: string;
@@ -204,12 +209,16 @@ export default async function PlaylistPage(
     return <div className="p-6 text-white">Playlist not found.</div>;
   }
 
-  const playlistCoverUrl =
-    playlist.cover_url
-      ? supabase.storage
-          .from("playlist-covers")
-          .getPublicUrl(playlist.cover_url).data.publicUrl ?? null
-      : null;
+  const playlistWithCoverFields = playlist as PlaylistJoin & PlaylistCoverFields;
+
+  const preferredPlaylistCoverPath =
+    playlistWithCoverFields.cover_path ?? playlist.cover_url ?? null;
+
+  const playlistCoverUrl = preferredPlaylistCoverPath
+    ? supabase.storage
+        .from("playlist-covers")
+        .getPublicUrl(preferredPlaylistCoverPath).data.publicUrl ?? null
+    : null;
 
   const playlistForClient: PlaylistJoin = {
     ...playlist,

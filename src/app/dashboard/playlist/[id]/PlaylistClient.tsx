@@ -131,48 +131,45 @@ export default function PlaylistClient({
   async function onDeletePlaylist() {
     if (!isOwner) return;
 
-    const { data: fresh } = await supabase
+    const { data: fresh, error: freshErr } = await supabase
       .from("playlists")
-      .select("cover_url")
+      .select("cover_url, cover_path, cover_preview_path")
       .eq("id", localPlaylist.id)
-      .single();
+      .single<{
+        cover_url: string | null;
+        cover_path: string | null;
+        cover_preview_path: string | null;
+      }>();
 
-    if (fresh?.cover_url || localPlaylist.cover_url) {
-      try {
-        const bucketName = "playlist-covers";
-        const publicUrl = fresh?.cover_url ?? localPlaylist.cover_url;
-
-        let relativePath = publicUrl?.split("/object/public/playlist-covers/")[1];
-
-        if (!relativePath) {
-          relativePath = publicUrl ?? null;
-        }
-
-        if (relativePath && relativePath.includes("?")) {
-          relativePath = relativePath.split("?")[0];
-        }
-
-        if (relativePath) {
-          const { error } = await supabase.storage
-            .from(bucketName)
-            .remove([relativePath]);
-
-          if (error) {
-            console.error("Storage delete error:", error);
-          }
-        }
-      } catch (err) {
-        console.error("Error parsing cover delete:", err);
-      }
+    if (freshErr) {
+      console.error("Failed to load current playlist cover paths:", freshErr);
     }
 
-    await supabase.from("playlists").update({ cover_url: null }).eq("id", localPlaylist.id);
+    const coverPaths = Array.from(
+      new Set(
+        [
+          fresh?.cover_url ?? null,
+          fresh?.cover_path ?? null,
+          fresh?.cover_preview_path ?? null,
+        ].filter((value): value is string => Boolean(value))
+      )
+    );
 
     const { error } = await supabase.from("playlists").delete().eq("id", localPlaylist.id);
 
     if (error) {
       console.error("Error deleting playlist:", error);
       return;
+    }
+
+    if (coverPaths.length > 0) {
+      const { error: removeErr } = await supabase.storage
+        .from("playlist-covers")
+        .remove(coverPaths);
+
+      if (removeErr) {
+        console.error("Playlist cover cleanup error:", removeErr);
+      }
     }
 
     window.location.href = "/dashboard/library?tab=playlists";

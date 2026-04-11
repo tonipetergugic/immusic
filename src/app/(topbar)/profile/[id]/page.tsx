@@ -1,12 +1,14 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
+import { buildPlaylistCoverUrlServer } from "@/lib/playlistCovers.server";
 import PublicProfileView from "./_components/PublicProfileView";
 import type { PublicProfile, PublicPlaylist } from "./_types/public-profile";
 
-function isHttpUrl(value: string) {
-  return value.startsWith("http://") || value.startsWith("https://");
-}
+type PublicPlaylistRow = PublicPlaylist & {
+  cover_path: string | null;
+  cover_preview_path: string | null;
+};
 
 export default async function PublicProfileV2Page({
   params,
@@ -97,7 +99,7 @@ export default async function PublicProfileV2Page({
   try {
     let playlistsQuery = supabase
       .from("playlists")
-      .select("id, title, description, cover_url, is_public, created_at")
+      .select("id, title, description, cover_url, cover_path, cover_preview_path, is_public, created_at")
       .eq("created_by", profileId)
       .order("created_at", { ascending: false });
 
@@ -111,24 +113,15 @@ export default async function PublicProfileV2Page({
       console.error("Failed to load public profile playlists:", playlistsError);
       playlists = [];
     } else {
-      playlists = ((playlistRows ?? []) as PublicPlaylist[]).map((pl) => {
-        const raw = pl.cover_url ?? null;
-
-        if (raw && isHttpUrl(raw)) {
-          return { ...pl, cover_url: raw };
-        }
-
-        if (raw) {
-          const publicUrl =
-            supabase.storage
-              .from("playlist-covers")
-              .getPublicUrl(raw).data.publicUrl ?? null;
-
-          return { ...pl, cover_url: publicUrl };
-        }
-
-        return { ...pl, cover_url: null };
-      });
+      playlists = ((playlistRows ?? []) as PublicPlaylistRow[]).map((pl) => ({
+        ...pl,
+        cover_url: buildPlaylistCoverUrlServer({
+          supabase,
+          cover_preview_path: pl.cover_preview_path ?? null,
+          cover_path: pl.cover_path ?? null,
+          cover_url: pl.cover_url ?? null,
+        }),
+      }));
     }
   } catch (error) {
     console.error("Failed to load public profile playlists:", error);

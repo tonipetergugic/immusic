@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildPlaylistCoverUrlServer } from "@/lib/playlistCovers.server";
 import ArtistClient from "./ArtistClient";
 import type { ArtistPageDto, TopTrackDto } from "./_types/artistPageDto";
 
@@ -106,7 +107,7 @@ export default async function ArtistV2Page({
 
     supabase
       .from("playlists")
-      .select("id, title, cover_url, created_at")
+      .select("id, title, cover_url, cover_path, cover_preview_path, created_at")
       .eq("created_by", artistId)
       .eq("is_public", true)
       .order("created_at", { ascending: false }),
@@ -267,10 +268,12 @@ export default async function ArtistV2Page({
     });
 
   const playlists = (playlistsData ?? []).map((p) => {
-    const coverUrl = p.cover_url
-      ? supabase.storage.from("playlist-covers").getPublicUrl(p.cover_url).data
-          .publicUrl
-      : null;
+    const coverUrl = buildPlaylistCoverUrlServer({
+      supabase,
+      cover_preview_path: p.cover_preview_path ?? null,
+      cover_path: p.cover_path ?? null,
+      cover_url: p.cover_url ?? null,
+    });
 
     return {
       id: p.id,

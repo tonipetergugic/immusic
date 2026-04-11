@@ -11,11 +11,41 @@ function showNotice(message: string) {
   );
 }
 
+function buildPlaylistCoverUrl(params: {
+  supabase: any;
+  cover_preview_path?: string | null | undefined;
+  cover_path?: string | null | undefined;
+  cover_url?: string | null | undefined;
+}) {
+  const { supabase, cover_preview_path, cover_path, cover_url } = params;
+
+  const preferredPath = cover_preview_path ?? cover_path ?? null;
+  if (preferredPath) {
+    return (
+      supabase.storage.from("playlist-covers").getPublicUrl(preferredPath).data
+        .publicUrl ?? null
+    );
+  }
+
+  const raw = cover_url ?? null;
+  if (!raw) return null;
+
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+
+  return (
+    supabase.storage.from("playlist-covers").getPublicUrl(raw).data.publicUrl ?? null
+  );
+}
+
 type PlaylistRow = {
   id: string;
   title: string | null;
   description: string | null;
   cover_url: string | null;
+  cover_path?: string | null;
+  cover_preview_path?: string | null;
   created_at: string | null;
   cover_public_url?: string | null;
 };
@@ -63,7 +93,7 @@ export default function AddToPlaylistModal({
 
       const { data, error } = await supabase
         .from("playlists")
-        .select("id,title,description,cover_url,created_at")
+        .select("id,title,description,cover_url,cover_path,cover_preview_path,created_at")
         .eq("created_by", user.id)
         .order("created_at", { ascending: false });
 
@@ -73,23 +103,15 @@ export default function AddToPlaylistModal({
         console.error("Failed to load playlists:", error);
         setPlaylists([]);
       } else {
-        const mapped = (data as PlaylistRow[]).map((pl) => {
-          let coverPublicUrl: string | null = null;
-
-          if (pl.cover_url) {
-            const { data: pub } = supabase
-              .storage
-              .from("playlist-covers")
-              .getPublicUrl(pl.cover_url);
-
-            coverPublicUrl = pub?.publicUrl ?? null;
-          }
-
-          return {
-            ...pl,
-            cover_public_url: coverPublicUrl,
-          };
-        });
+        const mapped = (data as PlaylistRow[]).map((pl) => ({
+          ...pl,
+          cover_public_url: buildPlaylistCoverUrl({
+            supabase,
+            cover_preview_path: pl.cover_preview_path ?? null,
+            cover_path: pl.cover_path ?? null,
+            cover_url: pl.cover_url ?? null,
+          }),
+        }));
 
         setPlaylists(mapped);
       }
