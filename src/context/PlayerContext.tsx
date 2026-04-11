@@ -43,7 +43,13 @@ type PlayerContextType = {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 // PROVIDER ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-export function PlayerProvider({ children }: { children: ReactNode }) {
+export function PlayerProvider({
+  children,
+  initialHideExplicitTracks = false,
+}: {
+  children: ReactNode;
+  initialHideExplicitTracks?: boolean;
+}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const listeningChunkSecondsRef = useRef(0);
   const listeningTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -79,28 +85,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
-  const loadHideExplicitTracksPreference = useCallback(async () => {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user?.id) return false;
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("hide_explicit_tracks")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error("explicit playback preference load error:", profileError);
-      return false;
-    }
-
-    return !!profile?.hide_explicit_tracks;
-  }, [supabase]);
-
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -109,17 +93,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [isShuffle, setIsShuffle] = useState(false);
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [hideExplicitTracks, setHideExplicitTracks] = useState(false);
+  const [hideExplicitTracks, setHideExplicitTracks] = useState(initialHideExplicitTracks);
 
   const isExplicitPlaybackBlocked = useCallback(
     async (track: PlayerTrack | null) => {
       if (!track?.is_explicit) return false;
-
-      const blocked = await loadHideExplicitTracksPreference();
-      setHideExplicitTracks(blocked);
-      return blocked;
+      return hideExplicitTracks;
     },
-    [loadHideExplicitTracksPreference]
+    [hideExplicitTracks]
   );
 
   const isTrackPlaybackBlocked = useCallback(
@@ -149,20 +130,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const blocked = await loadHideExplicitTracksPreference();
-      if (cancelled) return;
-      setHideExplicitTracks(blocked);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loadHideExplicitTracksPreference]);
-
-  useEffect(() => {
     function handleExplicitPreferenceChanged(event: Event) {
       const customEvent = event as CustomEvent<{ hideExplicitTracks?: boolean }>;
       setHideExplicitTracks(!!customEvent.detail?.hideExplicitTracks);
@@ -180,6 +147,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       );
     };
   }, []);
+
+  useEffect(() => {
+    setHideExplicitTracks(initialHideExplicitTracks);
+  }, [initialHideExplicitTracks]);
 
   useEffect(() => {
     queueRef.current = queue;

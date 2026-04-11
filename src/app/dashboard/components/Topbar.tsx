@@ -13,21 +13,6 @@ function versionedUrl(base: string | null, updatedAt: string | null | undefined)
   return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(updatedAt)}`;
 }
 
-function buildAvatarPublicUrl(path: string | null | undefined) {
-  if (!path) return null;
-
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!baseUrl) return null;
-
-  const normalizedPath = path
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-
-  return `${baseUrl}/storage/v1/object/public/avatars/${normalizedPath}`;
-}
-
 type TopbarProps = {
   userEmail?: string | null;
   displayName?: string | null;
@@ -43,9 +28,9 @@ export default function Topbar({
   avatarUrl: initialAvatarUrl = null,
   avatarUpdatedAt: initialAvatarUpdatedAt = null,
 }: TopbarProps) {
-  const [userEmail, setUserEmail] = useState<string | null>(initialUserEmail);
+  const userEmail = initialUserEmail;
+  const role = initialRole;
   const [displayName, setDisplayName] = useState<string | null>(initialDisplayName);
-  const [role, setRole] = useState<string | null>(initialRole);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     versionedUrl(initialAvatarUrl, initialAvatarUpdatedAt)
   );
@@ -100,58 +85,12 @@ export default function Topbar({
             : null;
 
   useEffect(() => {
-    let isActive = true;
-
-    async function loadTopbarIdentity() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!isActive) return;
-
-      if (!user) {
-        setUserEmail(null);
-        setDisplayName(null);
-        setRole(null);
-        setAvatarUrl(null);
-        return;
-      }
-
-      setUserEmail(user.email ?? null);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select(
-          "role, display_name, avatar_url, avatar_path, avatar_preview_path, updated_at"
-        )
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!isActive) return;
-
-      const preferredAvatarUrl =
-        buildAvatarPublicUrl(profile?.avatar_preview_path ?? null) ??
-        buildAvatarPublicUrl(profile?.avatar_path ?? null) ??
-        profile?.avatar_url ??
-        null;
-
-      setDisplayName(profile?.display_name ?? null);
-      setRole(profile?.role ?? null);
-      setAvatarUrl(versionedUrl(preferredAvatarUrl, profile?.updated_at ?? null));
-    }
-
-    void loadTopbarIdentity();
-
-    return () => {
-      isActive = false;
-    };
-  }, [supabase]);
+    setDisplayName(initialDisplayName);
+  }, [initialDisplayName]);
 
   useEffect(() => {
-    if (role) {
-      window.dispatchEvent(new CustomEvent("roleUpdated", { detail: role }));
-    }
-  }, [role]);
+    setAvatarUrl(versionedUrl(initialAvatarUrl, initialAvatarUpdatedAt));
+  }, [initialAvatarUrl, initialAvatarUpdatedAt]);
 
   useEffect(() => {
     function handleNameUpdate(e: CustomEvent) {

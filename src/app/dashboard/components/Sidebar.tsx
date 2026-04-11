@@ -7,47 +7,29 @@ import { Home, Library, PlusCircle, Mic } from "lucide-react";
 import CreatePlaylistModal from "@/components/CreatePlaylistModal";
 
 export default function Sidebar({
+  role = null,
   variant = "desktop",
   onNavigate,
 }: {
+  role?: string | null;
   variant?: "desktop" | "drawer";
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const [role, setRole] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDesktopViewport, setIsDesktopViewport] = useState(true);
 
   const isDrawer = variant === "drawer";
 
   useEffect(() => {
-    // Init role from cache (needed for Mobile Drawer re-mount)
-    try {
-      const cached = window.localStorage.getItem("immusic:role");
-      if (cached && (cached === "artist" || cached === "admin" || cached === "listener")) {
-        setRole(cached);
-      }
-    } catch {
-      // ignore (private mode / blocked storage)
-    }
-
-    // Viewport gate: treat < lg as "non-desktop" (tablet + mobile)
     function updateViewport() {
       setIsDesktopViewport(window.matchMedia("(min-width: 1024px)").matches);
     }
+
     updateViewport();
     window.addEventListener("resize", updateViewport);
 
-    function handleRoleUpdate(e: Event) {
-      const ce = e as CustomEvent;
-      const nextRole = typeof ce.detail === "string" ? ce.detail : null;
-      setRole(nextRole);
-    }
-
-    window.addEventListener("roleUpdated", handleRoleUpdate as EventListener);
-
     return () => {
-      window.removeEventListener("roleUpdated", handleRoleUpdate as EventListener);
       window.removeEventListener("resize", updateViewport);
     };
   }, []);

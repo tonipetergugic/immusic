@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { Menu, X } from "lucide-react";
 
-export default function MobileSidebarDrawer() {
+export default function MobileSidebarDrawer({
+  role = null,
+}: {
+  role?: string | null;
+}) {
   const [open, setOpen] = useState(false);
 
   // ESC schließt Drawer
@@ -81,7 +85,11 @@ export default function MobileSidebarDrawer() {
 
             {/* Same Sidebar content */}
             <div className="h-full overflow-y-auto">
-              <Sidebar variant="drawer" onNavigate={() => setOpen(false)} />
+              <Sidebar
+                role={role}
+                variant="drawer"
+                onNavigate={() => setOpen(false)}
+              />
             </div>
           </div>
         </div>
