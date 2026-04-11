@@ -17,12 +17,12 @@ export async function writeTempWav(params: { wavBuf: ArrayBuffer }): Promise<str
   return tmpWavPath;
 }
 
-export async function transcodeWavFileToMp3_320(params: {
+export async function transcodeWavFileToFlac(params: {
   inPath: string;
-}): Promise<{ mp3Bytes: Uint8Array; outPath: string }> {
+}): Promise<{ flacBytes: Uint8Array; outPath: string }> {
   const outPath = join(
     tmpdir(),
-    `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`
+    `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.flac`
   );
 
   await execFileAsync(ffmpegPath, [
@@ -34,14 +34,39 @@ export async function transcodeWavFileToMp3_320(params: {
     params.inPath,
     "-vn",
     "-codec:a",
-    "libmp3lame",
-    "-b:a",
-    "320k",
-    "-compression_level",
-    "0",
+    "flac",
     outPath,
   ]);
 
-  const mp3 = await readFile(outPath);
-  return { mp3Bytes: new Uint8Array(mp3), outPath };
+  const flac = await readFile(outPath);
+  return { flacBytes: new Uint8Array(flac), outPath };
+}
+
+export async function transcodeWavFileToAac_160(params: {
+  inPath: string;
+}): Promise<{ aacBytes: Uint8Array; outPath: string }> {
+  const outPath = join(
+    tmpdir(),
+    `immusic-${Date.now()}-${Math.random().toString(16).slice(2)}.m4a`
+  );
+
+  await execFileAsync(ffmpegPath, [
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-i",
+    params.inPath,
+    "-vn",
+    "-codec:a",
+    "aac",
+    "-b:a",
+    "160k",
+    "-movflags",
+    "+faststart",
+    outPath,
+  ]);
+
+  const aac = await readFile(outPath);
+  return { aacBytes: new Uint8Array(aac), outPath };
 }

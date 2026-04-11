@@ -112,7 +112,7 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
 
   const { data: trackRow, error: trackLoadError } = await supabase
     .from("tracks")
-    .select("id, source_queue_id, audio_hash")
+    .select("id, source_queue_id, audio_hash, audio_path, master_audio_path")
     .eq("id", trackId)
     .eq("artist_id", user.id)
     .maybeSingle();
@@ -159,8 +159,12 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
     }
   }
 
-  if (audioPath) {
-    await supabase.storage.from("tracks").remove([audioPath]);
+  if (trackRow.audio_path) {
+    await supabase.storage.from("tracks").remove([trackRow.audio_path]);
+  }
+
+  if (trackRow.master_audio_path) {
+    await supabase.storage.from("track_masters").remove([trackRow.master_audio_path]);
   }
 
   revalidatePath("/artist/my-tracks");

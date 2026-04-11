@@ -6,7 +6,8 @@ import {
   ffprobeDurationSeconds,
   ffmpegDetectSilence,
   ffmpegDetectDcOffsetAbsMean,
-  transcodeWavFileToMp3_320,
+  transcodeWavFileToFlac,
+  transcodeWavFileToAac_160,
 } from "@/lib/audio/ingestTools";
 import { markQueueApproved, markQueueRejected } from "@/lib/ai/track-check/queue";
 import {
@@ -435,7 +436,8 @@ async function runApproveAndInsertTrack(params: {
   logStage: (stage: string, ms: number) => void;
   nowNs: () => bigint;
   elapsedMs: (startNs: bigint) => number;
-  setTmpMp3Path: (p: string | null) => void;
+  setTmpFlacPath: (p: string | null) => void;
+  setTmpAacPath: (p: string | null) => void;
 }): Promise<ApprovePhaseOk | ApprovePhaseFail> {
   const {
     supabase,
@@ -453,7 +455,8 @@ async function runApproveAndInsertTrack(params: {
     logStage,
     nowNs,
     elapsedMs,
-    setTmpMp3Path,
+    setTmpFlacPath,
+    setTmpAacPath,
   } = params;
 
   const safeTitleOut = (title || "untitled")
@@ -461,11 +464,18 @@ async function runApproveAndInsertTrack(params: {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  const mp3Path = `${userId}/${safeTitleOut}-${queueId}.mp3`;
+  const flacPath = `${userId}/${safeTitleOut}-${queueId}.flac`;
+  const aacPath = `${userId}/${safeTitleOut}-${queueId}.m4a`;
 
-  async function bestEffortRemoveUploadedMp3() {
+  async function bestEffortRemoveUploadedFlac() {
     try {
-      await supabase.storage.from("tracks").remove([mp3Path]);
+      await supabase.storage.from("track_masters").remove([flacPath]);
+    } catch {}
+  }
+
+  async function bestEffortRemoveUploadedAac() {
+    try {
+      await supabase.storage.from("tracks").remove([aacPath]);
     } catch {}
   }
 
@@ -487,13 +497,13 @@ async function runApproveAndInsertTrack(params: {
     return { ok: true, response };
   }
 
-  let mp3Bytes: Uint8Array;
+  let flacBytes: Uint8Array;
   try {
     const tTrans = nowNs();
-    const out = await transcodeWavFileToMp3_320({ inPath: tmpWavPath });
-    logStage("transcode_mp3_320", elapsedMs(tTrans));
-    mp3Bytes = out.mp3Bytes;
-    setTmpMp3Path(out.outPath);
+    const out = await transcodeWavFileToFlac({ inPath: tmpWavPath });
+    logStage("transcode_flac", elapsedMs(tTrans));
+    flacBytes = out.flacBytes;
+    setTmpFlacPath(out.outPath);
   } catch {
     const response = await respondInfraError500AndReset({
       supabase,
@@ -504,21 +514,59 @@ async function runApproveAndInsertTrack(params: {
     return { ok: false, response };
   }
 
-  const tUp = nowNs();
-  const { error: mp3UpErr } = await supabase.storage
-    .from("tracks")
-    .upload(mp3Path, new Blob([Buffer.from(mp3Bytes)], { type: "audio/mpeg" }), {
-      contentType: "audio/mpeg",
-      upsert: false,
-    });
-  logStage("upload_mp3", elapsedMs(tUp));
-
-  if (mp3UpErr) {
+  let aacBytes: Uint8Array;
+  try {
+    const tTrans = nowNs();
+    const out = await transcodeWavFileToAac_160({ inPath: tmpWavPath });
+    logStage("transcode_aac_160", elapsedMs(tTrans));
+    aacBytes = out.aacBytes;
+    setTmpAacPath(out.outPath);
+  } catch {
     const response = await respondInfraError500AndReset({
       supabase,
       userId,
       queueId,
-      error: "mp3_upload_failed",
+      error: "transcode_failed",
+    });
+    return { ok: false, response };
+  }
+
+  const tUpFlac = nowNs();
+  const { error: flacUpErr } = await supabase.storage
+    .from("track_masters")
+    .upload(flacPath, new Blob([Buffer.from(flacBytes)], { type: "audio/flac" }), {
+      contentType: "audio/flac",
+      upsert: false,
+    });
+  logStage("upload_flac", elapsedMs(tUpFlac));
+
+  if (flacUpErr) {
+    const response = await respondInfraError500AndReset({
+      supabase,
+      userId,
+      queueId,
+      error: "flac_upload_failed",
+    });
+    return { ok: false, response };
+  }
+
+  const tUpAac = nowNs();
+  const { error: aacUpErr } = await supabase.storage
+    .from("tracks")
+    .upload(aacPath, new Blob([Buffer.from(aacBytes)], { type: "audio/mp4" }), {
+      contentType: "audio/mp4",
+      upsert: false,
+    });
+  logStage("upload_aac_160", elapsedMs(tUpAac));
+
+  if (aacUpErr) {
+    await bestEffortRemoveUploadedFlac();
+
+    const response = await respondInfraError500AndReset({
+      supabase,
+      userId,
+      queueId,
+      error: "aac_upload_failed",
     });
     return { ok: false, response };
   }
@@ -526,7 +574,8 @@ async function runApproveAndInsertTrack(params: {
   const finalAudioHash = audioHash;
 
   if (!finalAudioHash) {
-    await bestEffortRemoveUploadedMp3();
+    await bestEffortRemoveUploadedAac();
+    await bestEffortRemoveUploadedFlac();
 
     const response = await respondInfraError500AndReset({
       supabase,
@@ -540,7 +589,8 @@ async function runApproveAndInsertTrack(params: {
   const tInsert = nowNs();
   const { error: trackError } = await supabase.from("tracks").insert({
     artist_id: userId,
-    audio_path: mp3Path,
+    audio_path: aacPath,
+    master_audio_path: flacPath,
     title,
     status: "approved",
     source_queue_id: queueId,
@@ -556,7 +606,8 @@ async function runApproveAndInsertTrack(params: {
       const isQueueUnique = msg.includes("tracks_source_queue_id_uq") || msg.includes("source_queue_id");
 
       if (isAudioHashUnique && !isQueueUnique) {
-        await bestEffortRemoveUploadedMp3();
+        await bestEffortRemoveUploadedAac();
+        await bestEffortRemoveUploadedFlac();
         await bestEffortRemoveIngestWav({ supabase, audioPath });
 
         await markQueueRejected({
@@ -579,7 +630,7 @@ async function runApproveAndInsertTrack(params: {
         admin,
         userId,
         queueId,
-        audio_path: mp3Path,
+        audio_path: aacPath,
       });
 
       await bestEffortRemoveIngestWav({ supabase, audioPath });
@@ -605,7 +656,8 @@ async function runApproveAndInsertTrack(params: {
       return { ok: true, response };
     }
 
-    await bestEffortRemoveUploadedMp3();
+    await bestEffortRemoveUploadedAac();
+    await bestEffortRemoveUploadedFlac();
 
     const response = await respondInfraError500AndReset({
       supabase,
@@ -620,7 +672,7 @@ async function runApproveAndInsertTrack(params: {
     admin,
     userId,
     queueId,
-    audio_path: mp3Path,
+    audio_path: aacPath,
   });
 
   await bestEffortRemoveIngestWav({ supabase, audioPath });
@@ -767,7 +819,8 @@ export async function runTrackCheckWorker(params: {
   // --- PERF BASELINE (console only) ---
 
   let tmpWavPath: string | null = null;
-  let tmpMp3Path: string | null = null;
+  let tmpFlacPath: string | null = null;
+  let tmpAacPath: string | null = null;
 
   try {
     const tech = await runTechnicalGatesAndPersistMetrics({
@@ -829,8 +882,11 @@ export async function runTrackCheckWorker(params: {
       logStage,
       nowNs,
       elapsedMs,
-      setTmpMp3Path: (p) => {
-        tmpMp3Path = p;
+      setTmpFlacPath: (p) => {
+        tmpFlacPath = p;
+      },
+      setTmpAacPath: (p) => {
+        tmpAacPath = p;
       },
     });
 
@@ -850,7 +906,11 @@ export async function runTrackCheckWorker(params: {
       if (tmpWavPath) await unlink(tmpWavPath);
     } catch {}
     try {
-      if (tmpMp3Path) await unlink(tmpMp3Path);
+      if (tmpFlacPath) await unlink(tmpFlacPath);
+    } catch {}
+
+    try {
+      if (tmpAacPath) await unlink(tmpAacPath);
     } catch {}
   }
 }

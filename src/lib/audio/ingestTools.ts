@@ -19,7 +19,8 @@ import {
   ffmpegDetectPhaseCorrelationEvents,
   ffprobeDurationSeconds,
   writeTempWav,
-  transcodeWavFileToMp3_320,
+  transcodeWavFileToFlac,
+  transcodeWavFileToAac_160,
   type SilenceSegment,
   type TruePeakOverEvent,
   type TruePeakOverWindow,
@@ -43,7 +44,7 @@ export async function sha256HexFromArrayBuffer(buf: ArrayBuffer) {
   return toHex(digest);
 }
 
-export { writeTempWav, transcodeWavFileToMp3_320 };
+export { writeTempWav, transcodeWavFileToFlac, transcodeWavFileToAac_160 };
 export { ffprobeDurationSeconds };
 
 export {

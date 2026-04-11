@@ -1,6 +1,10 @@
 export { ffprobeDurationSeconds } from "@/lib/audio/ingest/metadata";
 
-export { writeTempWav, transcodeWavFileToMp3_320 } from "@/lib/audio/ingest/wav-conversion";
+export {
+  writeTempWav,
+  transcodeWavFileToFlac,
+  transcodeWavFileToAac_160,
+} from "@/lib/audio/ingest/wav-conversion";
 
 export {
   ffmpegDetectTruePeakOvers,
