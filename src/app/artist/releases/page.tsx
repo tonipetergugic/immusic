@@ -14,7 +14,7 @@ export default async function ReleasesPage() {
 
   const { data, error } = await supabase
     .from("releases")
-    .select("id, title, release_type, cover_path, created_at, status")
+    .select("id, title, release_type, cover_path, cover_preview_path, created_at, status")
     .eq("artist_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -26,12 +26,16 @@ export default async function ReleasesPage() {
     return <ReleasesClient initialReleases={[]} />;
   }
 
-  const initialReleases: ReleaseRecord[] = data.map((r) => ({
-    ...r,
-    cover_url: r.cover_path
-      ? supabase.storage.from("release_covers").getPublicUrl(r.cover_path).data.publicUrl
-      : null,
-  }));
+  const initialReleases: ReleaseRecord[] = data.map((r) => {
+    const preferredCoverPath = r.cover_preview_path ?? r.cover_path ?? null;
+
+    return {
+      ...r,
+      cover_url: preferredCoverPath
+        ? supabase.storage.from("release_covers").getPublicUrl(preferredCoverPath).data.publicUrl
+        : null,
+    };
+  });
 
   return <ReleasesClient initialReleases={initialReleases} />;
 }

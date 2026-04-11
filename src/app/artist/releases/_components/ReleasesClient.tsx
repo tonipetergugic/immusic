@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Plus, Disc3, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -9,6 +10,7 @@ export type ReleaseRecord = {
   title: string;
   release_type: string;
   cover_path: string | null;
+  cover_preview_path?: string | null;
   created_at: string;
   status?: string | null;
   cover_url?: string | null;
@@ -176,11 +178,12 @@ export default function ReleasesClient({ initialReleases }: { initialReleases: R
                   ) : null}
 
                   {r.cover_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={r.cover_url}
                       alt={r.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                      fill
+                      sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, (max-width: 1535px) 20vw, 16vw"
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.01]"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-white/30">
