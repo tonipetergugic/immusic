@@ -1,33 +1,18 @@
 import BackLink from "@/components/BackLink";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { headers, cookies } from "next/headers";
+import {
+  readFeedbackState,
+  type ReadFeedbackStateErr,
+  type ReadFeedbackStateOk,
+} from "@/lib/ai/track-check/read-feedback-state";
 import { redirect } from "next/navigation";
 
-export type FeedbackApiOk = {
-  ok: true;
-  queue_id: string;
-  queue_title: string | null;
-  feedback_state: "locked" | "unlocked_pending" | "unlocked_ready";
-  status: "locked" | "unlocked_no_data" | "unlocked_ready";
-  unlocked: boolean;
-  access: {
-    unlocked: boolean;
-    has_paid: boolean;
-    credit_balance: number;
-    analysis_status: string | null;
-  };
-  payload: null | {
-    schema_version?: number;
-    summary?: { highlights?: string[]; severity?: "info" | "warn" | "critical" };
-    hard_fail?: { triggered?: boolean; reasons?: any[] };
-    metrics?: any;
-    recommendations?: any[];
-    track?: { duration_s?: number; decision?: string };
-    events?: any;
-  };
-};
+export type FeedbackApiOk = ReadFeedbackStateOk;
 
-export type FeedbackApiErr = { ok: false; error: string };
+export type FeedbackApiErr = {
+  ok: false;
+  error: ReadFeedbackStateErr["error"];
+};
 
 export type LoadFeedbackV3Result =
   | {
@@ -79,20 +64,14 @@ export async function loadFeedbackV3Data(params: {
     };
   }
 
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  if (!host) throw new Error("Failed to resolve host for feedback API.");
+  const data = await readFeedbackState({
+    supabase,
+    userId: user.id,
+    queueId,
+  });
 
-  const cookieHeader = (await cookies()).toString();
-
-  const res = await fetch(
-    `${proto}://${host}/api/ai/track-check/feedback?queue_id=${encodeURIComponent(queueId)}`,
-    { cache: "no-store", headers: { cookie: cookieHeader } }
-  );
-
-  if (!res.ok) {
-    if (res.status === 404) {
+  if (!data.ok) {
+    if (data.error === "not_found") {
       return {
         kind: "render",
         element: (
@@ -111,30 +90,11 @@ export async function loadFeedbackV3Data(params: {
         ),
       };
     }
-    throw new Error(`Feedback API request failed: ${res.status}`);
+
+    throw new Error(`Failed to load feedback state: ${data.error}`);
   }
 
-  const data = (await res.json()) as FeedbackApiOk | FeedbackApiErr;
-
-  if (!data || (data as any).ok !== true) {
-    if (data && (data as any).ok === false && (data as any).error === "not_found") {
-      return {
-        kind: "render",
-        element: (
-          <div className="min-h-screen bg-[#0E0E10] text-white">
-            <div className="w-full px-6 py-10">
-              <BackLink href="/artist/upload/processing" label="Back" />
-              <h1 className="mt-6 text-2xl font-bold">Feedback</h1>
-              <p className="mt-2 text-white/70">Not found.</p>
-            </div>
-          </div>
-        ),
-      };
-    }
-    throw new Error("Failed to load feedback state.");
-  }
-
-  const okData = data as FeedbackApiOk;
+  const okData = data;
   const unlocked = !!okData.access?.unlocked;
   const creditBalance = typeof okData.access?.credit_balance === "number" ? okData.access.credit_balance : 0;
   const queueTitle = okData.queue_title ?? "Untitled";

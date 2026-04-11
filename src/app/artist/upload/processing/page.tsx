@@ -32,12 +32,22 @@ export default async function ProcessingPage({
     );
   }
 
-  const { data: queueRow, error: queueErr } = await supabase
-    .from("tracks_ai_queue")
-    .select("id")
-    .eq("id", queueId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const [
+    { data: queueRow, error: queueErr },
+    { data: creditsRow, error: creditsErr },
+  ] = await Promise.all([
+    supabase
+      .from("tracks_ai_queue")
+      .select("id")
+      .eq("id", queueId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("artist_credits")
+      .select("balance")
+      .eq("profile_id", user.id)
+      .maybeSingle(),
+  ]);
 
   if (queueErr) {
     return (
@@ -54,12 +64,6 @@ export default async function ProcessingPage({
       </div>
     );
   }
-
-  const { data: creditsRow, error: creditsErr } = await supabase
-    .from("artist_credits")
-    .select("balance")
-    .eq("profile_id", user.id)
-    .maybeSingle();
 
   if (creditsErr) {
     return (
