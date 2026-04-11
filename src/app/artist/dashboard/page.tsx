@@ -24,17 +24,63 @@ export default async function ArtistDashboardPage() {
     redirect("/login");
   }
 
-  const { data: credits, error: creditsError } = await supabase
-    .from("artist_credits")
-    .select("balance")
-    .eq("profile_id", user.id)
-    .single();
+  const [
+    { data: artistCreditsRow, error: creditsError },
+    { data: transactionsRows, error: premiumTxError },
+    { data: topRatedRaw, error: topRatedError },
+    { data: topStreamsRaw, error: topStreamsError },
+    { data: artistMembershipsRaw, error: membershipsError },
+  ] = await Promise.all([
+    supabase
+      .from("artist_credits")
+      .select("balance")
+      .eq("profile_id", user.id)
+      .single(),
+    supabase
+      .from("artist_credit_transactions")
+      .select("id, delta, reason, source, created_at")
+      .eq("profile_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("analytics_artist_top_tracks_30d")
+      .select(
+        `
+      track_id,
+      streams:streams_30d,
+      ratings_count:ratings_count_30d,
+      rating_avg:rating_avg_30d
+    `
+      )
+      .eq("artist_id", user.id)
+      .gt("ratings_count_30d", 0)
+      .order("rating_avg_30d", { ascending: false, nullsFirst: false })
+      .order("ratings_count_30d", { ascending: false, nullsFirst: false })
+      .limit(3),
+    supabase
+      .from("analytics_artist_top_tracks_30d")
+      .select(
+        `
+      track_id,
+      streams:streams_30d,
+      ratings_count:ratings_count_30d,
+      rating_avg:rating_avg_30d
+    `
+      )
+      .eq("artist_id", user.id)
+      .order("streams_30d", { ascending: false, nullsFirst: false })
+      .limit(3),
+    supabase
+      .from("analytics_artist_track_memberships")
+      .select("track_id")
+      .eq("artist_id", user.id),
+  ]);
 
   if (creditsError && creditsError.code !== "PGRST116") {
     throw creditsError;
   }
 
-  const balance = credits?.balance ?? 0;
+  const balance = artistCreditsRow?.balance ?? 0;
 
   // --- Premium Credits Ledger (read-only) ---
   type PremiumTxRow = {
@@ -45,18 +91,11 @@ export default async function ArtistDashboardPage() {
     created_at: string;
   };
 
-  const { data: premiumTxRaw, error: premiumTxError } = await supabase
-    .from("artist_credit_transactions")
-    .select("id, delta, reason, source, created_at")
-    .eq("profile_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
   if (premiumTxError) {
     throw premiumTxError;
   }
 
-  const premiumTx = (premiumTxRaw ?? []) as PremiumTxRow[];
+  const premiumTx = (transactionsRows ?? []) as PremiumTxRow[];
 
   type AnalyticsTopTrackRow = {
     track_id: string;
@@ -97,42 +136,7 @@ export default async function ArtistDashboardPage() {
     cover_preview_path: string | null;
   };
 
-  const { data: topRatedRaw, error: topRatedError } = await supabase
-    .from("analytics_artist_top_tracks_30d")
-    .select(
-      `
-      track_id,
-      streams:streams_30d,
-      ratings_count:ratings_count_30d,
-      rating_avg:rating_avg_30d
-    `
-    )
-    .eq("artist_id", user.id)
-    .gt("ratings_count_30d", 0)
-    .order("rating_avg_30d", { ascending: false, nullsFirst: false })
-    .order("ratings_count_30d", { ascending: false, nullsFirst: false })
-    .limit(3);
-
-  const { data: topStreamsRaw, error: topStreamsError } = await supabase
-    .from("analytics_artist_top_tracks_30d")
-    .select(
-      `
-      track_id,
-      streams:streams_30d,
-      ratings_count:ratings_count_30d,
-      rating_avg:rating_avg_30d
-    `
-    )
-    .eq("artist_id", user.id)
-    .order("streams_30d", { ascending: false, nullsFirst: false })
-    .limit(3);
-
-  const { data: artistMembershipsRaw, error: artistMembershipsError } = await supabase
-    .from("analytics_artist_track_memberships")
-    .select("track_id")
-    .eq("artist_id", user.id);
-
-  const perfError = topRatedError ?? topStreamsError ?? artistMembershipsError;
+  const perfError = topRatedError ?? topStreamsError ?? membershipsError;
 
   if (perfError) {
     throw perfError;
@@ -149,13 +153,51 @@ export default async function ArtistDashboardPage() {
     )
   );
 
-  const { data: topTrackDetailsRaw, error: topTrackDetailsError } =
+  const artistMemberships = (artistMembershipsRaw ?? []) as ArtistMembershipRow[];
+
+  const quickStatsTrackIds = Array.from(
+    new Set(
+      artistMemberships
+        .map((row) => String(row.track_id ?? ""))
+        .filter(Boolean)
+    )
+  );
+
+  const [
+    { data: topTrackDetailsRaw, error: topTrackDetailsError },
+    [
+      { data: quickStatsTracksRaw, error: quickStatsTracksError },
+      { data: quickStatsLifetimeRaw, error: quickStatsLifetimeError },
+      { data: quickStatsReleaseRaw, error: quickStatsReleaseError },
+    ],
+  ] = await Promise.all([
     analyticsTrackIds.length > 0
-      ? await supabase
+      ? supabase
           .from("artist_top_tracks_resolved")
           .select("track_id, track_title, release_id, cover_path")
           .in("track_id", analyticsTrackIds)
-      : { data: [], error: null };
+      : Promise.resolve({ data: [], error: null }),
+    quickStatsTrackIds.length > 0
+      ? Promise.all([
+          supabase
+            .from("tracks")
+            .select("id, rating_avg, rating_count")
+            .in("id", quickStatsTrackIds),
+          supabase
+            .from("analytics_track_lifetime")
+            .select("track_id, streams_lifetime")
+            .in("track_id", quickStatsTrackIds),
+          supabase
+            .from("artist_top_tracks_resolved")
+            .select("track_id, release_id")
+            .in("track_id", quickStatsTrackIds),
+        ] as const)
+      : Promise.resolve([
+          { data: [], error: null },
+          { data: [], error: null },
+          { data: [], error: null },
+        ] as const),
+  ]);
 
   if (topTrackDetailsError) {
     throw topTrackDetailsError;
@@ -194,41 +236,6 @@ export default async function ArtistDashboardPage() {
       row.cover_preview_path ?? null,
     ])
   );
-
-  const artistMemberships = (artistMembershipsRaw ?? []) as ArtistMembershipRow[];
-
-  const quickStatsTrackIds = Array.from(
-    new Set(
-      artistMemberships
-        .map((row) => String(row.track_id ?? ""))
-        .filter(Boolean)
-    )
-  );
-
-  const [
-    { data: quickStatsTracksRaw, error: quickStatsTracksError },
-    { data: quickStatsLifetimeRaw, error: quickStatsLifetimeError },
-    { data: quickStatsReleaseRaw, error: quickStatsReleaseError },
-  ] = quickStatsTrackIds.length > 0
-    ? await Promise.all([
-        supabase
-          .from("tracks")
-          .select("id, rating_avg, rating_count")
-          .in("id", quickStatsTrackIds),
-        supabase
-          .from("analytics_track_lifetime")
-          .select("track_id, streams_lifetime")
-          .in("track_id", quickStatsTrackIds),
-        supabase
-          .from("artist_top_tracks_resolved")
-          .select("track_id, release_id")
-          .in("track_id", quickStatsTrackIds),
-      ])
-    : [
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-      ];
 
   const quickStatsError =
     quickStatsTracksError ?? quickStatsLifetimeError ?? quickStatsReleaseError;
