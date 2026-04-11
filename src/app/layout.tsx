@@ -31,15 +31,17 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   let initialHideExplicitTracks = false;
+  let initialViewerRole: string | null = null;
 
   if (user?.id) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("hide_explicit_tracks")
+      .select("hide_explicit_tracks, role")
       .eq("id", user.id)
       .maybeSingle();
 
     initialHideExplicitTracks = !!profile?.hide_explicit_tracks;
+    initialViewerRole = profile?.role ?? null;
   }
 
   return (
@@ -47,7 +49,10 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-[#0E0E10] text-white antialiased overflow-hidden`}
       >
-        <GlobalPlayerWrapper initialHideExplicitTracks={initialHideExplicitTracks}>
+        <GlobalPlayerWrapper
+          initialHideExplicitTracks={initialHideExplicitTracks}
+          initialViewerRole={initialViewerRole}
+        >
           {children}
         </GlobalPlayerWrapper>
       </body>

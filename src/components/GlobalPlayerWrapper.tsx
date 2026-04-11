@@ -8,9 +8,11 @@ import { ViewerRoleProvider } from "@/context/ViewerRoleContext";
 export default function GlobalPlayerWrapper({
   children,
   initialHideExplicitTracks = false,
+  initialViewerRole = null,
 }: {
   children: React.ReactNode;
   initialHideExplicitTracks?: boolean;
+  initialViewerRole?: string | null;
 }) {
   const [notice, setNotice] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -42,7 +44,7 @@ export default function GlobalPlayerWrapper({
   }, []);
 
   return (
-    <ViewerRoleProvider>
+    <ViewerRoleProvider initialRole={initialViewerRole}>
       <PlayerProvider initialHideExplicitTracks={initialHideExplicitTracks}>
       {/* Global Notice */}
       {notice && (
