@@ -26,19 +26,6 @@ export default async function DashboardPage() {
 
   const autoReleaseLimit = Math.max(0, 10 - (highlightedReleaseId ? 1 : 0));
 
-  const autoReleaseIds =
-    autoReleaseLimit > 0
-      ? await getLatestHomeReleaseIds({
-          limit: autoReleaseLimit,
-          excludeIds: highlightedReleaseId ? [highlightedReleaseId] : [],
-        })
-      : [];
-
-  const releaseIds = [
-    ...(highlightedReleaseId ? [highlightedReleaseId] : []),
-    ...autoReleaseIds,
-  ];
-
   const playlistModule = modules.find((m) => m.module_type === "playlist") ?? null;
   const playlistItems = playlistModule ? (obj[playlistModule.id] ?? []) : [];
 
@@ -51,13 +38,25 @@ export default async function DashboardPage() {
 
   const playlistAutoLimit = Math.max(0, 10 - (highlightedPlaylistId ? 1 : 0));
 
-  const autoPlaylistIds =
+  const [autoReleaseIds, autoPlaylistIds] = await Promise.all([
+    autoReleaseLimit > 0
+      ? getLatestHomeReleaseIds({
+          limit: autoReleaseLimit,
+          excludeIds: highlightedReleaseId ? [highlightedReleaseId] : [],
+        })
+      : Promise.resolve([] as string[]),
     playlistAutoLimit > 0
-      ? await getLatestHomePlaylistIds({
+      ? getLatestHomePlaylistIds({
           limit: playlistAutoLimit,
           excludeIds: highlightedPlaylistId ? [highlightedPlaylistId] : [],
         })
-      : [];
+      : Promise.resolve([] as string[]),
+  ]);
+
+  const releaseIds = [
+    ...(highlightedReleaseId ? [highlightedReleaseId] : []),
+    ...autoReleaseIds,
+  ];
 
   const devPlaylistIds = [
     ...(highlightedPlaylistId ? [highlightedPlaylistId] : []),
