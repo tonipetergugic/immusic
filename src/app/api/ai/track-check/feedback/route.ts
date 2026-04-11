@@ -38,5 +38,6 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json(result);
+  const { queue_audio_hash: _queueAudioHash, ...publicResult } = result;
+  return NextResponse.json(publicResult);
 }

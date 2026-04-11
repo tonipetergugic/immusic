@@ -46,19 +46,20 @@ export default async function UploadFeedbackV3Page({
     isReady,
     payload,
     queueTitle,
+    queueAudioHash,
   } = loaded;
 
   const { banner, heroChips, journey, coachRecommendations } = deriveFeedbackV3PageState({ payload, isReady });
   const summary = deriveFeedbackSummary({ payload, isReady });
 
   await logFeedbackAccessEvent({
-    supabase,
     userId,
     queueId,
     unlocked,
     creditBalance,
     errorParam: error,
     apiStatus: data.feedback_state,
+    queueAudioHash,
   });
 
   if (!unlocked) {

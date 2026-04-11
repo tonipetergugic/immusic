@@ -31,6 +31,7 @@ export type LoadFeedbackV3Result =
       isReady: boolean;
       payload: any | null;
       queueTitle: string;
+      queueAudioHash: string | null;
     };
 
 export async function loadFeedbackV3Data(params: {
@@ -113,5 +114,6 @@ export async function loadFeedbackV3Data(params: {
     isReady,
     payload,
     queueTitle,
+    queueAudioHash: okData.queue_audio_hash ?? null,
   };
 }

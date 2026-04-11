@@ -36,6 +36,7 @@ export type ReadFeedbackStateLocked = {
   ok: true;
   queue_id: string;
   queue_title: string | null;
+  queue_audio_hash: string | null;
   feedback_state: "locked";
   status: "locked";
   unlocked: false;
@@ -47,6 +48,7 @@ export type ReadFeedbackStateUnlockedPending = {
   ok: true;
   queue_id: string;
   queue_title: string | null;
+  queue_audio_hash: string | null;
   feedback_state: "unlocked_pending";
   status: "unlocked_no_data";
   unlocked: true;
@@ -58,6 +60,7 @@ export type ReadFeedbackStateUnlockedReady = {
   ok: true;
   queue_id: string;
   queue_title: string | null;
+  queue_audio_hash: string | null;
   feedback_state: "unlocked_ready";
   status: "unlocked_ready";
   unlocked: true;
@@ -144,6 +147,7 @@ export async function readFeedbackState(params: {
       ok: true,
       queue_id: queueId,
       queue_title: (queueRow.title as string | null) ?? null,
+      queue_audio_hash: queueHash ?? null,
       feedback_state: "locked",
       status: "locked",
       unlocked: false,
@@ -248,6 +252,7 @@ export async function readFeedbackState(params: {
           ok: true,
           queue_id: queueId,
           queue_title: (queueRow as QueueRow).title ?? null,
+          queue_audio_hash: queueHash ?? null,
           feedback_state: "unlocked_ready",
           status: "unlocked_ready",
           unlocked: true,
@@ -268,6 +273,7 @@ export async function readFeedbackState(params: {
     ok: true,
     queue_id: queueId,
     queue_title: (queueRow.title as string | null) ?? null,
+    queue_audio_hash: queueHash ?? null,
     feedback_state: "unlocked_pending",
     status: "unlocked_no_data",
     unlocked: true,
