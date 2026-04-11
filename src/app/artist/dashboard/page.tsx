@@ -126,9 +126,11 @@ export default async function ArtistDashboardPage() {
     streams_lifetime: number | null;
   };
 
-  type TrackReleaseRow = {
+  type ResolvedTrackReleaseRow = {
     track_id: string;
+    track_title: string | null;
     release_id: string | null;
+    cover_path: string | null;
   };
 
   type ReleasePreviewRow = {
@@ -163,19 +165,22 @@ export default async function ArtistDashboardPage() {
     )
   );
 
+  const resolvedTrackIds = Array.from(
+    new Set([...analyticsTrackIds, ...quickStatsTrackIds].filter(Boolean))
+  );
+
   const [
-    { data: topTrackDetailsRaw, error: topTrackDetailsError },
+    { data: resolvedTracksRaw, error: resolvedTracksError },
     [
       { data: quickStatsTracksRaw, error: quickStatsTracksError },
       { data: quickStatsLifetimeRaw, error: quickStatsLifetimeError },
-      { data: quickStatsReleaseRaw, error: quickStatsReleaseError },
     ],
   ] = await Promise.all([
-    analyticsTrackIds.length > 0
+    resolvedTrackIds.length > 0
       ? supabase
           .from("artist_top_tracks_resolved")
           .select("track_id, track_title, release_id, cover_path")
-          .in("track_id", analyticsTrackIds)
+          .in("track_id", resolvedTrackIds)
       : Promise.resolve({ data: [], error: null }),
     quickStatsTrackIds.length > 0
       ? Promise.all([
@@ -187,32 +192,27 @@ export default async function ArtistDashboardPage() {
             .from("analytics_track_lifetime")
             .select("track_id, streams_lifetime")
             .in("track_id", quickStatsTrackIds),
-          supabase
-            .from("artist_top_tracks_resolved")
-            .select("track_id, release_id")
-            .in("track_id", quickStatsTrackIds),
         ] as const)
       : Promise.resolve([
-          { data: [], error: null },
           { data: [], error: null },
           { data: [], error: null },
         ] as const),
   ]);
 
-  if (topTrackDetailsError) {
-    throw topTrackDetailsError;
+  if (resolvedTracksError) {
+    throw resolvedTracksError;
   }
 
+  const resolvedTracks = (resolvedTracksRaw ?? []) as ResolvedTrackReleaseRow[];
+
   const detailsByTrackId = new Map(
-    ((topTrackDetailsRaw ?? []) as ResolvedTrackRow[]).map((row) => [
-      row.track_id,
-      row,
-    ])
+    resolvedTracks.map((row) => [row.track_id, row])
   );
 
   const topTrackReleaseIds = Array.from(
     new Set(
-      ((topTrackDetailsRaw ?? []) as ResolvedTrackRow[])
+      resolvedTracks
+        .filter((row) => analyticsTrackIds.includes(String(row.track_id ?? "")))
         .map((row) => String(row.release_id ?? ""))
         .filter(Boolean)
     )
@@ -238,7 +238,7 @@ export default async function ArtistDashboardPage() {
   );
 
   const quickStatsError =
-    quickStatsTracksError ?? quickStatsLifetimeError ?? quickStatsReleaseError;
+    quickStatsTracksError ?? quickStatsLifetimeError;
 
   if (quickStatsError) {
     throw quickStatsError;
@@ -246,7 +246,12 @@ export default async function ArtistDashboardPage() {
 
   const quickStatsTracks = (quickStatsTracksRaw ?? []) as TrackStatRow[];
   const quickStatsLifetime = (quickStatsLifetimeRaw ?? []) as TrackLifetimeRow[];
-  const quickStatsReleases = (quickStatsReleaseRaw ?? []) as TrackReleaseRow[];
+  const quickStatsReleases = resolvedTracks
+    .filter((row) => quickStatsTrackIds.includes(String(row.track_id ?? "")))
+    .map((row) => ({
+      track_id: row.track_id,
+      release_id: row.release_id,
+    }));
 
   const totalStreams = quickStatsLifetime.reduce(
     (sum, row) =>
