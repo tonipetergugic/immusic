@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import GlobalPlayerWrapper from "@/components/GlobalPlayerWrapper";
 import "./globals.css";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedServerUser } from "@/lib/supabase/getCachedServerUser";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,9 +27,7 @@ export default async function RootLayout({
 }>) {
   const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedServerUser();
 
   const initialViewerUserId = user?.id ?? null;
 

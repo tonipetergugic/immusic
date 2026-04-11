@@ -1,6 +1,7 @@
 import Sidebar from "./components/ArtistSidebar";
 import Topbar from "../dashboard/components/Topbar";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedServerUser } from "@/lib/supabase/getCachedServerUser";
 import { ArtistProfileProvider } from "@/app/artist/_components/ArtistProfileProvider";
 import AppShell from "@/components/layout/AppShell";
 
@@ -11,9 +12,7 @@ export default async function ArtistLayout({
 }) {
   const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedServerUser();
 
   let profile:
       | {

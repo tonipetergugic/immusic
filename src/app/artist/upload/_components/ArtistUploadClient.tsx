@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, RotateCcw, Upload as UploadIcon } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
+import { useViewerRole } from "@/context/ViewerRoleContext";
 
 type WavValidation =
   | { ok: true; durationSeconds: number; sampleRate: number; channels: number; bitsPerSample: number }
@@ -117,8 +118,6 @@ async function validateWavFile(file: File): Promise<WavValidation> {
   return { ok: true, durationSeconds, sampleRate, channels, bitsPerSample };
 }
 
-type Props = { userId: string };
-
 type QueueApiResponse =
   | { ok: true; queue_id: string }
   | { ok: false; error: string };
@@ -138,9 +137,10 @@ function randomId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export default function ArtistUploadClient({ userId }: Props) {
+export default function ArtistUploadClient() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const { userId } = useViewerRole();
 
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -186,6 +186,11 @@ export default function ArtistUploadClient({ userId }: Props) {
     if (!file) return;
 
     setUiError(null);
+
+    if (!userId) {
+      setUiError("Your session could not be verified. Please reload and try again.");
+      return;
+    }
 
     const extCheck = (file.name.split(".").pop() || "").toLowerCase();
     if (extCheck !== "wav") {

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedServerUser } from "@/lib/supabase/getCachedServerUser";
 import ProcessingClient from "./ProcessingClient";
 
 export default async function ProcessingPage({
@@ -8,9 +9,7 @@ export default async function ProcessingPage({
 }) {
   const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedServerUser();
 
   if (!user) {
     return (

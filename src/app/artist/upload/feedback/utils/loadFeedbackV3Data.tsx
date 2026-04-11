@@ -1,5 +1,6 @@
 import BackLink from "@/components/BackLink";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedServerUser } from "@/lib/supabase/getCachedServerUser";
 import {
   readFeedbackState,
   type ReadFeedbackStateErr,
@@ -42,9 +43,7 @@ export async function loadFeedbackV3Data(params: {
   const errorParam = (sp?.error ?? "").trim();
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedServerUser();
 
   if (!user) redirect("/login");
 
