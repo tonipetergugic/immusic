@@ -60,7 +60,7 @@ export default function DashboardHomeClient({
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const router = useRouter();
 
-  const { isListener } = useViewerRole();
+  const { isListener, userId } = useViewerRole();
 
   const [discoveryMode, setDiscoveryMode] = useState<"development" | "performance">("development");
   const [homeTab, setHomeTab] = useState<HomeTabKey>("releases");
@@ -102,6 +102,7 @@ export default function DashboardHomeClient({
     discoveryMode,
     isEnabled: homeTab === "tracks",
     isListener,
+    viewerUserId: userId,
     supabase,
     fetchPerformanceDiscovery,
   });

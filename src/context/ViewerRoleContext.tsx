@@ -4,6 +4,7 @@ import { createContext, useContext, ReactNode } from "react";
 
 type ViewerRoleContextValue = {
   role: string | null;
+  userId: string | null;
   isArtist: boolean;
   isListener: boolean;
   isAdmin: boolean;
@@ -15,17 +16,21 @@ const ViewerRoleContext = createContext<ViewerRoleContextValue | undefined>(unde
 export function ViewerRoleProvider({
   children,
   initialRole = null,
+  initialUserId = null,
 }: {
   children: ReactNode;
   initialRole?: string | null;
+  initialUserId?: string | null;
 }) {
   const role = initialRole;
+  const userId = initialUserId;
   const isLoaded = true;
 
   return (
     <ViewerRoleContext.Provider
       value={{
         role,
+        userId,
         isArtist: role === "artist",
         isListener: role === "listener",
         isAdmin: role === "admin",

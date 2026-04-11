@@ -30,6 +30,8 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const initialViewerUserId = user?.id ?? null;
+
   let initialHideExplicitTracks = false;
   let initialViewerRole: string | null = null;
 
@@ -52,6 +54,7 @@ export default async function RootLayout({
         <GlobalPlayerWrapper
           initialHideExplicitTracks={initialHideExplicitTracks}
           initialViewerRole={initialViewerRole}
+          initialViewerUserId={initialViewerUserId}
         >
           {children}
         </GlobalPlayerWrapper>

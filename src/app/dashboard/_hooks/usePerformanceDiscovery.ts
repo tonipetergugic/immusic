@@ -34,6 +34,7 @@ type Params = {
   discoveryMode: "development" | "performance";
   isEnabled: boolean;
   isListener: boolean;
+  viewerUserId: string | null;
   supabase: SupabaseClient;
   fetchPerformanceDiscovery: (limit: number) => Promise<PerformanceDiscoveryItem[]>;
 };
@@ -42,6 +43,7 @@ export function usePerformanceDiscovery({
   discoveryMode,
   isEnabled,
   isListener,
+  viewerUserId,
   supabase,
   fetchPerformanceDiscovery,
 }: Params) {
@@ -141,31 +143,27 @@ export function usePerformanceDiscovery({
             setPerfTrackMetaMap(trackMetaMap);
           }
 
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-
           const myStarsByTrackId = new Map<string, number>();
           const listenStateByTrackId = new Map<
             string,
             { can_rate: boolean | null; listened_seconds: number | null }
           >();
 
-          if (user?.id) {
+          if (viewerUserId) {
             const [{ data: myRatings, error: myRatingsErr }, { data: listenRows, error: listenErr }] =
               await Promise.all([
                 trackIds.length > 0
                   ? supabase
                       .from("track_ratings")
                       .select("track_id, stars")
-                      .eq("user_id", user.id)
+                      .eq("user_id", viewerUserId)
                       .in("track_id", trackIds)
                   : Promise.resolve({ data: [], error: null }),
                 trackIds.length > 0 && isListener
                   ? supabase
                       .from("track_listen_state")
                       .select("track_id, listened_seconds, can_rate")
-                      .eq("user_id", user.id)
+                      .eq("user_id", viewerUserId)
                       .in("track_id", trackIds)
                   : Promise.resolve({ data: [], error: null }),
               ]);
@@ -225,7 +223,7 @@ export function usePerformanceDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [discoveryMode, isEnabled, isListener, supabase, fetchPerformanceDiscovery]);
+  }, [discoveryMode, isEnabled, isListener, viewerUserId, supabase, fetchPerformanceDiscovery]);
 
   return {
     performanceItems,
