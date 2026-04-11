@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -125,6 +126,34 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
     throw new Error("Track not found");
   }
 
+  const admin = getSupabaseAdmin();
+
+  if (trackRow.audio_path) {
+    const { data: trackStorageDeleteData, error: trackStorageDeleteError } =
+      await admin.storage.from("tracks").remove([trackRow.audio_path]);
+
+    if (trackStorageDeleteError) {
+      throw new Error(`Failed to delete playback file: ${trackStorageDeleteError.message}`);
+    }
+
+    if (!Array.isArray(trackStorageDeleteData) || trackStorageDeleteData.length === 0) {
+      throw new Error("Failed to delete playback file: storage object not removed.");
+    }
+  }
+
+  if (trackRow.master_audio_path) {
+    const { data: masterStorageDeleteData, error: masterStorageDeleteError } =
+      await admin.storage.from("track_masters").remove([trackRow.master_audio_path]);
+
+    if (masterStorageDeleteError) {
+      throw new Error(`Failed to delete master file: ${masterStorageDeleteError.message}`);
+    }
+
+    if (!Array.isArray(masterStorageDeleteData) || masterStorageDeleteData.length === 0) {
+      throw new Error("Failed to delete master file: storage object not removed.");
+    }
+  }
+
   const { error: dbError } = await supabase
     .from("tracks")
     .delete()
@@ -157,14 +186,6 @@ export async function deleteTrackAction(trackId: string, audioPath: string) {
     if (queueDeleteByHashError) {
       throw new Error("Failed to delete duplicate queue history");
     }
-  }
-
-  if (trackRow.audio_path) {
-    await supabase.storage.from("tracks").remove([trackRow.audio_path]);
-  }
-
-  if (trackRow.master_audio_path) {
-    await supabase.storage.from("track_masters").remove([trackRow.master_audio_path]);
   }
 
   revalidatePath("/artist/my-tracks");
