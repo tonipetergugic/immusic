@@ -71,47 +71,28 @@ export function deriveHeroChips(payload: any, isReady: boolean) {
     };
   }
 
-  // Sections (structure): prefer explicit label; fallback: presence of sections array
-  const sections = findFirst<any[]>(payload, ["structure.sections", "structure.sections_v1", "structureSections", "sections"]);
+  const sections = findFirst<any[]>(payload, ["metrics.structure.sections"]);
 
-  const structureLabel =
-    formatChipValue(findFirst<string>(payload, ["structure.sections_label", "structure.structure_label", "structure.label"])) !== "—"
-      ? formatChipValue(findFirst<string>(payload, ["structure.sections_label", "structure.structure_label", "structure.label"]))
-      : Array.isArray(sections) && sections.length > 0
-        ? "Detected"
-        : "—";
-
-  // Drop: prefer a label if present; fallback: detect a drop section marker
-  const dropLabelRaw = findFirst<string>(payload, [
-    "structure.drop.label",
-    "structure.drop_confidence.label",
-    "structure.dropConfidence.label",
-    "drop.label",
-    "dropConfidence.label",
-  ]);
+  const structureLabel = Array.isArray(sections) && sections.length > 0 ? "Detected" : "—";
 
   const hasDrop =
     Array.isArray(sections) &&
     sections.some((s: any) => {
-      const t = typeof s?.type === "string" ? s.type : null;
+      const t = typeof s?.type === "string" ? s.type.trim().toLowerCase() : "";
       return t === "drop";
     });
 
+  const dropConfidence = findFirst<number>(payload, ["metrics.structure.drop_confidence"]);
   const dropLabel =
-    dropLabelRaw && dropLabelRaw.trim()
-      ? dropLabelRaw.trim()
+    typeof dropConfidence === "number" && Number.isFinite(dropConfidence)
+      ? `${Math.round(dropConfidence * 100)}%`
       : hasDrop
         ? "Detected"
         : "—";
 
-  // Hook: prefer detected boolean
-  const hookDetected = safeBool(
-    findFirst<any>(payload, ["structure.hook.detected", "structure.hookDetected", "hook.detected", "hookDetected"])
-  );
-
+  const hookDetected = safeBool(findFirst<any>(payload, ["metrics.structure.hook"]));
   const hookLabel = hookDetected === true ? "Detected" : hookDetected === false ? "Not detected" : "—";
 
-  // Streaming: prefer explicit risk label; fallback: severity-based hint
   const streamingRiskLabel = findFirst<string>(payload, [
     "streaming.risk.label",
     "streaming.distortion_risk.label",

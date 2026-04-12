@@ -4,92 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { buildFeedbackPayloadV2Mvp, type FeedbackPayloadV2 } from "@/lib/ai/feedbackPayloadV2";
-
-async function loadCodecSimulationBestEffort(admin: any, queueId: string): Promise<FeedbackPayloadV2["codec_simulation"] | null> {
-  try {
-    const { data: cRow, error: cErr } = await admin
-      .from("track_ai_codec_simulation")
-      .select(
-        [
-          "pre_true_peak_db",
-          "aac128_post_true_peak_db",
-          "aac128_overs_count",
-          "aac128_headroom_delta_db",
-          "aac128_distortion_risk",
-          "mp3128_post_true_peak_db",
-          "mp3128_overs_count",
-          "mp3128_headroom_delta_db",
-          "mp3128_distortion_risk",
-        ].join(",")
-      )
-      .eq("queue_id", queueId)
-      .maybeSingle();
-
-    if (cErr || !cRow) return null;
-
-    const n = (x: any) => {
-      if (typeof x === "number" && Number.isFinite(x)) return x;
-      if (typeof x === "string") {
-        const p = Number(x);
-        return Number.isFinite(p) ? p : null;
-      }
-      return null;
-    };
-
-    const i = (x: any) => {
-      if (typeof x === "number" && Number.isFinite(x)) return Math.trunc(x);
-      if (typeof x === "string") {
-        const p = Number(x);
-        return Number.isFinite(p) ? Math.trunc(p) : null;
-      }
-      return null;
-    };
-
-    const c: any = cRow as any;
-
-    const preTruePeakDb = n(c?.pre_true_peak_db);
-
-    const aacPost = n(c?.aac128_post_true_peak_db);
-    const aacOvers = i(c?.aac128_overs_count);
-    const aacDelta = n(c?.aac128_headroom_delta_db);
-    const aacRisk = typeof c?.aac128_distortion_risk === "string" ? String(c.aac128_distortion_risk) : null;
-
-    const mp3Post = n(c?.mp3128_post_true_peak_db);
-    const mp3Overs = i(c?.mp3128_overs_count);
-    const mp3Delta = n(c?.mp3128_headroom_delta_db);
-    const mp3Risk = typeof c?.mp3128_distortion_risk === "string" ? String(c.mp3128_distortion_risk) : null;
-
-    const hasAny =
-      preTruePeakDb !== null ||
-      aacPost !== null ||
-      aacOvers !== null ||
-      aacDelta !== null ||
-      mp3Post !== null ||
-      mp3Overs !== null ||
-      mp3Delta !== null;
-
-    if (!hasAny) return null;
-
-    return {
-      pre_true_peak_db: preTruePeakDb,
-      aac128: {
-        post_true_peak_db: aacPost,
-        overs_count: aacOvers,
-        headroom_delta_db: aacDelta,
-        distortion_risk: aacRisk === "low" || aacRisk === "moderate" || aacRisk === "high" ? aacRisk : null,
-      },
-      mp3128: {
-        post_true_peak_db: mp3Post,
-        overs_count: mp3Overs,
-        headroom_delta_db: mp3Delta,
-        distortion_risk: mp3Risk === "low" || mp3Risk === "moderate" || mp3Risk === "high" ? mp3Risk : null,
-      },
-    };
-  } catch {
-    return null;
-  }
-}
+import { writeFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/payload";
 
 async function ensureFeedbackPayloadForTerminalQueue(params: {
   queueId: string;
@@ -99,16 +14,6 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
   const { queueId, userId, audioHash } = params;
   const admin = getSupabaseAdmin() as any;
 
-  // If payload already exists -> nothing to do (idempotent)
-  const { data: existing, error: existingErr } = await admin
-    .from("track_ai_feedback_payloads")
-    .select("id")
-    .eq("queue_id", queueId)
-    .maybeSingle();
-
-  if (!existingErr && existing?.id) return;
-
-  // Load queue state (service-role, no RLS issues)
   const { data: q, error: qErr } = await admin
     .from("tracks_ai_queue")
     .select("id, user_id, status, audio_hash")
@@ -122,85 +27,16 @@ async function ensureFeedbackPayloadForTerminalQueue(params: {
   const status = String(q.status ?? "");
   if (status !== "approved" && status !== "rejected") return;
 
-  const decision = status === "approved" ? "approved" : "rejected";
-
-  const { data: pm, error: pmErr } = await admin
-    .from("track_ai_private_metrics")
-    .select("duration_s,integrated_lufs,true_peak_db_tp,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,transient_density_std,transient_density_cv,punch_index,loudness_range_lu,hard_fail_reasons")
-    .eq("queue_id", queueId)
-    .maybeSingle();
-
-  if (pmErr) {
-    console.error("[TERMINAL] private metrics read failed:", pmErr);
-    throw new Error("private_metrics_read_failed");
-  }
-
-  if (!pm) {
-    throw new Error("private_metrics_missing");
-  }
-
-  const hardFailReasonsSoT = Array.isArray((pm as any).hard_fail_reasons)
-    ? ((pm as any).hard_fail_reasons as any[])
-    : [];
-
-  const decisionForPayload =
-    hardFailReasonsSoT.length > 0 ? "rejected" : decision;
-
-  const hardFailReasonsForPayload = hardFailReasonsSoT
-    .map((r) => {
-      const id = typeof (r as any)?.id === "string" ? String((r as any).id) : null;
-      if (!id) return null;
-      return { id };
-    })
-    .filter(Boolean) as Array<{ id: string }>;
-
-  const codecSimulation = await loadCodecSimulationBestEffort(admin, queueId);
-
-  const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
+  await writeFeedbackPayloadIfUnlocked({
+    admin,
+    userId,
     queueId,
     audioHash,
-    decision: decisionForPayload,
-    durationS: typeof (pm as any).duration_s === "number" && Number.isFinite((pm as any).duration_s) ? (pm as any).duration_s : null,
-    integratedLufs: pm.integrated_lufs,
-    truePeakDbTp: pm.true_peak_db_tp,
-    loudnessRangeLu: (pm as any).loudness_range_lu,
-    clippedSampleCount: pm.clipped_sample_count,
-    crestFactorDb: pm.crest_factor_db,
-    phaseCorrelation: (pm as any).phase_correlation,
-    midRmsDbfs: (pm as any).mid_rms_dbfs,
-    sideRmsDbfs: (pm as any).side_rms_dbfs,
-    midSideEnergyRatio: (pm as any).mid_side_energy_ratio,
-    stereoWidthIndex: (pm as any).stereo_width_index,
-    spectralSubRmsDbfs: (pm as any).spectral_sub_rms_dbfs,
-    spectralLowRmsDbfs: (pm as any).spectral_low_rms_dbfs,
-    spectralLowMidRmsDbfs: (pm as any).spectral_lowmid_rms_dbfs,
-    spectralMidRmsDbfs: (pm as any).spectral_mid_rms_dbfs,
-    spectralHighMidRmsDbfs: (pm as any).spectral_highmid_rms_dbfs,
-    spectralHighRmsDbfs: (pm as any).spectral_high_rms_dbfs,
-    spectralAirRmsDbfs: (pm as any).spectral_air_rms_dbfs,
-    meanShortCrestDb: (pm as any).mean_short_crest_db,
-    p95ShortCrestDb: (pm as any).p95_short_crest_db,
-    transientDensity: (pm as any).transient_density,
-    transientDensityStd: (pm as any).transient_density_std,
-    transientDensityCv: (pm as any).transient_density_cv,
-    punchIndex: (pm as any).punch_index,
-    hardFailReasons: hardFailReasonsForPayload,
-    codecSimulation,
+    decision: status === "approved" ? "approved" : "rejected",
+    integratedLufs: null,
+    truePeakDbTp: null,
+    clippedSampleCount: null,
   });
-
-  await admin
-    .from("track_ai_feedback_payloads")
-    .upsert(
-      {
-        queue_id: queueId,
-        user_id: userId,
-        audio_hash: audioHash,
-        payload_version: 2,
-        payload,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "queue_id" }
-    );
 }
 
 export async function unlockPaidFeedbackAction(formData: FormData) {
@@ -267,124 +103,8 @@ export async function unlockPaidFeedbackAction(formData: FormData) {
     throw new Error("Failed to persist unlock: missing_id");
   }
 
-  // Read server-only private metrics and write deterministic V2 payload (no re-run, no HTTP self-call)
-  const admin = getSupabaseAdmin();
-  const userId = user.id;
-  const audioHash = queueAudioHash;
-  const status = String((queueRow as any)?.status ?? "");
-
-  type PrivateMetricsRow = {
-    integrated_lufs: number;
-    true_peak_db_tp: number;
-    loudness_range_lu: number | null;
-    title: string;
-    clipped_sample_count: number;
-    crest_factor_db: number | null;
-    phase_correlation: number | null;
-    mid_rms_dbfs: number | null;
-    side_rms_dbfs: number | null;
-    mid_side_energy_ratio: number | null;
-    stereo_width_index: number | null;
-    spectral_sub_rms_dbfs: number | null;
-    spectral_low_rms_dbfs: number | null;
-    spectral_lowmid_rms_dbfs: number | null;
-    spectral_mid_rms_dbfs: number | null;
-    spectral_highmid_rms_dbfs: number | null;
-    spectral_high_rms_dbfs: number | null;
-    spectral_air_rms_dbfs: number | null;
-    mean_short_crest_db: number | null;
-    p95_short_crest_db: number | null;
-    transient_density: number | null;
-    punch_index: number | null;
-  };
-
-  const { data: pm, error: pmErr } = await admin
-    .from("track_ai_private_metrics")
-    .select("duration_s,integrated_lufs,true_peak_db_tp,title,clipped_sample_count,crest_factor_db,phase_correlation,mid_rms_dbfs,side_rms_dbfs,mid_side_energy_ratio,stereo_width_index,spectral_sub_rms_dbfs,spectral_low_rms_dbfs,spectral_lowmid_rms_dbfs,spectral_mid_rms_dbfs,spectral_highmid_rms_dbfs,spectral_high_rms_dbfs,spectral_air_rms_dbfs,mean_short_crest_db,p95_short_crest_db,transient_density,transient_density_std,transient_density_cv,punch_index,loudness_range_lu,hard_fail_reasons")
-    .eq("queue_id", queueId)
-    .maybeSingle<PrivateMetricsRow>();
-
-  if (pmErr) {
-    console.error("[UNLOCK] private metrics read failed:", pmErr);
-    throw new Error("private_metrics_read_failed");
-  }
-
-  if (!pm) {
-    throw new Error("private_metrics_missing");
-  }
-
-  const hardFailReasonsSoT = Array.isArray((pm as any).hard_fail_reasons)
-    ? ((pm as any).hard_fail_reasons as any[])
-    : [];
-
-  const decision = status === "approved" ? "approved" : "rejected";
-
-  const decisionForPayload =
-    hardFailReasonsSoT.length > 0 ? "rejected" : decision;
-
-  const hardFailReasonsForPayload = hardFailReasonsSoT
-    .map((r) => {
-      const id = typeof (r as any)?.id === "string" ? String((r as any).id) : null;
-      if (!id) return null;
-      return { id };
-    })
-    .filter(Boolean) as Array<{ id: string }>;
-
-  if (!audioHash) {
-    throw new Error("audio_hash_missing");
-  }
-
-  const codecSimulation = await loadCodecSimulationBestEffort(admin, queueId);
-
-  const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
-    queueId,
-    audioHash,
-    decision: decisionForPayload,
-    durationS: typeof (pm as any).duration_s === "number" && Number.isFinite((pm as any).duration_s) ? (pm as any).duration_s : null,
-    integratedLufs: pm.integrated_lufs,
-    truePeakDbTp: pm.true_peak_db_tp,
-    loudnessRangeLu: pm.loudness_range_lu,
-    clippedSampleCount: pm.clipped_sample_count,
-    crestFactorDb: pm.crest_factor_db,
-    phaseCorrelation: pm.phase_correlation,
-    midRmsDbfs: pm.mid_rms_dbfs,
-    sideRmsDbfs: pm.side_rms_dbfs,
-    midSideEnergyRatio: pm.mid_side_energy_ratio,
-    stereoWidthIndex: pm.stereo_width_index,
-    spectralSubRmsDbfs: pm.spectral_sub_rms_dbfs,
-    spectralLowRmsDbfs: pm.spectral_low_rms_dbfs,
-    spectralLowMidRmsDbfs: pm.spectral_lowmid_rms_dbfs,
-    spectralMidRmsDbfs: pm.spectral_mid_rms_dbfs,
-    spectralHighMidRmsDbfs: pm.spectral_highmid_rms_dbfs,
-    spectralHighRmsDbfs: pm.spectral_high_rms_dbfs,
-    spectralAirRmsDbfs: pm.spectral_air_rms_dbfs,
-    meanShortCrestDb: pm.mean_short_crest_db,
-    p95ShortCrestDb: pm.p95_short_crest_db,
-    transientDensity: pm.transient_density,
-    transientDensityStd: (pm as any).transient_density_std,
-    transientDensityCv: (pm as any).transient_density_cv,
-    punchIndex: pm.punch_index,
-    hardFailReasons: hardFailReasonsForPayload,
-    codecSimulation,
-  });
-
-  const { error: payloadErr } = await (admin as any)
-    .from("track_ai_feedback_payloads")
-    .upsert(
-      {
-        queue_id: queueId,
-        user_id: userId,
-        audio_hash: audioHash,
-        payload_version: 2,
-        payload,
-      },
-      { onConflict: "queue_id" }
-    );
-
-  if (payloadErr) {
-    console.error("[UNLOCK] payload upsert failed:", payloadErr);
-    throw new Error("payload_upsert_failed");
-  }
+  // Payload wird absichtlich nicht mehr hier gebaut.
+  // Ab jetzt darf nur noch der zentrale Voll-Builder writeFeedbackPayloadIfUnlocked(...) schreiben.
 
   // 3) Credits prüfen (optional, aber UX: sauberer Redirect statt RPC-Exception)
   const { data: creditRow, error: creditErr } = await supabase

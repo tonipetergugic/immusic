@@ -49,7 +49,7 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
       : null;
 
   const truePeakOvers =
-    typeof payload?.events?.loudness?.true_peak_overs === "number" && Number.isFinite(payload.events.loudness.true_peak_overs)
+    Array.isArray(payload?.events?.loudness?.true_peak_overs)
       ? payload.events.loudness.true_peak_overs
       : null;
 
@@ -208,8 +208,10 @@ export function deriveFeedbackSummary(params: { payload: any; isReady: boolean }
 
   // ---------- LIMITER STRESS ----------
   const limiterEvaluation = evaluateLimiterStress(
-    payload?.events?.loudness?.true_peak_overs_details ?? null,
-    payload?.metrics?.duration_s ?? null
+    truePeakOvers,
+    typeof payload?.track?.duration_s === "number" && Number.isFinite(payload.track.duration_s)
+      ? payload.track.duration_s
+      : null
   );
 
   pushIssue(issues, {

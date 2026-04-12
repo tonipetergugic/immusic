@@ -20,10 +20,22 @@ export function deriveFeedbackV3PageState(params: {
   // Coach-style Recommendations (top 5 max)
   const coachRecommendations = (() => {
     const recs = Array.isArray(payload?.recommendations) ? payload.recommendations : [];
+
     return recs
-      .filter((r: any) => r && typeof r === "object" && typeof r.text === "string")
+      .filter((r: any) => r && typeof r === "object")
       .slice(0, 5)
-      .map((r: any) => r.text.trim());
+      .map((r: any) => {
+        const parts = [
+          typeof r.title === "string" ? r.title.trim() : "",
+          typeof r.why === "string" ? r.why.trim() : "",
+          Array.isArray(r.how)
+            ? r.how.filter((item: unknown) => typeof item === "string" && item.trim().length > 0).join(" ")
+            : "",
+        ].filter((part) => part.length > 0);
+
+        return parts.join(" — ");
+      })
+      .filter((text: string) => text.length > 0);
   })();
 
   return { banner, heroChips, journey, coachRecommendations };
