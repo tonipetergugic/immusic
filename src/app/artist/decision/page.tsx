@@ -26,13 +26,18 @@ type DecisionTrackRow = {
 type DecisionSummaryBlock = {
   status?: string | null;
   main_reason?: string | null;
+  selection_mode?: "only_match" | "priority_match" | "fallback_unclear" | null;
   next_action?: string | null;
   confidence_level?: string | null;
+  supporting_conditions?: string[] | null;
+  open_counterarguments?: string[] | null;
   evidence?: {
     repetition_ratio_0_1?: number | null;
     unique_section_count?: number | null;
     transition_strength_0_1?: number | null;
     novelty_change_strength_0_1?: number | null;
+    section_similarity_mean_0_1?: number | null;
+    drop_to_drop_similarity_mean_0_1?: number | null;
   } | null;
 };
 
@@ -50,12 +55,26 @@ type DecisionRuleContextBlock = {
   underdeveloped_thresholds?: {
     unique_section_count_max?: number | null;
     transition_max?: number | null;
+    novelty_max?: number | null;
+  } | null;
+  similarity_thresholds?: {
+    repetitive?: {
+      section_similarity_mean_min?: number | null;
+      drop_to_drop_similarity_mean_min?: number | null;
+    } | null;
+    balanced?: {
+      section_similarity_mean_max?: number | null;
+      drop_to_drop_similarity_mean_max?: number | null;
+    } | null;
   } | null;
 };
 
 type DecisionTraceBlock = {
   matched_rule_branch?: string | null;
   threshold_profile_source?: string | null;
+  selected_branch_reason?: string | null;
+  selected_branch_passed_conditions?: string[] | null;
+  selected_branch_failed_conditions?: string[] | null;
 };
 
 type ConsultantPayloadBlock = {
@@ -90,6 +109,8 @@ type ConsultantPayloadBlock = {
     unique_section_count?: number | null;
     transition_strength_0_1?: number | null;
     novelty_change_strength_0_1?: number | null;
+    section_similarity_mean_0_1?: number | null;
+    drop_to_drop_similarity_mean_0_1?: number | null;
   } | null;
 };
 
@@ -479,6 +500,9 @@ export default async function ArtistDecisionPage({
                             <span className="rounded-full border border-white/10 px-3 py-1">
                               Confidence: {formatDecisionLabel(decisionSummary.confidence_level)}
                             </span>
+                            <span className="rounded-full border border-white/10 px-3 py-1">
+                              Selection mode: {formatDecisionLabel(decisionSummary.selection_mode)}
+                            </span>
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">
@@ -498,6 +522,50 @@ export default async function ArtistDecisionPage({
                               <div className="mt-2 text-sm leading-6 text-white/88">
                                 {formatDecisionLabel(decisionSummary.next_action)}
                               </div>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Supporting conditions
+                              </div>
+
+                              {decisionSummary.supporting_conditions?.length ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {decisionSummary.supporting_conditions.map((condition) => (
+                                    <span
+                                      key={condition}
+                                      className="rounded-full border border-[#00FFC6]/20 bg-[#00FFC6]/8 px-3 py-1 text-xs text-[#B8FFF0]"
+                                    >
+                                      {condition}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-sm leading-6 text-white/60">No supporting conditions exposed yet.</p>
+                              )}
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Open counterarguments
+                              </div>
+
+                              {decisionSummary.open_counterarguments?.length ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {decisionSummary.open_counterarguments.map((condition) => (
+                                    <span
+                                      key={condition}
+                                      className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/78"
+                                    >
+                                      {condition}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-sm leading-6 text-white/60">No open counterarguments exposed yet.</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -603,6 +671,24 @@ export default async function ArtistDecisionPage({
                               {formatEvidenceValue(decisionEvidence.novelty_change_strength_0_1)}
                             </div>
                           </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                              Section similarity
+                            </div>
+                            <div className="mt-2 text-lg font-semibold text-white">
+                              {formatEvidenceValue(decisionEvidence.section_similarity_mean_0_1)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                              Drop-to-drop similarity
+                            </div>
+                            <div className="mt-2 text-lg font-semibold text-white">
+                              {formatEvidenceValue(decisionEvidence.drop_to_drop_similarity_mean_0_1)}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -640,7 +726,7 @@ export default async function ArtistDecisionPage({
                             </span>
                           </div>
 
-                          <div className="grid gap-4 md:grid-cols-3">
+                          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
                               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
                                 Repetitive thresholds
@@ -705,6 +791,55 @@ export default async function ArtistDecisionPage({
                                     decisionRuleContext.underdeveloped_thresholds?.transition_max
                                   )}
                                 </div>
+                                <div>
+                                  novelty max:{" "}
+                                  {formatEvidenceValue(
+                                    decisionRuleContext.underdeveloped_thresholds?.novelty_max
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Similarity thresholds
+                              </div>
+                              <div className="mt-3 space-y-3 text-sm text-white/82">
+                                <div>
+                                  <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+                                    Repetitive
+                                  </div>
+                                  <div className="mt-1">
+                                    section similarity min:{" "}
+                                    {formatEvidenceValue(
+                                      decisionRuleContext.similarity_thresholds?.repetitive?.section_similarity_mean_min
+                                    )}
+                                  </div>
+                                  <div>
+                                    drop-to-drop similarity min:{" "}
+                                    {formatEvidenceValue(
+                                      decisionRuleContext.similarity_thresholds?.repetitive?.drop_to_drop_similarity_mean_min
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+                                    Balanced
+                                  </div>
+                                  <div className="mt-1">
+                                    section similarity max:{" "}
+                                    {formatEvidenceValue(
+                                      decisionRuleContext.similarity_thresholds?.balanced?.section_similarity_mean_max
+                                    )}
+                                  </div>
+                                  <div>
+                                    drop-to-drop similarity max:{" "}
+                                    {formatEvidenceValue(
+                                      decisionRuleContext.similarity_thresholds?.balanced?.drop_to_drop_similarity_mean_max
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -738,22 +873,81 @@ export default async function ArtistDecisionPage({
                           A payload exists, but no decision trace was found yet.
                         </p>
                       ) : (
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                              Matched rule branch
+                        <div className="mt-4 space-y-4">
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Matched rule branch
+                              </div>
+                              <div className="mt-2 text-sm leading-6 text-white/88">
+                                {formatDecisionLabel(decisionTrace.matched_rule_branch)}
+                              </div>
                             </div>
-                            <div className="mt-2 text-sm leading-6 text-white/88">
-                              {formatDecisionLabel(decisionTrace.matched_rule_branch)}
+
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Selected branch reason
+                              </div>
+                              <div className="mt-2 text-sm leading-6 text-white/88">
+                                {formatDecisionLabel(decisionTrace.selected_branch_reason)}
+                              </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Threshold profile source
+                              </div>
+                              <div className="mt-2 text-sm leading-6 text-white/88">
+                                {formatDecisionLabel(decisionTrace.threshold_profile_source)}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                              Threshold profile source
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Supporting branch conditions
+                              </div>
+
+                              {decisionTrace.selected_branch_passed_conditions?.length ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {decisionTrace.selected_branch_passed_conditions.map((condition) => (
+                                    <span
+                                      key={condition}
+                                      className="rounded-full border border-[#00FFC6]/25 bg-[#00FFC6]/10 px-3 py-1 text-xs text-[#B8FFF0]"
+                                    >
+                                      {formatDecisionLabel(condition)}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-sm leading-6 text-white/55">
+                                  No supporting conditions available.
+                                </p>
+                              )}
                             </div>
-                            <div className="mt-2 text-sm leading-6 text-white/88">
-                              {formatDecisionLabel(decisionTrace.threshold_profile_source)}
+
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Open counterarguments
+                              </div>
+
+                              {decisionTrace.selected_branch_failed_conditions?.length ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {decisionTrace.selected_branch_failed_conditions.map((condition) => (
+                                    <span
+                                      key={condition}
+                                      className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-xs text-white/72"
+                                    >
+                                      {formatDecisionLabel(condition)}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-sm leading-6 text-white/55">
+                                  No open counterarguments available.
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -855,6 +1049,12 @@ export default async function ArtistDecisionPage({
                               </div>
                               <div>
                                 novelty change strength: {formatEvidenceValue(consultantPayload.evidence?.novelty_change_strength_0_1)}
+                              </div>
+                              <div>
+                                section similarity: {formatEvidenceValue(consultantPayload.evidence?.section_similarity_mean_0_1)}
+                              </div>
+                              <div>
+                                drop-to-drop similarity: {formatEvidenceValue(consultantPayload.evidence?.drop_to_drop_similarity_mean_0_1)}
                               </div>
                             </div>
                           </div>

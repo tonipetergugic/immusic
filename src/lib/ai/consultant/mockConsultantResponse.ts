@@ -27,12 +27,15 @@ type MockConsultantPayload = {
       | "healthy_variation_and_transitions"
       | "mixed_or_insufficient_signals"
       | null
+    selection_mode?: "only_match" | "priority_match" | "fallback_unclear" | null
     next_action?:
       | "increase_section_contrast"
       | "add_or_strengthen_structural_change"
       | "preserve_structure_refine_details"
       | "review_structure_manually"
       | null
+    supporting_conditions?: string[] | null
+    open_counterarguments?: string[] | null
     confidence_level?: "high" | "medium" | "low" | null
   } | null
   wording?: {
@@ -63,6 +66,8 @@ type MockConsultantPayload = {
   } | null
   threshold_profile_source?: string | null
   selected_branch_reason?: string | null
+  selected_branch_passed_conditions?: string[] | null
+  selected_branch_failed_conditions?: string[] | null
   confidence_context?: {
     core_metric_presence_count?: number | null
     matched_branch_count?: number | null
@@ -169,9 +174,37 @@ export function mockConsultantResponse(
 
   const activeGenreProfile = consultantPayload?.genre_context?.active_genre_profile ?? null
   const decision = consultantPayload?.decision ?? null
+  const selectionMode =
+    typeof decision?.selection_mode === "string" && decision.selection_mode.trim().length > 0
+      ? decision.selection_mode.trim()
+      : null
+  const decisionSupportingConditions = Array.isArray(decision?.supporting_conditions)
+    ? decision.supporting_conditions.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      )
+    : []
+  const decisionOpenCounterarguments = Array.isArray(decision?.open_counterarguments)
+    ? decision.open_counterarguments.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      )
+    : []
   const evidence = consultantPayload?.evidence ?? null
   const thresholdProfileSource = consultantPayload?.threshold_profile_source ?? null
   const selectedBranchReason = consultantPayload?.selected_branch_reason ?? null
+  const selectedBranchPassedConditions = Array.isArray(
+    consultantPayload?.selected_branch_passed_conditions
+  )
+    ? consultantPayload.selected_branch_passed_conditions.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      )
+    : []
+  const selectedBranchFailedConditions = Array.isArray(
+    consultantPayload?.selected_branch_failed_conditions
+  )
+    ? consultantPayload.selected_branch_failed_conditions.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      )
+    : []
   const confidenceContext = consultantPayload?.confidence_context ?? null
   const similarityRead = consultantPayload?.similarity_read ?? null
   const similarityEmphasis = consultantPayload?.wording?.similarity_emphasis ?? null
@@ -186,6 +219,60 @@ export function mockConsultantResponse(
       )
     : []
 
+  const repetitiveMatched = branchResults?.repetitive?.matched === true
+  const underdevelopedMatched = branchResults?.underdeveloped?.matched === true
+  const balancedMatched = branchResults?.balanced?.matched === true
+
+  const activeRuleBranch =
+    decision?.status === "repetitive" || decision?.status === "underdeveloped" || decision?.status === "balanced"
+      ? decision.status
+      : repetitiveMatched
+        ? "repetitive"
+        : underdevelopedMatched
+          ? "underdeveloped"
+          : balancedMatched
+            ? "balanced"
+            : null
+
+  const activeBranchResult =
+    activeRuleBranch === "repetitive"
+      ? branchResults?.repetitive
+      : activeRuleBranch === "underdeveloped"
+        ? branchResults?.underdeveloped
+        : activeRuleBranch === "balanced"
+          ? branchResults?.balanced
+          : null
+
+  const useSelectedBranchConditions =
+    selectedBranchPassedConditions.length > 0 || selectedBranchFailedConditions.length > 0
+
+  const fallbackSupportingConditions = useSelectedBranchConditions
+    ? selectedBranchPassedConditions
+    : Array.isArray(activeBranchResult?.passed_conditions)
+      ? activeBranchResult.passed_conditions.filter(
+          (item): item is string => typeof item === "string" && item.trim().length > 0
+        )
+      : []
+
+  const fallbackOpenCounterarguments = useSelectedBranchConditions
+    ? selectedBranchFailedConditions
+    : Array.isArray(activeBranchResult?.failed_conditions)
+      ? activeBranchResult.failed_conditions.filter(
+          (item): item is string => typeof item === "string" && item.trim().length > 0
+        )
+      : []
+
+  const supportingConditions =
+    decisionSupportingConditions.length > 0
+      ? decisionSupportingConditions
+      : fallbackSupportingConditions
+
+  const openCounterarguments =
+    decisionOpenCounterarguments.length > 0 ? decisionOpenCounterarguments : fallbackOpenCounterarguments
+
+  const supportingPreview = compactConditionList(supportingConditions, 3)
+  const counterargumentsPreview = compactConditionList(openCounterarguments, 2)
+
   if (declaredGenre || activeGenreProfile) {
     lines.push(
       `Context: declared genre ${declaredGenre ?? "unknown"}${activeGenreProfile ? ` (${activeGenreProfile})` : ""}.`
@@ -193,13 +280,79 @@ export function mockConsultantResponse(
   }
 
   if (decision?.status === "balanced") {
-    lines.push("Structure summary: this suggests the arrangement is already fairly balanced.")
+    if (selectionMode === "only_match") {
+      lines.push(
+        "Structure summary: this suggests the arrangement already reads as fairly balanced on the current evidence, without treating that as a final verdict."
+      )
+    } else if (selectionMode === "priority_match") {
+      lines.push(
+        "Structure summary: balance is the prioritized read even though other branches showed overlap—describe strengths without erasing competing signals."
+      )
+    } else if (selectionMode === "fallback_unclear") {
+      lines.push(
+        "Structure summary: the current signal mix is too soft to claim a settled balance read; keep the picture tentative and evidence-led."
+      )
+    } else {
+      lines.push("Structure summary: this suggests the arrangement is already fairly balanced.")
+    }
   } else if (decision?.status === "repetitive") {
-    lines.push("Structure summary: this suggests repetition may currently limit forward movement.")
+    if (selectionMode === "only_match") {
+      lines.push(
+        "Structure summary: repetition stands out as the main structural tension in this pass, framed directionally rather than as an absolute flaw."
+      )
+    } else if (selectionMode === "priority_match") {
+      lines.push(
+        "Structure summary: repetition is the prioritized narrative, but competing branches mean borderline evidence should stay in the conversation."
+      )
+    } else if (selectionMode === "fallback_unclear") {
+      lines.push(
+        "Structure summary: repetition is not a settled call here—the overall structural picture should be described as still open and inconclusive."
+      )
+    } else {
+      lines.push("Structure summary: this suggests repetition may currently limit forward movement.")
+    }
   } else if (decision?.status === "underdeveloped") {
-    lines.push("Structure summary: this indicates the track may benefit from stronger structural change.")
+    if (selectionMode === "only_match") {
+      lines.push(
+        "Structure summary: this indicates the track may benefit from clearer structural development, framed as a practical next step rather than a harsh judgment."
+      )
+    } else if (selectionMode === "priority_match") {
+      lines.push(
+        "Structure summary: underdevelopment is the lead interpretation while other branches still flicker—call out growth opportunities alongside those tensions."
+      )
+    } else if (selectionMode === "fallback_unclear") {
+      lines.push(
+        "Structure summary: it is premature to insist the arrangement is underdeveloped; the evidence is mixed about how much structural change is really needed."
+      )
+    } else {
+      lines.push("Structure summary: this indicates the track may benefit from stronger structural change.")
+    }
   } else if (decision?.status === "unclear") {
-    lines.push("Structure summary: signals are mixed, so the interpretation should stay cautious.")
+    if (selectionMode === "fallback_unclear") {
+      lines.push(
+        "Structure summary: the current signal mix remains inconclusive, so any structural label should sound provisional rather than decisive."
+      )
+    } else {
+      lines.push("Structure summary: signals are mixed, so the interpretation should stay cautious.")
+    }
+  }
+
+  if (supportingPreview) {
+    lines.push(
+      `Decision audit: supporting checks (${supportingPreview}) help explain why this structural direction is plausible on the supplied rule evidence.`
+    )
+  }
+
+  if (counterargumentsPreview) {
+    if (selectionMode === "only_match") {
+      lines.push(
+        `Decision audit: open checks (${counterargumentsPreview}) still sit on the table, so keep the wording measured rather than absolute.`
+      )
+    } else {
+      lines.push(
+        `Decision audit: open checks (${counterargumentsPreview}) argue against overstating the verdict—describe structure as contested, not sealed shut.`
+      )
+    }
   }
 
   const humanizedThresholdProfileSource = humanizeToken(thresholdProfileSource)
@@ -208,6 +361,20 @@ export function mockConsultantResponse(
   if (humanizedThresholdProfileSource || humanizedSelectedBranchReason) {
     lines.push(
       `Decision audit: the current read uses ${humanizedThresholdProfileSource ?? "the active"} threshold profile${humanizedSelectedBranchReason ? ` and points mainly to ${humanizedSelectedBranchReason}` : ""}.`
+    )
+  }
+
+  if (selectionMode === "only_match") {
+    lines.push(
+      "Decision audit: with a single clear rule match, the read may be stated somewhat more plainly while staying genre-relative and non-absolute."
+    )
+  } else if (selectionMode === "priority_match") {
+    lines.push(
+      "Decision audit: multiple branches had signals, so this reflects a priority pick—keep competing cues and open counter-arguments visible."
+    )
+  } else if (selectionMode === "fallback_unclear") {
+    lines.push(
+      "Decision audit: the structural verdict is intentionally soft; describe the picture as inconclusive rather than settled."
     )
   }
 
@@ -253,10 +420,40 @@ export function mockConsultantResponse(
     cautionSignals.push(`${closeCallCount} close call${closeCallCount === 1 ? "" : "s"}`)
   }
 
+  if (selectionMode === "priority_match") {
+    cautionSignals.push("priority-weighted choice among competing branches")
+  }
+
+  if (selectionMode === "fallback_unclear") {
+    cautionSignals.push("unsettled structural read")
+  }
+
+  if (counterargumentsPreview) {
+    cautionSignals.push(`open structural checks include ${counterargumentsPreview}`)
+  }
+
+  let cautionClosing =
+    selectionMode === "priority_match"
+      ? "Treat this as a priority-weighted read where competing signals, open counter-arguments, and borderline checks still matter."
+      : selectionMode === "fallback_unclear"
+        ? "Prefer tentative language—the evidence is not decisive about the overall structural picture."
+        : "Treat this arrangement read as directional rather than absolute."
+
+  if (
+    counterargumentsPreview &&
+    (selectionMode === "priority_match" ||
+      selectionMode === "fallback_unclear" ||
+      closeCallCount > 0 ||
+      decision?.confidence_level === "low")
+  ) {
+    cautionClosing =
+      `${cautionClosing} Make those open checks audible in how you hedge—especially while signals stay split or confidence is thin.`
+  } else if (counterargumentsPreview) {
+    cautionClosing = `${cautionClosing} Keep those open checks visible so the read never sounds ironclad.`
+  }
+
   if (cautionSignals.length > 0) {
-    lines.push(
-      `Decision caution: ${cautionSignals.join(", ")}. Treat this arrangement read as directional rather than absolute.`
-    )
+    lines.push(`Decision caution: ${cautionSignals.join(", ")}. ${cautionClosing}`)
   }
 
   if (closeCalls.length > 0) {
@@ -268,51 +465,18 @@ export function mockConsultantResponse(
     lines.push(`Borderline signals: ${preview}.`)
   }
 
-  const repetitiveMatched = branchResults?.repetitive?.matched === true
-  const underdevelopedMatched = branchResults?.underdeveloped?.matched === true
-  const balancedMatched = branchResults?.balanced?.matched === true
-
   if (branchResults?.repetitive || branchResults?.underdeveloped || branchResults?.balanced) {
     lines.push(
       `Rule snapshot: repetitive ${repetitiveMatched ? "matched" : "not matched"}, underdeveloped ${underdevelopedMatched ? "matched" : "not matched"}, balanced ${balancedMatched ? "matched" : "not matched"}.`
     )
   }
 
-  const activeRuleBranch =
-    decision?.status === "repetitive" || decision?.status === "underdeveloped" || decision?.status === "balanced"
-      ? decision.status
-      : repetitiveMatched
-        ? "repetitive"
-        : underdevelopedMatched
-          ? "underdeveloped"
-          : balancedMatched
-            ? "balanced"
-            : null
+  lines.push(`Selection mode: ${selectionMode ?? "unknown"}`)
 
-  const activeBranchResult =
-    activeRuleBranch === "repetitive"
-      ? branchResults?.repetitive
-      : activeRuleBranch === "underdeveloped"
-        ? branchResults?.underdeveloped
-        : activeRuleBranch === "balanced"
-          ? branchResults?.balanced
-          : null
-
-  const passedConditionPreview = compactConditionList(activeBranchResult?.passed_conditions, 3)
-  const failedConditionPreview = compactConditionList(activeBranchResult?.failed_conditions, 2)
-
-  if (activeRuleBranch && (passedConditionPreview || failedConditionPreview)) {
-    const conditionBits: string[] = []
-
-    if (passedConditionPreview) {
-      conditionBits.push(`passed ${passedConditionPreview}`)
-    }
-
-    if (failedConditionPreview) {
-      conditionBits.push(`failed ${failedConditionPreview}`)
-    }
-
-    lines.push(`Matched branch conditions: ${activeRuleBranch} -> ${conditionBits.join("; ")}.`)
+  if (supportingPreview || counterargumentsPreview) {
+    lines.push("Decision conditions:")
+    lines.push(`supporting: ${supportingPreview ?? "none"}`)
+    lines.push(`counterarguments: ${counterargumentsPreview ?? "none"}`)
   }
 
   const activeThresholdBits: string[] = []
@@ -395,14 +559,27 @@ export function mockConsultantResponse(
     }
   }
 
+  const focusTail =
+    selectionMode === "fallback_unclear"
+      ? " Favor small, reversible tries while the structural read stays open."
+      : ""
+
   if (decision?.next_action === "increase_section_contrast") {
-    lines.push("Suggested focus: increase contrast between sections so the arrangement develops more clearly.")
+    lines.push(
+      `Suggested focus: increase contrast between sections so the arrangement develops more clearly.${focusTail}`
+    )
   } else if (decision?.next_action === "add_or_strengthen_structural_change") {
-    lines.push("Suggested focus: add or strengthen structural changes between key sections.")
+    lines.push(
+      `Suggested focus: add or strengthen structural changes between key sections.${focusTail}`
+    )
   } else if (decision?.next_action === "preserve_structure_refine_details") {
-    lines.push("Suggested focus: preserve the structure and refine details without overcorrecting.")
+    lines.push(
+      `Suggested focus: preserve the structure and refine details without overcorrecting.${focusTail}`
+    )
   } else if (decision?.next_action === "review_structure_manually") {
-    lines.push("Suggested focus: review the structure manually before making strong arrangement decisions.")
+    lines.push(
+      `Suggested focus: review the structure manually before making strong arrangement decisions.${focusTail}`
+    )
   }
 
   const lufs = fmt(metrics.LUFS, 1)
@@ -490,7 +667,10 @@ export function mockConsultantResponse(
       line.startsWith("Pattern focus:") ||
       line.startsWith("Structure evidence:") ||
       line.startsWith("Rule snapshot:") ||
-      line.startsWith("Matched branch conditions:") ||
+      line.startsWith("Selection mode:") ||
+      line.startsWith("Decision conditions:") ||
+      line.startsWith("supporting:") ||
+      line.startsWith("counterarguments:") ||
       line.startsWith("Active thresholds:")
   )
 
@@ -511,7 +691,10 @@ export function mockConsultantResponse(
       !line.startsWith("Pattern focus:") &&
       !line.startsWith("Structure evidence:") &&
       !line.startsWith("Rule snapshot:") &&
-      !line.startsWith("Matched branch conditions:") &&
+      !line.startsWith("Selection mode:") &&
+      !line.startsWith("Decision conditions:") &&
+      !line.startsWith("supporting:") &&
+      !line.startsWith("counterarguments:") &&
       !line.startsWith("Active thresholds:") &&
       !line.startsWith("Suggested focus:") &&
       !line.startsWith("Decision caution:") &&

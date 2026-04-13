@@ -9,7 +9,10 @@ export type ConsultantPromptInput = {
     decision?: {
       status?: string | null
       main_reason?: string | null
+      selection_mode?: "only_match" | "priority_match" | "fallback_unclear"
       next_action?: string | null
+      supporting_conditions?: string[] | null
+      open_counterarguments?: string[] | null
       confidence_level?: string | null
     } | null
     wording?: {
@@ -39,6 +42,8 @@ export type ConsultantPromptInput = {
     } | null
     threshold_profile_source?: string | null
     selected_branch_reason?: string | null
+    selected_branch_passed_conditions?: string[] | null
+    selected_branch_failed_conditions?: string[] | null
     confidence_context?: {
       core_metric_presence_count?: number | null
       matched_branch_count?: number | null
@@ -118,7 +123,35 @@ function cleanConsultantPayload(
   const out: Record<string, unknown> = {}
 
   for (const [sectionKey, sectionValue] of Object.entries(payload)) {
-    if (!sectionValue || typeof sectionValue !== "object") continue
+    if (sectionValue === null || sectionValue === undefined) continue
+
+    if (Array.isArray(sectionValue)) {
+      const cleanedArray = sectionValue.filter(
+        (item) =>
+          item !== null &&
+          item !== undefined &&
+          !(typeof item === "number" && !Number.isFinite(item))
+      )
+      if (cleanedArray.length === 0) continue
+      out[sectionKey] = cleanedArray
+      continue
+    }
+
+    if (typeof sectionValue === "number") {
+      if (!Number.isFinite(sectionValue)) continue
+      out[sectionKey] = sectionValue
+      continue
+    }
+
+    if (
+      typeof sectionValue === "string" ||
+      typeof sectionValue === "boolean"
+    ) {
+      out[sectionKey] = sectionValue
+      continue
+    }
+
+    if (typeof sectionValue !== "object") continue
 
     const cleanedSection: Record<string, unknown> = {}
 
@@ -286,6 +319,11 @@ function buildConsultantPayloadSummary(
       ? decision.main_reason.trim()
       : null
 
+  const selectionMode =
+    typeof decision?.selection_mode === "string" && decision.selection_mode.trim().length > 0
+      ? decision.selection_mode.trim()
+      : null
+
   const nextAction =
     typeof decision?.next_action === "string" && decision.next_action.trim().length > 0
       ? decision.next_action.trim()
@@ -303,11 +341,14 @@ function buildConsultantPayloadSummary(
         status ? `status=${status}` : null,
         mainReason ? `reason=${mainReason}` : null,
         nextAction ? `next_action=${nextAction}` : null,
-        confidenceLevel ? `confidence=${confidenceLevel}` : null,
       ]
         .filter(Boolean)
         .join(" ")
     )
+    lines.push(`Selection Mode: ${selectionMode ?? "unknown"}`)
+    if (confidenceLevel) {
+      lines.push(`confidence=${confidenceLevel}`)
+    }
   }
 
   if (thresholdProfileSource || selectedBranchReason || similarityRead) {
@@ -445,6 +486,14 @@ function buildConsultantPayloadSummary(
           ? balancedBranch
           : null
 
+  const selectedBranchPassedConditions = readStringArray(
+    payload.selected_branch_passed_conditions
+  )
+
+  const selectedBranchFailedConditions = readStringArray(
+    payload.selected_branch_failed_conditions
+  )
+
   const matchedBranchPassedConditions = readStringArray(
     matchedBranchRecord?.passed_conditions
   )
@@ -556,22 +605,43 @@ function buildConsultantPayloadSummary(
     )
   }
 
-  if (
-    matchedBranchPassedConditions.length > 0 ||
-    matchedBranchFailedConditions.length > 0
-  ) {
+  const useSelectedBranchConditions =
+    selectedBranchPassedConditions.length > 0 ||
+    selectedBranchFailedConditions.length > 0
+
+  const fallbackSupportingConditions = useSelectedBranchConditions
+    ? selectedBranchPassedConditions
+    : matchedBranchPassedConditions
+
+  const fallbackOpenCounterarguments = useSelectedBranchConditions
+    ? selectedBranchFailedConditions
+    : matchedBranchFailedConditions
+
+  const decisionSupportingConditions = readStringArray(
+    decision?.supporting_conditions
+  )
+
+  const decisionOpenCounterarguments = readStringArray(
+    decision?.open_counterarguments
+  )
+
+  const supportingConditions =
+    decisionSupportingConditions.length > 0
+      ? decisionSupportingConditions
+      : fallbackSupportingConditions
+
+  const openCounterarguments =
+    decisionOpenCounterarguments.length > 0
+      ? decisionOpenCounterarguments
+      : fallbackOpenCounterarguments
+
+  if (supportingConditions.length > 0 || openCounterarguments.length > 0) {
+    lines.push("Decision Conditions:")
     lines.push(
-      [
-        "Matched Branch Conditions:",
-        matchedBranchPassedConditions.length > 0
-          ? `passed=${matchedBranchPassedConditions.join(", ")}`
-          : null,
-        matchedBranchFailedConditions.length > 0
-          ? `failed=${matchedBranchFailedConditions.join(", ")}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" ")
+      `supporting: ${supportingConditions.length > 0 ? supportingConditions.join(", ") : "none"}`
+    )
+    lines.push(
+      `counterarguments: ${openCounterarguments.length > 0 ? openCounterarguments.join(", ") : "none"}`
     )
   }
 
@@ -741,7 +811,18 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
     "Treat the structured consultant payload as controlled product context and as your primary audit frame.",
     "Use it to validate the engine direction first. Only challenge it when the evidence clearly supports a careful deviation.",
     "Do not blindly override the engine and do not ignore the payload.",
-    "Use selected_branch_reason, threshold_profile_source, confidence_context, close_calls, branch_results, and the active thresholds as mandatory interpretation anchors.",
+    "Use selection_mode, supporting_conditions, open_counterarguments, selected_branch_reason, threshold_profile_source, confidence_context, close_calls, branch_results, and the active thresholds as mandatory interpretation anchors.",
+    "Treat supporting_conditions as the conditions that actively support the current engine direction, and open_counterarguments as conditions that argue against an over-strong claim or keep alternative readings plausible.",
+    "Weigh supporting_conditions against open_counterarguments visibly in your reasoning rather than treating the headline decision as self-explanatory.",
+    "When open_counterarguments is non-empty, do not write as if the engine verdict were unassailable; keep the tension explicit.",
+    "Especially when selection_mode is priority_match or fallback_unclear, when close_calls are present, or when confidence is lower, let open_counterarguments meaningfully shape caution, hedging, and how strongly you state the structural read.",
+    "Treat selection_mode as a compact audit hint about how the final branch was chosen (only_match, priority_match, or fallback_unclear).",
+    "When selection_mode is only_match, you may articulate direction somewhat more clearly, but stay evidence-based, genre-relative, and non-absolute.",
+    "When selection_mode is priority_match, pay special attention to competing signals, open counter-arguments, and borderline cases already surfaced in the payload.",
+    "When selection_mode is fallback_unclear, phrase especially cautiously, make uncertainty visible, and avoid sounding definitive about the structure.",
+    "Treat selected_branch_passed_conditions and selected_branch_failed_conditions as the direct short audit of the finally chosen branch: read and sanity-check this pair first before digging deeper into branch_results or other auxiliary fields.",
+    "If selected_branch_failed_conditions is non-empty, visibly account for those open counter-arguments in your assessment rather than glossing over them.",
+    "When selected_branch_reason indicates a priority-based selection (for example repetitive priority over other matches), be extra careful to consider whether competing signals still deserve weight in your narrative.",
     "If close_calls are present, if the selected branch is unclear, or if the confidence context suggests uncertainty, reduce certainty in your wording.",
     "If you disagree with the engine direction, explicitly ground that disagreement in the provided evidence, branch checks, and thresholds.",
     "Never turn uncertainty into a hard negative judgment.",
@@ -764,6 +845,12 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
     "In your wording:",
     "- treat the engine decision as the starting point",
     "- only challenge it when the provided evidence clearly supports that",
+    "- in Body, frame the final chosen branch using carrying hints from supporting_conditions (and selected_branch_passed_conditions when present) while letting selection_mode subtly inform tone (without naming it mechanically unless helpful)",
+    "- in Caution, reflect open counter-arguments from open_counterarguments and selected_branch_failed_conditions alongside close_calls when relevant",
+    "- when open_counterarguments is non-empty, avoid unnecessarily absolute language about the structure or the engine read",
+    "- in Caution, be noticeably more careful when selection_mode is priority_match or fallback_unclear",
+    "- when selection_mode is fallback_unclear, avoid overly hard or definitive statements about the arrangement structure",
+    "- when a priority-style selection is signaled in selected_branch_reason or when confidence is low, phrase especially cautiously",
     "- reflect uncertainty when close calls or low-confidence signals are present",
     "- keep the language genre-relative and evidence-based",
     "- avoid absolute judgments and leave room for artistic intent",

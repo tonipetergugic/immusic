@@ -1441,6 +1441,71 @@ export function buildStructureAnalysisV1(input: {
       : null,
   ].filter((value): value is string => value !== null);
 
+  const matchedBranchNames = [
+    decision_rule_evaluation.repetitive.matched ? "repetitive" : null,
+    decision_rule_evaluation.underdeveloped.matched ? "underdeveloped" : null,
+    decision_rule_evaluation.balanced.matched ? "balanced" : null,
+  ].filter(
+    (
+      value
+    ): value is "repetitive" | "underdeveloped" | "balanced" => value !== null
+  );
+
+  const selectedBranchReason: NonNullable<
+    StructureAnalysisV1["decision_trace"]
+  >["selected_branch_reason"] =
+    decision_candidate.status_candidate === "unclear"
+      ? "fallback_unclear_no_rule_matched"
+      : decision_candidate.status_candidate === "repetitive"
+        ? matchedBranchNames.length === 1
+          ? "selected_repetitive_only_match"
+          : "selected_repetitive_priority_match"
+        : decision_candidate.status_candidate === "underdeveloped"
+          ? matchedBranchNames.length === 1
+            ? "selected_underdeveloped_only_match"
+            : "selected_underdeveloped_priority_match"
+          : "selected_balanced_only_match";
+
+  const decisionSelectionMode: NonNullable<
+    StructureAnalysisV1["decision_summary"]
+  >["selection_mode"] =
+    selectedBranchReason === "selected_repetitive_priority_match" ||
+    selectedBranchReason === "selected_underdeveloped_priority_match"
+      ? "priority_match"
+      : selectedBranchReason === "fallback_unclear_no_rule_matched"
+        ? "fallback_unclear"
+        : "only_match";
+
+  const selectedBranchConditionSummary: Pick<
+    NonNullable<StructureAnalysisV1["decision_trace"]>,
+    "selected_branch_passed_conditions" | "selected_branch_failed_conditions"
+  > =
+    decision_candidate.status_candidate === "repetitive"
+      ? {
+          selected_branch_passed_conditions:
+            decision_rule_evaluation.repetitive.passed_conditions,
+          selected_branch_failed_conditions:
+            decision_rule_evaluation.repetitive.failed_conditions,
+        }
+      : decision_candidate.status_candidate === "underdeveloped"
+        ? {
+            selected_branch_passed_conditions:
+              decision_rule_evaluation.underdeveloped.passed_conditions,
+            selected_branch_failed_conditions:
+              decision_rule_evaluation.underdeveloped.failed_conditions,
+          }
+        : decision_candidate.status_candidate === "balanced"
+          ? {
+              selected_branch_passed_conditions:
+                decision_rule_evaluation.balanced.passed_conditions,
+              selected_branch_failed_conditions:
+                decision_rule_evaluation.balanced.failed_conditions,
+            }
+          : {
+              selected_branch_passed_conditions: [],
+              selected_branch_failed_conditions: [],
+            };
+
   const decision_trace: StructureAnalysisV1["decision_trace"] = {
     matched_rule_branch: decision_candidate.status_candidate,
     threshold_profile_source: decision_threshold_profile.threshold_profile_source,
@@ -1461,10 +1526,11 @@ export function buildStructureAnalysisV1(input: {
         failed_conditions: decision_rule_evaluation.balanced.failed_conditions,
       },
     },
-    selected_branch_reason:
-      decision_candidate.status_candidate === "unclear"
-        ? "fallback_unclear_no_rule_matched"
-        : "matched_priority_rule",
+    selected_branch_reason: selectedBranchReason,
+    selected_branch_passed_conditions:
+      selectedBranchConditionSummary.selected_branch_passed_conditions,
+    selected_branch_failed_conditions:
+      selectedBranchConditionSummary.selected_branch_failed_conditions,
     key_threshold_comparisons: {
       repetitive: decision_rule_evaluation.repetitive.key_threshold_comparisons,
       underdeveloped: decision_rule_evaluation.underdeveloped.key_threshold_comparisons,
@@ -1507,8 +1573,13 @@ export function buildStructureAnalysisV1(input: {
   const decision_summary: StructureAnalysisV1["decision_summary"] = {
     status: decision_candidate.status_candidate,
     main_reason: decision_candidate.primary_reason_candidate,
+    selection_mode: decisionSelectionMode,
     next_action: decision_candidate.next_action_candidate,
     confidence_level: decisionConfidenceLevel,
+    supporting_conditions:
+      selectedBranchConditionSummary.selected_branch_passed_conditions,
+    open_counterarguments:
+      selectedBranchConditionSummary.selected_branch_failed_conditions,
     evidence: {
       repetition_ratio_0_1,
       unique_section_count,
@@ -1523,6 +1594,7 @@ export function buildStructureAnalysisV1(input: {
   const explanation_inputs: StructureAnalysisV1["explanation_inputs"] = {
     status: decision_summary.status,
     main_reason: decision_summary.main_reason,
+    selection_mode: decision_summary.selection_mode,
     next_action: decision_summary.next_action,
     confidence_level: decision_summary.confidence_level,
     matched_rule_branch: decision_trace.matched_rule_branch,
@@ -1532,6 +1604,8 @@ export function buildStructureAnalysisV1(input: {
     declared_subgenre: declaredSubgenre,
     declared_reference_artist: declaredReferenceArtist,
     declared_reference_track: declaredReferenceTrack,
+    supporting_conditions: decision_summary.supporting_conditions,
+    open_counterarguments: decision_summary.open_counterarguments,
     evidence: {
       repetition_ratio_0_1: decision_summary.evidence.repetition_ratio_0_1,
       unique_section_count: decision_summary.evidence.unique_section_count,
@@ -1632,6 +1706,7 @@ export function buildStructureAnalysisV1(input: {
     similarity_emphasis: wording_plan.similarity_emphasis,
     status: decision_summary.status,
     main_reason: decision_summary.main_reason,
+    selection_mode: explanation_inputs.selection_mode,
     next_action: decision_summary.next_action,
     confidence_level: decision_summary.confidence_level,
     active_genre_profile: decision_rule_context.active_genre_profile,
@@ -1639,6 +1714,8 @@ export function buildStructureAnalysisV1(input: {
     declared_subgenre: declaredSubgenre,
     declared_reference_artist: declaredReferenceArtist,
     declared_reference_track: declaredReferenceTrack,
+    supporting_conditions: explanation_inputs.supporting_conditions,
+    open_counterarguments: explanation_inputs.open_counterarguments,
     evidence: {
       repetition_ratio_0_1: decision_summary.evidence.repetition_ratio_0_1,
       unique_section_count: decision_summary.evidence.unique_section_count,
@@ -1692,7 +1769,10 @@ export function buildStructureAnalysisV1(input: {
     decision: {
       status: decision_summary.status,
       main_reason: decision_summary.main_reason,
+      selection_mode: decision_summary.selection_mode,
       next_action: decision_summary.next_action,
+      supporting_conditions: decision_summary.supporting_conditions,
+      open_counterarguments: decision_summary.open_counterarguments,
       confidence_level: decision_summary.confidence_level,
     },
     wording: {
@@ -1823,6 +1903,10 @@ export function buildStructureAnalysisV1(input: {
     },
     threshold_profile_source: decision_trace.threshold_profile_source,
     selected_branch_reason: decision_trace.selected_branch_reason,
+    selected_branch_passed_conditions:
+      decision_trace.selected_branch_passed_conditions,
+    selected_branch_failed_conditions:
+      decision_trace.selected_branch_failed_conditions,
     confidence_context: {
       core_metric_presence_count:
         decisionConfidenceInputs.core_metric_presence_count,

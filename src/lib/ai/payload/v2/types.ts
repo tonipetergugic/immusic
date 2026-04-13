@@ -196,8 +196,14 @@ export type StructureAnalysisV1 = {
       };
     };
     selected_branch_reason:
-      | "matched_priority_rule"
+      | "selected_repetitive_only_match"
+      | "selected_repetitive_priority_match"
+      | "selected_underdeveloped_only_match"
+      | "selected_underdeveloped_priority_match"
+      | "selected_balanced_only_match"
       | "fallback_unclear_no_rule_matched";
+    selected_branch_passed_conditions: string[];
+    selected_branch_failed_conditions: string[];
     key_threshold_comparisons: {
       repetitive: {
         repetition_ratio_0_1: {
@@ -275,12 +281,15 @@ export type StructureAnalysisV1 = {
       | "low_section_count_weak_transitions"
       | "healthy_variation_and_transitions"
       | "mixed_or_insufficient_signals";
+    selection_mode: "only_match" | "priority_match" | "fallback_unclear";
     next_action:
       | "increase_section_contrast"
       | "add_or_strengthen_structural_change"
       | "preserve_structure_refine_details"
       | "review_structure_manually";
     confidence_level: "high" | "medium" | "low";
+    supporting_conditions: string[];
+    open_counterarguments: string[];
     evidence: {
       repetition_ratio_0_1: number | null;
       unique_section_count: number | null;
@@ -297,6 +306,7 @@ export type StructureAnalysisV1 = {
       | "low_section_count_weak_transitions"
       | "healthy_variation_and_transitions"
       | "mixed_or_insufficient_signals";
+    selection_mode: "only_match" | "priority_match" | "fallback_unclear";
     next_action:
       | "increase_section_contrast"
       | "add_or_strengthen_structural_change"
@@ -323,6 +333,8 @@ export type StructureAnalysisV1 = {
     declared_subgenre: string | null;
     declared_reference_artist: string | null;
     declared_reference_track: string | null;
+    supporting_conditions: string[];
+    open_counterarguments: string[];
     evidence: {
       repetition_ratio_0_1: number | null;
       unique_section_count: number | null;
@@ -387,6 +399,7 @@ export type StructureAnalysisV1 = {
       | "low_section_count_weak_transitions"
       | "healthy_variation_and_transitions"
       | "mixed_or_insufficient_signals";
+    selection_mode: "only_match" | "priority_match" | "fallback_unclear";
     next_action:
       | "increase_section_contrast"
       | "add_or_strengthen_structural_change"
@@ -407,6 +420,8 @@ export type StructureAnalysisV1 = {
     declared_subgenre: string | null;
     declared_reference_artist: string | null;
     declared_reference_track: string | null;
+    supporting_conditions: string[];
+    open_counterarguments: string[];
     evidence: {
       repetition_ratio_0_1: number | null;
       unique_section_count: number | null;
@@ -436,11 +451,14 @@ export type StructureAnalysisV1 = {
         | "low_section_count_weak_transitions"
         | "healthy_variation_and_transitions"
         | "mixed_or_insufficient_signals";
+      selection_mode: "only_match" | "priority_match" | "fallback_unclear";
       next_action:
         | "increase_section_contrast"
         | "add_or_strengthen_structural_change"
         | "preserve_structure_refine_details"
         | "review_structure_manually";
+      supporting_conditions: string[];
+      open_counterarguments: string[];
       confidence_level: "high" | "medium" | "low";
     };
     wording: {
@@ -605,8 +623,14 @@ export type StructureAnalysisV1 = {
     };
     threshold_profile_source: "genre_profile" | "default_profile";
     selected_branch_reason:
-      | "matched_priority_rule"
+      | "selected_repetitive_only_match"
+      | "selected_repetitive_priority_match"
+      | "selected_underdeveloped_only_match"
+      | "selected_underdeveloped_priority_match"
+      | "selected_balanced_only_match"
       | "fallback_unclear_no_rule_matched";
+    selected_branch_passed_conditions: string[];
+    selected_branch_failed_conditions: string[];
     confidence_context: {
       core_metric_presence_count: number;
       matched_branch_count: number;
