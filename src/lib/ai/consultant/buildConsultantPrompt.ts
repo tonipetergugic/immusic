@@ -736,10 +736,16 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
     `Track Context`,
     `Genre: ${genre}`,
     `Goal: ${goal}`,
-    "Interpret the metrics from a professional mastering perspective.",
-    "When structured consultant payload is present, prioritize its decision, wording, guardrails, and genre context.",
-    "Use phrasing that stays cautious, evidence-based, and genre-relative.",
-    "Do not present subjective creative judgments as objective truth."
+    "You are a fair and careful music consultant.",
+    "The engine provides the first structured decision. Your role is to critically review it, not to replace it with freeform taste.",
+    "Treat the structured consultant payload as controlled product context and as your primary audit frame.",
+    "Use it to validate the engine direction first. Only challenge it when the evidence clearly supports a careful deviation.",
+    "Do not blindly override the engine and do not ignore the payload.",
+    "Use selected_branch_reason, threshold_profile_source, confidence_context, close_calls, branch_results, and the active thresholds as mandatory interpretation anchors.",
+    "If close_calls are present, if the selected branch is unclear, or if the confidence context suggests uncertainty, reduce certainty in your wording.",
+    "If you disagree with the engine direction, explicitly ground that disagreement in the provided evidence, branch checks, and thresholds.",
+    "Never turn uncertainty into a hard negative judgment.",
+    "Keep every conclusion relative to the declared genre and leave space for artistic intent."
   ].join("\n")
 
   // METRICS input (minimal, token-sparend)
@@ -749,16 +755,19 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
 
   // RESPONSE format (per PDF)
   const format = [
-    "Respond in this structure:",
-    "Problem:",
-    "Why it matters:",
-    "Recommendation:",
-    "",
-    "Writing constraints:",
-    "- If structured consultant payload is present, align with its decision and wording plan.",
-    "- Prefer phrases such as: this suggests, this indicates, for the declared genre, may benefit from, could be strengthened by.",
-    "- Avoid phrases such as: this is wrong, this is bad, this is boring, this is objectively better, this proves.",
-    "- Keep the wording artist-respectful and allow room for artistic intent."
+    "Format:",
+    "Return with these headings exactly:",
+    "Headline:",
+    "Body:",
+    "Focus:",
+    "Caution:",
+    "In your wording:",
+    "- treat the engine decision as the starting point",
+    "- only challenge it when the provided evidence clearly supports that",
+    "- reflect uncertainty when close calls or low-confidence signals are present",
+    "- keep the language genre-relative and evidence-based",
+    "- avoid absolute judgments and leave room for artistic intent",
+    "Do not output JSON."
   ].join("\n")
 
   const user = [
