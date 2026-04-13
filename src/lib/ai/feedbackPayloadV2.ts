@@ -32,6 +32,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
   queueId: string;
   audioHash: string;
   decision: "approved" | "rejected";
+  mainGenre?: string | null;
+  subgenre?: string | null;
+  referenceArtist?: string | null;
+  referenceTrack?: string | null;
   durationS?: number | null;
   integratedLufs?: number | null;
   truePeakDbTp?: number | null;
@@ -75,6 +79,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
     queueId,
     audioHash,
     decision,
+    mainGenre = null,
+    subgenre = null,
+    referenceArtist = null,
+    referenceTrack = null,
     durationS = null,
     integratedLufs = null,
     truePeakDbTp = null,
@@ -925,6 +933,10 @@ export function buildFeedbackPayloadV2Mvp(params: {
     transientDensity: transientDensityNum,
     meanShortCrestDb: meanShortCrestDb,
     p95ShortCrestDb: p95ShortCrestDb,
+    mainGenre,
+    subgenre,
+    referenceArtist,
+    referenceTrack,
   });
 
   const structureArc = classifyEnergyArcV1(structureAnalysis);

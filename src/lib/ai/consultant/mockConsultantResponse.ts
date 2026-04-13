@@ -18,13 +18,124 @@ type ConsultantMetrics = {
   AIR_RMS?: number | null
 }
 
+type MockConsultantPayload = {
+  decision?: {
+    status?: "balanced" | "repetitive" | "underdeveloped" | "unclear" | null
+    main_reason?:
+      | "high_repetition_low_novelty"
+      | "low_section_count_weak_transitions"
+      | "healthy_variation_and_transitions"
+      | "mixed_or_insufficient_signals"
+      | null
+    next_action?:
+      | "increase_section_contrast"
+      | "add_or_strengthen_structural_change"
+      | "preserve_structure_refine_details"
+      | "review_structure_manually"
+      | null
+    confidence_level?: "high" | "medium" | "low" | null
+  } | null
+  wording?: {
+    caution_mode?: "low" | "medium" | "high" | null
+  } | null
+  genre_context?: {
+    declared_main_genre?: string | null
+    declared_subgenre?: string | null
+    declared_reference_artist?: string | null
+    declared_reference_track?: string | null
+    active_genre_profile?:
+      | "trance_like"
+      | "techno_like"
+      | "house_edm_like"
+      | "bass_music_like"
+      | "hard_dance_like"
+      | "pop_urban_like"
+      | "rock_metal_like"
+      | "other_like"
+      | "unknown"
+      | null
+  } | null
+  evidence?: {
+    repetition_ratio_0_1?: number | null
+    unique_section_count?: number | null
+    transition_strength_0_1?: number | null
+    novelty_change_strength_0_1?: number | null
+  } | null
+}
+
 function fmt(n: number | null | undefined, digits = 1) {
   if (typeof n !== "number" || !Number.isFinite(n)) return null
   return n.toFixed(digits)
 }
 
-export function mockConsultantResponse(metrics: ConsultantMetrics) {
+export function mockConsultantResponse(
+  metrics: ConsultantMetrics,
+  consultantPayload?: MockConsultantPayload | null
+) {
   const lines: string[] = []
+
+  const declaredGenre =
+    typeof consultantPayload?.genre_context?.declared_subgenre === "string" &&
+    consultantPayload.genre_context.declared_subgenre.trim().length > 0
+      ? consultantPayload.genre_context.declared_subgenre.trim()
+      : typeof consultantPayload?.genre_context?.declared_main_genre === "string" &&
+          consultantPayload.genre_context.declared_main_genre.trim().length > 0
+        ? consultantPayload.genre_context.declared_main_genre.trim()
+        : null
+
+  const activeGenreProfile = consultantPayload?.genre_context?.active_genre_profile ?? null
+  const decision = consultantPayload?.decision ?? null
+  const evidence = consultantPayload?.evidence ?? null
+
+  if (declaredGenre || activeGenreProfile) {
+    lines.push(
+      `Context: declared genre ${declaredGenre ?? "unknown"}${activeGenreProfile ? ` (${activeGenreProfile})` : ""}.`
+    )
+  }
+
+  if (decision?.status === "balanced") {
+    lines.push("Structure summary: this suggests the arrangement is already fairly balanced.")
+  } else if (decision?.status === "repetitive") {
+    lines.push("Structure summary: this suggests repetition may currently limit forward movement.")
+  } else if (decision?.status === "underdeveloped") {
+    lines.push("Structure summary: this indicates the track may benefit from stronger structural change.")
+  } else if (decision?.status === "unclear") {
+    lines.push("Structure summary: signals are mixed, so the interpretation should stay cautious.")
+  }
+
+  if (evidence) {
+    const bits: string[] = []
+
+    if (typeof evidence.repetition_ratio_0_1 === "number" && Number.isFinite(evidence.repetition_ratio_0_1)) {
+      bits.push(`repetition ${evidence.repetition_ratio_0_1.toFixed(2)}`)
+    }
+
+    if (typeof evidence.unique_section_count === "number" && Number.isFinite(evidence.unique_section_count)) {
+      bits.push(`sections ${evidence.unique_section_count.toFixed(0)}`)
+    }
+
+    if (typeof evidence.transition_strength_0_1 === "number" && Number.isFinite(evidence.transition_strength_0_1)) {
+      bits.push(`transition ${evidence.transition_strength_0_1.toFixed(2)}`)
+    }
+
+    if (typeof evidence.novelty_change_strength_0_1 === "number" && Number.isFinite(evidence.novelty_change_strength_0_1)) {
+      bits.push(`novelty ${evidence.novelty_change_strength_0_1.toFixed(2)}`)
+    }
+
+    if (bits.length > 0) {
+      lines.push(`Structure evidence: ${bits.join(", ")}.`)
+    }
+  }
+
+  if (decision?.next_action === "increase_section_contrast") {
+    lines.push("Suggested focus: increase contrast between sections so the arrangement develops more clearly.")
+  } else if (decision?.next_action === "add_or_strengthen_structural_change") {
+    lines.push("Suggested focus: add or strengthen structural changes between key sections.")
+  } else if (decision?.next_action === "preserve_structure_refine_details") {
+    lines.push("Suggested focus: preserve the structure and refine details without overcorrecting.")
+  } else if (decision?.next_action === "review_structure_manually") {
+    lines.push("Suggested focus: review the structure manually before making strong arrangement decisions.")
+  }
 
   const lufs = fmt(metrics.LUFS, 1)
   const tp = fmt(metrics.TP, 2)

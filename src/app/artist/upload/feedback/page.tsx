@@ -120,6 +120,7 @@ export default async function UploadFeedbackV3Page({
                   sub={payload?.metrics?.spectral?.sub_rms_dbfs ?? null}
                   mid={payload?.metrics?.spectral?.mid_rms_dbfs ?? null}
                   air={payload?.metrics?.spectral?.air_rms_dbfs ?? null}
+                  consultantPayload={(payload?.metrics?.structure as any)?.consultant_payload ?? null}
                 />
               ) : null}
               <div className="pt-1">

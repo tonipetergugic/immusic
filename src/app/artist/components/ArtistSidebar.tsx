@@ -10,7 +10,8 @@ import {
   Upload,
   BarChart3,
   User,
-  Home
+  Home,
+  Brain,
 } from "lucide-react";
 
 type ArtistSidebarProps = {
@@ -58,6 +59,12 @@ export default function ArtistSidebar({
       label: "My Tracks",
       href: "/artist/my-tracks",
       icon: <FileMusic size={20} />,
+      requiresArtist: true,
+    },
+    {
+      label: "Decision Center",
+      href: "/artist/decision",
+      icon: <Brain size={20} />,
       requiresArtist: true,
     },
     {

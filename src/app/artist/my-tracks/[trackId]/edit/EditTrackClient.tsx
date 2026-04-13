@@ -178,14 +178,6 @@ export default function EditTrackClient({
     router.push("/artist/my-tracks");
   };
 
-  const handleViewFeedback = () => {
-    if (!track.queue_id) return;
-
-    router.push(
-      `/artist/upload/feedback?queue_id=${encodeURIComponent(track.queue_id)}`
-    );
-  };
-
   const handleOpenDeleteModal = () => {
     setShowDeleteModal(true);
   };
@@ -341,10 +333,10 @@ export default function EditTrackClient({
             editSuccess={editSuccess}
             isPending={isPending}
             isLocked={track.is_locked}
-            queueId={track.queue_id}
+            queueId={null}
             onSave={handleSave}
             onDone={handleDone}
-            onViewFeedback={handleViewFeedback}
+            onViewFeedback={() => {}}
             onDelete={handleOpenDeleteModal}
           />
         </div>

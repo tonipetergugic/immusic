@@ -13,6 +13,132 @@ type StructureSectionV1 =
   | { type: "outro"; start: number; end: number }
   | { type: "drop"; t: number; impact: number; impact_score: number };
 
+type RangeSectionTypeV1 = "intro" | "build" | "break" | "outro";
+
+type RangeSectionV1 = {
+  type: RangeSectionTypeV1;
+  start: number;
+  end: number;
+};
+
+type SectionSimilarityVectorV1 = {
+  duration_s: number;
+  mean_energy: number;
+  max_energy: number;
+  energy_variance: number;
+  start_energy: number;
+  end_energy: number;
+  energy_delta: number;
+  local_peak_density: number;
+};
+
+function isRangeSectionV1(section: StructureSectionV1): section is RangeSectionV1 {
+  return (
+    section.type === "intro" ||
+    section.type === "build" ||
+    section.type === "break" ||
+    section.type === "outro"
+  );
+}
+
+function variance(values: number[]): number {
+  if (values.length === 0) return 0;
+  const m = mean(values);
+  let s = 0;
+  for (const v of values) {
+    const d = v - m;
+    s += d * d;
+  }
+  return s / values.length;
+}
+
+function sliceEnergyPointsByRange(points: EnergyPointV1[], start: number, end: number): EnergyPointV1[] {
+  const sliced = points.filter((p) => p.t >= start && p.t <= end);
+  if (sliced.length > 0) return sliced;
+
+  let nearestStart: EnergyPointV1 | null = null;
+  let nearestEnd: EnergyPointV1 | null = null;
+
+  for (const p of points) {
+    if (p.t <= start) nearestStart = p;
+    if (p.t >= end) {
+      nearestEnd = p;
+      break;
+    }
+  }
+
+  if (nearestStart && nearestEnd) {
+    if (nearestStart.t === nearestEnd.t) return [nearestStart];
+    return [nearestStart, nearestEnd];
+  }
+
+  if (nearestStart) return [nearestStart];
+  if (nearestEnd) return [nearestEnd];
+  return [];
+}
+
+function buildSectionSimilarityVectorV1(args: {
+  section: RangeSectionV1;
+  energyCurve: EnergyPointV1[];
+  peaks: NonNullable<StructureAnalysisV1["peaks"]>;
+}): SectionSimilarityVectorV1 | null {
+  const { section, energyCurve, peaks } = args;
+  const sectionPoints = sliceEnergyPointsByRange(energyCurve, section.start, section.end);
+  if (sectionPoints.length === 0) return null;
+
+  const energies = sectionPoints.map((p) => p.e);
+  const duration_s = Math.max(0, section.end - section.start);
+  const mean_energy = clamp01(mean(energies));
+  const max_energy = clamp01(Math.max(...energies));
+  const energy_variance = clamp01(variance(energies));
+  const start_energy = clamp01(sectionPoints[0]!.e);
+  const end_energy = clamp01(sectionPoints[sectionPoints.length - 1]!.e);
+  const energy_delta = end_energy - start_energy;
+
+  let localPeakCount = 0;
+  for (const peak of peaks) {
+    if (peak.t >= section.start && peak.t <= section.end) localPeakCount++;
+  }
+
+  const local_peak_density = duration_s > 1e-6 ? localPeakCount / duration_s : 0;
+
+  return {
+    duration_s,
+    mean_energy,
+    max_energy,
+    energy_variance,
+    start_energy,
+    end_energy,
+    energy_delta,
+    local_peak_density,
+  };
+}
+
+function relativeSimilarity(a: number, b: number): number {
+  const denom = Math.max(Math.abs(a), Math.abs(b), 1e-6);
+  return clamp01(1 - Math.abs(a - b) / denom);
+}
+
+function boundedSimilarity(a: number, b: number, maxDiff: number): number {
+  if (maxDiff <= 0) return 0;
+  return clamp01(1 - Math.abs(a - b) / maxDiff);
+}
+
+function computeSectionSimilarityScoreV1(a: SectionSimilarityVectorV1, b: SectionSimilarityVectorV1): number {
+  const sims = [
+    relativeSimilarity(a.duration_s, b.duration_s),
+    boundedSimilarity(a.mean_energy, b.mean_energy, 1),
+    boundedSimilarity(a.max_energy, b.max_energy, 1),
+    boundedSimilarity(a.energy_variance, b.energy_variance, 1),
+    boundedSimilarity(a.start_energy, b.start_energy, 1),
+    boundedSimilarity(a.end_energy, b.end_energy, 1),
+    boundedSimilarity(a.energy_delta, b.energy_delta, 2),
+    relativeSimilarity(a.local_peak_density, b.local_peak_density),
+  ];
+
+  return clamp01(mean(sims));
+}
+
 function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -74,9 +200,158 @@ export function buildStructureAnalysisV1(input: {
   transientDensity?: number | null | undefined;
   meanShortCrestDb?: number | null | undefined;
   p95ShortCrestDb?: number | null | undefined;
+  mainGenre?: string | null | undefined;
+  subgenre?: string | null | undefined;
+  referenceArtist?: string | null | undefined;
+  referenceTrack?: string | null | undefined;
 }): StructureAnalysisV1 | null {
   const timeline = Array.isArray(input.shortTermLufsTimeline) ? input.shortTermLufsTimeline : null;
   if (!timeline || timeline.length < 3) return null;
+
+  const declaredMainGenre =
+    typeof input.mainGenre === "string" && input.mainGenre.trim().length > 0
+      ? input.mainGenre.trim()
+      : null;
+
+  const declaredSubgenre =
+    typeof input.subgenre === "string" && input.subgenre.trim().length > 0
+      ? input.subgenre.trim()
+      : null;
+
+  const declaredReferenceArtist =
+    typeof input.referenceArtist === "string" && input.referenceArtist.trim().length > 0
+      ? input.referenceArtist.trim()
+      : null;
+
+  const declaredReferenceTrack =
+    typeof input.referenceTrack === "string" && input.referenceTrack.trim().length > 0
+      ? input.referenceTrack.trim()
+      : null;
+
+  const mainGenreKey =
+    declaredMainGenre !== null && declaredMainGenre.trim().length > 0
+      ? declaredMainGenre.trim().toLowerCase()
+      : null;
+
+  const subgenreKey =
+    declaredSubgenre !== null && declaredSubgenre.trim().length > 0
+      ? declaredSubgenre.trim().toLowerCase()
+      : null;
+
+  const genre_rule_context: StructureAnalysisV1["genre_rule_context"] = {
+    main_genre_key: mainGenreKey,
+    subgenre_key: subgenreKey,
+    has_reference_artist: declaredReferenceArtist !== null,
+    has_reference_track: declaredReferenceTrack !== null,
+    genre_rules_ready: mainGenreKey !== null,
+  };
+
+  const classifyGenreRuleProfileKey = (genreKey: string | null): NonNullable<
+    StructureAnalysisV1["genre_rule_profile"]
+  >["profile_key"] => {
+    if (genreKey === null) return "unknown";
+
+    if (
+      genreKey === "trance" ||
+      genreKey === "progressive trance" ||
+      genreKey === "uplifting trance" ||
+      genreKey === "psytrance" ||
+      genreKey === "vocal trance" ||
+      genreKey === "hard trance" ||
+      genreKey === "tech trance"
+    ) {
+      return "trance_like";
+    }
+
+    if (
+      genreKey === "techno" ||
+      genreKey === "melodic techno" ||
+      genreKey === "peak time techno" ||
+      genreKey === "industrial techno" ||
+      genreKey === "hard techno"
+    ) {
+      return "techno_like";
+    }
+
+    if (
+      genreKey === "house" ||
+      genreKey === "deep house" ||
+      genreKey === "progressive house" ||
+      genreKey === "tech house" ||
+      genreKey === "afro house" ||
+      genreKey === "future house" ||
+      genreKey === "edm" ||
+      genreKey === "big room" ||
+      genreKey === "electro house" ||
+      genreKey === "festival edm"
+    ) {
+      return "house_edm_like";
+    }
+
+    if (
+      genreKey === "drum & bass" ||
+      genreKey === "liquid drum & bass" ||
+      genreKey === "neurofunk" ||
+      genreKey === "dubstep" ||
+      genreKey === "melodic dubstep" ||
+      genreKey === "future bass"
+    ) {
+      return "bass_music_like";
+    }
+
+    if (
+      genreKey === "hardstyle" ||
+      genreKey === "rawstyle" ||
+      genreKey === "hardcore" ||
+      genreKey === "uptempo hardcore"
+    ) {
+      return "hard_dance_like";
+    }
+
+    if (
+      genreKey === "pop" ||
+      genreKey === "dance pop" ||
+      genreKey === "indie pop" ||
+      genreKey === "hip-hop" ||
+      genreKey === "trap" ||
+      genreKey === "drill" ||
+      genreKey === "r&b" ||
+      genreKey === "soul"
+    ) {
+      return "pop_urban_like";
+    }
+
+    if (
+      genreKey === "rock" ||
+      genreKey === "alternative rock" ||
+      genreKey === "indie rock" ||
+      genreKey === "metal"
+    ) {
+      return "rock_metal_like";
+    }
+
+    if (
+      genreKey === "ambient" ||
+      genreKey === "cinematic" ||
+      genreKey === "lofi" ||
+      genreKey === "other"
+    ) {
+      return "other_like";
+    }
+
+    return "unknown";
+  };
+
+  const genreRuleProfileKey =
+    classifyGenreRuleProfileKey(subgenreKey) !== "unknown"
+      ? classifyGenreRuleProfileKey(subgenreKey)
+      : classifyGenreRuleProfileKey(mainGenreKey);
+
+  const genre_rule_profile: StructureAnalysisV1["genre_rule_profile"] = {
+    profile_key: genreRuleProfileKey,
+    derived_from_main_genre: mainGenreKey,
+    derived_from_subgenre: subgenreKey,
+  };
 
   const t = timeline.map((p) => p.t);
   const lufs = timeline.map((p) => p.lufs).filter((x) => Number.isFinite(x));
@@ -365,6 +640,481 @@ export function buildStructureAnalysisV1(input: {
   sections.length = 0;
   sections.push(...(sequenced as any));
 
+  const rangeSectionEntries = sections
+    .map((section, sectionIndex) => {
+      if (!isRangeSectionV1(section)) return null;
+
+      const vector = buildSectionSimilarityVectorV1({
+        section,
+        energyCurve: energy_curve,
+        peaks,
+      });
+
+      if (!vector) return null;
+
+      return { section, sectionIndex, vector };
+    })
+    .filter(
+      (
+        entry
+      ): entry is {
+        section: RangeSectionV1;
+        sectionIndex: number;
+        vector: SectionSimilarityVectorV1;
+      } => entry !== null
+    );
+
+  const similarityPairs: NonNullable<NonNullable<StructureAnalysisV1["section_similarity"]>["pairs"]> = [];
+
+  for (let i = 0; i < rangeSectionEntries.length - 1; i++) {
+    for (let j = i + 1; j < rangeSectionEntries.length; j++) {
+      const a = rangeSectionEntries[i]!;
+      const b = rangeSectionEntries[j]!;
+      const similarity_0_1 = computeSectionSimilarityScoreV1(a.vector, b.vector);
+
+      similarityPairs.push({
+        from: a.section.type,
+        from_index: a.sectionIndex,
+        to: b.section.type,
+        to_index: b.sectionIndex,
+        similarity_0_1,
+        features: {
+          duration_s: { a: a.vector.duration_s, b: b.vector.duration_s },
+          mean_energy: { a: a.vector.mean_energy, b: b.vector.mean_energy },
+          max_energy: { a: a.vector.max_energy, b: b.vector.max_energy },
+          energy_variance: { a: a.vector.energy_variance, b: b.vector.energy_variance },
+          start_energy: { a: a.vector.start_energy, b: b.vector.start_energy },
+          end_energy: { a: a.vector.end_energy, b: b.vector.end_energy },
+          energy_delta: { a: a.vector.energy_delta, b: b.vector.energy_delta },
+          local_peak_density: { a: a.vector.local_peak_density, b: b.vector.local_peak_density },
+        },
+      });
+    }
+  }
+
+  const section_similarity: StructureAnalysisV1["section_similarity"] = {
+    pairs: similarityPairs,
+    highest_similarity_0_1:
+      similarityPairs.length > 0
+        ? Math.max(...similarityPairs.map((pair) => pair.similarity_0_1))
+        : null,
+    mean_similarity_0_1:
+      similarityPairs.length > 0
+        ? mean(similarityPairs.map((pair) => pair.similarity_0_1))
+        : null,
+  };
+
+  const repetitionPairs = similarityPairs.filter(
+    (pair) =>
+      pair.from !== "intro" &&
+      pair.from !== "outro" &&
+      pair.to !== "intro" &&
+      pair.to !== "outro"
+  );
+
+  const repetitionActivatedScores = repetitionPairs.map((pair) =>
+    clamp01((pair.similarity_0_1 - 0.7) / 0.3)
+  );
+
+  const repetition_ratio_0_1: StructureAnalysisV1["repetition_ratio_0_1"] =
+    repetitionActivatedScores.length > 0
+      ? mean(repetitionActivatedScores)
+      : null;
+
+  const unique_section_count: StructureAnalysisV1["unique_section_count"] =
+    countRangeSections(sections as any);
+
+  const transitionPairStrengths = [];
+
+  for (let i = 0; i < rangeSectionEntries.length - 1; i++) {
+    const current = rangeSectionEntries[i]!;
+    const next = rangeSectionEntries[i + 1]!;
+
+    const gap_s = Math.max(0, next.section.start - current.section.end);
+    const energy_jump = Math.abs(next.vector.start_energy - current.vector.end_energy);
+
+    const gap_score = clamp01(1 - gap_s / 8);
+    const energy_score = clamp01(energy_jump / 0.35);
+    const transition_pair_strength_0_1 = clamp01(0.65 * energy_score + 0.35 * gap_score);
+
+    transitionPairStrengths.push(transition_pair_strength_0_1);
+  }
+
+  const transition_strength_0_1: StructureAnalysisV1["transition_strength_0_1"] =
+    transitionPairStrengths.length > 0
+      ? mean(transitionPairStrengths)
+      : null;
+
+  const noveltyPairScores = [];
+
+  for (let i = 0; i < rangeSectionEntries.length - 1; i++) {
+    const current = rangeSectionEntries[i]!;
+    const next = rangeSectionEntries[i + 1]!;
+    const adjacent_similarity_0_1 = computeSectionSimilarityScoreV1(current.vector, next.vector);
+    const type_change_flag = current.section.type === next.section.type ? 0 : 1;
+    const novelty_pair_score_0_1 = clamp01(
+      0.85 * (1 - adjacent_similarity_0_1) + 0.15 * type_change_flag
+    );
+
+    noveltyPairScores.push(novelty_pair_score_0_1);
+  }
+
+  const novelty_change_strength_0_1: StructureAnalysisV1["novelty_change_strength_0_1"] =
+    noveltyPairScores.length > 0
+      ? mean(noveltyPairScores)
+      : null;
+
+  const dropSimilarityPairs: NonNullable<
+    NonNullable<StructureAnalysisV1["drop_to_drop_similarity"]>["pairs"]
+  > = [];
+
+  for (let i = 0; i < drops.length - 1; i++) {
+    for (let j = i + 1; j < drops.length; j++) {
+      const a = drops[i]!;
+      const b = drops[j]!;
+
+      const similarity_0_1 = mean([
+        boundedSimilarity(a.drop_energy, b.drop_energy, 1),
+        boundedSimilarity(a.build_mean_energy, b.build_mean_energy, 1),
+        boundedSimilarity(a.impact, b.impact, 1),
+        boundedSimilarity(a.impact_score, b.impact_score, 100),
+      ]);
+
+      dropSimilarityPairs.push({
+        from_index: i,
+        to_index: j,
+        similarity_0_1,
+        features: {
+          drop_energy: { a: a.drop_energy, b: b.drop_energy },
+          build_mean_energy: { a: a.build_mean_energy, b: b.build_mean_energy },
+          impact: { a: a.impact, b: b.impact },
+          impact_score: { a: a.impact_score, b: b.impact_score },
+        },
+      });
+    }
+  }
+
+  const drop_to_drop_similarity: StructureAnalysisV1["drop_to_drop_similarity"] = {
+    pairs: dropSimilarityPairs,
+    highest_similarity_0_1:
+      dropSimilarityPairs.length > 0
+        ? Math.max(...dropSimilarityPairs.map((pair) => pair.similarity_0_1))
+        : null,
+    mean_similarity_0_1:
+      dropSimilarityPairs.length > 0
+        ? mean(dropSimilarityPairs.map((pair) => pair.similarity_0_1))
+        : null,
+  };
+
+  const decision_inputs: StructureAnalysisV1["decision_inputs"] = {
+    repetition_ratio_0_1,
+    unique_section_count,
+    transition_strength_0_1,
+    novelty_change_strength_0_1,
+    section_similarity_highest_0_1: section_similarity.highest_similarity_0_1,
+    section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
+    drop_to_drop_similarity_highest_0_1: drop_to_drop_similarity.highest_similarity_0_1,
+    drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+    declared_main_genre: declaredMainGenre,
+    declared_subgenre: declaredSubgenre,
+    declared_reference_artist: declaredReferenceArtist,
+    declared_reference_track: declaredReferenceTrack,
+  };
+
+  const repetitiveThresholds =
+    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+      ? {
+          repetition_min: 0.68,
+          novelty_max: 0.42,
+        }
+      : genreRuleProfileKey === "rock_metal_like" || genreRuleProfileKey === "pop_urban_like"
+        ? {
+            repetition_min: 0.52,
+            novelty_max: 0.48,
+          }
+        : {
+            repetition_min: 0.6,
+            novelty_max: 0.45,
+          };
+
+  const balancedThresholds =
+    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+      ? {
+          repetition_max: 0.55,
+          novelty_min: 0.5,
+          transition_min: 0.42,
+        }
+      : genreRuleProfileKey === "rock_metal_like" || genreRuleProfileKey === "pop_urban_like"
+        ? {
+            repetition_max: 0.38,
+            novelty_min: 0.58,
+            transition_min: 0.48,
+          }
+        : {
+            repetition_max: 0.45,
+            novelty_min: 0.55,
+            transition_min: 0.45,
+          };
+
+  const decision_rule_context: StructureAnalysisV1["decision_rule_context"] = {
+    active_genre_profile: genreRuleProfileKey,
+    repetitive_thresholds: repetitiveThresholds,
+    balanced_thresholds: balancedThresholds,
+    underdeveloped_thresholds: {
+      unique_section_count_max: 2,
+      transition_max: 0.4,
+    },
+  };
+
+  const thresholdProfileSource: NonNullable<
+    StructureAnalysisV1["decision_trace"]
+  >["threshold_profile_source"] =
+    genreRuleProfileKey === "trance_like" ||
+    genreRuleProfileKey === "house_edm_like" ||
+    genreRuleProfileKey === "rock_metal_like" ||
+    genreRuleProfileKey === "pop_urban_like"
+      ? "genre_profile"
+      : "default_profile";
+
+  const decision_candidate: StructureAnalysisV1["decision_candidate"] =
+    repetition_ratio_0_1 !== null &&
+    novelty_change_strength_0_1 !== null &&
+    repetition_ratio_0_1 >= repetitiveThresholds.repetition_min &&
+    novelty_change_strength_0_1 <= repetitiveThresholds.novelty_max
+      ? {
+          status_candidate: "repetitive",
+          primary_reason_candidate: "high_repetition_low_novelty",
+          next_action_candidate: "increase_section_contrast",
+          evidence_snapshot: {
+            repetition_ratio_0_1,
+            unique_section_count,
+            transition_strength_0_1,
+            novelty_change_strength_0_1,
+            section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
+            drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+          },
+        }
+      : unique_section_count !== null &&
+          unique_section_count <= 2 &&
+          transition_strength_0_1 !== null &&
+          transition_strength_0_1 <= 0.4
+        ? {
+            status_candidate: "underdeveloped",
+            primary_reason_candidate: "low_section_count_weak_transitions",
+            next_action_candidate: "add_or_strengthen_structural_change",
+            evidence_snapshot: {
+              repetition_ratio_0_1,
+              unique_section_count,
+              transition_strength_0_1,
+              novelty_change_strength_0_1,
+              section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
+              drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+            },
+          }
+        : repetition_ratio_0_1 !== null &&
+            repetition_ratio_0_1 <= balancedThresholds.repetition_max &&
+            novelty_change_strength_0_1 !== null &&
+            novelty_change_strength_0_1 >= balancedThresholds.novelty_min &&
+            transition_strength_0_1 !== null &&
+            transition_strength_0_1 >= balancedThresholds.transition_min
+          ? {
+              status_candidate: "balanced",
+              primary_reason_candidate: "healthy_variation_and_transitions",
+              next_action_candidate: "preserve_structure_refine_details",
+              evidence_snapshot: {
+                repetition_ratio_0_1,
+                unique_section_count,
+                transition_strength_0_1,
+                novelty_change_strength_0_1,
+                section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
+                drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+              },
+            }
+          : {
+              status_candidate: "unclear",
+              primary_reason_candidate: "mixed_or_insufficient_signals",
+              next_action_candidate: "review_structure_manually",
+              evidence_snapshot: {
+                repetition_ratio_0_1,
+                unique_section_count,
+                transition_strength_0_1,
+                novelty_change_strength_0_1,
+                section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
+                drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+              },
+            };
+
+  const decision_trace: StructureAnalysisV1["decision_trace"] = {
+    matched_rule_branch: decision_candidate.status_candidate,
+    threshold_profile_source: thresholdProfileSource,
+  };
+
+  const decisionConfidenceLevel: NonNullable<
+    StructureAnalysisV1["decision_summary"]
+  >["confidence_level"] =
+    decision_candidate.status_candidate === "unclear"
+      ? "low"
+      : section_similarity.mean_similarity_0_1 !== null &&
+          repetition_ratio_0_1 !== null &&
+          novelty_change_strength_0_1 !== null &&
+          transition_strength_0_1 !== null
+        ? "high"
+        : "medium";
+
+  const decision_summary: StructureAnalysisV1["decision_summary"] = {
+    status: decision_candidate.status_candidate,
+    main_reason: decision_candidate.primary_reason_candidate,
+    next_action: decision_candidate.next_action_candidate,
+    confidence_level: decisionConfidenceLevel,
+    evidence: {
+      repetition_ratio_0_1,
+      unique_section_count,
+      transition_strength_0_1,
+      novelty_change_strength_0_1,
+    },
+  };
+
+  const explanation_inputs: StructureAnalysisV1["explanation_inputs"] = {
+    status: decision_summary.status,
+    main_reason: decision_summary.main_reason,
+    next_action: decision_summary.next_action,
+    confidence_level: decision_summary.confidence_level,
+    matched_rule_branch: decision_trace.matched_rule_branch,
+    threshold_profile_source: decision_trace.threshold_profile_source,
+    active_genre_profile: decision_rule_context.active_genre_profile,
+    declared_main_genre: declaredMainGenre,
+    declared_subgenre: declaredSubgenre,
+    declared_reference_artist: declaredReferenceArtist,
+    declared_reference_track: declaredReferenceTrack,
+    evidence: {
+      repetition_ratio_0_1: decision_summary.evidence.repetition_ratio_0_1,
+      unique_section_count: decision_summary.evidence.unique_section_count,
+      transition_strength_0_1: decision_summary.evidence.transition_strength_0_1,
+      novelty_change_strength_0_1: decision_summary.evidence.novelty_change_strength_0_1,
+    },
+  };
+
+  const explanation_candidate: StructureAnalysisV1["explanation_candidate"] = {
+    tone:
+      decision_summary.status === "balanced"
+        ? "affirming"
+        : decision_summary.status === "repetitive" ||
+            decision_summary.status === "underdeveloped"
+          ? "corrective"
+          : "cautious",
+    focus:
+      decision_summary.main_reason === "high_repetition_low_novelty"
+        ? "variation"
+        : decision_summary.main_reason === "low_section_count_weak_transitions"
+          ? "structure_growth"
+          : decision_summary.main_reason === "healthy_variation_and_transitions"
+            ? "preserve_strength"
+            : "manual_review",
+    caution_level:
+      decision_summary.confidence_level === "high"
+        ? "low"
+        : decision_summary.confidence_level === "medium"
+          ? "medium"
+          : "high",
+  };
+
+  const wording_plan: StructureAnalysisV1["wording_plan"] = {
+    headline_key:
+      decision_summary.status === "balanced"
+        ? "balanced_structure"
+        : decision_summary.status === "repetitive"
+          ? "repetition_warning"
+          : decision_summary.status === "underdeveloped"
+            ? "structure_growth_needed"
+            : "manual_review_needed",
+    body_focus_key:
+      explanation_candidate.focus === "preserve_strength"
+        ? "highlight_strengths"
+        : explanation_candidate.focus === "variation"
+          ? "increase_variation"
+          : explanation_candidate.focus === "structure_growth"
+            ? "strengthen_structure_changes"
+            : "explain_uncertainty",
+    caution_mode: explanation_candidate.caution_level,
+  };
+
+  const wording_payload: StructureAnalysisV1["wording_payload"] = {
+    headline_key: wording_plan.headline_key,
+    body_focus_key: wording_plan.body_focus_key,
+    caution_mode: wording_plan.caution_mode,
+    status: decision_summary.status,
+    main_reason: decision_summary.main_reason,
+    next_action: decision_summary.next_action,
+    confidence_level: decision_summary.confidence_level,
+    active_genre_profile: decision_rule_context.active_genre_profile,
+    declared_main_genre: declaredMainGenre,
+    declared_subgenre: declaredSubgenre,
+    declared_reference_artist: declaredReferenceArtist,
+    declared_reference_track: declaredReferenceTrack,
+    evidence: {
+      repetition_ratio_0_1: decision_summary.evidence.repetition_ratio_0_1,
+      unique_section_count: decision_summary.evidence.unique_section_count,
+      transition_strength_0_1: decision_summary.evidence.transition_strength_0_1,
+      novelty_change_strength_0_1: decision_summary.evidence.novelty_change_strength_0_1,
+    },
+  };
+
+  const wording_guardrails: StructureAnalysisV1["wording_guardrails"] = {
+    avoid_absolute_judgment: true,
+    require_evidence_based_language: true,
+    require_genre_relative_language: true,
+    preserve_artistic_intent_space: true,
+    preferred_phrases: [
+      "this suggests",
+      "this indicates",
+      "for the declared genre",
+      "may benefit from",
+      "could be strengthened by",
+    ],
+    forbidden_phrases: [
+      "this is wrong",
+      "this is bad",
+      "this is boring",
+      "this is objectively better",
+      "this proves",
+    ],
+  };
+
+  const consultant_payload: StructureAnalysisV1["consultant_payload"] = {
+    decision: {
+      status: decision_summary.status,
+      main_reason: decision_summary.main_reason,
+      next_action: decision_summary.next_action,
+      confidence_level: decision_summary.confidence_level,
+    },
+    wording: {
+      headline_key: wording_payload.headline_key,
+      body_focus_key: wording_payload.body_focus_key,
+      caution_mode: wording_payload.caution_mode,
+    },
+    guardrails: {
+      avoid_absolute_judgment: wording_guardrails.avoid_absolute_judgment,
+      require_evidence_based_language: wording_guardrails.require_evidence_based_language,
+      require_genre_relative_language: wording_guardrails.require_genre_relative_language,
+      preserve_artistic_intent_space: wording_guardrails.preserve_artistic_intent_space,
+      preferred_phrases: wording_guardrails.preferred_phrases,
+      forbidden_phrases: wording_guardrails.forbidden_phrases,
+    },
+    genre_context: {
+      declared_main_genre: declaredMainGenre,
+      declared_subgenre: declaredSubgenre,
+      declared_reference_artist: declaredReferenceArtist,
+      declared_reference_track: declaredReferenceTrack,
+      active_genre_profile: decision_rule_context.active_genre_profile,
+    },
+    evidence: {
+      repetition_ratio_0_1: wording_payload.evidence.repetition_ratio_0_1,
+      unique_section_count: wording_payload.evidence.unique_section_count,
+      transition_strength_0_1: wording_payload.evidence.transition_strength_0_1,
+      novelty_change_strength_0_1: wording_payload.evidence.novelty_change_strength_0_1,
+    },
+  };
+
   const structural_balance = computeStructuralBalanceIndexV1({
     energy_curve,
     density_zones: {
@@ -406,5 +1156,30 @@ export function buildStructureAnalysisV1(input: {
     },
     balance: structural_balance,
     sections,
+    section_similarity,
+    repetition_ratio_0_1,
+    unique_section_count,
+    transition_strength_0_1,
+    novelty_change_strength_0_1,
+    drop_to_drop_similarity,
+    decision_inputs,
+    decision_candidate,
+    decision_rule_context,
+    decision_trace,
+    decision_summary,
+    explanation_inputs,
+    explanation_candidate,
+    wording_plan,
+    wording_payload,
+    wording_guardrails,
+    consultant_payload,
+    genre_context: {
+      declared_main_genre: declaredMainGenre,
+      declared_subgenre: declaredSubgenre,
+      declared_reference_artist: declaredReferenceArtist,
+      declared_reference_track: declaredReferenceTrack,
+    },
+    genre_rule_context,
+    genre_rule_profile,
   };
 }

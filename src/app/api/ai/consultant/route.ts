@@ -8,7 +8,7 @@ import crypto from "crypto"
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { metrics, context } = body
+    const { metrics, context, consultant_payload } = body
 
     if (!metrics) {
       return NextResponse.json(
@@ -17,23 +17,43 @@ export async function POST(req: Request) {
       )
     }
 
-    const goal = context?.goal ?? "balanced"
-    const genre = context?.genre ?? null
+    const rawGoal = context?.goal
+
+    const goal =
+      rawGoal === "club" || rawGoal === "streaming" || rawGoal === "balanced"
+        ? rawGoal
+        : "balanced"
+
+    const genreFromConsultantPayload =
+      typeof consultant_payload?.genre_context?.declared_subgenre === "string" &&
+      consultant_payload.genre_context.declared_subgenre.trim().length > 0
+        ? consultant_payload.genre_context.declared_subgenre.trim()
+        : typeof consultant_payload?.genre_context?.declared_main_genre === "string" &&
+            consultant_payload.genre_context.declared_main_genre.trim().length > 0
+          ? consultant_payload.genre_context.declared_main_genre.trim()
+          : null
+
+    const genre =
+      genreFromConsultantPayload ??
+      (typeof context?.genre === "string" && context.genre.trim().length > 0
+        ? context.genre.trim()
+        : null)
 
     // build token-sparenden prompt (für später live)
     const { system, user } = buildConsultantPrompt({
       goal,
       genre,
       metrics,
+      consultant_payload,
     })
 
     const cacheKey = crypto
       .createHash("sha256")
-      .update(JSON.stringify({ goal, genre, metrics }))
+      .update(JSON.stringify({ goal, genre, metrics, consultant_payload }))
       .digest("hex")
 
     if (!isAiConsultantLive()) {
-      const result = mockConsultantResponse(metrics)
+      const result = mockConsultantResponse(metrics, consultant_payload ?? null)
       return NextResponse.json({ explanation: result.explanation ?? String(result) })
     }
 

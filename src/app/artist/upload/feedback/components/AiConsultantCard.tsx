@@ -117,6 +117,7 @@ type Props = {
   sub: number | null
   mid: number | null
   air: number | null
+  consultantPayload?: Record<string, unknown> | null
 }
 
 export default function AiConsultantCard({
@@ -134,6 +135,7 @@ export default function AiConsultantCard({
   sub,
   mid,
   air,
+  consultantPayload = null,
 }: Props) {
 
   const [explanation, setExplanation] = useState<string | null>(null)
@@ -194,6 +196,7 @@ export default function AiConsultantCard({
           MID_RMS_SPEC: mid,
           AIR_RMS: air,
         }),
+        consultant_payload: consultantPayload ?? null,
         context: {
           goal,
           genre,

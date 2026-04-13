@@ -60,6 +60,335 @@ export type StructureAnalysisV1 = {
     | { type: "outro"; start: number; end: number }
     | { type: "drop"; t: number; impact: number; impact_score: number }
   >;
+  section_similarity?: {
+    pairs: Array<{
+      from: "intro" | "build" | "break" | "outro";
+      from_index: number;
+      to: "intro" | "build" | "break" | "outro";
+      to_index: number;
+      similarity_0_1: number;
+      features: {
+        duration_s: { a: number; b: number };
+        mean_energy: { a: number; b: number };
+        max_energy: { a: number; b: number };
+        energy_variance: { a: number; b: number };
+        start_energy: { a: number; b: number };
+        end_energy: { a: number; b: number };
+        energy_delta: { a: number; b: number };
+        local_peak_density: { a: number; b: number };
+      };
+    }>;
+    highest_similarity_0_1: number | null;
+    mean_similarity_0_1: number | null;
+  };
+  repetition_ratio_0_1?: number | null;
+  unique_section_count?: number | null;
+  transition_strength_0_1?: number | null;
+  novelty_change_strength_0_1?: number | null;
+  drop_to_drop_similarity?: {
+    pairs: Array<{
+      from_index: number;
+      to_index: number;
+      similarity_0_1: number;
+      features: {
+        drop_energy: { a: number; b: number };
+        build_mean_energy: { a: number; b: number };
+        impact: { a: number; b: number };
+        impact_score: { a: number; b: number };
+      };
+    }>;
+    highest_similarity_0_1: number | null;
+    mean_similarity_0_1: number | null;
+  };
+  decision_inputs?: {
+    repetition_ratio_0_1: number | null;
+    unique_section_count: number | null;
+    transition_strength_0_1: number | null;
+    novelty_change_strength_0_1: number | null;
+    section_similarity_highest_0_1: number | null;
+    section_similarity_mean_0_1: number | null;
+    drop_to_drop_similarity_highest_0_1: number | null;
+    drop_to_drop_similarity_mean_0_1: number | null;
+    declared_main_genre: string | null;
+    declared_subgenre: string | null;
+    declared_reference_artist: string | null;
+    declared_reference_track: string | null;
+  };
+  decision_candidate?: {
+    status_candidate: "balanced" | "repetitive" | "underdeveloped" | "unclear";
+    primary_reason_candidate:
+      | "high_repetition_low_novelty"
+      | "low_section_count_weak_transitions"
+      | "healthy_variation_and_transitions"
+      | "mixed_or_insufficient_signals";
+    next_action_candidate:
+      | "increase_section_contrast"
+      | "add_or_strengthen_structural_change"
+      | "preserve_structure_refine_details"
+      | "review_structure_manually";
+    evidence_snapshot: {
+      repetition_ratio_0_1: number | null;
+      unique_section_count: number | null;
+      transition_strength_0_1: number | null;
+      novelty_change_strength_0_1: number | null;
+      section_similarity_mean_0_1: number | null;
+      drop_to_drop_similarity_mean_0_1: number | null;
+    };
+  };
+  decision_rule_context?: {
+    active_genre_profile:
+      | "trance_like"
+      | "techno_like"
+      | "house_edm_like"
+      | "bass_music_like"
+      | "hard_dance_like"
+      | "pop_urban_like"
+      | "rock_metal_like"
+      | "other_like"
+      | "unknown";
+    repetitive_thresholds: {
+      repetition_min: number;
+      novelty_max: number;
+    };
+    balanced_thresholds: {
+      repetition_max: number;
+      novelty_min: number;
+      transition_min: number;
+    };
+    underdeveloped_thresholds: {
+      unique_section_count_max: number;
+      transition_max: number;
+    };
+  };
+  decision_trace?: {
+    matched_rule_branch:
+      | "repetitive"
+      | "underdeveloped"
+      | "balanced"
+      | "unclear";
+    threshold_profile_source: "genre_profile" | "default_profile";
+  };
+  decision_summary?: {
+    status: "balanced" | "repetitive" | "underdeveloped" | "unclear";
+    main_reason:
+      | "high_repetition_low_novelty"
+      | "low_section_count_weak_transitions"
+      | "healthy_variation_and_transitions"
+      | "mixed_or_insufficient_signals";
+    next_action:
+      | "increase_section_contrast"
+      | "add_or_strengthen_structural_change"
+      | "preserve_structure_refine_details"
+      | "review_structure_manually";
+    confidence_level: "high" | "medium" | "low";
+    evidence: {
+      repetition_ratio_0_1: number | null;
+      unique_section_count: number | null;
+      transition_strength_0_1: number | null;
+      novelty_change_strength_0_1: number | null;
+    };
+  };
+  explanation_inputs?: {
+    status: "balanced" | "repetitive" | "underdeveloped" | "unclear";
+    main_reason:
+      | "high_repetition_low_novelty"
+      | "low_section_count_weak_transitions"
+      | "healthy_variation_and_transitions"
+      | "mixed_or_insufficient_signals";
+    next_action:
+      | "increase_section_contrast"
+      | "add_or_strengthen_structural_change"
+      | "preserve_structure_refine_details"
+      | "review_structure_manually";
+    confidence_level: "high" | "medium" | "low";
+    matched_rule_branch:
+      | "repetitive"
+      | "underdeveloped"
+      | "balanced"
+      | "unclear";
+    threshold_profile_source: "genre_profile" | "default_profile";
+    active_genre_profile:
+      | "trance_like"
+      | "techno_like"
+      | "house_edm_like"
+      | "bass_music_like"
+      | "hard_dance_like"
+      | "pop_urban_like"
+      | "rock_metal_like"
+      | "other_like"
+      | "unknown";
+    declared_main_genre: string | null;
+    declared_subgenre: string | null;
+    declared_reference_artist: string | null;
+    declared_reference_track: string | null;
+    evidence: {
+      repetition_ratio_0_1: number | null;
+      unique_section_count: number | null;
+      transition_strength_0_1: number | null;
+      novelty_change_strength_0_1: number | null;
+    };
+  };
+  explanation_candidate?: {
+    tone: "affirming" | "corrective" | "cautious";
+    focus:
+      | "variation"
+      | "structure_growth"
+      | "preserve_strength"
+      | "manual_review";
+    caution_level: "low" | "medium" | "high";
+  };
+  wording_plan?: {
+    headline_key:
+      | "balanced_structure"
+      | "repetition_warning"
+      | "structure_growth_needed"
+      | "manual_review_needed";
+    body_focus_key:
+      | "highlight_strengths"
+      | "increase_variation"
+      | "strengthen_structure_changes"
+      | "explain_uncertainty";
+    caution_mode: "low" | "medium" | "high";
+  };
+  wording_payload?: {
+    headline_key:
+      | "balanced_structure"
+      | "repetition_warning"
+      | "structure_growth_needed"
+      | "manual_review_needed";
+    body_focus_key:
+      | "highlight_strengths"
+      | "increase_variation"
+      | "strengthen_structure_changes"
+      | "explain_uncertainty";
+    caution_mode: "low" | "medium" | "high";
+    status: "balanced" | "repetitive" | "underdeveloped" | "unclear";
+    main_reason:
+      | "high_repetition_low_novelty"
+      | "low_section_count_weak_transitions"
+      | "healthy_variation_and_transitions"
+      | "mixed_or_insufficient_signals";
+    next_action:
+      | "increase_section_contrast"
+      | "add_or_strengthen_structural_change"
+      | "preserve_structure_refine_details"
+      | "review_structure_manually";
+    confidence_level: "high" | "medium" | "low";
+    active_genre_profile:
+      | "trance_like"
+      | "techno_like"
+      | "house_edm_like"
+      | "bass_music_like"
+      | "hard_dance_like"
+      | "pop_urban_like"
+      | "rock_metal_like"
+      | "other_like"
+      | "unknown";
+    declared_main_genre: string | null;
+    declared_subgenre: string | null;
+    declared_reference_artist: string | null;
+    declared_reference_track: string | null;
+    evidence: {
+      repetition_ratio_0_1: number | null;
+      unique_section_count: number | null;
+      transition_strength_0_1: number | null;
+      novelty_change_strength_0_1: number | null;
+    };
+  };
+  wording_guardrails?: {
+    avoid_absolute_judgment: boolean;
+    require_evidence_based_language: boolean;
+    require_genre_relative_language: boolean;
+    preserve_artistic_intent_space: boolean;
+    preferred_phrases: string[];
+    forbidden_phrases: string[];
+  };
+  consultant_payload?: {
+    decision: {
+      status: "balanced" | "repetitive" | "underdeveloped" | "unclear";
+      main_reason:
+        | "high_repetition_low_novelty"
+        | "low_section_count_weak_transitions"
+        | "healthy_variation_and_transitions"
+        | "mixed_or_insufficient_signals";
+      next_action:
+        | "increase_section_contrast"
+        | "add_or_strengthen_structural_change"
+        | "preserve_structure_refine_details"
+        | "review_structure_manually";
+      confidence_level: "high" | "medium" | "low";
+    };
+    wording: {
+      headline_key:
+        | "balanced_structure"
+        | "repetition_warning"
+        | "structure_growth_needed"
+        | "manual_review_needed";
+      body_focus_key:
+        | "highlight_strengths"
+        | "increase_variation"
+        | "strengthen_structure_changes"
+        | "explain_uncertainty";
+      caution_mode: "low" | "medium" | "high";
+    };
+    guardrails: {
+      avoid_absolute_judgment: boolean;
+      require_evidence_based_language: boolean;
+      require_genre_relative_language: boolean;
+      preserve_artistic_intent_space: boolean;
+      preferred_phrases: string[];
+      forbidden_phrases: string[];
+    };
+    genre_context: {
+      declared_main_genre: string | null;
+      declared_subgenre: string | null;
+      declared_reference_artist: string | null;
+      declared_reference_track: string | null;
+      active_genre_profile:
+        | "trance_like"
+        | "techno_like"
+        | "house_edm_like"
+        | "bass_music_like"
+        | "hard_dance_like"
+        | "pop_urban_like"
+        | "rock_metal_like"
+        | "other_like"
+        | "unknown";
+    };
+    evidence: {
+      repetition_ratio_0_1: number | null;
+      unique_section_count: number | null;
+      transition_strength_0_1: number | null;
+      novelty_change_strength_0_1: number | null;
+    };
+  };
+  genre_context?: {
+    declared_main_genre: string | null;
+    declared_subgenre: string | null;
+    declared_reference_artist: string | null;
+    declared_reference_track: string | null;
+  };
+  genre_rule_context?: {
+    main_genre_key: string | null;
+    subgenre_key: string | null;
+    has_reference_artist: boolean;
+    has_reference_track: boolean;
+    genre_rules_ready: boolean;
+  };
+  genre_rule_profile?: {
+    profile_key:
+      | "trance_like"
+      | "techno_like"
+      | "house_edm_like"
+      | "bass_music_like"
+      | "hard_dance_like"
+      | "pop_urban_like"
+      | "rock_metal_like"
+      | "other_like"
+      | "unknown";
+    derived_from_main_genre: string | null;
+    derived_from_subgenre: string | null;
+  };
   // UI-only: neutral segment spans (derived from sections with start/end)
   segments?: Array<{ start: number; end: number }>;
   segment_count_spans?: number;
