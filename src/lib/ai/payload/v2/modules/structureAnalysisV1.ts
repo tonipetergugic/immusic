@@ -1537,6 +1537,10 @@ export function buildStructureAnalysisV1(input: {
       unique_section_count: decision_summary.evidence.unique_section_count,
       transition_strength_0_1: decision_summary.evidence.transition_strength_0_1,
       novelty_change_strength_0_1: decision_summary.evidence.novelty_change_strength_0_1,
+      section_similarity_mean_0_1:
+        decision_summary.evidence.section_similarity_mean_0_1,
+      drop_to_drop_similarity_mean_0_1:
+        decision_summary.evidence.drop_to_drop_similarity_mean_0_1,
     },
   };
 
@@ -1602,6 +1606,10 @@ export function buildStructureAnalysisV1(input: {
       unique_section_count: decision_summary.evidence.unique_section_count,
       transition_strength_0_1: decision_summary.evidence.transition_strength_0_1,
       novelty_change_strength_0_1: decision_summary.evidence.novelty_change_strength_0_1,
+      section_similarity_mean_0_1:
+        decision_summary.evidence.section_similarity_mean_0_1,
+      drop_to_drop_similarity_mean_0_1:
+        decision_summary.evidence.drop_to_drop_similarity_mean_0_1,
     },
   };
 
