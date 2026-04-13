@@ -340,6 +340,11 @@ export type StructureAnalysisV1 = {
       | "preserve_strength"
       | "manual_review";
     caution_level: "low" | "medium" | "high";
+    similarity_read:
+      | "pattern_reinforces_repetition"
+      | "pattern_supports_balance"
+      | "pattern_is_mixed"
+      | "similarity_signal_unavailable";
   };
   wording_plan?: {
     headline_key:
@@ -353,6 +358,11 @@ export type StructureAnalysisV1 = {
       | "strengthen_structure_changes"
       | "explain_uncertainty";
     caution_mode: "low" | "medium" | "high";
+    similarity_emphasis:
+      | "highlight_repetition_patterns"
+      | "highlight_balanced_patterns"
+      | "highlight_mixed_patterns"
+      | "highlight_missing_similarity_context";
   };
   wording_payload?: {
     headline_key:
@@ -366,6 +376,11 @@ export type StructureAnalysisV1 = {
       | "strengthen_structure_changes"
       | "explain_uncertainty";
     caution_mode: "low" | "medium" | "high";
+    similarity_emphasis:
+      | "highlight_repetition_patterns"
+      | "highlight_balanced_patterns"
+      | "highlight_mixed_patterns"
+      | "highlight_missing_similarity_context";
     status: "balanced" | "repetitive" | "underdeveloped" | "unclear";
     main_reason:
       | "high_repetition_low_novelty"
@@ -406,8 +421,12 @@ export type StructureAnalysisV1 = {
     require_evidence_based_language: boolean;
     require_genre_relative_language: boolean;
     preserve_artistic_intent_space: boolean;
+    require_similarity_context_caution: boolean;
+    require_similarity_genre_relative_language: boolean;
     preferred_phrases: string[];
     forbidden_phrases: string[];
+    similarity_preferred_phrases: string[];
+    similarity_forbidden_phrases: string[];
   };
   consultant_payload?: {
     decision: {
@@ -436,14 +455,28 @@ export type StructureAnalysisV1 = {
         | "strengthen_structure_changes"
         | "explain_uncertainty";
       caution_mode: "low" | "medium" | "high";
+      similarity_emphasis:
+        | "highlight_repetition_patterns"
+        | "highlight_balanced_patterns"
+        | "highlight_mixed_patterns"
+        | "highlight_missing_similarity_context";
     };
+    similarity_read:
+      | "pattern_reinforces_repetition"
+      | "pattern_supports_balance"
+      | "pattern_is_mixed"
+      | "similarity_signal_unavailable";
     guardrails: {
       avoid_absolute_judgment: boolean;
       require_evidence_based_language: boolean;
       require_genre_relative_language: boolean;
       preserve_artistic_intent_space: boolean;
+      require_similarity_context_caution: boolean;
+      require_similarity_genre_relative_language: boolean;
       preferred_phrases: string[];
       forbidden_phrases: string[];
+      similarity_preferred_phrases: string[];
+      similarity_forbidden_phrases: string[];
     };
     genre_context: {
       declared_main_genre: string | null;
@@ -461,11 +494,23 @@ export type StructureAnalysisV1 = {
         | "other_like"
         | "unknown";
     };
+    similarity_thresholds: {
+      repetitive: {
+        section_similarity_mean_min: number;
+        drop_to_drop_similarity_mean_min: number;
+      };
+      balanced: {
+        section_similarity_mean_max: number;
+        drop_to_drop_similarity_mean_max: number;
+      };
+    };
     evidence: {
       repetition_ratio_0_1: number | null;
       unique_section_count: number | null;
       transition_strength_0_1: number | null;
       novelty_change_strength_0_1: number | null;
+      section_similarity_mean_0_1: number | null;
+      drop_to_drop_similarity_mean_0_1: number | null;
     };
   };
   genre_context?: {

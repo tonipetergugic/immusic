@@ -1544,6 +1544,28 @@ export function buildStructureAnalysisV1(input: {
     },
   };
 
+  const similaritySignalUnavailable =
+    explanation_inputs.evidence.section_similarity_mean_0_1 === null &&
+    explanation_inputs.evidence.drop_to_drop_similarity_mean_0_1 === null;
+
+  const similaritySupportsRepetition =
+    (explanation_inputs.evidence.section_similarity_mean_0_1 !== null &&
+      explanation_inputs.evidence.section_similarity_mean_0_1 >=
+        decision_rule_context.similarity_thresholds.repetitive.section_similarity_mean_min) ||
+    (explanation_inputs.evidence.drop_to_drop_similarity_mean_0_1 !== null &&
+      explanation_inputs.evidence.drop_to_drop_similarity_mean_0_1 >=
+        decision_rule_context.similarity_thresholds.repetitive
+          .drop_to_drop_similarity_mean_min);
+
+  const similaritySupportsBalance =
+    explanation_inputs.evidence.section_similarity_mean_0_1 !== null &&
+    explanation_inputs.evidence.section_similarity_mean_0_1 <=
+      decision_rule_context.similarity_thresholds.balanced.section_similarity_mean_max &&
+    explanation_inputs.evidence.drop_to_drop_similarity_mean_0_1 !== null &&
+    explanation_inputs.evidence.drop_to_drop_similarity_mean_0_1 <=
+      decision_rule_context.similarity_thresholds.balanced
+        .drop_to_drop_similarity_mean_max;
+
   const explanation_candidate: StructureAnalysisV1["explanation_candidate"] = {
     tone:
       decision_summary.status === "balanced"
@@ -1566,6 +1588,13 @@ export function buildStructureAnalysisV1(input: {
         : decision_summary.confidence_level === "medium"
           ? "medium"
           : "high",
+    similarity_read: similaritySignalUnavailable
+      ? "similarity_signal_unavailable"
+      : similaritySupportsRepetition && !similaritySupportsBalance
+        ? "pattern_reinforces_repetition"
+        : similaritySupportsBalance && !similaritySupportsRepetition
+          ? "pattern_supports_balance"
+          : "pattern_is_mixed",
   };
 
   const wording_plan: StructureAnalysisV1["wording_plan"] = {
@@ -1586,12 +1615,21 @@ export function buildStructureAnalysisV1(input: {
             ? "strengthen_structure_changes"
             : "explain_uncertainty",
     caution_mode: explanation_candidate.caution_level,
+    similarity_emphasis:
+      explanation_candidate.similarity_read === "pattern_reinforces_repetition"
+        ? "highlight_repetition_patterns"
+        : explanation_candidate.similarity_read === "pattern_supports_balance"
+          ? "highlight_balanced_patterns"
+          : explanation_candidate.similarity_read === "pattern_is_mixed"
+            ? "highlight_mixed_patterns"
+            : "highlight_missing_similarity_context",
   };
 
   const wording_payload: StructureAnalysisV1["wording_payload"] = {
     headline_key: wording_plan.headline_key,
     body_focus_key: wording_plan.body_focus_key,
     caution_mode: wording_plan.caution_mode,
+    similarity_emphasis: wording_plan.similarity_emphasis,
     status: decision_summary.status,
     main_reason: decision_summary.main_reason,
     next_action: decision_summary.next_action,
@@ -1618,6 +1656,8 @@ export function buildStructureAnalysisV1(input: {
     require_evidence_based_language: true,
     require_genre_relative_language: true,
     preserve_artistic_intent_space: true,
+    require_similarity_context_caution: true,
+    require_similarity_genre_relative_language: true,
     preferred_phrases: [
       "this suggests",
       "this indicates",
@@ -1632,6 +1672,20 @@ export function buildStructureAnalysisV1(input: {
       "this is objectively better",
       "this proves",
     ],
+    similarity_preferred_phrases: [
+      "similarity here may suggest",
+      "these pattern relationships may indicate",
+      "for the declared genre context",
+      "this repeated structure could be intentional",
+      "pattern similarity alone does not determine quality",
+    ],
+    similarity_forbidden_phrases: [
+      "this similarity proves the structure is bad",
+      "these repeated patterns are objectively wrong",
+      "this track is boring because the patterns are similar",
+      "the arrangement definitely lacks creativity",
+      "similar sections automatically mean weak songwriting",
+    ],
   };
 
   const consultant_payload: StructureAnalysisV1["consultant_payload"] = {
@@ -1645,14 +1699,22 @@ export function buildStructureAnalysisV1(input: {
       headline_key: wording_payload.headline_key,
       body_focus_key: wording_payload.body_focus_key,
       caution_mode: wording_payload.caution_mode,
+      similarity_emphasis: wording_payload.similarity_emphasis,
     },
+    similarity_read: explanation_candidate.similarity_read,
     guardrails: {
       avoid_absolute_judgment: wording_guardrails.avoid_absolute_judgment,
       require_evidence_based_language: wording_guardrails.require_evidence_based_language,
       require_genre_relative_language: wording_guardrails.require_genre_relative_language,
       preserve_artistic_intent_space: wording_guardrails.preserve_artistic_intent_space,
+      require_similarity_context_caution:
+        wording_guardrails.require_similarity_context_caution,
+      require_similarity_genre_relative_language:
+        wording_guardrails.require_similarity_genre_relative_language,
       preferred_phrases: wording_guardrails.preferred_phrases,
       forbidden_phrases: wording_guardrails.forbidden_phrases,
+      similarity_preferred_phrases: wording_guardrails.similarity_preferred_phrases,
+      similarity_forbidden_phrases: wording_guardrails.similarity_forbidden_phrases,
     },
     genre_context: {
       declared_main_genre: declaredMainGenre,
@@ -1661,11 +1723,33 @@ export function buildStructureAnalysisV1(input: {
       declared_reference_track: declaredReferenceTrack,
       active_genre_profile: decision_rule_context.active_genre_profile,
     },
+    similarity_thresholds: {
+      repetitive: {
+        section_similarity_mean_min:
+          decision_rule_context.similarity_thresholds.repetitive
+            .section_similarity_mean_min,
+        drop_to_drop_similarity_mean_min:
+          decision_rule_context.similarity_thresholds.repetitive
+            .drop_to_drop_similarity_mean_min,
+      },
+      balanced: {
+        section_similarity_mean_max:
+          decision_rule_context.similarity_thresholds.balanced
+            .section_similarity_mean_max,
+        drop_to_drop_similarity_mean_max:
+          decision_rule_context.similarity_thresholds.balanced
+            .drop_to_drop_similarity_mean_max,
+      },
+    },
     evidence: {
       repetition_ratio_0_1: wording_payload.evidence.repetition_ratio_0_1,
       unique_section_count: wording_payload.evidence.unique_section_count,
       transition_strength_0_1: wording_payload.evidence.transition_strength_0_1,
       novelty_change_strength_0_1: wording_payload.evidence.novelty_change_strength_0_1,
+      section_similarity_mean_0_1:
+        wording_payload.evidence.section_similarity_mean_0_1,
+      drop_to_drop_similarity_mean_0_1:
+        wording_payload.evidence.drop_to_drop_similarity_mean_0_1,
     },
   };
 
