@@ -1741,6 +1741,97 @@ export function buildStructureAnalysisV1(input: {
             .drop_to_drop_similarity_mean_max,
       },
     },
+    repetitive_thresholds: {
+      repetition_min: decision_rule_context.repetitive_thresholds.repetition_min,
+      novelty_max: decision_rule_context.repetitive_thresholds.novelty_max,
+    },
+    balanced_thresholds: {
+      repetition_max: decision_rule_context.balanced_thresholds.repetition_max,
+      novelty_min: decision_rule_context.balanced_thresholds.novelty_min,
+      transition_min: decision_rule_context.balanced_thresholds.transition_min,
+    },
+    underdeveloped_thresholds: {
+      unique_section_count_max:
+        decision_rule_context.underdeveloped_thresholds.unique_section_count_max,
+      transition_max:
+        decision_rule_context.underdeveloped_thresholds.transition_max,
+      novelty_max:
+        decision_rule_context.underdeveloped_thresholds.novelty_max,
+    },
+    branch_results: {
+      repetitive: {
+        matched: decision_trace.branch_results.repetitive.matched,
+        passed_conditions: decision_trace.branch_results.repetitive.passed_conditions,
+        failed_conditions: decision_trace.branch_results.repetitive.failed_conditions,
+      },
+      underdeveloped: {
+        matched: decision_trace.branch_results.underdeveloped.matched,
+        passed_conditions:
+          decision_trace.branch_results.underdeveloped.passed_conditions,
+        failed_conditions:
+          decision_trace.branch_results.underdeveloped.failed_conditions,
+      },
+      balanced: {
+        matched: decision_trace.branch_results.balanced.matched,
+        passed_conditions: decision_trace.branch_results.balanced.passed_conditions,
+        failed_conditions: decision_trace.branch_results.balanced.failed_conditions,
+      },
+    },
+    key_threshold_comparisons: {
+      repetitive: {
+        repetition_ratio_0_1:
+          decision_trace.key_threshold_comparisons.repetitive
+            .repetition_ratio_0_1,
+        novelty_change_strength_0_1:
+          decision_trace.key_threshold_comparisons.repetitive
+            .novelty_change_strength_0_1,
+        section_similarity_mean_0_1:
+          decision_trace.key_threshold_comparisons.repetitive
+            .section_similarity_mean_0_1,
+        drop_to_drop_similarity_mean_0_1:
+          decision_trace.key_threshold_comparisons.repetitive
+            .drop_to_drop_similarity_mean_0_1,
+      },
+      underdeveloped: {
+        unique_section_count:
+          decision_trace.key_threshold_comparisons.underdeveloped
+            .unique_section_count,
+        transition_strength_0_1:
+          decision_trace.key_threshold_comparisons.underdeveloped
+            .transition_strength_0_1,
+        novelty_change_strength_0_1:
+          decision_trace.key_threshold_comparisons.underdeveloped
+            .novelty_change_strength_0_1,
+      },
+      balanced: {
+        repetition_ratio_0_1:
+          decision_trace.key_threshold_comparisons.balanced
+            .repetition_ratio_0_1,
+        novelty_change_strength_0_1:
+          decision_trace.key_threshold_comparisons.balanced
+            .novelty_change_strength_0_1,
+        transition_strength_0_1:
+          decision_trace.key_threshold_comparisons.balanced
+            .transition_strength_0_1,
+        section_similarity_mean_0_1:
+          decision_trace.key_threshold_comparisons.balanced
+            .section_similarity_mean_0_1,
+        drop_to_drop_similarity_mean_0_1:
+          decision_trace.key_threshold_comparisons.balanced
+            .drop_to_drop_similarity_mean_0_1,
+      },
+    },
+    threshold_profile_source: decision_trace.threshold_profile_source,
+    selected_branch_reason: decision_trace.selected_branch_reason,
+    confidence_context: {
+      core_metric_presence_count:
+        decisionConfidenceInputs.core_metric_presence_count,
+      matched_branch_count: decisionConfidenceInputs.matched_branch_count,
+      close_call_count: decisionConfidenceInputs.close_call_count,
+      selected_branch_is_unclear:
+        decisionConfidenceInputs.selected_branch_is_unclear,
+    },
+    close_calls: decision_trace.close_calls,
     evidence: {
       repetition_ratio_0_1: wording_payload.evidence.repetition_ratio_0_1,
       unique_section_count: wording_payload.evidence.unique_section_count,
