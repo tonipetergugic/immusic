@@ -159,6 +159,16 @@ export type StructureAnalysisV1 = {
       unique_section_count_max: number;
       transition_max: number;
     };
+    similarity_thresholds: {
+      repetitive: {
+        section_similarity_mean_min: number;
+        drop_to_drop_similarity_mean_min: number;
+      };
+      balanced: {
+        section_similarity_mean_max: number;
+        drop_to_drop_similarity_mean_max: number;
+      };
+    };
   };
   decision_trace?: {
     matched_rule_branch:
@@ -167,6 +177,90 @@ export type StructureAnalysisV1 = {
       | "balanced"
       | "unclear";
     threshold_profile_source: "genre_profile" | "default_profile";
+    branch_results: {
+      repetitive: {
+        matched: boolean;
+        passed_conditions: string[];
+        failed_conditions: string[];
+      };
+      underdeveloped: {
+        matched: boolean;
+        passed_conditions: string[];
+        failed_conditions: string[];
+      };
+      balanced: {
+        matched: boolean;
+        passed_conditions: string[];
+        failed_conditions: string[];
+      };
+    };
+    selected_branch_reason:
+      | "matched_priority_rule"
+      | "fallback_unclear_no_rule_matched";
+    key_threshold_comparisons: {
+      repetitive: {
+        repetition_ratio_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        novelty_change_strength_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        section_similarity_mean_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        drop_to_drop_similarity_mean_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+      };
+      underdeveloped: {
+        unique_section_count: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        transition_strength_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+      };
+      balanced: {
+        repetition_ratio_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        novelty_change_strength_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        transition_strength_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        section_similarity_mean_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+        drop_to_drop_similarity_mean_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
+      };
+    };
+    close_calls: string[];
   };
   decision_summary?: {
     status: "balanced" | "repetitive" | "underdeveloped" | "unclear";

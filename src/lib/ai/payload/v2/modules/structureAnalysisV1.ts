@@ -821,6 +821,17 @@ export function buildStructureAnalysisV1(input: {
     declared_reference_track: declaredReferenceTrack,
   };
 
+  const decision_metric_snapshot = {
+    repetition_ratio_0_1,
+    unique_section_count,
+    transition_strength_0_1,
+    novelty_change_strength_0_1,
+    section_similarity_highest_0_1: section_similarity.highest_similarity_0_1,
+    section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
+    drop_to_drop_similarity_highest_0_1: drop_to_drop_similarity.highest_similarity_0_1,
+    drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+  };
+
   const repetitiveThresholds =
     genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
       ? {
@@ -856,16 +867,6 @@ export function buildStructureAnalysisV1(input: {
             transition_min: 0.45,
           };
 
-  const decision_rule_context: StructureAnalysisV1["decision_rule_context"] = {
-    active_genre_profile: genreRuleProfileKey,
-    repetitive_thresholds: repetitiveThresholds,
-    balanced_thresholds: balancedThresholds,
-    underdeveloped_thresholds: {
-      unique_section_count_max: 2,
-      transition_max: 0.4,
-    },
-  };
-
   const thresholdProfileSource: NonNullable<
     StructureAnalysisV1["decision_trace"]
   >["threshold_profile_source"] =
@@ -876,90 +877,582 @@ export function buildStructureAnalysisV1(input: {
       ? "genre_profile"
       : "default_profile";
 
-  const decision_candidate: StructureAnalysisV1["decision_candidate"] =
-    repetition_ratio_0_1 !== null &&
-    novelty_change_strength_0_1 !== null &&
-    repetition_ratio_0_1 >= repetitiveThresholds.repetition_min &&
-    novelty_change_strength_0_1 <= repetitiveThresholds.novelty_max
+  const similarityThresholds =
+    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
       ? {
-          status_candidate: "repetitive",
-          primary_reason_candidate: "high_repetition_low_novelty",
-          next_action_candidate: "increase_section_contrast",
-          evidence_snapshot: {
-            repetition_ratio_0_1,
-            unique_section_count,
-            transition_strength_0_1,
-            novelty_change_strength_0_1,
-            section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
-            drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+          repetitive: {
+            section_similarity_mean_min: 0.66,
+            drop_to_drop_similarity_mean_min: 0.78,
+          },
+          balanced: {
+            section_similarity_mean_max: 0.74,
+            drop_to_drop_similarity_mean_max: 0.84,
           },
         }
-      : unique_section_count !== null &&
-          unique_section_count <= 2 &&
-          transition_strength_0_1 !== null &&
-          transition_strength_0_1 <= 0.4
+      : genreRuleProfileKey === "rock_metal_like" ||
+          genreRuleProfileKey === "pop_urban_like"
         ? {
-            status_candidate: "underdeveloped",
-            primary_reason_candidate: "low_section_count_weak_transitions",
-            next_action_candidate: "add_or_strengthen_structural_change",
-            evidence_snapshot: {
-              repetition_ratio_0_1,
-              unique_section_count,
-              transition_strength_0_1,
-              novelty_change_strength_0_1,
-              section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
-              drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
+            repetitive: {
+              section_similarity_mean_min: 0.54,
+              drop_to_drop_similarity_mean_min: 0.66,
+            },
+            balanced: {
+              section_similarity_mean_max: 0.62,
+              drop_to_drop_similarity_mean_max: 0.72,
             },
           }
-        : repetition_ratio_0_1 !== null &&
-            repetition_ratio_0_1 <= balancedThresholds.repetition_max &&
-            novelty_change_strength_0_1 !== null &&
-            novelty_change_strength_0_1 >= balancedThresholds.novelty_min &&
-            transition_strength_0_1 !== null &&
-            transition_strength_0_1 >= balancedThresholds.transition_min
-          ? {
-              status_candidate: "balanced",
-              primary_reason_candidate: "healthy_variation_and_transitions",
-              next_action_candidate: "preserve_structure_refine_details",
-              evidence_snapshot: {
-                repetition_ratio_0_1,
-                unique_section_count,
-                transition_strength_0_1,
-                novelty_change_strength_0_1,
-                section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
-                drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
-              },
-            }
-          : {
-              status_candidate: "unclear",
-              primary_reason_candidate: "mixed_or_insufficient_signals",
-              next_action_candidate: "review_structure_manually",
-              evidence_snapshot: {
-                repetition_ratio_0_1,
-                unique_section_count,
-                transition_strength_0_1,
-                novelty_change_strength_0_1,
-                section_similarity_mean_0_1: section_similarity.mean_similarity_0_1,
-                drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
-              },
-            };
+        : {
+            repetitive: {
+              section_similarity_mean_min: 0.6,
+              drop_to_drop_similarity_mean_min: 0.72,
+            },
+            balanced: {
+              section_similarity_mean_max: 0.68,
+              drop_to_drop_similarity_mean_max: 0.78,
+            },
+          };
+
+  const decision_threshold_profile = {
+    active_genre_profile: genreRuleProfileKey,
+    threshold_profile_source: thresholdProfileSource,
+    repetitive_thresholds: repetitiveThresholds,
+    balanced_thresholds: balancedThresholds,
+    underdeveloped_thresholds: {
+      unique_section_count_max: 2,
+      transition_max: 0.4,
+    },
+    similarity_thresholds: similarityThresholds,
+  };
+
+  const decision_rule_context: StructureAnalysisV1["decision_rule_context"] = {
+    active_genre_profile: decision_threshold_profile.active_genre_profile,
+    repetitive_thresholds: decision_threshold_profile.repetitive_thresholds,
+    balanced_thresholds: decision_threshold_profile.balanced_thresholds,
+    underdeveloped_thresholds: decision_threshold_profile.underdeveloped_thresholds,
+  similarity_thresholds: decision_threshold_profile.similarity_thresholds,
+  };
+
+  const repetitiveRuleChecks = {
+    repetition_ratio_present: decision_metric_snapshot.repetition_ratio_0_1 !== null,
+    novelty_present: decision_metric_snapshot.novelty_change_strength_0_1 !== null,
+    section_similarity_mean_present:
+      decision_metric_snapshot.section_similarity_mean_0_1 !== null,
+    drop_similarity_mean_present:
+      decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 !== null,
+    repetition_threshold_passed:
+      decision_metric_snapshot.repetition_ratio_0_1 !== null &&
+      decision_metric_snapshot.repetition_ratio_0_1 >=
+        decision_threshold_profile.repetitive_thresholds.repetition_min,
+    novelty_threshold_passed:
+      decision_metric_snapshot.novelty_change_strength_0_1 !== null &&
+      decision_metric_snapshot.novelty_change_strength_0_1 <=
+        decision_threshold_profile.repetitive_thresholds.novelty_max,
+    section_similarity_threshold_passed:
+      decision_metric_snapshot.section_similarity_mean_0_1 === null ||
+    decision_metric_snapshot.section_similarity_mean_0_1 >=
+      decision_threshold_profile.similarity_thresholds.repetitive.section_similarity_mean_min,
+    drop_similarity_threshold_passed:
+      decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 === null ||
+    decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 >=
+      decision_threshold_profile.similarity_thresholds.repetitive.drop_to_drop_similarity_mean_min,
+  };
+
+  const underdevelopedRuleChecks = {
+    unique_section_count_present: decision_metric_snapshot.unique_section_count !== null,
+    transition_present: decision_metric_snapshot.transition_strength_0_1 !== null,
+    unique_section_count_threshold_passed:
+      decision_metric_snapshot.unique_section_count !== null &&
+      decision_metric_snapshot.unique_section_count <=
+        decision_threshold_profile.underdeveloped_thresholds.unique_section_count_max,
+    transition_threshold_passed:
+      decision_metric_snapshot.transition_strength_0_1 !== null &&
+      decision_metric_snapshot.transition_strength_0_1 <=
+        decision_threshold_profile.underdeveloped_thresholds.transition_max,
+  };
+
+  const balancedRuleChecks = {
+    repetition_ratio_present: decision_metric_snapshot.repetition_ratio_0_1 !== null,
+    novelty_present: decision_metric_snapshot.novelty_change_strength_0_1 !== null,
+    transition_present: decision_metric_snapshot.transition_strength_0_1 !== null,
+    section_similarity_mean_present:
+      decision_metric_snapshot.section_similarity_mean_0_1 !== null,
+    drop_similarity_mean_present:
+      decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 !== null,
+    repetition_threshold_passed:
+      decision_metric_snapshot.repetition_ratio_0_1 !== null &&
+      decision_metric_snapshot.repetition_ratio_0_1 <=
+        decision_threshold_profile.balanced_thresholds.repetition_max,
+    novelty_threshold_passed:
+      decision_metric_snapshot.novelty_change_strength_0_1 !== null &&
+      decision_metric_snapshot.novelty_change_strength_0_1 >=
+        decision_threshold_profile.balanced_thresholds.novelty_min,
+    transition_threshold_passed:
+      decision_metric_snapshot.transition_strength_0_1 !== null &&
+      decision_metric_snapshot.transition_strength_0_1 >=
+        decision_threshold_profile.balanced_thresholds.transition_min,
+    section_similarity_threshold_passed:
+      decision_metric_snapshot.section_similarity_mean_0_1 === null ||
+    decision_metric_snapshot.section_similarity_mean_0_1 <=
+      decision_threshold_profile.similarity_thresholds.balanced.section_similarity_mean_max,
+    drop_similarity_threshold_passed:
+      decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 === null ||
+    decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 <=
+      decision_threshold_profile.similarity_thresholds.balanced.drop_to_drop_similarity_mean_max,
+  };
+
+  const decision_rule_evaluation = {
+    repetitive: {
+      matched:
+        repetitiveRuleChecks.repetition_ratio_present &&
+        repetitiveRuleChecks.novelty_present &&
+        repetitiveRuleChecks.repetition_threshold_passed &&
+        repetitiveRuleChecks.novelty_threshold_passed &&
+        repetitiveRuleChecks.section_similarity_threshold_passed &&
+        repetitiveRuleChecks.drop_similarity_threshold_passed,
+      passed_conditions: [
+        repetitiveRuleChecks.repetition_ratio_present ? "repetition_ratio_present" : null,
+        repetitiveRuleChecks.novelty_present ? "novelty_change_strength_present" : null,
+        repetitiveRuleChecks.section_similarity_mean_present
+          ? "section_similarity_mean_present"
+          : null,
+        repetitiveRuleChecks.drop_similarity_mean_present
+          ? "drop_to_drop_similarity_mean_present"
+          : null,
+        repetitiveRuleChecks.repetition_threshold_passed
+          ? "repetition_ratio_meets_min_threshold"
+          : null,
+        repetitiveRuleChecks.novelty_threshold_passed
+          ? "novelty_change_strength_meets_max_threshold"
+          : null,
+        repetitiveRuleChecks.section_similarity_mean_present &&
+        repetitiveRuleChecks.section_similarity_threshold_passed
+          ? "section_similarity_mean_supports_repetitive"
+          : null,
+        repetitiveRuleChecks.drop_similarity_mean_present &&
+        repetitiveRuleChecks.drop_similarity_threshold_passed
+          ? "drop_to_drop_similarity_supports_repetitive"
+          : null,
+      ].filter((value): value is string => value !== null),
+      failed_conditions: [
+        !repetitiveRuleChecks.repetition_ratio_present ? "repetition_ratio_missing" : null,
+        !repetitiveRuleChecks.novelty_present
+          ? "novelty_change_strength_missing"
+          : null,
+        repetitiveRuleChecks.repetition_ratio_present &&
+        !repetitiveRuleChecks.repetition_threshold_passed
+          ? "repetition_ratio_below_min_threshold"
+          : null,
+        repetitiveRuleChecks.novelty_present &&
+        !repetitiveRuleChecks.novelty_threshold_passed
+          ? "novelty_change_strength_above_max_threshold"
+          : null,
+        repetitiveRuleChecks.section_similarity_mean_present &&
+        !repetitiveRuleChecks.section_similarity_threshold_passed
+          ? "section_similarity_mean_too_low_for_repetitive"
+          : null,
+        repetitiveRuleChecks.drop_similarity_mean_present &&
+        !repetitiveRuleChecks.drop_similarity_threshold_passed
+          ? "drop_to_drop_similarity_too_low_for_repetitive"
+          : null,
+      ].filter((value): value is string => value !== null),
+      key_threshold_comparisons: {
+        repetition_ratio_0_1: {
+          value: decision_metric_snapshot.repetition_ratio_0_1,
+          threshold: decision_threshold_profile.repetitive_thresholds.repetition_min,
+          passed: repetitiveRuleChecks.repetition_threshold_passed,
+        },
+        novelty_change_strength_0_1: {
+          value: decision_metric_snapshot.novelty_change_strength_0_1,
+          threshold: decision_threshold_profile.repetitive_thresholds.novelty_max,
+          passed: repetitiveRuleChecks.novelty_threshold_passed,
+        },
+        section_similarity_mean_0_1: {
+          value: decision_metric_snapshot.section_similarity_mean_0_1,
+          threshold:
+            decision_threshold_profile.similarity_thresholds.repetitive
+              .section_similarity_mean_min,
+          passed: repetitiveRuleChecks.section_similarity_threshold_passed,
+        },
+        drop_to_drop_similarity_mean_0_1: {
+          value: decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
+          threshold:
+            decision_threshold_profile.similarity_thresholds.repetitive
+              .drop_to_drop_similarity_mean_min,
+          passed: repetitiveRuleChecks.drop_similarity_threshold_passed,
+        },
+      },
+      status_candidate: "repetitive" as const,
+      primary_reason_candidate: "high_repetition_low_novelty" as const,
+      next_action_candidate: "increase_section_contrast" as const,
+      evidence_snapshot: {
+        repetition_ratio_0_1: decision_metric_snapshot.repetition_ratio_0_1,
+        unique_section_count: decision_metric_snapshot.unique_section_count,
+        transition_strength_0_1: decision_metric_snapshot.transition_strength_0_1,
+        novelty_change_strength_0_1: decision_metric_snapshot.novelty_change_strength_0_1,
+        section_similarity_mean_0_1: decision_metric_snapshot.section_similarity_mean_0_1,
+        drop_to_drop_similarity_mean_0_1:
+          decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
+      },
+    },
+    underdeveloped: {
+      matched:
+        underdevelopedRuleChecks.unique_section_count_present &&
+        underdevelopedRuleChecks.unique_section_count_threshold_passed &&
+        underdevelopedRuleChecks.transition_present &&
+        underdevelopedRuleChecks.transition_threshold_passed,
+      passed_conditions: [
+        underdevelopedRuleChecks.unique_section_count_present
+          ? "unique_section_count_present"
+          : null,
+        underdevelopedRuleChecks.transition_present
+          ? "transition_strength_present"
+          : null,
+        underdevelopedRuleChecks.unique_section_count_threshold_passed
+          ? "unique_section_count_meets_max_threshold"
+          : null,
+        underdevelopedRuleChecks.transition_threshold_passed
+          ? "transition_strength_meets_max_threshold"
+          : null,
+      ].filter((value): value is string => value !== null),
+      failed_conditions: [
+        !underdevelopedRuleChecks.unique_section_count_present
+          ? "unique_section_count_missing"
+          : null,
+        !underdevelopedRuleChecks.transition_present
+          ? "transition_strength_missing"
+          : null,
+        underdevelopedRuleChecks.unique_section_count_present &&
+        !underdevelopedRuleChecks.unique_section_count_threshold_passed
+          ? "unique_section_count_above_max_threshold"
+          : null,
+        underdevelopedRuleChecks.transition_present &&
+        !underdevelopedRuleChecks.transition_threshold_passed
+          ? "transition_strength_above_max_threshold"
+          : null,
+      ].filter((value): value is string => value !== null),
+      key_threshold_comparisons: {
+        unique_section_count: {
+          value: decision_metric_snapshot.unique_section_count,
+          threshold:
+            decision_threshold_profile.underdeveloped_thresholds.unique_section_count_max,
+          passed: underdevelopedRuleChecks.unique_section_count_threshold_passed,
+        },
+        transition_strength_0_1: {
+          value: decision_metric_snapshot.transition_strength_0_1,
+          threshold: decision_threshold_profile.underdeveloped_thresholds.transition_max,
+          passed: underdevelopedRuleChecks.transition_threshold_passed,
+        },
+      },
+      status_candidate: "underdeveloped" as const,
+      primary_reason_candidate: "low_section_count_weak_transitions" as const,
+      next_action_candidate: "add_or_strengthen_structural_change" as const,
+      evidence_snapshot: {
+        repetition_ratio_0_1: decision_metric_snapshot.repetition_ratio_0_1,
+        unique_section_count: decision_metric_snapshot.unique_section_count,
+        transition_strength_0_1: decision_metric_snapshot.transition_strength_0_1,
+        novelty_change_strength_0_1: decision_metric_snapshot.novelty_change_strength_0_1,
+        section_similarity_mean_0_1: decision_metric_snapshot.section_similarity_mean_0_1,
+        drop_to_drop_similarity_mean_0_1:
+          decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
+      },
+    },
+    balanced: {
+      matched:
+        balancedRuleChecks.repetition_ratio_present &&
+        balancedRuleChecks.repetition_threshold_passed &&
+        balancedRuleChecks.novelty_present &&
+        balancedRuleChecks.novelty_threshold_passed &&
+        balancedRuleChecks.transition_present &&
+        balancedRuleChecks.transition_threshold_passed &&
+        balancedRuleChecks.section_similarity_threshold_passed &&
+        balancedRuleChecks.drop_similarity_threshold_passed,
+      passed_conditions: [
+        balancedRuleChecks.repetition_ratio_present ? "repetition_ratio_present" : null,
+        balancedRuleChecks.novelty_present ? "novelty_change_strength_present" : null,
+        balancedRuleChecks.transition_present ? "transition_strength_present" : null,
+        balancedRuleChecks.section_similarity_mean_present
+          ? "section_similarity_mean_present"
+          : null,
+        balancedRuleChecks.drop_similarity_mean_present
+          ? "drop_to_drop_similarity_mean_present"
+          : null,
+        balancedRuleChecks.repetition_threshold_passed
+          ? "repetition_ratio_meets_max_threshold"
+          : null,
+        balancedRuleChecks.novelty_threshold_passed
+          ? "novelty_change_strength_meets_min_threshold"
+          : null,
+        balancedRuleChecks.transition_threshold_passed
+          ? "transition_strength_meets_min_threshold"
+          : null,
+        balancedRuleChecks.section_similarity_mean_present &&
+        balancedRuleChecks.section_similarity_threshold_passed
+          ? "section_similarity_mean_supports_balanced"
+          : null,
+        balancedRuleChecks.drop_similarity_mean_present &&
+        balancedRuleChecks.drop_similarity_threshold_passed
+          ? "drop_to_drop_similarity_supports_balanced"
+          : null,
+      ].filter((value): value is string => value !== null),
+      failed_conditions: [
+        !balancedRuleChecks.repetition_ratio_present ? "repetition_ratio_missing" : null,
+        !balancedRuleChecks.novelty_present
+          ? "novelty_change_strength_missing"
+          : null,
+        !balancedRuleChecks.transition_present ? "transition_strength_missing" : null,
+        balancedRuleChecks.repetition_ratio_present &&
+        !balancedRuleChecks.repetition_threshold_passed
+          ? "repetition_ratio_above_max_threshold"
+          : null,
+        balancedRuleChecks.novelty_present &&
+        !balancedRuleChecks.novelty_threshold_passed
+          ? "novelty_change_strength_below_min_threshold"
+          : null,
+        balancedRuleChecks.transition_present &&
+        !balancedRuleChecks.transition_threshold_passed
+          ? "transition_strength_below_min_threshold"
+          : null,
+        balancedRuleChecks.section_similarity_mean_present &&
+        !balancedRuleChecks.section_similarity_threshold_passed
+          ? "section_similarity_mean_too_high_for_balanced"
+          : null,
+        balancedRuleChecks.drop_similarity_mean_present &&
+        !balancedRuleChecks.drop_similarity_threshold_passed
+          ? "drop_to_drop_similarity_too_high_for_balanced"
+          : null,
+      ].filter((value): value is string => value !== null),
+      key_threshold_comparisons: {
+        repetition_ratio_0_1: {
+          value: decision_metric_snapshot.repetition_ratio_0_1,
+          threshold: decision_threshold_profile.balanced_thresholds.repetition_max,
+          passed: balancedRuleChecks.repetition_threshold_passed,
+        },
+        novelty_change_strength_0_1: {
+          value: decision_metric_snapshot.novelty_change_strength_0_1,
+          threshold: decision_threshold_profile.balanced_thresholds.novelty_min,
+          passed: balancedRuleChecks.novelty_threshold_passed,
+        },
+        transition_strength_0_1: {
+          value: decision_metric_snapshot.transition_strength_0_1,
+          threshold: decision_threshold_profile.balanced_thresholds.transition_min,
+          passed: balancedRuleChecks.transition_threshold_passed,
+        },
+        section_similarity_mean_0_1: {
+          value: decision_metric_snapshot.section_similarity_mean_0_1,
+          threshold:
+            decision_threshold_profile.similarity_thresholds.balanced
+              .section_similarity_mean_max,
+          passed: balancedRuleChecks.section_similarity_threshold_passed,
+        },
+        drop_to_drop_similarity_mean_0_1: {
+          value: decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
+          threshold:
+            decision_threshold_profile.similarity_thresholds.balanced
+              .drop_to_drop_similarity_mean_max,
+          passed: balancedRuleChecks.drop_similarity_threshold_passed,
+        },
+      },
+      status_candidate: "balanced" as const,
+      primary_reason_candidate: "healthy_variation_and_transitions" as const,
+      next_action_candidate: "preserve_structure_refine_details" as const,
+      evidence_snapshot: {
+        repetition_ratio_0_1: decision_metric_snapshot.repetition_ratio_0_1,
+        unique_section_count: decision_metric_snapshot.unique_section_count,
+        transition_strength_0_1: decision_metric_snapshot.transition_strength_0_1,
+        novelty_change_strength_0_1: decision_metric_snapshot.novelty_change_strength_0_1,
+        section_similarity_mean_0_1: decision_metric_snapshot.section_similarity_mean_0_1,
+        drop_to_drop_similarity_mean_0_1:
+          decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
+      },
+    },
+  };
+
+  const decision_resolution = decision_rule_evaluation.repetitive.matched
+    ? decision_rule_evaluation.repetitive
+    : decision_rule_evaluation.underdeveloped.matched
+      ? decision_rule_evaluation.underdeveloped
+      : decision_rule_evaluation.balanced.matched
+        ? decision_rule_evaluation.balanced
+        : {
+            matched: false,
+            passed_conditions: [],
+            failed_conditions: [],
+            key_threshold_comparisons: null,
+            status_candidate: "unclear" as const,
+            primary_reason_candidate: "mixed_or_insufficient_signals" as const,
+            next_action_candidate: "review_structure_manually" as const,
+            evidence_snapshot: {
+              repetition_ratio_0_1: decision_metric_snapshot.repetition_ratio_0_1,
+              unique_section_count: decision_metric_snapshot.unique_section_count,
+              transition_strength_0_1: decision_metric_snapshot.transition_strength_0_1,
+              novelty_change_strength_0_1:
+                decision_metric_snapshot.novelty_change_strength_0_1,
+              section_similarity_mean_0_1: decision_metric_snapshot.section_similarity_mean_0_1,
+              drop_to_drop_similarity_mean_0_1:
+                decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
+            },
+          };
+
+  const decision_candidate: StructureAnalysisV1["decision_candidate"] = {
+    status_candidate: decision_resolution.status_candidate,
+    primary_reason_candidate: decision_resolution.primary_reason_candidate,
+    next_action_candidate: decision_resolution.next_action_candidate,
+    evidence_snapshot: decision_resolution.evidence_snapshot,
+  };
+
+  const decision_trace_close_calls = [
+    !decision_rule_evaluation.repetitive.matched &&
+    decision_metric_snapshot.repetition_ratio_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.repetition_ratio_0_1 -
+        decision_threshold_profile.repetitive_thresholds.repetition_min
+    ) <= 0.03
+      ? "repetitive_repetition_ratio_near_threshold"
+      : null,
+    !decision_rule_evaluation.repetitive.matched &&
+    decision_metric_snapshot.novelty_change_strength_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.novelty_change_strength_0_1 -
+        decision_threshold_profile.repetitive_thresholds.novelty_max
+    ) <= 0.03
+      ? "repetitive_novelty_near_threshold"
+      : null,
+    !decision_rule_evaluation.repetitive.matched &&
+    decision_metric_snapshot.section_similarity_mean_0_1 !== null &&
+  Math.abs(
+    decision_metric_snapshot.section_similarity_mean_0_1 -
+      decision_threshold_profile.similarity_thresholds.repetitive.section_similarity_mean_min
+  ) <= 0.03
+      ? "repetitive_section_similarity_near_threshold"
+      : null,
+    !decision_rule_evaluation.repetitive.matched &&
+    decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 !== null &&
+  Math.abs(
+    decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 -
+      decision_threshold_profile.similarity_thresholds.repetitive.drop_to_drop_similarity_mean_min
+  ) <= 0.03
+      ? "repetitive_drop_similarity_near_threshold"
+      : null,
+    !decision_rule_evaluation.underdeveloped.matched &&
+    decision_metric_snapshot.unique_section_count !== null &&
+    Math.abs(
+      decision_metric_snapshot.unique_section_count -
+        decision_threshold_profile.underdeveloped_thresholds.unique_section_count_max
+    ) <= 1
+      ? "underdeveloped_unique_section_count_near_threshold"
+      : null,
+    !decision_rule_evaluation.underdeveloped.matched &&
+    decision_metric_snapshot.transition_strength_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.transition_strength_0_1 -
+        decision_threshold_profile.underdeveloped_thresholds.transition_max
+    ) <= 0.03
+      ? "underdeveloped_transition_strength_near_threshold"
+      : null,
+    !decision_rule_evaluation.balanced.matched &&
+    decision_metric_snapshot.repetition_ratio_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.repetition_ratio_0_1 -
+        decision_threshold_profile.balanced_thresholds.repetition_max
+    ) <= 0.03
+      ? "balanced_repetition_ratio_near_threshold"
+      : null,
+    !decision_rule_evaluation.balanced.matched &&
+    decision_metric_snapshot.novelty_change_strength_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.novelty_change_strength_0_1 -
+        decision_threshold_profile.balanced_thresholds.novelty_min
+    ) <= 0.03
+      ? "balanced_novelty_near_threshold"
+      : null,
+    !decision_rule_evaluation.balanced.matched &&
+    decision_metric_snapshot.transition_strength_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.transition_strength_0_1 -
+        decision_threshold_profile.balanced_thresholds.transition_min
+    ) <= 0.03
+      ? "balanced_transition_strength_near_threshold"
+      : null,
+    !decision_rule_evaluation.balanced.matched &&
+    decision_metric_snapshot.section_similarity_mean_0_1 !== null &&
+  Math.abs(
+    decision_metric_snapshot.section_similarity_mean_0_1 -
+      decision_threshold_profile.similarity_thresholds.balanced.section_similarity_mean_max
+  ) <= 0.03
+      ? "balanced_section_similarity_near_threshold"
+      : null,
+    !decision_rule_evaluation.balanced.matched &&
+    decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 !== null &&
+  Math.abs(
+    decision_metric_snapshot.drop_to_drop_similarity_mean_0_1 -
+      decision_threshold_profile.similarity_thresholds.balanced.drop_to_drop_similarity_mean_max
+  ) <= 0.03
+      ? "balanced_drop_similarity_near_threshold"
+      : null,
+  ].filter((value): value is string => value !== null);
 
   const decision_trace: StructureAnalysisV1["decision_trace"] = {
     matched_rule_branch: decision_candidate.status_candidate,
-    threshold_profile_source: thresholdProfileSource,
+    threshold_profile_source: decision_threshold_profile.threshold_profile_source,
+    branch_results: {
+      repetitive: {
+        matched: decision_rule_evaluation.repetitive.matched,
+        passed_conditions: decision_rule_evaluation.repetitive.passed_conditions,
+        failed_conditions: decision_rule_evaluation.repetitive.failed_conditions,
+      },
+      underdeveloped: {
+        matched: decision_rule_evaluation.underdeveloped.matched,
+        passed_conditions: decision_rule_evaluation.underdeveloped.passed_conditions,
+        failed_conditions: decision_rule_evaluation.underdeveloped.failed_conditions,
+      },
+      balanced: {
+        matched: decision_rule_evaluation.balanced.matched,
+        passed_conditions: decision_rule_evaluation.balanced.passed_conditions,
+        failed_conditions: decision_rule_evaluation.balanced.failed_conditions,
+      },
+    },
+    selected_branch_reason:
+      decision_candidate.status_candidate === "unclear"
+        ? "fallback_unclear_no_rule_matched"
+        : "matched_priority_rule",
+    key_threshold_comparisons: {
+      repetitive: decision_rule_evaluation.repetitive.key_threshold_comparisons,
+      underdeveloped: decision_rule_evaluation.underdeveloped.key_threshold_comparisons,
+      balanced: decision_rule_evaluation.balanced.key_threshold_comparisons,
+    },
+    close_calls: decision_trace_close_calls,
+  };
+
+  const decisionConfidenceInputs = {
+    core_metric_presence_count: [
+      decision_metric_snapshot.repetition_ratio_0_1,
+      decision_metric_snapshot.unique_section_count,
+      decision_metric_snapshot.transition_strength_0_1,
+      decision_metric_snapshot.novelty_change_strength_0_1,
+    ].filter((value) => value !== null).length,
+    matched_branch_count: [
+      decision_trace.branch_results.repetitive.matched,
+      decision_trace.branch_results.underdeveloped.matched,
+      decision_trace.branch_results.balanced.matched,
+    ].filter(Boolean).length,
+    close_call_count: decision_trace.close_calls.length,
+    selected_branch_is_unclear: decision_candidate.status_candidate === "unclear",
   };
 
   const decisionConfidenceLevel: NonNullable<
     StructureAnalysisV1["decision_summary"]
   >["confidence_level"] =
-    decision_candidate.status_candidate === "unclear"
+    decisionConfidenceInputs.selected_branch_is_unclear
       ? "low"
-      : section_similarity.mean_similarity_0_1 !== null &&
-          repetition_ratio_0_1 !== null &&
-          novelty_change_strength_0_1 !== null &&
-          transition_strength_0_1 !== null
+      : decisionConfidenceInputs.core_metric_presence_count === 4 &&
+          decisionConfidenceInputs.matched_branch_count === 1 &&
+          decisionConfidenceInputs.close_call_count === 0
         ? "high"
-        : "medium";
+        : decisionConfidenceInputs.core_metric_presence_count >= 3 &&
+            decisionConfidenceInputs.matched_branch_count === 1 &&
+            decisionConfidenceInputs.close_call_count <= 2
+          ? "medium"
+          : "low";
 
   const decision_summary: StructureAnalysisV1["decision_summary"] = {
     status: decision_candidate.status_candidate,
