@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { mapConsultantMetrics } from "@/lib/ai/consultant/mapConsultantMetrics"
 import AppSelect from "@/components/AppSelect"
 
@@ -99,6 +99,15 @@ const CONSULTANT_TARGET_ITEMS = [
   { value: "streaming", label: "Streaming" },
 ]
 
+type ConsultantApiResponse = {
+  explanation: string
+  explanation_raw?: string | null
+  headline?: string | null
+  body?: string | null
+  focus?: string | null
+  caution?: string | null
+}
+
 type Props = {
   lufs: number | null
   tp: number | null
@@ -138,8 +147,30 @@ export default function AiConsultantCard({
   consultantPayload = null,
 }: Props) {
 
-  const [explanation, setExplanation] = useState<string | null>(null)
+  const [consultantResponse, setConsultantResponse] = useState<ConsultantApiResponse | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const additionalConsultantNotes = useMemo(() => {
+    if (!consultantResponse) return []
+
+    const raw = consultantResponse.explanation_raw ?? consultantResponse.explanation ?? ""
+    if (typeof raw !== "string" || raw.trim().length === 0) return []
+
+    const withoutStructuredSections = raw
+      .replace(/Headline:\s*[\s\S]*?(?=\n(?:Headline|Body|Focus|Caution):|$)/i, "")
+      .replace(/Body:\s*[\s\S]*?(?=\n(?:Headline|Body|Focus|Caution):|$)/i, "")
+      .replace(/Focus:\s*[\s\S]*?(?=\n(?:Headline|Body|Focus|Caution):|$)/i, "")
+      .replace(/Caution:\s*[\s\S]*?(?=\n(?:Headline|Body|Focus|Caution):|$)/i, "")
+      .trim()
+
+    if (withoutStructuredSections.length === 0) return []
+
+    return withoutStructuredSections
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+  }, [consultantResponse])
+
   const [loading, setLoading] = useState(false)
   const [genre, setGenre] = useState<string>("Trance")
   const [goal, setGoal] = useState<"balanced" | "club" | "streaming">("balanced")
@@ -213,7 +244,14 @@ export default function AiConsultantCard({
       return
     }
 
-    setExplanation(data.explanation)
+    setConsultantResponse({
+      explanation: typeof data?.explanation === "string" ? data.explanation : "",
+      explanation_raw: typeof data?.explanation_raw === "string" ? data.explanation_raw : null,
+      headline: typeof data?.headline === "string" ? data.headline : null,
+      body: typeof data?.body === "string" ? data.body : null,
+      focus: typeof data?.focus === "string" ? data.focus : null,
+      caution: typeof data?.caution === "string" ? data.caution : null,
+    })
 
     setLoading(false)
   }
@@ -284,7 +322,7 @@ export default function AiConsultantCard({
         </div>
       ) : null}
 
-      {explanation ? (
+      {consultantResponse ? (
         <div className="rounded-[24px] border border-white/10 bg-black/40 p-5 sm:p-6">
           <div className="mb-4 flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full bg-[#00FFC6]" />
@@ -293,11 +331,76 @@ export default function AiConsultantCard({
             </div>
           </div>
 
-          <div className="space-y-3 text-[15px] leading-7 text-white/82">
-            {explanation.split("\n").map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
-          </div>
+          {consultantResponse.headline || consultantResponse.body || consultantResponse.focus || consultantResponse.caution ? (
+            <div className="space-y-5">
+              {consultantResponse.headline ? (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Headline
+                  </div>
+                  <p className="text-lg font-semibold leading-7 text-white">
+                    {consultantResponse.headline}
+                  </p>
+                </div>
+              ) : null}
+
+              {consultantResponse.body ? (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Body
+                  </div>
+                  <p className="text-[15px] leading-7 text-white/82">
+                    {consultantResponse.body}
+                  </p>
+                </div>
+              ) : null}
+
+              {consultantResponse.focus ? (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Focus
+                  </div>
+                  <p className="text-[15px] leading-7 text-white/82">
+                    {consultantResponse.focus}
+                  </p>
+                </div>
+              ) : null}
+
+              {consultantResponse.caution ? (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Caution
+                  </div>
+                  <p className="text-[15px] leading-7 text-white/82">
+                    {consultantResponse.caution}
+                  </p>
+                </div>
+              ) : null}
+
+              {additionalConsultantNotes.length > 0 ? (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Additional notes
+                  </div>
+                  <div className="space-y-3 text-[15px] leading-7 text-white/75">
+                    {additionalConsultantNotes.map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-3 text-[15px] leading-7 text-white/82">
+              {consultantResponse.explanation
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+                .map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-4 text-sm leading-relaxed text-white/45">

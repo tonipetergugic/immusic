@@ -76,6 +76,47 @@ type MockConsultantPayload = {
     | "pattern_is_mixed"
     | "pattern_signal_missing"
     | null
+  repetitive_thresholds?: {
+    repetition_min?: number | null
+    novelty_max?: number | null
+  } | null
+  balanced_thresholds?: {
+    repetition_max?: number | null
+    novelty_min?: number | null
+    transition_min?: number | null
+  } | null
+  underdeveloped_thresholds?: {
+    unique_section_count_max?: number | null
+    transition_max?: number | null
+    novelty_max?: number | null
+  } | null
+  similarity_thresholds?: {
+    repetitive?: {
+      section_similarity_mean_min?: number | null
+      drop_to_drop_similarity_mean_min?: number | null
+    } | null
+    balanced?: {
+      section_similarity_mean_max?: number | null
+      drop_to_drop_similarity_mean_max?: number | null
+    } | null
+  } | null
+  branch_results?: {
+    repetitive?: {
+      matched?: boolean | null
+      passed_conditions?: string[] | null
+      failed_conditions?: string[] | null
+    } | null
+    underdeveloped?: {
+      matched?: boolean | null
+      passed_conditions?: string[] | null
+      failed_conditions?: string[] | null
+    } | null
+    balanced?: {
+      matched?: boolean | null
+      passed_conditions?: string[] | null
+      failed_conditions?: string[] | null
+    } | null
+  } | null
   evidence?: {
     repetition_ratio_0_1?: number | null
     unique_section_count?: number | null
@@ -94,6 +135,21 @@ function fmt(n: number | null | undefined, digits = 1) {
 function humanizeToken(value: string | null | undefined) {
   if (typeof value !== "string" || value.trim().length === 0) return null
   return value.trim().replace(/_/g, " ")
+}
+
+function stripLeadLabel(line: string) {
+  return line.replace(/^[^:]+:\s*/, "").trim()
+}
+
+function compactConditionList(values: string[] | null | undefined, limit = 3) {
+  if (!Array.isArray(values)) return null
+
+  const cleaned = values
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .slice(0, limit)
+    .map((value) => humanizeToken(value) ?? value)
+
+  return cleaned.length > 0 ? cleaned.join(", ") : null
 }
 
 export function mockConsultantResponse(
@@ -119,6 +175,11 @@ export function mockConsultantResponse(
   const confidenceContext = consultantPayload?.confidence_context ?? null
   const similarityRead = consultantPayload?.similarity_read ?? null
   const similarityEmphasis = consultantPayload?.wording?.similarity_emphasis ?? null
+  const repetitiveThresholds = consultantPayload?.repetitive_thresholds ?? null
+  const balancedThresholds = consultantPayload?.balanced_thresholds ?? null
+  const underdevelopedThresholds = consultantPayload?.underdeveloped_thresholds ?? null
+  const similarityThresholds = consultantPayload?.similarity_thresholds ?? null
+  const branchResults = consultantPayload?.branch_results ?? null
   const closeCalls = Array.isArray(consultantPayload?.close_calls)
     ? consultantPayload.close_calls.filter(
         (item): item is string => typeof item === "string" && item.trim().length > 0
@@ -205,6 +266,95 @@ export function mockConsultantResponse(
       .join(", ")
 
     lines.push(`Borderline signals: ${preview}.`)
+  }
+
+  const repetitiveMatched = branchResults?.repetitive?.matched === true
+  const underdevelopedMatched = branchResults?.underdeveloped?.matched === true
+  const balancedMatched = branchResults?.balanced?.matched === true
+
+  if (branchResults?.repetitive || branchResults?.underdeveloped || branchResults?.balanced) {
+    lines.push(
+      `Rule snapshot: repetitive ${repetitiveMatched ? "matched" : "not matched"}, underdeveloped ${underdevelopedMatched ? "matched" : "not matched"}, balanced ${balancedMatched ? "matched" : "not matched"}.`
+    )
+  }
+
+  const activeRuleBranch =
+    decision?.status === "repetitive" || decision?.status === "underdeveloped" || decision?.status === "balanced"
+      ? decision.status
+      : repetitiveMatched
+        ? "repetitive"
+        : underdevelopedMatched
+          ? "underdeveloped"
+          : balancedMatched
+            ? "balanced"
+            : null
+
+  const activeBranchResult =
+    activeRuleBranch === "repetitive"
+      ? branchResults?.repetitive
+      : activeRuleBranch === "underdeveloped"
+        ? branchResults?.underdeveloped
+        : activeRuleBranch === "balanced"
+          ? branchResults?.balanced
+          : null
+
+  const passedConditionPreview = compactConditionList(activeBranchResult?.passed_conditions, 3)
+  const failedConditionPreview = compactConditionList(activeBranchResult?.failed_conditions, 2)
+
+  if (activeRuleBranch && (passedConditionPreview || failedConditionPreview)) {
+    const conditionBits: string[] = []
+
+    if (passedConditionPreview) {
+      conditionBits.push(`passed ${passedConditionPreview}`)
+    }
+
+    if (failedConditionPreview) {
+      conditionBits.push(`failed ${failedConditionPreview}`)
+    }
+
+    lines.push(`Matched branch conditions: ${activeRuleBranch} -> ${conditionBits.join("; ")}.`)
+  }
+
+  const activeThresholdBits: string[] = []
+
+  if (activeRuleBranch === "repetitive") {
+    const repetitionMin = fmt(repetitiveThresholds?.repetition_min, 2)
+    const noveltyMax = fmt(repetitiveThresholds?.novelty_max, 2)
+    const sectionSimilarityMin = fmt(similarityThresholds?.repetitive?.section_similarity_mean_min, 2)
+    const dropSimilarityMin = fmt(similarityThresholds?.repetitive?.drop_to_drop_similarity_mean_min, 2)
+
+    if (repetitionMin) activeThresholdBits.push(`repetition >= ${repetitionMin}`)
+    if (noveltyMax) activeThresholdBits.push(`novelty <= ${noveltyMax}`)
+    if (sectionSimilarityMin) activeThresholdBits.push(`section similarity >= ${sectionSimilarityMin}`)
+    if (dropSimilarityMin) activeThresholdBits.push(`drop similarity >= ${dropSimilarityMin}`)
+  }
+
+  if (activeRuleBranch === "underdeveloped") {
+    const sectionCountMax = fmt(underdevelopedThresholds?.unique_section_count_max, 0)
+    const transitionMax = fmt(underdevelopedThresholds?.transition_max, 2)
+    const noveltyMax = fmt(underdevelopedThresholds?.novelty_max, 2)
+
+    if (sectionCountMax) activeThresholdBits.push(`sections <= ${sectionCountMax}`)
+    if (transitionMax) activeThresholdBits.push(`transition <= ${transitionMax}`)
+    if (noveltyMax) activeThresholdBits.push(`novelty <= ${noveltyMax}`)
+  }
+
+  if (activeRuleBranch === "balanced") {
+    const repetitionMax = fmt(balancedThresholds?.repetition_max, 2)
+    const noveltyMin = fmt(balancedThresholds?.novelty_min, 2)
+    const transitionMin = fmt(balancedThresholds?.transition_min, 2)
+    const sectionSimilarityMax = fmt(similarityThresholds?.balanced?.section_similarity_mean_max, 2)
+    const dropSimilarityMax = fmt(similarityThresholds?.balanced?.drop_to_drop_similarity_mean_max, 2)
+
+    if (repetitionMax) activeThresholdBits.push(`repetition <= ${repetitionMax}`)
+    if (noveltyMin) activeThresholdBits.push(`novelty >= ${noveltyMin}`)
+    if (transitionMin) activeThresholdBits.push(`transition >= ${transitionMin}`)
+    if (sectionSimilarityMax) activeThresholdBits.push(`section similarity <= ${sectionSimilarityMax}`)
+    if (dropSimilarityMax) activeThresholdBits.push(`drop similarity <= ${dropSimilarityMax}`)
+  }
+
+  if (activeRuleBranch && activeThresholdBits.length > 0) {
+    lines.push(`Active thresholds: ${activeThresholdBits.join(", ")}.`)
   }
 
   if (evidence) {
@@ -328,5 +478,65 @@ export function mockConsultantResponse(
     lines.push("Overall: a lot of fundamentals look solid — this is already close to release-ready from a technical perspective.")
   }
 
-  return { explanation: lines.join(" ") }
+  const headlineLine =
+    lines.find((line) => line.startsWith("Structure summary:")) ??
+    "Structure summary: this suggests the current arrangement should be reviewed with caution."
+
+  const bodyLines = lines.filter(
+    (line) =>
+      line.startsWith("Context:") ||
+      line.startsWith("Decision audit:") ||
+      line.startsWith("Similarity read:") ||
+      line.startsWith("Pattern focus:") ||
+      line.startsWith("Structure evidence:") ||
+      line.startsWith("Rule snapshot:") ||
+      line.startsWith("Matched branch conditions:") ||
+      line.startsWith("Active thresholds:")
+  )
+
+  const focusLines = lines.filter((line) => line.startsWith("Suggested focus:"))
+
+  const cautionLines = lines.filter(
+    (line) =>
+      line.startsWith("Decision caution:") ||
+      line.startsWith("Borderline signals:")
+  )
+
+  const technicalLines = lines.filter(
+    (line) =>
+      line !== headlineLine &&
+      !line.startsWith("Context:") &&
+      !line.startsWith("Decision audit:") &&
+      !line.startsWith("Similarity read:") &&
+      !line.startsWith("Pattern focus:") &&
+      !line.startsWith("Structure evidence:") &&
+      !line.startsWith("Rule snapshot:") &&
+      !line.startsWith("Matched branch conditions:") &&
+      !line.startsWith("Active thresholds:") &&
+      !line.startsWith("Suggested focus:") &&
+      !line.startsWith("Decision caution:") &&
+      !line.startsWith("Borderline signals:")
+  )
+
+  const sections: string[] = []
+
+  sections.push(`Headline: ${stripLeadLabel(headlineLine)}`)
+
+  if (bodyLines.length > 0) {
+    sections.push(`Body: ${bodyLines.map(stripLeadLabel).join(" ")}`)
+  }
+
+  if (focusLines.length > 0) {
+    sections.push(`Focus: ${focusLines.map(stripLeadLabel).join(" ")}`)
+  }
+
+  if (cautionLines.length > 0) {
+    sections.push(`Caution: ${cautionLines.map(stripLeadLabel).join(" ")}`)
+  }
+
+  if (technicalLines.length > 0) {
+    sections.push(technicalLines.join("\n"))
+  }
+
+  return { explanation: sections.join("\n\n") }
 }

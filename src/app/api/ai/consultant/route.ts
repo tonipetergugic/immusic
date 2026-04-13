@@ -5,6 +5,31 @@ import { mockConsultantResponse } from "@/lib/ai/consultant/mockConsultantRespon
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import crypto from "crypto"
 
+function parseConsultantExplanation(explanation: string) {
+  const normalized = explanation.replace(/\r\n/g, "\n").trim()
+
+  const extractSection = (label: "Headline" | "Body" | "Focus" | "Caution") => {
+    const pattern = new RegExp(
+      `${label}:\\s*([\\s\\S]*?)(?=\\n(?:Headline|Body|Focus|Caution):|$)`,
+      "i"
+    )
+
+    const match = normalized.match(pattern)
+    const value = match?.[1]?.trim()
+
+    return value && value.length > 0 ? value : null
+  }
+
+  return {
+    explanation: normalized,
+    explanation_raw: normalized,
+    headline: extractSection("Headline"),
+    body: extractSection("Body"),
+    focus: extractSection("Focus"),
+    caution: extractSection("Caution"),
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -54,7 +79,9 @@ export async function POST(req: Request) {
 
     if (!isAiConsultantLive()) {
       const result = mockConsultantResponse(metrics, consultant_payload ?? null)
-      return NextResponse.json({ explanation: result.explanation ?? String(result) })
+      const explanation = result.explanation ?? String(result)
+
+      return NextResponse.json(parseConsultantExplanation(explanation))
     }
 
     const supabase = await createSupabaseServerClient()
@@ -67,8 +94,8 @@ export async function POST(req: Request) {
 
     if (cached?.explanation) {
       return NextResponse.json({
-        explanation: cached.explanation,
-        cached: true
+        ...parseConsultantExplanation(cached.explanation),
+        cached: true,
       })
     }
 
@@ -92,7 +119,10 @@ export async function POST(req: Request) {
     )
 
     return NextResponse.json(
-      { explanation, cached: false },
+      {
+        ...parseConsultantExplanation(explanation),
+        cached: false,
+      },
       { status: 501 }
     )
 
