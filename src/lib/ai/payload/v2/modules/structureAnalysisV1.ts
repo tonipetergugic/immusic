@@ -912,15 +912,32 @@ export function buildStructureAnalysisV1(input: {
             },
           };
 
+  const underdevelopedThresholds =
+    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+      ? {
+          unique_section_count_max: 2,
+          transition_max: 0.34,
+          novelty_max: 0.36,
+        }
+      : genreRuleProfileKey === "rock_metal_like" ||
+          genreRuleProfileKey === "pop_urban_like"
+        ? {
+            unique_section_count_max: 3,
+            transition_max: 0.46,
+            novelty_max: 0.5,
+          }
+        : {
+            unique_section_count_max: 2,
+            transition_max: 0.4,
+            novelty_max: 0.42,
+          };
+
   const decision_threshold_profile = {
     active_genre_profile: genreRuleProfileKey,
     threshold_profile_source: thresholdProfileSource,
     repetitive_thresholds: repetitiveThresholds,
     balanced_thresholds: balancedThresholds,
-    underdeveloped_thresholds: {
-      unique_section_count_max: 2,
-      transition_max: 0.4,
-    },
+    underdeveloped_thresholds: underdevelopedThresholds,
     similarity_thresholds: similarityThresholds,
   };
 
@@ -960,6 +977,7 @@ export function buildStructureAnalysisV1(input: {
   const underdevelopedRuleChecks = {
     unique_section_count_present: decision_metric_snapshot.unique_section_count !== null,
     transition_present: decision_metric_snapshot.transition_strength_0_1 !== null,
+    novelty_present: decision_metric_snapshot.novelty_change_strength_0_1 !== null,
     unique_section_count_threshold_passed:
       decision_metric_snapshot.unique_section_count !== null &&
       decision_metric_snapshot.unique_section_count <=
@@ -968,6 +986,10 @@ export function buildStructureAnalysisV1(input: {
       decision_metric_snapshot.transition_strength_0_1 !== null &&
       decision_metric_snapshot.transition_strength_0_1 <=
         decision_threshold_profile.underdeveloped_thresholds.transition_max,
+    novelty_threshold_passed:
+      decision_metric_snapshot.novelty_change_strength_0_1 !== null &&
+      decision_metric_snapshot.novelty_change_strength_0_1 <=
+        decision_threshold_profile.underdeveloped_thresholds.novelty_max,
   };
 
   const balancedRuleChecks = {
@@ -1099,7 +1121,9 @@ export function buildStructureAnalysisV1(input: {
         underdevelopedRuleChecks.unique_section_count_present &&
         underdevelopedRuleChecks.unique_section_count_threshold_passed &&
         underdevelopedRuleChecks.transition_present &&
-        underdevelopedRuleChecks.transition_threshold_passed,
+        underdevelopedRuleChecks.transition_threshold_passed &&
+        underdevelopedRuleChecks.novelty_present &&
+        underdevelopedRuleChecks.novelty_threshold_passed,
       passed_conditions: [
         underdevelopedRuleChecks.unique_section_count_present
           ? "unique_section_count_present"
@@ -1107,11 +1131,17 @@ export function buildStructureAnalysisV1(input: {
         underdevelopedRuleChecks.transition_present
           ? "transition_strength_present"
           : null,
+        underdevelopedRuleChecks.novelty_present
+          ? "novelty_change_strength_present"
+          : null,
         underdevelopedRuleChecks.unique_section_count_threshold_passed
           ? "unique_section_count_meets_max_threshold"
           : null,
         underdevelopedRuleChecks.transition_threshold_passed
           ? "transition_strength_meets_max_threshold"
+          : null,
+        underdevelopedRuleChecks.novelty_threshold_passed
+          ? "novelty_change_strength_meets_max_threshold"
           : null,
       ].filter((value): value is string => value !== null),
       failed_conditions: [
@@ -1121,6 +1151,9 @@ export function buildStructureAnalysisV1(input: {
         !underdevelopedRuleChecks.transition_present
           ? "transition_strength_missing"
           : null,
+        !underdevelopedRuleChecks.novelty_present
+          ? "novelty_change_strength_missing"
+          : null,
         underdevelopedRuleChecks.unique_section_count_present &&
         !underdevelopedRuleChecks.unique_section_count_threshold_passed
           ? "unique_section_count_above_max_threshold"
@@ -1128,6 +1161,10 @@ export function buildStructureAnalysisV1(input: {
         underdevelopedRuleChecks.transition_present &&
         !underdevelopedRuleChecks.transition_threshold_passed
           ? "transition_strength_above_max_threshold"
+          : null,
+        underdevelopedRuleChecks.novelty_present &&
+        !underdevelopedRuleChecks.novelty_threshold_passed
+          ? "novelty_change_strength_above_max_threshold"
           : null,
       ].filter((value): value is string => value !== null),
       key_threshold_comparisons: {
@@ -1141,6 +1178,11 @@ export function buildStructureAnalysisV1(input: {
           value: decision_metric_snapshot.transition_strength_0_1,
           threshold: decision_threshold_profile.underdeveloped_thresholds.transition_max,
           passed: underdevelopedRuleChecks.transition_threshold_passed,
+        },
+        novelty_change_strength_0_1: {
+          value: decision_metric_snapshot.novelty_change_strength_0_1,
+          threshold: decision_threshold_profile.underdeveloped_thresholds.novelty_max,
+          passed: underdevelopedRuleChecks.novelty_threshold_passed,
         },
       },
       status_candidate: "underdeveloped" as const,
@@ -1349,6 +1391,14 @@ export function buildStructureAnalysisV1(input: {
     ) <= 0.03
       ? "underdeveloped_transition_strength_near_threshold"
       : null,
+    !decision_rule_evaluation.underdeveloped.matched &&
+    decision_metric_snapshot.novelty_change_strength_0_1 !== null &&
+    Math.abs(
+      decision_metric_snapshot.novelty_change_strength_0_1 -
+        decision_threshold_profile.underdeveloped_thresholds.novelty_max
+    ) <= 0.03
+      ? "underdeveloped_novelty_near_threshold"
+      : null,
     !decision_rule_evaluation.balanced.matched &&
     decision_metric_snapshot.repetition_ratio_0_1 !== null &&
     Math.abs(
@@ -1464,6 +1514,9 @@ export function buildStructureAnalysisV1(input: {
       unique_section_count,
       transition_strength_0_1,
       novelty_change_strength_0_1,
+      section_similarity_mean_0_1: decision_metric_snapshot.section_similarity_mean_0_1,
+      drop_to_drop_similarity_mean_0_1:
+        decision_metric_snapshot.drop_to_drop_similarity_mean_0_1,
     },
   };
 

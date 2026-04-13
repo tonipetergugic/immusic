@@ -158,6 +158,7 @@ export type StructureAnalysisV1 = {
     underdeveloped_thresholds: {
       unique_section_count_max: number;
       transition_max: number;
+      novelty_max: number;
     };
     similarity_thresholds: {
       repetitive: {
@@ -231,6 +232,11 @@ export type StructureAnalysisV1 = {
           threshold: number;
           passed: boolean;
         };
+        novelty_change_strength_0_1: {
+          value: number | null;
+          threshold: number;
+          passed: boolean;
+        };
       };
       balanced: {
         repetition_ratio_0_1: {
@@ -280,6 +286,8 @@ export type StructureAnalysisV1 = {
       unique_section_count: number | null;
       transition_strength_0_1: number | null;
       novelty_change_strength_0_1: number | null;
+      section_similarity_mean_0_1: number | null;
+      drop_to_drop_similarity_mean_0_1: number | null;
     };
   };
   explanation_inputs?: {
