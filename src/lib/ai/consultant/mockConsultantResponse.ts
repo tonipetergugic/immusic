@@ -37,6 +37,12 @@ type MockConsultantPayload = {
   } | null
   wording?: {
     caution_mode?: "low" | "medium" | "high" | null
+    similarity_emphasis?:
+      | "highlight_repetition_patterns"
+      | "highlight_balanced_patterns"
+      | "highlight_mixed_patterns"
+      | "highlight_missing_similarity_context"
+      | null
   } | null
   genre_context?: {
     declared_main_genre?: string | null
@@ -55,17 +61,39 @@ type MockConsultantPayload = {
       | "unknown"
       | null
   } | null
+  threshold_profile_source?: string | null
+  selected_branch_reason?: string | null
+  confidence_context?: {
+    core_metric_presence_count?: number | null
+    matched_branch_count?: number | null
+    close_call_count?: number | null
+    selected_branch_is_unclear?: boolean | null
+  } | null
+  close_calls?: string[] | null
+  similarity_read?:
+    | "pattern_reinforces_repetition"
+    | "pattern_supports_balance"
+    | "pattern_is_mixed"
+    | "pattern_signal_missing"
+    | null
   evidence?: {
     repetition_ratio_0_1?: number | null
     unique_section_count?: number | null
     transition_strength_0_1?: number | null
     novelty_change_strength_0_1?: number | null
+    section_similarity_mean_0_1?: number | null
+    drop_to_drop_similarity_mean_0_1?: number | null
   } | null
 }
 
 function fmt(n: number | null | undefined, digits = 1) {
   if (typeof n !== "number" || !Number.isFinite(n)) return null
   return n.toFixed(digits)
+}
+
+function humanizeToken(value: string | null | undefined) {
+  if (typeof value !== "string" || value.trim().length === 0) return null
+  return value.trim().replace(/_/g, " ")
 }
 
 export function mockConsultantResponse(
@@ -86,6 +114,16 @@ export function mockConsultantResponse(
   const activeGenreProfile = consultantPayload?.genre_context?.active_genre_profile ?? null
   const decision = consultantPayload?.decision ?? null
   const evidence = consultantPayload?.evidence ?? null
+  const thresholdProfileSource = consultantPayload?.threshold_profile_source ?? null
+  const selectedBranchReason = consultantPayload?.selected_branch_reason ?? null
+  const confidenceContext = consultantPayload?.confidence_context ?? null
+  const similarityRead = consultantPayload?.similarity_read ?? null
+  const similarityEmphasis = consultantPayload?.wording?.similarity_emphasis ?? null
+  const closeCalls = Array.isArray(consultantPayload?.close_calls)
+    ? consultantPayload.close_calls.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      )
+    : []
 
   if (declaredGenre || activeGenreProfile) {
     lines.push(
@@ -101,6 +139,72 @@ export function mockConsultantResponse(
     lines.push("Structure summary: this indicates the track may benefit from stronger structural change.")
   } else if (decision?.status === "unclear") {
     lines.push("Structure summary: signals are mixed, so the interpretation should stay cautious.")
+  }
+
+  const humanizedThresholdProfileSource = humanizeToken(thresholdProfileSource)
+  const humanizedSelectedBranchReason = humanizeToken(selectedBranchReason)
+
+  if (humanizedThresholdProfileSource || humanizedSelectedBranchReason) {
+    lines.push(
+      `Decision audit: the current read uses ${humanizedThresholdProfileSource ?? "the active"} threshold profile${humanizedSelectedBranchReason ? ` and points mainly to ${humanizedSelectedBranchReason}` : ""}.`
+    )
+  }
+
+  if (similarityRead === "pattern_reinforces_repetition") {
+    lines.push("Similarity read: recurring section patterns appear to reinforce repetition, but this should still be interpreted relative to the declared genre.")
+  } else if (similarityRead === "pattern_supports_balance") {
+    lines.push("Similarity read: the section pattern supports a more balanced structural read for the declared genre.")
+  } else if (similarityRead === "pattern_is_mixed") {
+    lines.push("Similarity read: the pattern is mixed, so similarity should be treated as supporting context rather than a hard verdict.")
+  } else if (similarityRead === "pattern_signal_missing") {
+    lines.push("Similarity read: there is not enough similarity context to lean on this signal strongly.")
+  }
+
+  if (similarityEmphasis === "highlight_repetition_patterns") {
+    lines.push("Pattern focus: repetition-like pattern carryover looks worth checking more closely across comparable sections.")
+  } else if (similarityEmphasis === "highlight_balanced_patterns") {
+    lines.push("Pattern focus: the arrangement seems to keep enough structural contrast between comparable sections.")
+  } else if (similarityEmphasis === "highlight_mixed_patterns") {
+    lines.push("Pattern focus: some pattern cues point in different directions, so the structural read should stay measured.")
+  } else if (similarityEmphasis === "highlight_missing_similarity_context") {
+    lines.push("Pattern focus: similarity context is limited, so arrangement interpretation should rely more on the broader evidence set.")
+  }
+
+  const closeCallCount =
+    typeof confidenceContext?.close_call_count === "number" &&
+    Number.isFinite(confidenceContext.close_call_count)
+      ? confidenceContext.close_call_count
+      : closeCalls.length
+
+  const selectedBranchIsUnclear = confidenceContext?.selected_branch_is_unclear === true
+
+  const cautionSignals: string[] = []
+
+  if (decision?.confidence_level === "low") {
+    cautionSignals.push("low confidence")
+  }
+
+  if (selectedBranchIsUnclear) {
+    cautionSignals.push("unclear selected branch")
+  }
+
+  if (closeCallCount > 0) {
+    cautionSignals.push(`${closeCallCount} close call${closeCallCount === 1 ? "" : "s"}`)
+  }
+
+  if (cautionSignals.length > 0) {
+    lines.push(
+      `Decision caution: ${cautionSignals.join(", ")}. Treat this arrangement read as directional rather than absolute.`
+    )
+  }
+
+  if (closeCalls.length > 0) {
+    const preview = closeCalls
+      .slice(0, 3)
+      .map((item) => humanizeToken(item) ?? item)
+      .join(", ")
+
+    lines.push(`Borderline signals: ${preview}.`)
   }
 
   if (evidence) {
@@ -120,6 +224,20 @@ export function mockConsultantResponse(
 
     if (typeof evidence.novelty_change_strength_0_1 === "number" && Number.isFinite(evidence.novelty_change_strength_0_1)) {
       bits.push(`novelty ${evidence.novelty_change_strength_0_1.toFixed(2)}`)
+    }
+
+    if (
+      typeof evidence.section_similarity_mean_0_1 === "number" &&
+      Number.isFinite(evidence.section_similarity_mean_0_1)
+    ) {
+      bits.push(`section similarity ${evidence.section_similarity_mean_0_1.toFixed(2)}`)
+    }
+
+    if (
+      typeof evidence.drop_to_drop_similarity_mean_0_1 === "number" &&
+      Number.isFinite(evidence.drop_to_drop_similarity_mean_0_1)
+    ) {
+      bits.push(`drop similarity ${evidence.drop_to_drop_similarity_mean_0_1.toFixed(2)}`)
     }
 
     if (bits.length > 0) {
