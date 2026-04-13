@@ -16,6 +16,7 @@ export type ConsultantPromptInput = {
       headline_key?: string | null
       body_focus_key?: string | null
       caution_mode?: string | null
+      similarity_emphasis?: string | null
     } | null
     guardrails?: {
       avoid_absolute_judgment?: boolean | null
@@ -24,6 +25,10 @@ export type ConsultantPromptInput = {
       preserve_artistic_intent_space?: boolean | null
       preferred_phrases?: string[] | null
       forbidden_phrases?: string[] | null
+      require_similarity_context_caution?: boolean | null
+      require_similarity_genre_relative_language?: boolean | null
+      similarity_preferred_phrases?: string[] | null
+      similarity_forbidden_phrases?: string[] | null
     } | null
     genre_context?: {
       declared_main_genre?: string | null
@@ -32,11 +37,23 @@ export type ConsultantPromptInput = {
       declared_reference_track?: string | null
       active_genre_profile?: string | null
     } | null
+    threshold_profile_source?: string | null
+    selected_branch_reason?: string | null
+    confidence_context?: {
+      core_metric_presence_count?: number | null
+      matched_branch_count?: number | null
+      close_call_count?: number | null
+      selected_branch_is_unclear?: boolean | null
+    } | null
+    close_calls?: string[] | null
+    similarity_read?: string | null
     evidence?: {
       repetition_ratio_0_1?: number | null
       unique_section_count?: number | null
       transition_strength_0_1?: number | null
       novelty_change_strength_0_1?: number | null
+      section_similarity_mean_0_1?: number | null
+      drop_to_drop_similarity_mean_0_1?: number | null
     } | null
   } | null
 }
@@ -123,6 +140,35 @@ function buildConsultantPayloadSummary(
       ? (payload.evidence as Record<string, unknown>)
       : null
 
+  const confidenceContext =
+    payload.confidence_context && typeof payload.confidence_context === "object"
+      ? (payload.confidence_context as Record<string, unknown>)
+      : null
+
+  const thresholdProfileSource =
+    typeof payload.threshold_profile_source === "string" &&
+    payload.threshold_profile_source.trim().length > 0
+      ? payload.threshold_profile_source.trim()
+      : null
+
+  const selectedBranchReason =
+    typeof payload.selected_branch_reason === "string" &&
+    payload.selected_branch_reason.trim().length > 0
+      ? payload.selected_branch_reason.trim()
+      : null
+
+  const similarityRead =
+    typeof payload.similarity_read === "string" &&
+    payload.similarity_read.trim().length > 0
+      ? payload.similarity_read.trim()
+      : null
+
+  const closeCalls = Array.isArray(payload.close_calls)
+    ? payload.close_calls.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0
+      )
+    : []
+
   const status =
     typeof decision?.status === "string" && decision.status.trim().length > 0
       ? decision.status.trim()
@@ -151,6 +197,67 @@ function buildConsultantPayloadSummary(
         mainReason ? `reason=${mainReason}` : null,
         nextAction ? `next_action=${nextAction}` : null,
         confidenceLevel ? `confidence=${confidenceLevel}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
+  }
+
+  if (thresholdProfileSource || selectedBranchReason || similarityRead) {
+    lines.push(
+      [
+        "Decision Trace:",
+        thresholdProfileSource ? `profile_source=${thresholdProfileSource}` : null,
+        selectedBranchReason ? `selected_reason=${selectedBranchReason}` : null,
+        similarityRead ? `similarity_read=${similarityRead}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
+  }
+
+  const coreMetricPresenceCount =
+    typeof confidenceContext?.core_metric_presence_count === "number" &&
+    Number.isFinite(confidenceContext.core_metric_presence_count)
+      ? confidenceContext.core_metric_presence_count
+      : null
+
+  const matchedBranchCount =
+    typeof confidenceContext?.matched_branch_count === "number" &&
+    Number.isFinite(confidenceContext.matched_branch_count)
+      ? confidenceContext.matched_branch_count
+      : null
+
+  const closeCallCount =
+    typeof confidenceContext?.close_call_count === "number" &&
+    Number.isFinite(confidenceContext.close_call_count)
+      ? confidenceContext.close_call_count
+      : null
+
+  const selectedBranchIsUnclear =
+    typeof confidenceContext?.selected_branch_is_unclear === "boolean"
+      ? confidenceContext.selected_branch_is_unclear
+      : null
+
+  if (
+    coreMetricPresenceCount !== null ||
+    matchedBranchCount !== null ||
+    closeCallCount !== null ||
+    selectedBranchIsUnclear !== null
+  ) {
+    lines.push(
+      [
+        "Confidence Context:",
+        coreMetricPresenceCount !== null
+          ? `core_metrics=${coreMetricPresenceCount}`
+          : null,
+        matchedBranchCount !== null
+          ? `matched_branches=${matchedBranchCount}`
+          : null,
+        closeCallCount !== null ? `close_calls=${closeCallCount}` : null,
+        selectedBranchIsUnclear !== null
+          ? `selected_branch_is_unclear=${selectedBranchIsUnclear ? "true" : "false"}`
+          : null,
       ]
         .filter(Boolean)
         .join(" ")
@@ -266,8 +373,30 @@ function buildConsultantPayloadSummary(
     evidenceBits.push(`novelty=${evidence.novelty_change_strength_0_1.toFixed(2)}`)
   }
 
+  if (
+    typeof evidence?.section_similarity_mean_0_1 === "number" &&
+    Number.isFinite(evidence.section_similarity_mean_0_1)
+  ) {
+    evidenceBits.push(
+      `section_similarity=${evidence.section_similarity_mean_0_1.toFixed(2)}`
+    )
+  }
+
+  if (
+    typeof evidence?.drop_to_drop_similarity_mean_0_1 === "number" &&
+    Number.isFinite(evidence.drop_to_drop_similarity_mean_0_1)
+  ) {
+    evidenceBits.push(
+      `drop_similarity=${evidence.drop_to_drop_similarity_mean_0_1.toFixed(2)}`
+    )
+  }
+
   if (evidenceBits.length > 0) {
     lines.push(`Evidence: ${evidenceBits.join(" ")}`)
+  }
+
+  if (closeCalls.length > 0) {
+    lines.push(`Close Calls: ${closeCalls.join(" | ")}`)
   }
 
   const preferredPhrases =
