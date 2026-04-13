@@ -47,6 +47,47 @@ export type ConsultantPromptInput = {
     } | null
     close_calls?: string[] | null
     similarity_read?: string | null
+    repetitive_thresholds?: {
+      repetition_min?: number | null
+      novelty_max?: number | null
+    } | null
+    balanced_thresholds?: {
+      repetition_max?: number | null
+      novelty_min?: number | null
+      transition_min?: number | null
+    } | null
+    underdeveloped_thresholds?: {
+      unique_section_count_max?: number | null
+      transition_max?: number | null
+      novelty_max?: number | null
+    } | null
+    similarity_thresholds?: {
+      repetitive?: {
+        section_similarity_mean_min?: number | null
+        drop_to_drop_similarity_mean_min?: number | null
+      } | null
+      balanced?: {
+        section_similarity_mean_max?: number | null
+        drop_to_drop_similarity_mean_max?: number | null
+      } | null
+    } | null
+    branch_results?: {
+      repetitive?: {
+        matched?: boolean | null
+        passed_conditions?: string[] | null
+        failed_conditions?: string[] | null
+      } | null
+      underdeveloped?: {
+        matched?: boolean | null
+        passed_conditions?: string[] | null
+        failed_conditions?: string[] | null
+      } | null
+      balanced?: {
+        matched?: boolean | null
+        passed_conditions?: string[] | null
+        failed_conditions?: string[] | null
+      } | null
+    } | null
     evidence?: {
       repetition_ratio_0_1?: number | null
       unique_section_count?: number | null
@@ -168,6 +209,72 @@ function buildConsultantPayloadSummary(
         (item): item is string => typeof item === "string" && item.trim().length > 0
       )
     : []
+
+  const readNumber = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null
+
+  const readStringArray = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value.filter(
+          (item): item is string => typeof item === "string" && item.trim().length > 0
+        )
+      : []
+
+  const branchResults =
+    payload.branch_results && typeof payload.branch_results === "object"
+      ? (payload.branch_results as Record<string, unknown>)
+      : null
+
+  const repetitiveBranch =
+    branchResults?.repetitive && typeof branchResults.repetitive === "object"
+      ? (branchResults.repetitive as Record<string, unknown>)
+      : null
+
+  const underdevelopedBranch =
+    branchResults?.underdeveloped &&
+    typeof branchResults.underdeveloped === "object"
+      ? (branchResults.underdeveloped as Record<string, unknown>)
+      : null
+
+  const balancedBranch =
+    branchResults?.balanced && typeof branchResults.balanced === "object"
+      ? (branchResults.balanced as Record<string, unknown>)
+      : null
+
+  const repetitiveThresholds =
+    payload.repetitive_thresholds &&
+    typeof payload.repetitive_thresholds === "object"
+      ? (payload.repetitive_thresholds as Record<string, unknown>)
+      : null
+
+  const balancedThresholds =
+    payload.balanced_thresholds && typeof payload.balanced_thresholds === "object"
+      ? (payload.balanced_thresholds as Record<string, unknown>)
+      : null
+
+  const underdevelopedThresholds =
+    payload.underdeveloped_thresholds &&
+    typeof payload.underdeveloped_thresholds === "object"
+      ? (payload.underdeveloped_thresholds as Record<string, unknown>)
+      : null
+
+  const similarityThresholds =
+    payload.similarity_thresholds &&
+    typeof payload.similarity_thresholds === "object"
+      ? (payload.similarity_thresholds as Record<string, unknown>)
+      : null
+
+  const repetitiveSimilarityThresholds =
+    similarityThresholds?.repetitive &&
+    typeof similarityThresholds.repetitive === "object"
+      ? (similarityThresholds.repetitive as Record<string, unknown>)
+      : null
+
+  const balancedSimilarityThresholds =
+    similarityThresholds?.balanced &&
+    typeof similarityThresholds.balanced === "object"
+      ? (similarityThresholds.balanced as Record<string, unknown>)
+      : null
 
   const status =
     typeof decision?.status === "string" && decision.status.trim().length > 0
@@ -309,6 +416,168 @@ function buildConsultantPayloadSummary(
     genreContext.active_genre_profile.trim().length > 0
       ? genreContext.active_genre_profile.trim()
       : null
+
+  const repetitiveMatched =
+    typeof repetitiveBranch?.matched === "boolean" ? repetitiveBranch.matched : null
+
+  const underdevelopedMatched =
+    typeof underdevelopedBranch?.matched === "boolean"
+      ? underdevelopedBranch.matched
+      : null
+
+  const balancedMatched =
+    typeof balancedBranch?.matched === "boolean" ? balancedBranch.matched : null
+
+  const matchedBranchName = repetitiveMatched
+    ? "repetitive"
+    : underdevelopedMatched
+      ? "underdeveloped"
+      : balancedMatched
+        ? "balanced"
+        : null
+
+  const matchedBranchRecord =
+    matchedBranchName === "repetitive"
+      ? repetitiveBranch
+      : matchedBranchName === "underdeveloped"
+        ? underdevelopedBranch
+        : matchedBranchName === "balanced"
+          ? balancedBranch
+          : null
+
+  const matchedBranchPassedConditions = readStringArray(
+    matchedBranchRecord?.passed_conditions
+  )
+
+  const matchedBranchFailedConditions = readStringArray(
+    matchedBranchRecord?.failed_conditions
+  )
+
+  const activeThresholdBits: string[] = []
+
+  if (matchedBranchName === "repetitive") {
+    const repetitionMin = readNumber(repetitiveThresholds?.repetition_min)
+    const noveltyMax = readNumber(repetitiveThresholds?.novelty_max)
+    const sectionSimilarityMin = readNumber(
+      repetitiveSimilarityThresholds?.section_similarity_mean_min
+    )
+    const dropSimilarityMin = readNumber(
+      repetitiveSimilarityThresholds?.drop_to_drop_similarity_mean_min
+    )
+
+    if (repetitionMin !== null) {
+      activeThresholdBits.push(`repetition_min=${repetitionMin.toFixed(2)}`)
+    }
+    if (noveltyMax !== null) {
+      activeThresholdBits.push(`novelty_max=${noveltyMax.toFixed(2)}`)
+    }
+    if (sectionSimilarityMin !== null) {
+      activeThresholdBits.push(
+        `section_similarity_min=${sectionSimilarityMin.toFixed(2)}`
+      )
+    }
+    if (dropSimilarityMin !== null) {
+      activeThresholdBits.push(`drop_similarity_min=${dropSimilarityMin.toFixed(2)}`)
+    }
+  }
+
+  if (matchedBranchName === "underdeveloped") {
+    const uniqueSectionCountMax = readNumber(
+      underdevelopedThresholds?.unique_section_count_max
+    )
+    const transitionMax = readNumber(underdevelopedThresholds?.transition_max)
+    const noveltyMax = readNumber(underdevelopedThresholds?.novelty_max)
+
+    if (uniqueSectionCountMax !== null) {
+      activeThresholdBits.push(
+        `unique_section_count_max=${uniqueSectionCountMax.toFixed(0)}`
+      )
+    }
+    if (transitionMax !== null) {
+      activeThresholdBits.push(`transition_max=${transitionMax.toFixed(2)}`)
+    }
+    if (noveltyMax !== null) {
+      activeThresholdBits.push(`novelty_max=${noveltyMax.toFixed(2)}`)
+    }
+  }
+
+  if (matchedBranchName === "balanced") {
+    const repetitionMax = readNumber(balancedThresholds?.repetition_max)
+    const noveltyMin = readNumber(balancedThresholds?.novelty_min)
+    const transitionMin = readNumber(balancedThresholds?.transition_min)
+    const sectionSimilarityMax = readNumber(
+      balancedSimilarityThresholds?.section_similarity_mean_max
+    )
+    const dropSimilarityMax = readNumber(
+      balancedSimilarityThresholds?.drop_to_drop_similarity_mean_max
+    )
+
+    if (repetitionMax !== null) {
+      activeThresholdBits.push(`repetition_max=${repetitionMax.toFixed(2)}`)
+    }
+    if (noveltyMin !== null) {
+      activeThresholdBits.push(`novelty_min=${noveltyMin.toFixed(2)}`)
+    }
+    if (transitionMin !== null) {
+      activeThresholdBits.push(`transition_min=${transitionMin.toFixed(2)}`)
+    }
+    if (sectionSimilarityMax !== null) {
+      activeThresholdBits.push(
+        `section_similarity_max=${sectionSimilarityMax.toFixed(2)}`
+      )
+    }
+    if (dropSimilarityMax !== null) {
+      activeThresholdBits.push(`drop_similarity_max=${dropSimilarityMax.toFixed(2)}`)
+    }
+  }
+
+  if (
+    matchedBranchName ||
+    repetitiveMatched !== null ||
+    underdevelopedMatched !== null ||
+    balancedMatched !== null
+  ) {
+    lines.push(
+      [
+        "Rule Snapshot:",
+        matchedBranchName ? `matched_branch=${matchedBranchName}` : null,
+        repetitiveMatched !== null
+          ? `repetitive=${repetitiveMatched ? "matched" : "not_matched"}`
+          : null,
+        underdevelopedMatched !== null
+          ? `underdeveloped=${underdevelopedMatched ? "matched" : "not_matched"}`
+          : null,
+        balancedMatched !== null
+          ? `balanced=${balancedMatched ? "matched" : "not_matched"}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
+  }
+
+  if (
+    matchedBranchPassedConditions.length > 0 ||
+    matchedBranchFailedConditions.length > 0
+  ) {
+    lines.push(
+      [
+        "Matched Branch Conditions:",
+        matchedBranchPassedConditions.length > 0
+          ? `passed=${matchedBranchPassedConditions.join(", ")}`
+          : null,
+        matchedBranchFailedConditions.length > 0
+          ? `failed=${matchedBranchFailedConditions.join(", ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    )
+  }
+
+  if (activeThresholdBits.length > 0) {
+    lines.push(`Active Thresholds: ${activeThresholdBits.join(" ")}`)
+  }
 
   const declaredReferenceArtist =
     typeof genreContext?.declared_reference_artist === "string" &&
