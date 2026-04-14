@@ -30,6 +30,46 @@ function parseConsultantExplanation(explanation: string) {
   }
 }
 
+function extractOpenAiExplanation(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null
+
+  const output = (payload as { output?: unknown }).output
+  if (!Array.isArray(output)) return null
+
+  const parts: string[] = []
+
+  for (const item of output) {
+    if (!item || typeof item !== "object") continue
+
+    const typedItem = item as {
+      type?: unknown
+      content?: unknown
+    }
+
+    if (typedItem.type !== "message" || !Array.isArray(typedItem.content)) continue
+
+    for (const contentItem of typedItem.content) {
+      if (!contentItem || typeof contentItem !== "object") continue
+
+      const typedContentItem = contentItem as {
+        type?: unknown
+        text?: unknown
+      }
+
+      if (
+        typedContentItem.type === "output_text" &&
+        typeof typedContentItem.text === "string" &&
+        typedContentItem.text.trim().length > 0
+      ) {
+        parts.push(typedContentItem.text.trim())
+      }
+    }
+  }
+
+  if (parts.length === 0) return null
+  return parts.join("\n\n").trim()
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -99,15 +139,64 @@ export async function POST(req: Request) {
       })
     }
 
-    // system/user prompt already built via buildConsultantPrompt({ goal, genre, metrics })
-    // Launch TODO: send { system, user } to OpenAI and return explanation.
-    void system
-    void user
+    const openAiApiKey = process.env.OPENAI_API_KEY
+    const openAiModel = process.env.OPENAI_CONSULTANT_MODEL
 
-    const explanation =
-      "AI live mode not implemented yet. Prompt builder is ready for launch."
+    if (!openAiApiKey || openAiApiKey.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Missing OPENAI_API_KEY" },
+        { status: 500 }
+      )
+    }
 
-    // best-effort cache write (ignore errors)
+    if (!openAiModel || openAiModel.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Missing OPENAI_CONSULTANT_MODEL" },
+        { status: 500 }
+      )
+    }
+
+    const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openAiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: openAiModel.trim(),
+        instructions: system,
+        input: user,
+        store: false,
+        temperature: 0.3,
+        max_output_tokens: 700,
+      }),
+    })
+
+    const openAiPayload = await openAiResponse.json().catch(() => null)
+
+    if (!openAiResponse.ok) {
+      console.error("Consultant OpenAI API error", {
+        status: openAiResponse.status,
+        payload: openAiPayload,
+      })
+
+      return NextResponse.json(
+        { error: "OpenAI consultant request failed" },
+        { status: 502 }
+      )
+    }
+
+    const explanation = extractOpenAiExplanation(openAiPayload)
+
+    if (!explanation) {
+      console.error("Consultant OpenAI API returned no explanation text", openAiPayload)
+
+      return NextResponse.json(
+        { error: "OpenAI consultant returned no explanation text" },
+        { status: 502 }
+      )
+    }
+
     await supabase.from("ai_consultant_cache").upsert(
       {
         cache_key: cacheKey,
@@ -118,13 +207,10 @@ export async function POST(req: Request) {
       { onConflict: "cache_key" }
     )
 
-    return NextResponse.json(
-      {
-        ...parseConsultantExplanation(explanation),
-        cached: false,
-      },
-      { status: 501 }
-    )
+    return NextResponse.json({
+      ...parseConsultantExplanation(explanation),
+      cached: false,
+    })
 
   } catch (error) {
     console.error("Consultant API error", error)
