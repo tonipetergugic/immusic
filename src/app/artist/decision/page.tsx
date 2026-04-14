@@ -307,16 +307,19 @@ export default async function ArtistDecisionPage({
         })
       : null;
 
+  const feedbackPayload =
+    feedbackState && "payload" in feedbackState ? feedbackState.payload : null
+
   if (selectedTrack?.title?.toLowerCase().includes("beyond")) {
     console.log(
       "[decision-debug][Beyond][structure-focus]",
       JSON.stringify(
         {
-          sections: feedbackState?.payload?.metrics?.structure?.sections ?? null,
+          sections: feedbackPayload?.metrics?.structure?.sections ?? null,
           section_similarity:
-            feedbackState?.payload?.metrics?.structure?.section_similarity ?? null,
+            feedbackPayload?.metrics?.structure?.section_similarity ?? null,
           drop_to_drop_similarity:
-            feedbackState?.payload?.metrics?.structure?.drop_to_drop_similarity ?? null,
+            feedbackPayload?.metrics?.structure?.drop_to_drop_similarity ?? null,
         },
         null,
         2
