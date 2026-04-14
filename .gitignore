@@ -44,3 +44,7 @@ __MACOSX/
 
 analysis_engine/output/
 analysis_engine/__pycache__/
+analysis_engine/.venv/
+.venv/
+__pycache__/
+*.pyc
