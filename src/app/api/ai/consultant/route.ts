@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { buildConsultantPrompt } from "@/lib/ai/consultant/buildConsultantPrompt"
 import { isAiConsultantLive } from "@/lib/ai/consultant/config"
 import { mockConsultantResponse } from "@/lib/ai/consultant/mockConsultantResponse"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import crypto from "crypto"
 
 function parseConsultantExplanation(explanation: string) {
@@ -124,17 +124,29 @@ export async function POST(req: Request) {
       return NextResponse.json(parseConsultantExplanation(explanation))
     }
 
-    const supabase = await createSupabaseServerClient()
+    const supabase = getSupabaseAdmin()
+    const cacheTable = supabase.from("ai_consultant_cache") as any
 
-    const { data: cached } = await supabase
-      .from("ai_consultant_cache")
+    const { data: cachedRaw, error: cacheReadError } = await cacheTable
       .select("explanation")
       .eq("cache_key", cacheKey)
       .maybeSingle()
 
-    if (cached?.explanation) {
+    if (cacheReadError) {
+      console.error("Consultant cache read failed", cacheReadError)
+
+      return NextResponse.json(
+        { error: "Consultant cache read failed" },
+        { status: 502 }
+      )
+    }
+
+    const cachedExplanation =
+      (cachedRaw as { explanation?: string | null } | null)?.explanation ?? null
+
+    if (cachedExplanation) {
       return NextResponse.json({
-        ...parseConsultantExplanation(cached.explanation),
+        ...parseConsultantExplanation(cachedExplanation),
         cached: true,
       })
     }
@@ -197,7 +209,7 @@ export async function POST(req: Request) {
       )
     }
 
-    await supabase.from("ai_consultant_cache").upsert(
+    const { error: cacheUpsertError } = await cacheTable.upsert(
       {
         cache_key: cacheKey,
         goal: String(goal),
@@ -206,6 +218,15 @@ export async function POST(req: Request) {
       },
       { onConflict: "cache_key" }
     )
+
+    if (cacheUpsertError) {
+      console.error("Consultant cache upsert failed", cacheUpsertError)
+
+      return NextResponse.json(
+        { error: "Consultant cache write failed" },
+        { status: 502 }
+      )
+    }
 
     return NextResponse.json({
       ...parseConsultantExplanation(explanation),

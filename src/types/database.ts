@@ -50,6 +50,32 @@ export type Profile = {
 export type Database = {
   public: {
     Tables: {
+      ai_consultant_cache: {
+        Row: {
+          id: string;
+          cache_key: string;
+          goal: string | null;
+          genre: string | null;
+          explanation: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          cache_key: string;
+          goal?: string | null;
+          genre?: string | null;
+          explanation: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          cache_key?: string;
+          goal?: string | null;
+          genre?: string | null;
+          explanation?: string;
+          created_at?: string;
+        };
+      };
       tracks: {
         Row: Track;
       };
