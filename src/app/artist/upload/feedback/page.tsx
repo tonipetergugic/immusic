@@ -14,7 +14,6 @@ import ShortTermLufsChart from "./components/ShortTermLufsChart";
 import SpectralRmsCard from "./components/SpectralRmsCard";
 import StreamingNormalization from "./components/StreamingNormalization";
 import StreamingRiskGauge from "./components/StreamingRiskGauge";
-import SuggestedImprovementsSection from "./components/SuggestedImprovementsSection";
 import TransientsPanel from "./components/TransientsPanel";
 import UnlockFooterSection from "./components/UnlockFooterSection";
 import { Wrench, Gauge, Activity, TrendingUp, SlidersHorizontal, AudioWaveform, Columns2, BarChart3, ShieldAlert, ClipboardList } from "lucide-react";
@@ -49,7 +48,7 @@ export default async function UploadFeedbackV3Page({
     queueAudioHash,
   } = loaded;
 
-  const { banner, heroChips, journey, coachRecommendations } = deriveFeedbackV3PageState({ payload, isReady });
+  const { banner, heroChips, journey } = deriveFeedbackV3PageState({ payload, isReady });
   const summary = deriveFeedbackSummary({ payload, isReady });
 
   await logFeedbackAccessEvent({
@@ -310,7 +309,6 @@ export default async function UploadFeedbackV3Page({
                 </section>
               </div>
 
-              <SuggestedImprovementsSection coachRecommendations={coachRecommendations} />
             </div>
         </main>
       </div>
