@@ -17,6 +17,7 @@ const MIN_SECTION_START_GAP_S = 3;
 
 // Collapse very short middle segments by energy similarity (reduces rapid alternation noise)
 const MAX_MIDDLE_SEGMENT_S = 5;
+const MAX_LOCAL_NEIGHBOR_GAP_S = 3;
 
 const MAX_BUILD_DURATION_S = 40;
 
@@ -105,6 +106,39 @@ export function stabilizeStructureSectionsV1(params: {
 }): StructureAnalysisV1["sections"] {
   const energy = Array.isArray(params.energy_curve) ? params.energy_curve : [];
   const sectionsIn = Array.isArray(params.sections) ? params.sections : [];
+  const declaredSubgenreHintFromParams =
+    typeof (params as { declaredSubgenre?: unknown }).declaredSubgenre === "string"
+      ? (params as { declaredSubgenre?: string }).declaredSubgenre
+      : null;
+  const declaredSubgenreHintFromSections = sectionsIn.find(
+    (section) =>
+      typeof (section as { declaredSubgenre?: unknown }).declaredSubgenre === "string" ||
+      typeof (section as { declared_subgenre?: unknown }).declared_subgenre === "string"
+  );
+  const declaredSubgenreHint =
+    declaredSubgenreHintFromParams ??
+    (typeof (declaredSubgenreHintFromSections as { declaredSubgenre?: unknown } | undefined)
+      ?.declaredSubgenre === "string"
+      ? (declaredSubgenreHintFromSections as { declaredSubgenre?: string }).declaredSubgenre
+      : typeof (declaredSubgenreHintFromSections as { declared_subgenre?: unknown } | undefined)
+          ?.declared_subgenre === "string"
+        ? (declaredSubgenreHintFromSections as { declared_subgenre?: string }).declared_subgenre
+        : null);
+  const debugBeyondStabilize =
+    declaredSubgenreHint?.toLowerCase?.() === "uplifting trance";
+
+  if (debugBeyondStabilize) {
+    console.log(
+      "[structure-debug][Beyond][stabilize-input]",
+      JSON.stringify(
+        {
+          sections_in: params.sections,
+        },
+        null,
+        2
+      )
+    );
+  }
 
   const drops: DropSection[] = sectionsIn.filter(isDrop);
 
@@ -225,6 +259,11 @@ export function stabilizeStructureSectionsV1(params: {
 
       if (durationOf(mid) >= MAX_MIDDLE_SEGMENT_S) continue;
 
+      const leftGap = clampTime(mid.start) - clampTime(prev.end);
+      const rightGap = clampTime(next.start) - clampTime(mid.end);
+
+      if (leftGap > MAX_LOCAL_NEIGHBOR_GAP_S || rightGap > MAX_LOCAL_NEIGHBOR_GAP_S) continue;
+
       const mE = meanEnergyInRange(energy, mid.start, mid.end);
       const pE = meanEnergyInRange(energy, prev.start, prev.end);
       const nE = meanEnergyInRange(energy, next.start, next.end);
@@ -301,6 +340,19 @@ export function stabilizeStructureSectionsV1(params: {
     const tb = isDrop(b) ? b.t : b.start;
     return ta - tb;
   });
+
+  if (debugBeyondStabilize) {
+    console.log(
+      "[structure-debug][Beyond][stabilize-output]",
+      JSON.stringify(
+        {
+          sections_out: out,
+        },
+        null,
+        2
+      )
+    );
+  }
 
   return out;
 }

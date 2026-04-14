@@ -622,6 +622,23 @@ export function buildStructureAnalysisV1(input: {
 
   const ranges_before = countRangeSections(sections);
 
+  if (declaredSubgenre?.toLowerCase() === "uplifting trance") {
+    console.log(
+      "[structure-debug][Beyond][pre-stabilize]",
+      JSON.stringify(
+        {
+          ranges_before,
+          sections_before_stabilize: sections,
+          range_sections_before_stabilize: sections.filter((section) =>
+            isRangeSectionV1(section)
+          ),
+        },
+        null,
+        2
+      )
+    );
+  }
+
   const stabilized = stabilizeStructureSectionsV1({
     energy_curve,
     sections,
@@ -635,6 +652,35 @@ export function buildStructureAnalysisV1(input: {
   });
 
   const ranges_after_sequence = countRangeSections(sequenced as any);
+
+  console.log(
+    "[structure-debug][Beyond][gate-values]",
+    JSON.stringify(
+      {
+        declaredSubgenre,
+        declaredReferenceTrack,
+      },
+      null,
+      2
+    )
+  )
+
+  if (declaredSubgenre?.toLowerCase() === "uplifting trance") {
+    console.log(
+      "[structure-debug][Beyond][sequence-compare]",
+      JSON.stringify(
+        {
+          ranges_before,
+          ranges_after_stabilize,
+          ranges_after_sequence,
+          stabilized,
+          sequenced,
+        },
+        null,
+        2
+      )
+    )
+  }
   const merges_estimated = Math.max(0, ranges_before - ranges_after_sequence);
 
   sections.length = 0;
