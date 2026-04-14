@@ -5,6 +5,15 @@ import { mockConsultantResponse } from "@/lib/ai/consultant/mockConsultantRespon
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import crypto from "crypto"
 
+const ALLOWED_CONSULTANT_LANGUAGES = new Set([
+  "English",
+  "German",
+  "Spanish",
+  "French",
+  "Italian",
+  "Portuguese",
+])
+
 function parseConsultantExplanation(explanation: string) {
   const normalized = explanation.replace(/\r\n/g, "\n").trim()
 
@@ -89,6 +98,14 @@ export async function POST(req: Request) {
         ? rawGoal
         : "balanced"
 
+    const rawLanguage = context?.language
+
+    const language =
+      typeof rawLanguage === "string" &&
+      ALLOWED_CONSULTANT_LANGUAGES.has(rawLanguage)
+        ? rawLanguage
+        : "English"
+
     const genreFromConsultantPayload =
       typeof consultant_payload?.genre_context?.declared_subgenre === "string" &&
       consultant_payload.genre_context.declared_subgenre.trim().length > 0
@@ -108,13 +125,14 @@ export async function POST(req: Request) {
     const { system, user } = buildConsultantPrompt({
       goal,
       genre,
+      language,
       metrics,
       consultant_payload,
     })
 
     const cacheKey = crypto
       .createHash("sha256")
-      .update(JSON.stringify({ goal, genre, metrics, consultant_payload }))
+      .update(JSON.stringify({ goal, genre, language, metrics, consultant_payload }))
       .digest("hex")
 
     if (!isAiConsultantLive()) {

@@ -3,6 +3,7 @@ export type ConsultantGoal = "club" | "streaming" | "balanced"
 export type ConsultantPromptInput = {
   genre?: string | null
   goal?: ConsultantGoal | null
+  language?: string | null
   // already-mapped compact metrics object (token-sparend), e.g. { LUFS, TP, LRA, PHASE, LOW_MONO, CREST, ... }
   metrics: Record<string, number | string | boolean | null | undefined>
   consultant_payload?: {
@@ -778,6 +779,10 @@ function buildConsultantPayloadSummary(
 export function buildConsultantPrompt(input: ConsultantPromptInput) {
   const genre = input.genre ?? "unknown"
   const goal: ConsultantGoal = (input.goal ?? "balanced") as ConsultantGoal
+  const responseLanguage =
+    typeof input.language === "string" && input.language.trim().length > 0
+      ? input.language.trim()
+      : "English"
 
   // SYSTEM prompt stays stable (per PDF)
   const system = [
@@ -798,6 +803,7 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
     "- Do not make absolute judgments.",
     "- Use evidence-based language.",
     "- Use genre-relative language when genre context is present.",
+    "- Follow the requested response language while keeping the required section headings exactly in English.",
     "- Leave room for artistic intent."
   ].join("\n")
 
@@ -806,6 +812,7 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
     `Track Context`,
     `Genre: ${genre}`,
     `Goal: ${goal}`,
+    `Response language: ${responseLanguage}`,
     "You are a fair and careful music consultant.",
     "The engine provides the first structured decision. Your role is to critically review it, not to replace it with freeform taste.",
     "Treat the structured consultant payload as controlled product context and as your primary audit frame.",
@@ -842,6 +849,8 @@ export function buildConsultantPrompt(input: ConsultantPromptInput) {
     "Body:",
     "Focus:",
     "Caution:",
+    `Write the content itself in ${responseLanguage}.`,
+    "Keep the headings themselves exactly in English: Headline, Body, Focus, Caution.",
     "In your wording:",
     "- treat the engine decision as the starting point",
     "- only challenge it when the provided evidence clearly supports that",

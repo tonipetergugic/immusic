@@ -99,6 +99,15 @@ const CONSULTANT_TARGET_ITEMS = [
   { value: "streaming", label: "Streaming" },
 ]
 
+const CONSULTANT_LANGUAGE_ITEMS = [
+  { value: "English", label: "English" },
+  { value: "German", label: "Deutsch" },
+  { value: "Spanish", label: "Español" },
+  { value: "French", label: "Français" },
+  { value: "Italian", label: "Italiano" },
+  { value: "Portuguese", label: "Português" },
+]
+
 type ConsultantApiResponse = {
   explanation: string
   explanation_raw?: string | null
@@ -127,6 +136,12 @@ type Props = {
   mid: number | null
   air: number | null
   consultantPayload?: Record<string, unknown> | null
+  title?: string
+  description?: string
+  buttonLabel?: string
+  initialGenre?: string | null
+  source?: string
+  showGenreSelect?: boolean
 }
 
 export default function AiConsultantCard({
@@ -145,6 +160,12 @@ export default function AiConsultantCard({
   mid,
   air,
   consultantPayload = null,
+  title = "AI Mastering Consultant",
+  description = "Choose your genre, target, and language, then click \"Explain this mix\" to get a clear technical interpretation of your current metrics.",
+  buttonLabel = "Explain this mix",
+  initialGenre = null,
+  source = "feedback-page",
+  showGenreSelect = true,
 }: Props) {
 
   const [consultantResponse, setConsultantResponse] = useState<ConsultantApiResponse | null>(null)
@@ -174,18 +195,39 @@ export default function AiConsultantCard({
   const [loading, setLoading] = useState(false)
   const [genre, setGenre] = useState<string>("Trance")
   const [goal, setGoal] = useState<"balanced" | "club" | "streaming">("balanced")
+  const [language, setLanguage] = useState<string>("English")
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     const savedGenre = window.localStorage.getItem("ai_consultant_genre")
     const savedGoal = window.localStorage.getItem("ai_consultant_goal")
+    const savedLanguage = window.localStorage.getItem("ai_consultant_language")
 
-    if (savedGenre) setGenre(savedGenre)
+    const nextGenre =
+      typeof initialGenre === "string" && initialGenre.trim().length > 0
+        ? initialGenre.trim()
+        : savedGenre && savedGenre.trim().length > 0
+          ? savedGenre
+          : "Trance"
+
+    setGenre(nextGenre)
+
     if (savedGoal === "balanced" || savedGoal === "club" || savedGoal === "streaming") {
       setGoal(savedGoal)
     }
+
+    const allowedLanguages = new Set(
+      CONSULTANT_LANGUAGE_ITEMS.map((item) => item.value)
+    )
+
+    if (savedLanguage && allowedLanguages.has(savedLanguage)) {
+      setLanguage(savedLanguage)
+    } else {
+      setLanguage("English")
+    }
+
     setHydrated(true)
-  }, [])
+  }, [initialGenre])
 
   useEffect(() => {
     if (!hydrated) return
@@ -196,6 +238,11 @@ export default function AiConsultantCard({
     if (!hydrated) return
     window.localStorage.setItem("ai_consultant_goal", goal)
   }, [goal, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    window.localStorage.setItem("ai_consultant_language", language)
+  }, [language, hydrated])
 
   async function handleClick() {
 
@@ -231,7 +278,8 @@ export default function AiConsultantCard({
         context: {
           goal,
           genre,
-          source: "feedback-page",
+          language,
+          source,
         }
       }),
     })
@@ -262,27 +310,29 @@ export default function AiConsultantCard({
         <div className="min-w-0 space-y-4">
           <div className="space-y-2.5">
             <div className="text-[28px] font-semibold tracking-tight text-white">
-              AI Mastering Consultant
+              {title}
             </div>
             <p className="max-w-3xl text-base leading-relaxed text-white/68">
-              Choose your genre and target, then click <span className="font-medium text-white">“Explain this mix”</span> to get a clear technical interpretation of your current metrics.
+              {description}
             </p>
           </div>
 
           <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-                <div className="space-y-2">
-                  <div className="text-base font-semibold text-white/85">Genre</div>
-                  <div className="min-w-[280px]">
-                    <AppSelect
-                      value={genre}
-                      onChange={setGenre}
-                      items={CONSULTANT_GENRE_ITEMS}
-                      className="[&>button]:h-13 [&>button]:min-w-[280px] [&>button]:rounded-2xl [&>button]:border-white/15 [&>button]:bg-black/50 [&>button]:px-4 [&>button]:text-base [&>button]:text-white [&>button]:focus:border-[#00FFC6]/50 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
-                    />
+                {showGenreSelect ? (
+                  <div className="space-y-2">
+                    <div className="text-base font-semibold text-white/85">Genre</div>
+                    <div className="min-w-[280px]">
+                      <AppSelect
+                        value={genre}
+                        onChange={setGenre}
+                        items={CONSULTANT_GENRE_ITEMS}
+                        className="[&>button]:h-13 [&>button]:min-w-[280px] [&>button]:rounded-2xl [&>button]:border-white/15 [&>button]:bg-black/50 [&>button]:px-4 [&>button]:text-base [&>button]:text-white [&>button]:focus:border-[#00FFC6]/50 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                 <div className="space-y-2">
                   <div className="text-base font-semibold text-white/85">Target</div>
@@ -291,6 +341,18 @@ export default function AiConsultantCard({
                       value={goal}
                       onChange={(value) => setGoal(value as any)}
                       items={CONSULTANT_TARGET_ITEMS}
+                      className="[&>button]:h-13 [&>button]:min-w-[200px] [&>button]:rounded-2xl [&>button]:border-white/15 [&>button]:bg-black/50 [&>button]:px-4 [&>button]:text-base [&>button]:text-white [&>button]:focus:border-[#00FFC6]/50 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-base font-semibold text-white/85">Language</div>
+                  <div className="min-w-[200px]">
+                    <AppSelect
+                      value={language}
+                      onChange={setLanguage}
+                      items={CONSULTANT_LANGUAGE_ITEMS}
                       className="[&>button]:h-13 [&>button]:min-w-[200px] [&>button]:rounded-2xl [&>button]:border-white/15 [&>button]:bg-black/50 [&>button]:px-4 [&>button]:text-base [&>button]:text-white [&>button]:focus:border-[#00FFC6]/50 [&>button]:focus:ring-2 [&>button]:focus:ring-[#00FFC6]/20 [&>button_svg]:text-white/55"
                     />
                   </div>
@@ -308,7 +370,7 @@ export default function AiConsultantCard({
                     Analyzing...
                   </span>
                 ) : (
-                  "Explain this mix"
+                  buttonLabel
                 )}
               </button>
             </div>

@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import { readFeedbackState } from "@/lib/ai/track-check/read-feedback-state";
 import DecisionTrackSwitcher from "./components/DecisionTrackSwitcher";
+import AiConsultantCard from "../upload/feedback/components/AiConsultantCard";
 
 type ProfileRoleRow = {
   id: string;
@@ -574,12 +575,12 @@ export default async function ArtistDecisionPage({
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-5">
                       <div className="text-sm font-medium text-white/85">
-                        Short explanation
+                        AI decision consultant
                       </div>
 
                       {!selectedTrack?.source_queue_id ? (
                         <p className="mt-2 text-sm leading-6 text-white/60">
-                          This track has no linked analysis queue yet. No explanation block can be built.
+                          This track has no linked analysis queue yet. No AI consultant can be shown.
                         </p>
                       ) : !feedbackState ? (
                         <p className="mt-2 text-sm leading-6 text-white/60">
@@ -587,24 +588,37 @@ export default async function ArtistDecisionPage({
                         </p>
                       ) : !feedbackState.ok ? (
                         <p className="mt-2 text-sm leading-6 text-white/60">
-                          The explanation state could not be loaded for this track.
+                          The AI consultant state could not be loaded for this track.
                         </p>
                       ) : feedbackState.feedback_state !== "unlocked_ready" ? (
                         <p className="mt-2 text-sm leading-6 text-white/60">
-                          The explanation block becomes available once the unlocked payload is ready.
-                        </p>
-                      ) : !shortExplanation ? (
-                        <p className="mt-2 text-sm leading-6 text-white/60">
-                          A payload exists, but no wording block was found for a short explanation yet.
+                          The AI consultant becomes available once the unlocked payload is ready.
                         </p>
                       ) : (
-                        <div className="mt-4 space-y-3">
-                          <div className="text-base font-medium text-white">
-                            {shortExplanation.headline}
-                          </div>
-                          <p className="text-sm leading-6 text-white/72">
-                            {shortExplanation.body}
-                          </p>
+                        <div className="mt-4">
+                          <AiConsultantCard
+                            title="AI Decision Consultant"
+                            description="Choose your target and language, then click &quot;Explain this decision&quot; to get a genre-relative interpretation of the current decision evidence."
+                            buttonLabel="Explain this decision"
+                            initialGenre={selectedTrack?.genre ?? null}
+                            source="decision-center"
+                            showGenreSelect={false}
+                            lufs={feedbackState.payload?.metrics?.loudness?.lufs_i ?? null}
+                            tp={feedbackState.payload?.metrics?.loudness?.true_peak_dbtp_max ?? null}
+                            lra={feedbackState.payload?.metrics?.dynamics?.loudness_range_lu ?? null}
+                            crest={feedbackState.payload?.metrics?.dynamics?.crest_factor_db ?? null}
+                            phase={feedbackState.payload?.metrics?.stereo?.phase_correlation ?? null}
+                            lowMono={feedbackState.payload?.metrics?.low_end?.phase_correlation_20_120 ?? null}
+                            width={feedbackState.payload?.metrics?.stereo?.stereo_width_index ?? null}
+                            midRms={feedbackState.payload?.metrics?.stereo?.mid_rms_dbfs ?? null}
+                            sideRms={feedbackState.payload?.metrics?.stereo?.side_rms_dbfs ?? null}
+                            attack={feedbackState.payload?.metrics?.transients?.attack_strength_0_100 ?? null}
+                            density={feedbackState.payload?.metrics?.transients?.transient_density ?? null}
+                            sub={feedbackState.payload?.metrics?.spectral?.sub_rms_dbfs ?? null}
+                            mid={feedbackState.payload?.metrics?.spectral?.mid_rms_dbfs ?? null}
+                            air={feedbackState.payload?.metrics?.spectral?.air_rms_dbfs ?? null}
+                            consultantPayload={(feedbackState.payload?.metrics?.structure as any)?.consultant_payload ?? null}
+                          />
                         </div>
                       )}
                     </div>
