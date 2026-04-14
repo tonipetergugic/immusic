@@ -832,8 +832,13 @@ export function buildStructureAnalysisV1(input: {
     drop_to_drop_similarity_mean_0_1: drop_to_drop_similarity.mean_similarity_0_1,
   };
 
+  const usesElectronicThresholdProfile =
+    genreRuleProfileKey === "trance_like" ||
+    genreRuleProfileKey === "house_edm_like" ||
+    genreRuleProfileKey === "techno_like";
+
   const repetitiveThresholds =
-    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+    usesElectronicThresholdProfile
       ? {
           repetition_min: 0.68,
           novelty_max: 0.42,
@@ -849,7 +854,7 @@ export function buildStructureAnalysisV1(input: {
           };
 
   const balancedThresholds =
-    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+    usesElectronicThresholdProfile
       ? {
           repetition_max: 0.55,
           novelty_min: 0.5,
@@ -870,15 +875,14 @@ export function buildStructureAnalysisV1(input: {
   const thresholdProfileSource: NonNullable<
     StructureAnalysisV1["decision_trace"]
   >["threshold_profile_source"] =
-    genreRuleProfileKey === "trance_like" ||
-    genreRuleProfileKey === "house_edm_like" ||
+    usesElectronicThresholdProfile ||
     genreRuleProfileKey === "rock_metal_like" ||
     genreRuleProfileKey === "pop_urban_like"
       ? "genre_profile"
       : "default_profile";
 
   const similarityThresholds =
-    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+    usesElectronicThresholdProfile
       ? {
           repetitive: {
             section_similarity_mean_min: 0.66,
@@ -913,7 +917,13 @@ export function buildStructureAnalysisV1(input: {
           };
 
   const underdevelopedThresholds =
-    genreRuleProfileKey === "trance_like" || genreRuleProfileKey === "house_edm_like"
+    genreRuleProfileKey === "techno_like"
+      ? {
+          unique_section_count_max: 3,
+          transition_max: 0.34,
+          novelty_max: 0.36,
+        }
+      : usesElectronicThresholdProfile
       ? {
           unique_section_count_max: 2,
           transition_max: 0.34,

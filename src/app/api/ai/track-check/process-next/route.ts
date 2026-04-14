@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   if (requestedQueueId) {
     const { data: requestedQueueRow, error: requestedQueueErr } = await supabase
       .from("tracks_ai_queue")
-      .select("id, user_id, audio_path, title, status, hash_status, audio_hash")
+      .select("id, user_id, audio_path, title, version, main_genre, genre, bpm, key, reference_artist, reference_track, status, hash_status, audio_hash")
       .eq("id", requestedQueueId)
       .eq("user_id", user.id)
       .maybeSingle();

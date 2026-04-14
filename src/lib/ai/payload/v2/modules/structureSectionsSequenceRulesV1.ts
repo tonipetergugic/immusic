@@ -6,6 +6,7 @@ type DropSection = Extract<Section, { type: "drop"; t: number; impact: number; i
 
 // Anti-flip: collapse short A-B-A islands (deterministic)
 const MAX_ISLAND_DURATION_S = 4;
+const MAX_SAME_TYPE_MERGE_GAP_S = 2;
 
 function isDrop(s: Section): s is DropSection {
   return (s as any).type === "drop" && typeof (s as any).t === "number";
@@ -250,11 +251,14 @@ export function applyStructureSequenceRulesV1(params: {
     if (!changed) break;
   }
 
-  // Rule E: merge adjacent ranges with same type (stable)
+  // Rule E: merge adjacent ranges with same type only when they are locally contiguous.
+  // This prevents distant repeated builds from collapsing into one giant section.
   for (let i = 0; i < ranges.length - 1; i++) {
     const a = ranges[i]!;
     const b = ranges[i + 1]!;
-    if (a.type === b.type) {
+    const gap = clampTime(b.start) - clampTime(a.end);
+
+    if (a.type === b.type && gap <= MAX_SAME_TYPE_MERGE_GAP_S) {
       ranges[i] = mergeRanges(a, b);
       ranges.splice(i + 1, 1);
       i = Math.max(-1, i - 1);

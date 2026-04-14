@@ -426,6 +426,13 @@ async function runApproveAndInsertTrack(params: {
   userId: string;
   queueId: string;
   title: string | null;
+  version: string | null;
+  mainGenre: string | null;
+  genre: string | null;
+  bpm: number | null;
+  key: string | null;
+  referenceArtist: string | null;
+  referenceTrack: string | null;
   audioPath: string;
   tmpWavPath: string;
   audioHash: string | null;
@@ -445,6 +452,13 @@ async function runApproveAndInsertTrack(params: {
     userId,
     queueId,
     title,
+    version,
+    mainGenre,
+    genre,
+    bpm,
+    key,
+    referenceArtist,
+    referenceTrack,
     audioPath,
     tmpWavPath,
     audioHash,
@@ -586,8 +600,7 @@ async function runApproveAndInsertTrack(params: {
     return { ok: false, response };
   }
 
-  const tInsert = nowNs();
-  const { error: trackError } = await supabase.from("tracks").insert({
+  const trackInsert: Record<string, unknown> = {
     artist_id: userId,
     audio_path: aacPath,
     master_audio_path: flacPath,
@@ -596,7 +609,32 @@ async function runApproveAndInsertTrack(params: {
     source_queue_id: queueId,
     audio_hash: finalAudioHash,
     duration: Math.round(durationSec),
-  });
+    reference_artist: referenceArtist || null,
+    reference_track: referenceTrack || null,
+  };
+
+  if (version) {
+    trackInsert.version = version;
+  }
+
+  if (mainGenre) {
+    trackInsert.main_genre = mainGenre;
+  }
+
+  if (genre) {
+    trackInsert.genre = genre;
+  }
+
+  if (typeof bpm === "number" && Number.isInteger(bpm) && bpm > 0) {
+    trackInsert.bpm = bpm;
+  }
+
+  if (key) {
+    trackInsert.key = key;
+  }
+
+  const tInsert = nowNs();
+  const { error: trackError } = await supabase.from("tracks").insert(trackInsert);
   logStage("insert_track", elapsedMs(tInsert));
 
   if (trackError) {
@@ -866,12 +904,54 @@ export async function runTrackCheckWorker(params: {
 
     audioHash = decisionPhase.audioHash;
 
+    const queueVersion =
+      typeof pendingItem.version === "string" && pendingItem.version.trim()
+        ? pendingItem.version.trim()
+        : null;
+
+    const queueMainGenre =
+      typeof pendingItem.main_genre === "string" && pendingItem.main_genre.trim()
+        ? pendingItem.main_genre.trim()
+        : null;
+
+    const queueGenre =
+      typeof pendingItem.genre === "string" && pendingItem.genre.trim()
+        ? pendingItem.genre.trim()
+        : null;
+
+    const queueBpm =
+      typeof pendingItem.bpm === "number" && Number.isInteger(pendingItem.bpm)
+        ? pendingItem.bpm
+        : null;
+
+    const queueKey =
+      typeof pendingItem.key === "string" && pendingItem.key.trim()
+        ? pendingItem.key.trim()
+        : null;
+
+    const queueReferenceArtist =
+      typeof pendingItem.reference_artist === "string" && pendingItem.reference_artist.trim()
+        ? pendingItem.reference_artist.trim()
+        : null;
+
+    const queueReferenceTrack =
+      typeof pendingItem.reference_track === "string" && pendingItem.reference_track.trim()
+        ? pendingItem.reference_track.trim()
+        : null;
+
     const approve = await runApproveAndInsertTrack({
       supabase,
       admin,
       userId: user.id,
       queueId,
       title,
+      version: queueVersion,
+      mainGenre: queueMainGenre,
+      genre: queueGenre,
+      bpm: queueBpm,
+      key: queueKey,
+      referenceArtist: queueReferenceArtist,
+      referenceTrack: queueReferenceTrack,
       audioPath,
       tmpWavPath: tmpWavPath!,
       audioHash,

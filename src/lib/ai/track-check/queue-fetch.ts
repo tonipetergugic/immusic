@@ -15,7 +15,7 @@ export async function fetchPendingOrRespond(params: {
   // 1) Find oldest pending queue item for this user
   const { data: pendingItem, error: fetchErr } = await params.supabase
     .from("tracks_ai_queue")
-    .select("id, user_id, audio_path, title, status, hash_status, audio_hash")
+    .select("id, user_id, audio_path, title, version, main_genre, genre, bpm, key, reference_artist, reference_track, status, hash_status, audio_hash")
     .eq("user_id", params.userId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })

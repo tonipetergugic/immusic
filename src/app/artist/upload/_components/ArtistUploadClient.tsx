@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, RotateCcw, Upload as UploadIcon } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import AudioDropzone from "@/components/AudioDropzone";
+import AppSelect from "@/components/AppSelect";
 import { useViewerRole } from "@/context/ViewerRoleContext";
+import { KEY_SUGGESTIONS } from "../../my-tracks/[trackId]/edit/trackKeyOptions";
+import { TRACK_VERSION_OPTIONS } from "../../my-tracks/[trackId]/edit/trackMetadataOptions";
 
 type WavValidation =
   | { ok: true; durationSeconds: number; sampleRate: number; channels: number; bitsPerSample: number }
@@ -122,6 +125,126 @@ type QueueApiResponse =
   | { ok: true; queue_id: string }
   | { ok: false; error: string };
 
+const MAIN_GENRE_ITEMS = [
+  { value: "Trance", label: "Trance" },
+  { value: "Techno", label: "Techno" },
+  { value: "House", label: "House" },
+  { value: "EDM", label: "EDM" },
+  { value: "Drum & Bass", label: "Drum & Bass" },
+  { value: "Dubstep", label: "Dubstep" },
+  { value: "Hard Dance", label: "Hard Dance" },
+  { value: "Pop", label: "Pop" },
+  { value: "Hip-Hop", label: "Hip-Hop" },
+  { value: "R&B", label: "R&B" },
+  { value: "Rock", label: "Rock" },
+  { value: "Metal", label: "Metal" },
+  { value: "Ambient", label: "Ambient" },
+  { value: "Cinematic", label: "Cinematic" },
+  { value: "LoFi", label: "LoFi" },
+  { value: "Other", label: "Other" },
+];
+
+const SUBGENRE_ITEMS = [
+  {
+    label: "Trance",
+    options: [
+      { value: "Trance", label: "Trance" },
+      { value: "Progressive Trance", label: "Progressive Trance" },
+      { value: "Uplifting Trance", label: "Uplifting Trance" },
+      { value: "Psytrance", label: "Psytrance" },
+      { value: "Vocal Trance", label: "Vocal Trance" },
+      { value: "Hard Trance", label: "Hard Trance" },
+      { value: "Tech Trance", label: "Tech Trance" },
+    ],
+  },
+  {
+    label: "Techno",
+    options: [
+      { value: "Techno", label: "Techno" },
+      { value: "Melodic Techno", label: "Melodic Techno" },
+      { value: "Peak Time Techno", label: "Peak Time Techno" },
+      { value: "Industrial Techno", label: "Industrial Techno" },
+      { value: "Hard Techno", label: "Hard Techno" },
+    ],
+  },
+  {
+    label: "House / EDM",
+    options: [
+      { value: "House", label: "House" },
+      { value: "Deep House", label: "Deep House" },
+      { value: "Progressive House", label: "Progressive House" },
+      { value: "Tech House", label: "Tech House" },
+      { value: "Afro House", label: "Afro House" },
+      { value: "Future House", label: "Future House" },
+      { value: "EDM", label: "EDM" },
+      { value: "Big Room", label: "Big Room" },
+      { value: "Electro House", label: "Electro House" },
+      { value: "Festival EDM", label: "Festival EDM" },
+    ],
+  },
+  {
+    label: "Bass Music",
+    options: [
+      { value: "Drum & Bass", label: "Drum & Bass" },
+      { value: "Liquid Drum & Bass", label: "Liquid Drum & Bass" },
+      { value: "Neurofunk", label: "Neurofunk" },
+      { value: "Dubstep", label: "Dubstep" },
+      { value: "Melodic Dubstep", label: "Melodic Dubstep" },
+      { value: "Future Bass", label: "Future Bass" },
+    ],
+  },
+  {
+    label: "Hard Dance",
+    options: [
+      { value: "Hardstyle", label: "Hardstyle" },
+      { value: "Rawstyle", label: "Rawstyle" },
+      { value: "Hardcore", label: "Hardcore" },
+      { value: "Uptempo Hardcore", label: "Uptempo Hardcore" },
+    ],
+  },
+  {
+    label: "Pop / Urban",
+    options: [
+      { value: "Pop", label: "Pop" },
+      { value: "Dance Pop", label: "Dance Pop" },
+      { value: "Indie Pop", label: "Indie Pop" },
+      { value: "Hip-Hop", label: "Hip-Hop" },
+      { value: "Trap", label: "Trap" },
+      { value: "Drill", label: "Drill" },
+      { value: "R&B", label: "R&B" },
+      { value: "Soul", label: "Soul" },
+    ],
+  },
+  {
+    label: "Rock / Metal",
+    options: [
+      { value: "Rock", label: "Rock" },
+      { value: "Alternative Rock", label: "Alternative Rock" },
+      { value: "Indie Rock", label: "Indie Rock" },
+      { value: "Metal", label: "Metal" },
+    ],
+  },
+  {
+    label: "Other",
+    options: [
+      { value: "Ambient", label: "Ambient" },
+      { value: "Cinematic", label: "Cinematic" },
+      { value: "LoFi", label: "LoFi" },
+      { value: "Other", label: "Other" },
+    ],
+  },
+];
+
+const KEY_ITEMS = KEY_SUGGESTIONS.map((value) => ({
+  value,
+  label: value,
+}));
+
+const VERSION_ITEMS = TRACK_VERSION_OPTIONS.map((option) => ({
+  value: option.value,
+  label: option.label,
+}));
+
 function formatMB(bytes: number) {
   return (bytes / (1024 * 1024)).toFixed(1);
 }
@@ -143,6 +266,13 @@ export default function ArtistUploadClient() {
   const { userId } = useViewerRole();
 
   const [title, setTitle] = useState("");
+  const [version, setVersion] = useState("");
+  const [mainGenre, setMainGenre] = useState("");
+  const [genre, setGenre] = useState("");
+  const [bpm, setBpm] = useState("");
+  const [key, setKey] = useState("");
+  const [referenceArtist, setReferenceArtist] = useState("");
+  const [referenceTrack, setReferenceTrack] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [audioPath, setAudioPath] = useState<string | null>(null);
@@ -154,6 +284,16 @@ export default function ArtistUploadClient() {
   const [flowStep, setFlowStep] = useState<"idle" | "validating" | "uploading" | "queueing">("idle");
 
   const hasTitleError = titleTouched && !title.trim();
+  const canSubmit =
+    Boolean(file) &&
+    !uploading &&
+    title.trim().length > 0 &&
+    version.trim().length > 0 &&
+    mainGenre.trim().length > 0 &&
+    genre.trim().length > 0 &&
+    bpm.trim().length > 0 &&
+    key.trim().length > 0 &&
+    rightsAccepted;
 
   function handleFileSelected(next: File | null) {
     if (!next) {
@@ -202,6 +342,37 @@ export default function ArtistUploadClient() {
     if (!title.trim()) {
       setTitleTouched(true);
       setUiError("Please enter a track title.");
+      return;
+    }
+
+    if (!version.trim()) {
+      setUiError("Please select a version.");
+      return;
+    }
+
+    if (!mainGenre.trim()) {
+      setUiError("Please select a main genre.");
+      return;
+    }
+
+    if (!genre.trim()) {
+      setUiError("Please select a subgenre.");
+      return;
+    }
+
+    if (!bpm.trim()) {
+      setUiError("Please enter a BPM value.");
+      return;
+    }
+
+    const parsedBpm = Number.parseInt(bpm.trim(), 10);
+    if (Number.isNaN(parsedBpm) || parsedBpm <= 0 || parsedBpm > 300) {
+      setUiError("Please enter a valid BPM value.");
+      return;
+    }
+
+    if (!key.trim()) {
+      setUiError("Please select a key.");
       return;
     }
 
@@ -254,6 +425,13 @@ export default function ArtistUploadClient() {
         body: JSON.stringify({
           audio_path: filePath,
           title: title.trim(),
+          version: version.trim(),
+          main_genre: mainGenre.trim(),
+          genre: genre.trim(),
+          bpm: Number.parseInt(bpm.trim(), 10),
+          key: key.trim(),
+          reference_artist: referenceArtist.trim() || null,
+          reference_track: referenceTrack.trim() || null,
         }),
       });
 
@@ -359,6 +537,108 @@ export default function ArtistUploadClient() {
           </div>
 
           <div className="mt-10 border-b border-white/10 pb-10">
+            <div className="text-2xl font-semibold tracking-tight text-white">Track metadata</div>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+              These metadata are part of the feedback context. Please make sure they are correct before starting the quality check.
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  Version
+                </label>
+                <AppSelect
+                  value={version}
+                  onChange={setVersion}
+                  items={VERSION_ITEMS}
+                  placeholder="Select version"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  Main Genre
+                </label>
+                <AppSelect
+                  value={mainGenre}
+                  onChange={setMainGenre}
+                  items={MAIN_GENRE_ITEMS}
+                  placeholder="Select main genre"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  Subgenre
+                </label>
+                <AppSelect
+                  value={genre}
+                  onChange={setGenre}
+                  items={SUBGENRE_ITEMS}
+                  placeholder="Select subgenre"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  BPM
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={300}
+                  step={1}
+                  value={bpm}
+                  onChange={(e) => setBpm(e.target.value)}
+                  placeholder="e.g. 138"
+                  className="w-full border-0 border-b border-white/12 bg-transparent px-0 pb-4 pt-1 text-[20px] leading-tight text-white outline-none transition focus:border-[#00FFC6]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  Key
+                </label>
+                <AppSelect
+                  value={key}
+                  onChange={setKey}
+                  items={KEY_ITEMS}
+                  placeholder="Select key"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  Reference Artist <span className="text-white/35 normal-case tracking-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={referenceArtist}
+                  onChange={(e) => setReferenceArtist(e.target.value)}
+                  placeholder="e.g. Armin van Buuren"
+                  className="w-full border-0 border-b border-white/12 bg-transparent px-0 pb-4 pt-1 text-[20px] leading-tight text-white outline-none transition focus:border-[#00FFC6] placeholder:text-white/30"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/55">
+                  Reference Track <span className="text-white/35 normal-case tracking-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={referenceTrack}
+                  onChange={(e) => setReferenceTrack(e.target.value)}
+                  placeholder="e.g. Track Title"
+                  className="w-full border-0 border-b border-white/12 bg-transparent px-0 pb-4 pt-1 text-[20px] leading-tight text-white outline-none transition focus:border-[#00FFC6] placeholder:text-white/30"
+                />
+                <p className="text-xs leading-6 text-white/45">
+                  Reference fields are optional and should only be used when you want feedback relative to a specific artistic reference.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 border-b border-white/10 pb-10">
             <div className="text-2xl font-semibold tracking-tight text-white">Audio file</div>
             <p className="mt-2 text-sm text-white/70">
               WAV (Master), 44.1 kHz or 48 kHz, 16-bit or 24-bit, stereo
@@ -459,7 +739,7 @@ export default function ArtistUploadClient() {
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <button
               onClick={handleUpload}
-              disabled={!file || uploading || title.trim().length === 0 || !rightsAccepted}
+              disabled={!canSubmit}
               className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#00FFC6]/30 bg-[#00FFC6]/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#00FFC6]/60 hover:bg-[#00FFC6]/16 hover:shadow-[0_0_0_1px_rgba(0,255,198,0.22),0_20px_60px_rgba(0,255,198,0.16)] active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-white/40 disabled:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFC6]/60 sm:w-[340px]"
               type="button"
             >
@@ -479,6 +759,13 @@ export default function ArtistUploadClient() {
               type="button"
               onClick={() => {
                 setTitle("");
+                setVersion("");
+                setMainGenre("");
+                setGenre("");
+                setBpm("");
+                setKey("");
+                setReferenceArtist("");
+                setReferenceTrack("");
                 setFile(null);
                 setUploading(false);
                 setAudioPath(null);

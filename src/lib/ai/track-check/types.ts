@@ -20,12 +20,19 @@ export type AnalyzerMetrics = {
   };
 };
 
-/** Shape of the row returned by select("id, user_id, audio_path, title, status, hash_status, audio_hash") on tracks_ai_queue */
+/** Shape of the row returned by the pending queue selects on tracks_ai_queue */
 export type PendingQueueItemRow = {
   id: string;
   user_id: string;
   audio_path: string | null;
   title: string | null;
+  version: string | null;
+  main_genre: string | null;
+  genre: string | null;
+  bpm: number | null;
+  key: string | null;
+  reference_artist: string | null;
+  reference_track: string | null;
   status: string;
   hash_status: string | null;
   audio_hash: string | null;

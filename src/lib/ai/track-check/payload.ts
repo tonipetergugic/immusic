@@ -18,11 +18,31 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
   const adminClient = asAdminClient(admin);
   const { data: queueRow, error: queueErr } = await adminClient
     .from("tracks_ai_queue")
-    .select("audio_hash")
+    .select("audio_hash, main_genre, genre, reference_artist, reference_track")
     .eq("id", queueId)
     .maybeSingle();
 
   const queueAudioHash = queueRow?.audio_hash ?? null;
+  const queueMainGenre =
+    typeof queueRow?.main_genre === "string" && queueRow.main_genre.trim()
+      ? queueRow.main_genre.trim()
+      : null;
+
+  const queueSubgenre =
+    typeof queueRow?.genre === "string" && queueRow.genre.trim()
+      ? queueRow.genre.trim()
+      : null;
+
+  const queueReferenceArtist =
+    typeof queueRow?.reference_artist === "string" && queueRow.reference_artist.trim()
+      ? queueRow.reference_artist.trim()
+      : null;
+
+  const queueReferenceTrack =
+    typeof queueRow?.reference_track === "string" && queueRow.reference_track.trim()
+      ? queueRow.reference_track.trim()
+      : null;
+
   if (queueErr || !queueAudioHash) {
     return;
   }
@@ -271,6 +291,10 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
   const payload: FeedbackPayloadV2 = buildFeedbackPayloadV2Mvp({
     queueId,
     audioHash: queueAudioHash,
+    mainGenre: queueMainGenre,
+    subgenre: queueSubgenre,
+    referenceArtist: queueReferenceArtist,
+    referenceTrack: queueReferenceTrack,
     decision,
     shortTermLufsTimeline: Array.isArray((m as any).short_term_lufs_timeline) ? (m as any).short_term_lufs_timeline : [],
     durationS:
