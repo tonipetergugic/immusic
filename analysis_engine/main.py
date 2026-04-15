@@ -7,7 +7,10 @@ from pathlib import Path
 
 from audio_io import compute_rms, get_duration_seconds, load_audio_mono, slice_audio_by_seconds
 from beat_grid import build_beat_grid
+from debug_plot import write_debug_plots
 from features import extract_bar_features
+from novelty import compute_novelty_curve, detect_boundary_candidates
+from sections import build_sections
 from similarity import compute_self_similarity_matrix
 from schemas import AnalysisResult
 
@@ -30,6 +33,14 @@ def main() -> int:
         bars = [[float(bar.start), float(bar.end)] for bar in beat_grid.bars]
         feature_names, bar_feature_vectors = extract_bar_features(samples, sample_rate, bars)
         self_similarity_matrix = compute_self_similarity_matrix(bar_feature_vectors)
+        novelty_curve = compute_novelty_curve(self_similarity_matrix)
+        boundary_candidate_indices = detect_boundary_candidates(novelty_curve)
+        boundary_candidates = [
+            float(bars[index][0])
+            for index in boundary_candidate_indices
+            if 0 <= index < len(bars)
+        ]
+        sections = build_sections(bars, boundary_candidates, duration_sec, novelty_curve=novelty_curve)
 
         result = AnalysisResult(
             track_id=args.track_id,
@@ -43,6 +54,9 @@ def main() -> int:
             feature_names=feature_names,
             bar_feature_vectors=bar_feature_vectors,
             self_similarity_matrix=self_similarity_matrix,
+            novelty_curve=novelty_curve,
+            boundary_candidates=boundary_candidates,
+            sections=sections,
         )
 
         output_dir = Path(__file__).resolve().parent / "output"
@@ -52,6 +66,15 @@ def main() -> int:
         output_path.write_text(
             json.dumps(result.to_dict(), indent=2, ensure_ascii=False),
             encoding="utf-8",
+        )
+        write_debug_plots(
+            output_dir=output_dir,
+            trackname=audio_path.stem,
+            self_similarity_matrix=self_similarity_matrix,
+            novelty_curve=novelty_curve,
+            boundary_candidates=boundary_candidates,
+            bars=bars,
+            sections=sections,
         )
 
         print(f"Audio: {audio_path}")
@@ -81,6 +104,8 @@ def main() -> int:
         print(f"Tail RMS: {tail_rms:.6f}")
         print(f"Reference RMS: {ref_rms:.6f}")
         print(f"Tail/Reference ratio: {tail_ratio:.3f}")
+        print(f"Novelty points: {len(novelty_curve)}")
+        print(f"Boundary candidates: {len(boundary_candidates)}")
         print(f"Output: {output_path}")
         return 0
     except Exception as exc:
