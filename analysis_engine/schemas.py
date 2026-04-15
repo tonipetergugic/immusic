@@ -5,7 +5,14 @@ from pathlib import Path
 from typing import Any
 
 
-@dataclass(slots=True)
+@dataclass
+class Bar:
+    index: int
+    start: float
+    end: float
+
+
+@dataclass
 class AnalysisResult:
     track_id: str | None
     source_path: str
@@ -14,7 +21,9 @@ class AnalysisResult:
     tempo_estimate: float | None
     beats: list[float] = field(default_factory=list)
     downbeats: list[float] = field(default_factory=list)
-    bars: list[list[float]] = field(default_factory=list)
+    bars: list[Bar] = field(default_factory=list)
+    feature_names: list[str] = field(default_factory=list)
+    bar_feature_vectors: list[list[float]] = field(default_factory=list)
     novelty_curve: list[float] = field(default_factory=list)
     boundary_candidates: list[float] = field(default_factory=list)
     sections: list[dict[str, Any]] = field(default_factory=list)
