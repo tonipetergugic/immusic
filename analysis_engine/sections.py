@@ -188,14 +188,6 @@ def _evaluate_secondary_split(
     if global_max <= 0.0:
         return None, [], "global_novelty_max_non_positive", []
 
-    section_values = [
-        float(novelty_curve[index])
-        for index in range(max(0, section_start), min(len(novelty_curve), section_end + 1))
-    ]
-    section_max = max(section_values) if section_values else 0.0
-    if section_max <= 0.0:
-        return None, [], "section_novelty_max_non_positive", []
-
     internal_local_maxima: list[int] = []
     candidate_evaluations: list[dict[str, object]] = []
     passed_global_ratio_count = 0
@@ -216,6 +208,33 @@ def _evaluate_secondary_split(
         key=lambda index: float(novelty_curve[index]),
         reverse=True,
     )
+
+    section_reference_candidates: list[float] = []
+
+    for peak_index in ranked_local_maxima:
+        peak_value = float(novelty_curve[peak_index])
+
+        if not math.isfinite(peak_value):
+            continue
+        if peak_value <= 0.0:
+            continue
+        if peak_value < (global_max * MIN_PEAK_RATIO_GLOBAL):
+            continue
+
+        too_close_to_external = False
+        for boundary_index in primary_boundary_indices:
+            if section_start < boundary_index <= section_end:
+                continue
+            if abs(peak_index - boundary_index) < MIN_EXTERNAL_BOUNDARY_DISTANCE_BARS:
+                too_close_to_external = True
+                break
+
+        if too_close_to_external:
+            continue
+
+        section_reference_candidates.append(peak_value)
+
+    section_reference_max = max(section_reference_candidates) if section_reference_candidates else 0.0
 
     for peak_index in ranked_local_maxima:
         peak_value = float(novelty_curve[peak_index])
@@ -264,12 +283,6 @@ def _evaluate_secondary_split(
             candidate_evaluations.append(eval_entry)
             continue
         passed_global_ratio_count += 1
-        if peak_value < (section_max * MIN_PEAK_RATIO_SECTION):
-            rejection_reason = "below_section_peak_ratio_threshold"
-            eval_entry["rejection_reason"] = rejection_reason
-            candidate_evaluations.append(eval_entry)
-            continue
-        passed_section_ratio_count += 1
 
         too_close_to_external = False
         for boundary_index in primary_boundary_indices:
@@ -286,6 +299,19 @@ def _evaluate_secondary_split(
             candidate_evaluations.append(eval_entry)
             continue
         passed_external_distance_count += 1
+
+        if section_reference_max <= 0.0:
+            rejection_reason = "section_reference_peak_unavailable"
+            eval_entry["rejection_reason"] = rejection_reason
+            candidate_evaluations.append(eval_entry)
+            continue
+
+        if peak_value < (section_reference_max * MIN_PEAK_RATIO_SECTION):
+            rejection_reason = "below_section_peak_ratio_threshold"
+            eval_entry["rejection_reason"] = rejection_reason
+            candidate_evaluations.append(eval_entry)
+            continue
+        passed_section_ratio_count += 1
 
         eval_entry["passed_all_checks"] = True
         eval_entry["rejection_reason"] = None
