@@ -8,6 +8,7 @@ from pathlib import Path
 from audio_io import compute_rms, get_duration_seconds, load_audio_mono, slice_audio_by_seconds
 from beat_grid import build_beat_grid
 from features import extract_bar_features
+from similarity import compute_self_similarity_matrix
 from schemas import AnalysisResult
 
 
@@ -28,6 +29,7 @@ def main() -> int:
         beat_grid = build_beat_grid(audio_path.as_posix(), duration_sec)
         bars = [[float(bar.start), float(bar.end)] for bar in beat_grid.bars]
         feature_names, bar_feature_vectors = extract_bar_features(samples, sample_rate, bars)
+        self_similarity_matrix = compute_self_similarity_matrix(bar_feature_vectors)
 
         result = AnalysisResult(
             track_id=args.track_id,
@@ -40,6 +42,7 @@ def main() -> int:
             bars=bars,
             feature_names=feature_names,
             bar_feature_vectors=bar_feature_vectors,
+            self_similarity_matrix=self_similarity_matrix,
         )
 
         output_dir = Path(__file__).resolve().parent / "output"
