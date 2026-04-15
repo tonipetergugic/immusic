@@ -59,6 +59,13 @@ def _validate_bar_grid_quality(bars: list[Bar], track_duration: float) -> None:
         )
 
     recent_window = bar_durations[-8:] if bar_durations.size >= 8 else bar_durations
+
+    last_bar_reaches_track_end = abs(float(bars[-1].end) - float(track_duration)) <= 1e-6
+    last_bar_is_shorter_than_median = float(bar_durations[-1]) < median_bar_duration
+
+    if last_bar_reaches_track_end and last_bar_is_shorter_than_median and bar_durations.size > 1:
+        recent_window = bar_durations[-9:-1] if bar_durations.size >= 9 else bar_durations[:-1]
+
     recent_relative_deviation = np.abs(recent_window - median_bar_duration) / median_bar_duration
 
     if np.any(recent_relative_deviation > 0.18):
