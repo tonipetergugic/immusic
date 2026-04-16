@@ -4,8 +4,16 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FuncFormatter
 
 from schemas import Section
+
+
+def _format_seconds_to_mmss(value: float, _position: float) -> str:
+    total_seconds = max(0, int(round(float(value))))
+    minutes = total_seconds // 60
+    seconds = total_seconds % 60
+    return f"{minutes}:{seconds:02d}"
 
 
 def _boundary_indices_from_times(boundary_candidates: list[float], bars: list[list[float]]) -> list[int]:
@@ -89,11 +97,18 @@ def write_debug_plots(
         )
         ax.text(start + width / 2.0, 0, str(section.index), ha="center", va="center", fontsize=9)
     total_duration = float(bars[-1][1]) if bars else 0.0
-    ax.set_xlim(0.0, max(total_duration, 1.0))
+    axis_max = max(total_duration, 1.0)
+
+    ax.set_xlim(0.0, axis_max)
     ax.set_ylim(-0.8, 0.8)
     ax.set_yticks([])
     ax.set_title("Sections")
-    ax.set_xlabel("Time (s)")
+    ax.set_xlabel("Time (mm:ss)")
+    ax.xaxis.set_major_formatter(FuncFormatter(_format_seconds_to_mmss))
+
+    tick_step = 15 if axis_max <= 180 else 30
+    tick_positions = np.arange(0, axis_max + tick_step, tick_step, dtype=float)
+    ax.set_xticks(tick_positions.tolist())
     fig.tight_layout()
     fig.savefig(sections_path, dpi=150)
     plt.close(fig)
