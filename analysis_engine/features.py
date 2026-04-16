@@ -11,6 +11,10 @@ FEATURE_NAMES: list[str] = [
     "spectral_rolloff_mean",
     "zero_crossing_rate_mean",
     "spectral_flatness_mean",
+    "onset_strength_mean",
+    "low_band_energy_mean",
+    "mid_band_energy_mean",
+    "high_band_energy_mean",
     "mfcc_1_mean",
     "mfcc_2_mean",
     "mfcc_3_mean",
@@ -49,6 +53,30 @@ def _mean_feature_value(values: np.ndarray) -> float:
     return float(np.mean(values))
 
 
+def _mean_band_energy(
+    stft_magnitude: np.ndarray,
+    freqs: np.ndarray,
+    min_hz: float,
+    max_hz: float,
+) -> float:
+    if stft_magnitude.size == 0 or freqs.size == 0:
+        return 0.0
+
+    if max_hz <= min_hz:
+        return 0.0
+
+    mask = (freqs >= float(min_hz)) & (freqs < float(max_hz))
+    if not np.any(mask):
+        return 0.0
+
+    band = stft_magnitude[mask, :]
+    if band.size == 0:
+        return 0.0
+
+    power = np.square(band)
+    return float(np.mean(power))
+
+
 def _slice_audio_bar(audio: np.ndarray, sr: int, start_sec: float, end_sec: float) -> np.ndarray:
     if sr <= 0 or audio.size == 0:
         return np.asarray([], dtype=audio.dtype)
@@ -80,6 +108,16 @@ def _extract_single_bar_vector(segment: np.ndarray, sr: int) -> list[float]:
     hop_length = max(1, n_fft // 4)
 
     try:
+        stft_magnitude = np.abs(
+            librosa.stft(
+                y=segment,
+                n_fft=n_fft,
+                hop_length=hop_length,
+                center=False,
+            )
+        )
+        freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
+
         rms = librosa.feature.rms(y=segment, frame_length=n_fft, hop_length=hop_length, center=False)
         spectral_centroid = librosa.feature.spectral_centroid(
             y=segment,
@@ -113,6 +151,12 @@ def _extract_single_bar_vector(segment: np.ndarray, sr: int) -> list[float]:
             n_fft=n_fft,
             hop_length=hop_length,
         )
+        onset_strength = librosa.onset.onset_strength(
+            y=segment,
+            sr=sr,
+            hop_length=hop_length,
+            center=False,
+        )
         mfcc = librosa.feature.mfcc(
             y=segment,
             sr=sr,
@@ -138,6 +182,10 @@ def _extract_single_bar_vector(segment: np.ndarray, sr: int) -> list[float]:
         _mean_feature_value(spectral_rolloff),
         _mean_feature_value(zero_crossing_rate),
         _mean_feature_value(spectral_flatness),
+        _mean_feature_value(onset_strength),
+        _mean_band_energy(stft_magnitude, freqs, 20.0, 150.0),
+        _mean_band_energy(stft_magnitude, freqs, 150.0, 2000.0),
+        _mean_band_energy(stft_magnitude, freqs, 2000.0, 8000.0),
     ]
 
     for index in range(13):

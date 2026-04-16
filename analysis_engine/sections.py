@@ -322,10 +322,10 @@ def _evaluate_secondary_split(
         return None, internal_local_maxima, "no_internal_local_maxima", candidate_evaluations
     if passed_global_ratio_count == 0:
         return None, internal_local_maxima, "below_global_peak_ratio_threshold", candidate_evaluations
-    if passed_section_ratio_count == 0:
-        return None, internal_local_maxima, "below_section_peak_ratio_threshold", candidate_evaluations
     if passed_external_distance_count == 0:
         return None, internal_local_maxima, "too_close_to_external_boundary", candidate_evaluations
+    if passed_section_ratio_count == 0:
+        return None, internal_local_maxima, "below_section_peak_ratio_threshold", candidate_evaluations
     return None, internal_local_maxima, "no_valid_secondary_peak_after_filters", candidate_evaluations
 
 
