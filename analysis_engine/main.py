@@ -40,7 +40,14 @@ def main() -> int:
             for index in boundary_candidate_indices
             if 0 <= index < len(bars)
         ]
-        sections = build_sections(bars, boundary_candidates, duration_sec, novelty_curve=novelty_curve)
+        sections = build_sections(
+            bars,
+            boundary_candidates,
+            duration_sec,
+            novelty_curve=novelty_curve,
+            feature_names=feature_names,
+            bar_feature_vectors=bar_feature_vectors,
+        )
 
         result = AnalysisResult(
             track_id=args.track_id,
