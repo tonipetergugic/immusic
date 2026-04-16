@@ -7,12 +7,17 @@ from pathlib import Path
 
 from audio_io import compute_rms, get_duration_seconds, load_audio_mono, slice_audio_by_seconds
 from beat_grid import build_beat_grid
+from change_intensity import compute_change_intensity
 from debug_plot import write_debug_plots
 from features import extract_bar_features
 from novelty import compute_novelty_curve, detect_boundary_candidates
 from sections import build_sections
 from similarity import compute_self_similarity_matrix
 from schemas import AnalysisResult
+from stability import compute_stability
+from transitions import compute_transitions
+from change_distribution import compute_change_distribution
+from region_similarity import compute_region_similarity
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,6 +53,28 @@ def main() -> int:
             feature_names=feature_names,
             bar_feature_vectors=bar_feature_vectors,
         )
+        change_intensity = compute_change_intensity(
+            bars=beat_grid.bars,
+            feature_names=feature_names,
+            bar_feature_vectors=bar_feature_vectors,
+        )
+        stability = compute_stability(
+            bars=beat_grid.bars,
+            smoothed_curve=change_intensity.smoothed_curve,
+        )
+        transitions = compute_transitions(
+            bars=beat_grid.bars,
+            smoothed_curve=change_intensity.smoothed_curve,
+        )
+        change_distribution = compute_change_distribution(
+            bars=beat_grid.bars,
+            smoothed_curve=change_intensity.smoothed_curve,
+        )
+        region_similarity = compute_region_similarity(
+            sections=sections,
+            bar_feature_vectors=bar_feature_vectors,
+            bars=beat_grid.bars,
+        )
 
         result = AnalysisResult(
             track_id=args.track_id,
@@ -64,6 +91,11 @@ def main() -> int:
             novelty_curve=novelty_curve,
             boundary_candidates=boundary_candidates,
             sections=sections,
+            change_intensity=change_intensity,
+            stability=stability,
+            transitions=transitions,
+            change_distribution=change_distribution,
+            region_similarity=region_similarity,
         )
 
         output_dir = Path(__file__).resolve().parent / "output"

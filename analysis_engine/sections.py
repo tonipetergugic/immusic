@@ -602,60 +602,137 @@ def _split_long_sections_with_secondary_peaks(
         set(_bar_index_for_time(bars, boundary_time) for boundary_time in boundary_candidates)
     )
 
-    refined_ranges: list[tuple[float, float]] = []
-    split_debug_by_range: dict[tuple[float, float], dict[str, object]] = {}
-    for section in sections:
+    def _make_debug_entry(
+        section: Section,
+        internal_peak_indices: list[int],
+        candidate_evaluations: list[dict[str, object]],
+        rejection_reason: Optional[str],
+        split_applied: bool,
+        *,
+        created_by_secondary_split: bool = False,
+        parent_split_bar_index: Optional[int] = None,
+        parent_split_time: Optional[float] = None,
+    ) -> dict[str, object]:
+        return {
+            "debug_is_long_section_candidate": _section_bar_count(section) > LONG_SECTION_BARS,
+            "debug_internal_peak_bar_indices": list(internal_peak_indices),
+            "debug_split_applied": split_applied,
+            "debug_candidate_evaluations": [dict(entry) for entry in candidate_evaluations],
+            "debug_split_rejection_reason": rejection_reason,
+            "debug_created_by_secondary_split": created_by_secondary_split,
+            "debug_parent_split_bar_index": parent_split_bar_index,
+            "debug_parent_split_time": parent_split_time,
+        }
+
+    def _make_child_placeholder_debug(
+        split_index: int,
+        split_time: float,
+    ) -> dict[str, object]:
+        return {
+            "debug_is_long_section_candidate": False,
+            "debug_internal_peak_bar_indices": [],
+            "debug_split_applied": False,
+            "debug_candidate_evaluations": [],
+            "debug_split_rejection_reason": None,
+            "debug_created_by_secondary_split": True,
+            "debug_parent_split_bar_index": int(split_index),
+            "debug_parent_split_time": float(split_time),
+        }
+
+    current_ranges: list[tuple[float, float]] = [
+        (float(section.start), float(section.end))
+        for section in sections
+    ]
+    debug_by_range: dict[tuple[float, float], dict[str, object]] = {}
+
+    max_iterations = 4
+
+    for _ in range(max_iterations):
+        current_sections = _rebuild_sections_from_ranges(current_ranges, bars)
+        next_ranges: list[tuple[float, float]] = []
+        next_debug_by_range: dict[tuple[float, float], dict[str, object]] = {}
+        had_split = False
+
+        for section in current_sections:
+            section_range = (float(section.start), float(section.end))
+            existing_debug_entry = debug_by_range.get(section_range, {})
+
+            split_index, internal_peak_indices, rejection_reason, candidate_evaluations = _evaluate_secondary_split(
+                section,
+                bars,
+                sanitized_novelty,
+                primary_boundary_indices,
+            )
+
+            current_debug_entry = _make_debug_entry(
+                section=section,
+                internal_peak_indices=internal_peak_indices,
+                candidate_evaluations=candidate_evaluations,
+                rejection_reason=rejection_reason,
+                split_applied=split_index is not None,
+                created_by_secondary_split=bool(
+                    existing_debug_entry.get("debug_created_by_secondary_split", False)
+                ),
+                parent_split_bar_index=existing_debug_entry.get("debug_parent_split_bar_index"),
+                parent_split_time=existing_debug_entry.get("debug_parent_split_time"),
+            )
+
+            if split_index is None:
+                next_ranges.append(section_range)
+                next_debug_by_range[section_range] = current_debug_entry
+                continue
+
+            split_time = float(bars[split_index][0])
+            if split_time <= float(section.start) or split_time >= float(section.end):
+                next_ranges.append(section_range)
+                next_debug_by_range[section_range] = current_debug_entry
+                continue
+
+            had_split = True
+
+            left_range = (float(section.start), split_time)
+            right_range = (split_time, float(section.end))
+            next_ranges.append(left_range)
+            next_ranges.append(right_range)
+
+            next_debug_by_range[left_range] = _make_child_placeholder_debug(split_index, split_time)
+            next_debug_by_range[right_range] = _make_child_placeholder_debug(split_index, split_time)
+
+        current_ranges = next_ranges
+        debug_by_range = next_debug_by_range
+
+        if not had_split:
+            break
+
+    final_sections = _rebuild_sections_from_ranges(current_ranges, bars)
+    final_debug_by_range: dict[tuple[float, float], dict[str, object]] = {}
+
+    # Finalen Sections immer ihr EIGENES letztes Debug geben
+    for section in final_sections:
+        section_range = (float(section.start), float(section.end))
+        existing_debug_entry = debug_by_range.get(section_range, {})
+
         split_index, internal_peak_indices, rejection_reason, candidate_evaluations = _evaluate_secondary_split(
             section,
             bars,
             sanitized_novelty,
             primary_boundary_indices,
         )
-        if split_index is None:
-            section_range = (float(section.start), float(section.end))
-            refined_ranges.append(section_range)
-            split_debug_by_range[section_range] = {
-                "debug_is_long_section_candidate": _section_bar_count(section) > LONG_SECTION_BARS,
-                "debug_internal_peak_bar_indices": internal_peak_indices,
-                "debug_split_applied": False,
-                "debug_candidate_evaluations": candidate_evaluations,
-                "debug_split_rejection_reason": rejection_reason,
-            }
-            continue
 
-        split_time = float(bars[split_index][0])
-        if split_time <= float(section.start) or split_time >= float(section.end):
-            section_range = (float(section.start), float(section.end))
-            refined_ranges.append(section_range)
-            split_debug_by_range[section_range] = {
-                "debug_is_long_section_candidate": _section_bar_count(section) > LONG_SECTION_BARS,
-                "debug_internal_peak_bar_indices": internal_peak_indices,
-                "debug_split_applied": False,
-                "debug_candidate_evaluations": candidate_evaluations,
-                "debug_split_rejection_reason": rejection_reason,
-            }
-            continue
+        final_debug_by_range[section_range] = _make_debug_entry(
+            section=section,
+            internal_peak_indices=internal_peak_indices,
+            candidate_evaluations=candidate_evaluations,
+            rejection_reason=rejection_reason,
+            split_applied=split_index is not None,
+            created_by_secondary_split=bool(
+                existing_debug_entry.get("debug_created_by_secondary_split", False)
+            ),
+            parent_split_bar_index=existing_debug_entry.get("debug_parent_split_bar_index"),
+            parent_split_time=existing_debug_entry.get("debug_parent_split_time"),
+        )
 
-        left_range = (float(section.start), split_time)
-        right_range = (split_time, float(section.end))
-        refined_ranges.append(left_range)
-        refined_ranges.append(right_range)
-        split_debug_by_range[left_range] = {
-            "debug_is_long_section_candidate": _section_bar_count(section) > LONG_SECTION_BARS,
-            "debug_internal_peak_bar_indices": internal_peak_indices,
-            "debug_split_applied": True,
-            "debug_candidate_evaluations": candidate_evaluations,
-            "debug_split_rejection_reason": None,
-        }
-        split_debug_by_range[right_range] = {
-            "debug_is_long_section_candidate": _section_bar_count(section) > LONG_SECTION_BARS,
-            "debug_internal_peak_bar_indices": internal_peak_indices,
-            "debug_split_applied": True,
-            "debug_candidate_evaluations": candidate_evaluations,
-            "debug_split_rejection_reason": None,
-        }
-
-    return _rebuild_sections_from_ranges(refined_ranges, bars), split_debug_by_range
+    return final_sections, final_debug_by_range
 
 
 def _attach_section_debug_diagnostics(
@@ -701,6 +778,21 @@ def _attach_section_debug_diagnostics(
             None
             if section.debug_split_applied or not is_long_candidate
             else rejection_reason
+        )
+        section.debug_created_by_secondary_split = bool(
+            debug_entry.get("debug_created_by_secondary_split", False)
+        )
+        parent_split_bar_index = debug_entry.get("debug_parent_split_bar_index")
+        section.debug_parent_split_bar_index = (
+            int(parent_split_bar_index)
+            if isinstance(parent_split_bar_index, int)
+            else None
+        )
+        parent_split_time = debug_entry.get("debug_parent_split_time")
+        section.debug_parent_split_time = (
+            float(parent_split_time)
+            if isinstance(parent_split_time, (int, float))
+            else None
         )
 
     return sections
