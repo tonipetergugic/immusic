@@ -52,6 +52,7 @@ class AnalysisResult:
     transitions: TransitionMetrics | None = None
     change_distribution: ChangeDistributionMetrics | None = None
     region_similarity: RegionSimilarityMetrics | None = None
+    melodic_motion: dict[str, Any] | None = None
     macro_metrics: MacroMetricsResult | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -81,6 +82,17 @@ class TransitionPoint:
     pre_region_end_bar: int
     post_region_start_bar: int
     post_region_end_bar: int
+
+
+@dataclass
+class ChangeBarMetrics:
+    bar_index: int
+    start_time_sec: float
+    end_time_sec: float
+    energy_change: float
+    spectral_change: float
+    rhythmic_change: float
+    combined_change: float
 
 
 @dataclass
@@ -118,7 +130,7 @@ class UniquenessEntry:
 class ChangeIntensityMetrics:
     global_score: float
     activity_label: str
-    per_bar_scores: list[float]
+    per_bar: list[ChangeBarMetrics]
     smoothed_curve: list[float]
     low_change_spans: list[Span]
     high_change_spans: list[Span]

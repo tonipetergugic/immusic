@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FuncFormatter
 
-from schemas import Section
+from schemas import Bar, Section
 
 
 def _format_seconds_to_mmss(value: float, _position: float) -> str:
@@ -16,7 +16,15 @@ def _format_seconds_to_mmss(value: float, _position: float) -> str:
     return f"{minutes}:{seconds:02d}"
 
 
-def _boundary_indices_from_times(boundary_candidates: list[float], bars: list[list[float]]) -> list[int]:
+def _bar_start(bar: Bar) -> float:
+    return float(bar.start)
+
+
+def _bar_end(bar: Bar) -> float:
+    return float(bar.end)
+
+
+def _boundary_indices_from_times(boundary_candidates: list[float], bars: list[Bar]) -> list[int]:
     if not bars:
         return []
 
@@ -25,10 +33,8 @@ def _boundary_indices_from_times(boundary_candidates: list[float], bars: list[li
         candidate_time = float(candidate)
         best_index = None
         for index, bar in enumerate(bars):
-            if len(bar) < 2:
-                continue
-            start = float(bar[0])
-            end = float(bar[1])
+            start = _bar_start(bar)
+            end = _bar_end(bar)
             if start <= candidate_time <= end:
                 best_index = index
                 break
@@ -47,7 +53,7 @@ def write_debug_plots(
     self_similarity_matrix: list[list[float]],
     novelty_curve: list[float],
     boundary_candidates: list[float],
-    bars: list[list[float]],
+    bars: list[Bar],
     sections: list[Section],
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -96,7 +102,7 @@ def write_debug_plots(
             edgecolor="black",
         )
         ax.text(start + width / 2.0, 0, str(section.index), ha="center", va="center", fontsize=9)
-    total_duration = float(bars[-1][1]) if bars else 0.0
+    total_duration = _bar_end(bars[-1]) if bars else 0.0
     axis_max = max(total_duration, 1.0)
 
     ax.set_xlim(0.0, axis_max)

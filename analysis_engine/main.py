@@ -13,11 +13,13 @@ from features import extract_bar_features
 from novelty import compute_novelty_curve, detect_boundary_candidates
 from sections import build_sections
 from similarity import compute_self_similarity_matrix
-from schemas import AnalysisResult
+from schemas import AnalysisResult, Bar
 from stability import compute_stability
 from transitions import compute_transitions
 from change_distribution import compute_change_distribution
 from region_similarity import compute_region_similarity
+from macro_metrics import compute_macro_metrics
+from melodic_motion import compute_melodic_motion
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,13 +37,20 @@ def main() -> int:
         samples, sample_rate = load_audio_mono(audio_path)
         duration_sec = get_duration_seconds(audio_path)
         beat_grid = build_beat_grid(audio_path.as_posix(), duration_sec)
-        bars = [[float(bar.start), float(bar.end)] for bar in beat_grid.bars]
+        bars = [
+            Bar(
+                index=index,
+                start=float(bar.start),
+                end=float(bar.end),
+            )
+            for index, bar in enumerate(beat_grid.bars)
+        ]
         feature_names, bar_feature_vectors = extract_bar_features(samples, sample_rate, bars)
         self_similarity_matrix = compute_self_similarity_matrix(bar_feature_vectors)
         novelty_curve = compute_novelty_curve(self_similarity_matrix)
         boundary_candidate_indices = detect_boundary_candidates(novelty_curve)
         boundary_candidates = [
-            float(bars[index][0])
+            float(bars[index].start)
             for index in boundary_candidate_indices
             if 0 <= index < len(bars)
         ]
@@ -75,6 +84,18 @@ def main() -> int:
             bar_feature_vectors=bar_feature_vectors,
             bars=beat_grid.bars,
         )
+        macro_metrics = compute_macro_metrics(
+            change_intensity=change_intensity,
+            stability=stability,
+            transitions=transitions,
+            change_distribution=change_distribution,
+            region_similarity=region_similarity,
+        )
+        melodic_motion = compute_melodic_motion(
+            feature_names=feature_names,
+            bar_feature_vectors=bar_feature_vectors,
+            bars=bars,
+        )
 
         result = AnalysisResult(
             track_id=args.track_id,
@@ -96,6 +117,8 @@ def main() -> int:
             transitions=transitions,
             change_distribution=change_distribution,
             region_similarity=region_similarity,
+            melodic_motion=melodic_motion,
+            macro_metrics=macro_metrics,
         )
 
         output_dir = Path(__file__).resolve().parent / "output"
@@ -148,7 +171,10 @@ def main() -> int:
         print(f"Output: {output_path}")
         return 0
     except Exception as exc:
+        import traceback
+
         print(f"Analysis failed: {exc}", file=sys.stderr)
+        traceback.print_exc()
         return 1
 
 

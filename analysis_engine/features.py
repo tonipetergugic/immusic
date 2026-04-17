@@ -211,12 +211,14 @@ def extract_bar_features(
     bar_feature_vectors: list[list[float]] = []
 
     for bar in bars:
-        if len(bar) < 2:
-            bar_feature_vectors.append(_empty_feature_vector())
-            continue
-
-        start_sec = float(bar[0])
-        end_sec = float(bar[1])
+        if hasattr(bar, "start") and hasattr(bar, "end"):
+            start_sec = float(bar.start)
+            end_sec = float(bar.end)
+        else:
+            if len(bar) < 2:
+                continue
+            start_sec = float(bar[0])
+            end_sec = float(bar[1])
         segment = _slice_audio_bar(audio, sr, start_sec, end_sec)
         bar_feature_vectors.append(_extract_single_bar_vector(segment, sr))
 

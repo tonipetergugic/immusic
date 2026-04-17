@@ -4,7 +4,7 @@ from typing import Sequence
 
 import numpy as np
 
-from schemas import Bar, ChangeIntensityMetrics, Span
+from schemas import Bar, ChangeBarMetrics, ChangeIntensityMetrics, Span
 
 
 LOW_CHANGE_QUANTILE = 0.30
@@ -13,6 +13,23 @@ MIN_SPAN_BARS = 4
 SMOOTHING_WINDOW_BARS = 4
 COMPRESSION_EXPONENT = 1.5
 EPSILON = 1e-9
+
+ENERGY_FEATURE_NAMES = {
+    "rms_mean",
+    "low_band_energy_mean",
+    "mid_band_energy_mean",
+    "high_band_energy_mean",
+}
+
+RHYTHMIC_FEATURE_NAMES = {
+    "onset_strength_mean",
+    "zero_crossing_rate_mean",
+}
+
+SPECTRAL_FEATURE_PREFIXES = (
+    "spectral_",
+    "mfcc_",
+)
 
 
 def compute_change_intensity(
@@ -27,13 +44,29 @@ def compute_change_intensity(
     if matrix is None:
         return _empty_change_intensity()
 
-    normalized_matrix = _robust_normalize_features(matrix)
+    normalized_matrix, normalized_feature_names = _robust_normalize_features(matrix, feature_names)
     if normalized_matrix.shape[0] < 2 or normalized_matrix.shape[1] == 0:
         return _empty_change_intensity()
 
-    per_bar_scores = _compute_per_bar_scores(normalized_matrix)
-    compressed_scores = _compress_scores(per_bar_scores)
-    smoothed_curve = _moving_average(compressed_scores, SMOOTHING_WINDOW_BARS)
+    energy_indices, spectral_indices, rhythmic_indices = _resolve_feature_group_indices(normalized_feature_names)
+
+    energy_scores = _compute_group_scores(normalized_matrix, energy_indices)
+    spectral_scores = _compute_group_scores(normalized_matrix, spectral_indices)
+    rhythmic_scores = _compute_group_scores(normalized_matrix, rhythmic_indices)
+
+    if not energy_scores and not spectral_scores and not rhythmic_scores:
+        return _empty_change_intensity()
+
+    energy_scores = _compress_scores(energy_scores)
+    spectral_scores = _compress_scores(spectral_scores)
+    rhythmic_scores = _compress_scores(rhythmic_scores)
+
+    combined_scores = _combine_component_scores(
+        energy_scores=energy_scores,
+        spectral_scores=spectral_scores,
+        rhythmic_scores=rhythmic_scores,
+    )
+    smoothed_curve = _moving_average(combined_scores, SMOOTHING_WINDOW_BARS)
 
     low_change_spans = _extract_spans(
         bars=bars,
@@ -53,10 +86,18 @@ def compute_change_intensity(
     global_score = float(np.clip(np.mean(smoothed_curve), 0.0, 1.0)) if smoothed_curve else 0.0
     activity_label = _activity_label_from_score(global_score)
 
+    per_bar = _build_per_bar_metrics(
+        bars=bars,
+        energy_scores=energy_scores,
+        spectral_scores=spectral_scores,
+        rhythmic_scores=rhythmic_scores,
+        combined_scores=combined_scores,
+    )
+
     return ChangeIntensityMetrics(
         global_score=global_score,
         activity_label=activity_label,
-        per_bar_scores=per_bar_scores,
+        per_bar=per_bar,
         smoothed_curve=smoothed_curve,
         low_change_spans=low_change_spans,
         high_change_spans=high_change_spans,
@@ -67,7 +108,7 @@ def _empty_change_intensity() -> ChangeIntensityMetrics:
     return ChangeIntensityMetrics(
         global_score=0.0,
         activity_label="very_sparse",
-        per_bar_scores=[],
+        per_bar=[],
         smoothed_curve=[],
         low_change_spans=[],
         high_change_spans=[],
@@ -110,7 +151,10 @@ def _build_feature_matrix(bar_feature_vectors: list[list[float]]) -> np.ndarray 
     return matrix
 
 
-def _robust_normalize_features(matrix: np.ndarray) -> np.ndarray:
+def _robust_normalize_features(
+    matrix: np.ndarray,
+    feature_names: list[str],
+) -> tuple[np.ndarray, list[str]]:
     medians = np.median(matrix, axis=0)
     q75 = np.percentile(matrix, 75, axis=0)
     q25 = np.percentile(matrix, 25, axis=0)
@@ -118,24 +162,110 @@ def _robust_normalize_features(matrix: np.ndarray) -> np.ndarray:
 
     informative_mask = iqr > EPSILON
     if not np.any(informative_mask):
-        return np.empty((matrix.shape[0], 0), dtype=np.float64)
+        return np.empty((matrix.shape[0], 0), dtype=np.float64), []
 
     filtered = matrix[:, informative_mask]
     filtered_medians = medians[informative_mask]
     filtered_iqr = iqr[informative_mask]
+    filtered_feature_names = [
+        name
+        for name, keep in zip(feature_names, informative_mask)
+        if keep
+    ]
 
     normalized = (filtered - filtered_medians) / filtered_iqr
-    return normalized.astype(np.float64, copy=False)
+    return normalized.astype(np.float64, copy=False), filtered_feature_names
 
 
-def _compute_per_bar_scores(normalized_matrix: np.ndarray) -> list[float]:
-    diffs = np.abs(np.diff(normalized_matrix, axis=0))
+def _resolve_feature_group_indices(feature_names: list[str]) -> tuple[list[int], list[int], list[int]]:
+    energy_indices: list[int] = []
+    spectral_indices: list[int] = []
+    rhythmic_indices: list[int] = []
+
+    for index, name in enumerate(feature_names):
+        if name in ENERGY_FEATURE_NAMES:
+            energy_indices.append(index)
+            continue
+
+        if name in RHYTHMIC_FEATURE_NAMES:
+            rhythmic_indices.append(index)
+            continue
+
+        if name.startswith(SPECTRAL_FEATURE_PREFIXES):
+            spectral_indices.append(index)
+            continue
+
+    return energy_indices, spectral_indices, rhythmic_indices
+
+
+def _compute_group_scores(normalized_matrix: np.ndarray, feature_indices: list[int]) -> list[float]:
+    if normalized_matrix.shape[0] == 0:
+        return []
+    if not feature_indices:
+        return [0.0] * normalized_matrix.shape[0]
+
+    group_matrix = normalized_matrix[:, feature_indices]
+    if group_matrix.ndim != 2 or group_matrix.shape[1] == 0:
+        return [0.0] * normalized_matrix.shape[0]
+
+    diffs = np.abs(np.diff(group_matrix, axis=0))
     mean_abs_diffs = np.mean(diffs, axis=1)
 
     scores = np.zeros(normalized_matrix.shape[0], dtype=np.float64)
     scores[1:] = mean_abs_diffs
 
     return scores.tolist()
+
+
+def _combine_component_scores(
+    energy_scores: list[float],
+    spectral_scores: list[float],
+    rhythmic_scores: list[float],
+) -> list[float]:
+    if not energy_scores or not spectral_scores or not rhythmic_scores:
+        return []
+
+    combined: list[float] = []
+    for energy, spectral, rhythmic in zip(
+        energy_scores,
+        spectral_scores,
+        rhythmic_scores,
+    ):
+        value = float(np.mean([energy, spectral, rhythmic]))
+        combined.append(float(np.clip(value, 0.0, 1.0)))
+
+    return combined
+
+
+def _build_per_bar_metrics(
+    bars: list[Bar],
+    energy_scores: list[float],
+    spectral_scores: list[float],
+    rhythmic_scores: list[float],
+    combined_scores: list[float],
+) -> list[ChangeBarMetrics]:
+    per_bar: list[ChangeBarMetrics] = []
+
+    for bar, energy, spectral, rhythmic, combined in zip(
+        bars,
+        energy_scores,
+        spectral_scores,
+        rhythmic_scores,
+        combined_scores,
+    ):
+        per_bar.append(
+            ChangeBarMetrics(
+                bar_index=bar.index,
+                start_time_sec=float(bar.start),
+                end_time_sec=float(bar.end),
+                energy_change=float(np.clip(energy, 0.0, 1.0)),
+                spectral_change=float(np.clip(spectral, 0.0, 1.0)),
+                rhythmic_change=float(np.clip(rhythmic, 0.0, 1.0)),
+                combined_change=float(np.clip(combined, 0.0, 1.0)),
+            )
+        )
+
+    return per_bar
 
 
 def _compress_scores(per_bar_scores: list[float]) -> list[float]:
@@ -148,7 +278,7 @@ def _compress_scores(per_bar_scores: list[float]) -> list[float]:
     if positive.size == 0:
         return values.tolist()
 
-    scale = float(np.quantile(positive, 0.90))
+    scale = float(np.quantile(positive, 0.98))
     if scale <= EPSILON:
         scale = float(np.max(positive))
     if scale <= EPSILON:
