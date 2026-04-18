@@ -18,33 +18,42 @@ def _tempo_to_float(value: Any) -> float:
     return float(value)
 
 
-def _build_bars_from_downbeats(downbeats: list[float], duration_sec: float) -> list[dict[str, float | int]]:
+def _estimate_last_bar_end(beat_times: list[float], start_index: int) -> float:
+    local_slice = np.asarray(beat_times[start_index : start_index + 4], dtype=float)
+    local_intervals = np.diff(local_slice)
+
+    if local_intervals.size > 0:
+        beat_interval = float(np.median(local_intervals))
+    else:
+        all_intervals = np.diff(np.asarray(beat_times, dtype=float))
+        beat_interval = float(np.median(all_intervals)) if all_intervals.size > 0 else 0.0
+
+    return float(beat_times[-1] + max(0.0, beat_interval))
+
+
+def _build_full_bars_from_beats(beat_times: list[float]) -> list[dict[str, float | int]]:
     bars: list[dict[str, float | int]] = []
 
-    if len(downbeats) < 2:
+    full_bar_count = len(beat_times) // 4
+    if full_bar_count == 0:
         return bars
 
-    for index in range(len(downbeats) - 1):
-        start = float(downbeats[index])
-        end = float(downbeats[index + 1])
+    for bar_index in range(full_bar_count):
+        start_index = bar_index * 4
+        start = float(beat_times[start_index])
+
+        next_bar_start_index = start_index + 4
+        if next_bar_start_index < len(beat_times):
+            end = float(beat_times[next_bar_start_index])
+        else:
+            end = _estimate_last_bar_end(beat_times, start_index)
+
         bars.append(
             {
-                "index": index,
+                "index": bar_index,
                 "start": start,
                 "end": end,
                 "duration_sec": max(0.0, end - start),
-            }
-        )
-
-    last_start = float(downbeats[-1])
-    last_end = float(duration_sec)
-    if last_end > last_start:
-        bars.append(
-            {
-                "index": len(bars),
-                "start": last_start,
-                "end": last_end,
-                "duration_sec": max(0.0, last_end - last_start),
             }
         )
 
@@ -52,16 +61,14 @@ def _build_bars_from_downbeats(downbeats: list[float], duration_sec: float) -> l
 
 
 def analyze_structure_baseline(audio_mono: np.ndarray, sample_rate: int) -> dict[str, Any]:
-    duration_sec = float(len(audio_mono) / sample_rate) if sample_rate > 0 else 0.0
-
     tempo_raw, beat_frames = librosa.beat.beat_track(y=audio_mono, sr=sample_rate)
     tempo = _tempo_to_float(tempo_raw)
 
     beat_times = librosa.frames_to_time(beat_frames, sr=sample_rate).tolist()
     beat_times = [float(x) for x in beat_times]
 
-    downbeats = beat_times[::4] if beat_times else []
-    bars = _build_bars_from_downbeats(downbeats, duration_sec)
+    bars = _build_full_bars_from_beats(beat_times)
+    downbeats = [float(bar["start"]) for bar in bars]
 
     bar_durations = [float(bar["duration_sec"]) for bar in bars]
     median_bar_duration = float(np.median(bar_durations)) if bar_durations else 0.0

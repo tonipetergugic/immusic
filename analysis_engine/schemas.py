@@ -59,6 +59,9 @@ class AnalysisResult:
     issues: JsonList = field(default_factory=list)
     structure: JsonDict = field(default_factory=dict)
     features: JsonDict = field(default_factory=dict)
+    similarity: JsonDict = field(default_factory=dict)
+    novelty: JsonDict = field(default_factory=dict)
+    sections: JsonDict = field(default_factory=dict)
     loudness: JsonDict = field(default_factory=dict)
     stereo: JsonDict = field(default_factory=dict)
 

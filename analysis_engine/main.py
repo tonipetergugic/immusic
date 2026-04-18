@@ -12,9 +12,12 @@ from analysis_engine.config import ensure_output_dir
 from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
 from analysis_engine.loudness import analyze_loudness
-from analysis_engine.plots import save_waveform_plot
+from analysis_engine.novelty import analyze_novelty
+from analysis_engine.plots import save_structure_plot, save_waveform_plot
 from analysis_engine.report import write_analysis_json
 from analysis_engine.schemas import AnalysisArtifactPaths, AnalysisResult
+from analysis_engine.sections import analyze_sections
+from analysis_engine.similarity import analyze_similarity
 from analysis_engine.stereo import analyze_stereo
 from analysis_engine.structure import analyze_structure_baseline
 
@@ -29,7 +32,7 @@ def build_artifact_paths(audio_path: Path) -> AnalysisArtifactPaths:
         json_path=str(track_dir / "analysis.json"),
         report_path=None,
         waveform_plot_path=str(track_dir / "waveform.png"),
-        structure_plot_path=None,
+        structure_plot_path=str(track_dir / "structure.png"),
     )
 
 
@@ -68,7 +71,22 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     )
 
     result.structure = analyze_structure_baseline(audio_mono, mono_sr)
-    result.features = analyze_features(audio_mono, mono_sr)
+    result.features = analyze_features(
+        audio_mono,
+        mono_sr,
+        bars=result.structure.get("bars", []),
+    )
+    result.similarity = analyze_similarity(
+        result.features.get("bar_feature_vectors", [])
+    )
+    result.novelty = analyze_novelty(
+        result.similarity.get("matrix", []),
+        result.structure.get("bars", []),
+    )
+    result.sections = analyze_sections(
+        result.structure.get("bars", []),
+        result.novelty.get("boundary_candidates", []),
+    )
     result.loudness = analyze_loudness(audio_mono, mono_sr)
     result.stereo = analyze_stereo(audio_stereo, mono_sr)
 
@@ -96,6 +114,7 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     result.summary = build_summary(result)
 
     save_waveform_plot(audio_mono, mono_sr, result)
+    save_structure_plot(audio_mono, mono_sr, result)
     write_analysis_json(result)
 
     return result
@@ -124,6 +143,8 @@ def main() -> None:
     print(f"JSON: {result.artifacts.json_path}")
     if result.artifacts.waveform_plot_path:
         print(f"Waveform plot: {result.artifacts.waveform_plot_path}")
+    if result.artifacts.structure_plot_path:
+        print(f"Structure plot: {result.artifacts.structure_plot_path}")
 
 
 if __name__ == "__main__":
