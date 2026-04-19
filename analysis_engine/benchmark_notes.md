@@ -249,3 +249,108 @@ Vorläufige Lesart:
 - **early peak before stable arrival** = Peak kommt früh auf eine Vorveränderung, stabile neue Phase folgt kurz danach
 
 Diese Muster müssen in der Boundary-Logik getrennt gedacht werden.
+
+## Minimal Boundary Types
+
+### Normal boundary
+Nutzen, wenn:
+- novelty klar sichtbar ist
+- delta_from_prev erhöht ist
+- similarity_prev_to_here spürbar fällt
+- forward_stability danach brauchbar ist
+
+Bedeutung:
+- echter Wechsel
+- neue Phase beginnt direkt hier
+
+### Late novelty drift
+Nutzen, wenn:
+- novelty hoch ist
+- delta_from_prev sehr niedrig bleibt
+- similarity_prev_to_here sehr hoch bleibt
+- forward_stability trotzdem hoch ist
+
+Bedeutung:
+- Peak kommt zu spät
+- kaum echter lokaler Wechsel
+- Boundary ist wahrscheinlich nach rechts gedriftet
+
+### Early peak before stable arrival
+Nutzen, wenn:
+- novelty hier schon hoch ist
+- delta_from_prev hier schon vorhanden ist
+- die stabilere Ankunft aber erst 1–3 Bars später liegt
+- dort die forward_stability klar besser wird
+
+Bedeutung:
+- früher Peak auf Vorveränderung
+- echte neue Hauptphase kommt kurz danach
+
+### Bewusst noch nicht Teil dieser Regelbasis
+- keine Genre-Branches
+- keine komplizierten Scores
+- keine Extra-Metriken
+- keine automatische Verschiebelogik in der Pipeline
+
+## Validierter Debug-Befund: kombinierte Boundary-Klassifikation
+
+Die aktuelle Debug-Klassifikation wurde bewusst nur an Referenzfällen geprüft und noch nicht in die Hauptpipeline übernommen.
+
+### Validierte Referenzfälle
+
+- **David Forbes – Techno Is My Only Drug**
+  - **Bar 83 / 02:19.02** wird korrekt als `late_novelty_drift_suspect` markiert.
+  - Frühere Kandidaten wie **Bar 8**, **15**, **39**, **56** und **61** bleiben `normal_candidate`.
+
+- **Above & Beyond, Zoe Johnston – Crazy Love**
+  - **Bar 145 / 04:23.04** wird korrekt als `early_peak_before_stable_arrival_suspect` markiert.
+  - Kandidaten wie **Bar 32**, **55**, **72** und **177** werden nicht mehr fälschlich als Early-Arrival-Suspect markiert und bleiben `normal_candidate`.
+
+### Aktuell validierte Debug-Regellogik
+
+#### late novelty drift suspect
+Ein Kandidat wird nur dann als `late_novelty_drift_suspect` markiert, wenn der Novelty-Peak sichtbar ist, aber der eigentliche Strukturwechsel an dieser Bar selbst schwach ist und eher auf verspätete Novelty-Reaktion hindeutet.
+
+#### early peak before stable arrival
+Ein Kandidat wird nur dann als `early_peak_before_stable_arrival_suspect` markiert, wenn:
+- Novelty klar sichtbar ist,
+- Delta ausreichend stark ist,
+- die aktuelle Bar noch genügend Ähnlichkeit zur Vorbar hat,
+- die aktuelle Bar bereits eine gewisse Vorwärtsstabilität besitzt,
+- und kurz danach eine noch stabilere Ankunft folgt.
+
+### Wichtig
+Dieser Stand ist nur als **validierter Debug-Befund** zu verstehen.
+
+Noch nicht tun:
+- keine Übernahme in `novelty.py`
+- kein Umbau der Hauptpipeline
+- keine automatische Boundary-Verschiebung
+- keine zusätzliche Heuristik-Kette ohne neue Referenzprüfung
+
+## Validierter Debug-Stand: Boundary-Klassifizierung
+
+Aktueller validierter Debug-Stand der Boundary-Klassifizierung nach manueller Prüfung:
+
+- Solar Vision - Coming Home Again:
+  - alle Kandidaten bleiben `normal_candidate`
+  - aktuell kein False Positive für `late_novelty_drift_suspect`
+  - aktuell kein False Positive für `early_peak_before_stable_arrival_suspect`
+
+- David Forbes - Techno Is My Only Drug:
+  - Kandidat bei Bar 83 bleibt ein valider Fall für `late_novelty_drift_suspect`
+  - die übrigen Kandidaten bleiben aktuell `normal_candidate`
+
+- Above & Beyond - Crazy Love:
+  - Kandidat bei Bar 145 bleibt ein valider Fall für `early_peak_before_stable_arrival_suspect`
+  - die übrigen Kandidaten bleiben aktuell `normal_candidate`
+
+Zwischenfazit:
+Die aktuelle Debug-Klassifizierung ist noch keine produktive Boundary-Logik.
+Aber der derzeitige Minimalstand trennt in den bisher geprüften Referenzfällen brauchbar zwischen:
+- normal_candidate
+- late_novelty_drift_suspect
+- early_peak_before_stable_arrival_suspect
+
+Wichtig:
+Vor einer echten Übernahme in die Pipeline muss diese Logik noch an weiteren Referenztracks geprüft werden.

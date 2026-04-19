@@ -81,6 +81,23 @@ def analyze_novelty(
         }
 
     matrix = _to_2d_array(similarity_matrix)
+    bar_count = int(matrix.shape[0])
+
+    if bar_count < kernel_radius * 2:
+        return {
+            "method": "checkerboard_novelty_on_self_similarity",
+            "kernel_radius": kernel_radius,
+            "peak_height": peak_height,
+            "peak_distance_bars": peak_distance_bars,
+            "novelty_curve": [0.0] * bar_count,
+            "boundary_candidates": [],
+            "candidate_count": 0,
+            "is_empty": True,
+            "reason": "not_enough_bars_for_checkerboard_kernel",
+            "bar_count": bar_count,
+            "required_min_bars": kernel_radius * 2,
+        }
+
     novelty_curve = _compute_novelty_curve(matrix, kernel_radius)
 
     peak_indices, _ = find_peaks(

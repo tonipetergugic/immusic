@@ -91,7 +91,22 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         result.novelty.get("boundary_candidates", []),
     )
     result.loudness = analyze_loudness(audio_mono, mono_sr)
-    result.stereo = analyze_stereo(audio_stereo, mono_sr)
+    if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
+        result.stereo = analyze_stereo(audio_stereo, mono_sr)
+    else:
+        result.stereo = {
+            "sample_rate": int(mono_sr),
+            "left_rms": None,
+            "right_rms": None,
+            "mid_rms": None,
+            "side_rms": None,
+            "left_rms_dbfs": None,
+            "right_rms_dbfs": None,
+            "mid_rms_dbfs": None,
+            "side_rms_dbfs": None,
+            "side_mid_ratio": None,
+            "correlation": None,
+        }
 
     issues: list[dict[str, object]] = []
 

@@ -38,8 +38,9 @@ def _build_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
     bars = structure.get("bars", []) or []
     novelty_curve = novelty.get("novelty_curve", []) or []
     boundary_candidates = novelty.get("boundary_candidates", []) or []
-    matrix = similarity.get("matrix", []) or []
-    bar_feature_vectors = features.get("bar_feature_vectors", []) or []
+    delta_values = features.get("bar_delta_from_prev", []) or []
+    similarity_prev_values = features.get("bar_similarity_prev_to_here", []) or []
+    forward_stability_values = features.get("bar_forward_stability", []) or []
 
     candidate_scores = _find_candidate_scores(boundary_candidates)
 
@@ -49,31 +50,9 @@ def _build_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
         start_sec = _safe_float(bar.get("start"))
         novelty_value = _safe_float(novelty_curve[i]) if i < len(novelty_curve) else None
 
-        delta_from_prev = None
-        if i > 0 and i < len(bar_feature_vectors):
-            prev_vec = bar_feature_vectors[i - 1]
-            curr_vec = bar_feature_vectors[i]
-            if isinstance(prev_vec, list) and isinstance(curr_vec, list) and len(prev_vec) == len(curr_vec):
-                total = 0.0
-                ok = True
-                for a, b in zip(prev_vec, curr_vec):
-                    fa = _safe_float(a)
-                    fb = _safe_float(b)
-                    if fa is None or fb is None:
-                        ok = False
-                        break
-                    diff = fb - fa
-                    total += diff * diff
-                if ok:
-                    delta_from_prev = total ** 0.5
-
-        similarity_prev_to_here = None
-        if i > 0 and i - 1 < len(matrix) and i < len(matrix[i - 1]):
-            similarity_prev_to_here = _safe_float(matrix[i - 1][i])
-
-        similarity_here_to_next = None
-        if i + 1 < len(matrix) and i + 1 < len(matrix[i]):
-            similarity_here_to_next = _safe_float(matrix[i][i + 1])
+        delta_from_prev = _safe_float(delta_values[i]) if i < len(delta_values) else None
+        similarity_prev_to_here = _safe_float(similarity_prev_values[i]) if i < len(similarity_prev_values) else None
+        forward_stability = _safe_float(forward_stability_values[i]) if i < len(forward_stability_values) else None
 
         rows.append(
             {
@@ -84,7 +63,7 @@ def _build_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
                 "candidate_score": candidate_scores.get(i),
                 "delta_from_prev": delta_from_prev,
                 "similarity_prev_to_here": similarity_prev_to_here,
-                "similarity_here_to_next": similarity_here_to_next,
+                "forward_stability": forward_stability,
             }
         )
 
@@ -130,7 +109,7 @@ def _print_local_window(rows: list[dict[str, Any]], target_bar: int, radius: int
             "candidate_score": round(row["candidate_score"], 6) if row["candidate_score"] is not None else None,
             "delta_from_prev": round(row["delta_from_prev"], 6) if row["delta_from_prev"] is not None else None,
             "similarity_prev_to_here": round(row["similarity_prev_to_here"], 6) if row["similarity_prev_to_here"] is not None else None,
-            "similarity_here_to_next": round(row["similarity_here_to_next"], 6) if row["similarity_here_to_next"] is not None else None,
+            "forward_stability": round(row["forward_stability"], 6) if row["forward_stability"] is not None else None,
         }
         print(formatted)
     print()
@@ -153,9 +132,9 @@ def _print_shift_compare(rows: list[dict[str, Any]], target_bar: int, max_shift:
             "novelty": round(row["novelty"], 6) if row["novelty"] is not None else None,
             "delta_from_prev": round(row["delta_from_prev"], 6) if row["delta_from_prev"] is not None else None,
             "similarity_prev_to_here": round(row["similarity_prev_to_here"], 6) if row["similarity_prev_to_here"] is not None else None,
-            "similarity_here_to_next": round(row["similarity_here_to_next"], 6) if row["similarity_here_to_next"] is not None else None,
-            "next_similarity": round(next_1["similarity_here_to_next"], 6) if next_1 and next_1["similarity_here_to_next"] is not None else None,
-            "next_next_similarity": round(next_2["similarity_here_to_next"], 6) if next_2 and next_2["similarity_here_to_next"] is not None else None,
+            "forward_stability": round(row["forward_stability"], 6) if row["forward_stability"] is not None else None,
+            "next_forward_stability": round(next_1["forward_stability"], 6) if next_1 and next_1["forward_stability"] is not None else None,
+            "next_next_forward_stability": round(next_2["forward_stability"], 6) if next_2 and next_2["forward_stability"] is not None else None,
         }
         print(formatted)
     print()
