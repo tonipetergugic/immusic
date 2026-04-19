@@ -82,6 +82,9 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     result.novelty = analyze_novelty(
         result.similarity.get("matrix", []),
         result.structure.get("bars", []),
+        bar_delta_from_prev=result.features.get("bar_delta_from_prev", []),
+        bar_similarity_prev_to_here=result.features.get("bar_similarity_prev_to_here", []),
+        bar_forward_stability=result.features.get("bar_forward_stability", []),
     )
     result.sections = analyze_sections(
         result.structure.get("bars", []),

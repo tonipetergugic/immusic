@@ -61,6 +61,9 @@ def _compute_novelty_curve(similarity_matrix: np.ndarray, kernel_radius: int) ->
 def analyze_novelty(
     similarity_matrix: list[list[float]],
     bars: list[dict[str, float | int]],
+    bar_delta_from_prev: list[float] | None = None,
+    bar_similarity_prev_to_here: list[float] | None = None,
+    bar_forward_stability: list[float] | None = None,
     kernel_radius: int = 8,
     peak_height: float = 0.1,
     peak_distance_bars: int = 4,
@@ -88,6 +91,10 @@ def analyze_novelty(
 
     boundary_candidates: list[dict[str, float | int]] = []
 
+    delta_values = bar_delta_from_prev or []
+    similarity_prev_values = bar_similarity_prev_to_here or []
+    forward_stability_values = bar_forward_stability or []
+
     for peak_index in peak_indices:
         bar_index = int(peak_index)
         start_sec = 0.0
@@ -95,13 +102,22 @@ def analyze_novelty(
         if 0 <= bar_index < len(bars):
             start_sec = float(bars[bar_index]["start"])
 
-        boundary_candidates.append(
-            {
-                "bar_index": bar_index,
-                "time_sec": start_sec,
-                "score": float(novelty_curve[bar_index]),
-            }
-        )
+        candidate: dict[str, float | int] = {
+            "bar_index": bar_index,
+            "time_sec": start_sec,
+            "score": float(novelty_curve[bar_index]),
+        }
+
+        if 0 <= bar_index < len(delta_values):
+            candidate["delta_from_prev"] = float(delta_values[bar_index])
+
+        if 0 <= bar_index < len(similarity_prev_values):
+            candidate["similarity_prev_to_here"] = float(similarity_prev_values[bar_index])
+
+        if 0 <= bar_index < len(forward_stability_values):
+            candidate["forward_stability"] = float(forward_stability_values[bar_index])
+
+        boundary_candidates.append(candidate)
 
     return {
         "method": "checkerboard_novelty_on_self_similarity",

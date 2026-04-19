@@ -94,3 +94,127 @@ The goal is to compare engine output against real hearing checks and identify re
 - Smaller internal sections are often missed.
 - Some tracks are segmented too coarsely.
 - Not every sound change should become a new section.
+
+## Verified Boundary Patterns
+
+### 1) Clean hard boundary
+**Reference case:** David Forbes - Techno Is My Only Drug (Mixed), boundary at bar 8
+
+**Observed data**
+- novelty: 0.699509
+- delta_from_prev: 1749.446424
+- similarity_prev_to_here: 0.711843
+- similarity_here_to_next: 0.994732
+- next_similarity: 0.996029
+
+**Interpretation**
+This is a clean section boundary.
+The previous state breaks clearly, and the new state becomes stable immediately after the boundary.
+
+**Lesson**
+A strong boundary is not just a local change spike.
+It should also show immediate post-boundary stability.
+
+---
+
+### 2) Early pre-drop boundary
+**Reference case:** Above & Beyond, Zoe Johnston - Crazy Love feat. Zoë Johnston (Extended Mix), boundary at bar 145
+
+**Observed data**
+- novelty: 0.594490
+- delta_from_prev: 3320.070884
+- similarity_prev_to_here: 0.734287
+- similarity_here_to_next: 0.882378
+- next_similarity: 0.991720
+- next_next_similarity: 0.988617
+
+**Interpretation**
+The engine catches a real change, but it appears to be the start of a transition or pre-drop event rather than the musically preferred main boundary.
+In listening validation, the boundary was perceived as too early because vocals before the drop triggered the change response.
+
+**Lesson**
+The strongest early change inside a transition is not always the best section boundary.
+The engine must later distinguish between transition onset and musically dominant arrival point.
+
+---
+
+### 3) Weak gradual/outro boundary
+**Reference case:** David Forbes - Techno Is My Only Drug (Mixed), boundary at bar 83
+
+**Observed data**
+- novelty at candidate bar 83: 0.163368
+- delta_from_prev at bar 83: 123.473418
+- similarity_prev_to_here at bar 83: 0.996248
+- similarity_here_to_next at bar 83: 0.998693
+- stronger later disruption:
+  - bar 84 -> 85 similarity: 0.698276
+  - delta_from_prev at bar 85: 1879.227912
+
+**Interpretation**
+The chosen boundary is weak and does not represent a clear hard break.
+The structural change is more gradual and smeared across several bars.
+
+**Lesson**
+Peak picking on novelty alone is not enough for gradual transitions or outros.
+Later boundary logic must handle smeared exits separately from hard section starts.
+
+---
+
+## Current Boundary Takeaways
+
+From the validated benchmark cases, the current issue is not primarily the beat/bar grid.
+The main problem is boundary semantics on top of novelty and similarity.
+
+Current verified boundary types:
+1. clean hard boundary
+2. early pre-drop boundary
+3. weak gradual/outro boundary
+
+These patterns should guide the next boundary-scoring design step.
+
+## Validierter Debug-Befund: late novelty drift suspect
+
+### Ziel
+Ein später Novelty-Peak soll als verdächtig gelten, wenn lokal kaum echter Wechsel sichtbar ist.
+
+### Aktuelle Debug-Regel
+Ein Kandidat wird als `late_novelty_drift_suspect` markiert, wenn:
+
+- `delta_from_prev < 0.05`
+- `similarity_prev_to_here > 0.95`
+
+Wichtig:
+Diese Regel ist aktuell nur Debug-Auswertung außerhalb der Pipeline.
+Sie verändert keine Kandidaten, keine Scores und keine Section-Setzung.
+
+### Validierte Fälle
+
+#### David Forbes – Techno Is My Only Drug
+Hörurteil:
+- Bar 83 / 02:19.02 ist kein spürbarer echter Wechsel
+- echter Wechsel eher um ca. 02:10 / ungefähr Bar 77
+
+Debug-Ergebnis:
+- Bar 83 wurde als `late_novelty_drift_suspect` markiert
+- die übrigen relevanten Kandidaten wurden nicht fälschlich markiert
+
+Bedeutung:
+- der späte Novelty-Peak wird korrekt als wahrscheinlich zu spät erkannt
+- lokaler echter Wechsel lag früher als der finale Peak
+
+#### Solar Vision – Coming Home Again
+Debug-Ergebnis:
+- kein Kandidat wurde als `late_novelty_drift_suspect` markiert
+
+Bedeutung:
+- die Regel bleibt in diesem guten Referenzfall sauber
+- bisher kein Hinweis auf eine offensichtliche Fehlmarkierung in diesem Track
+
+### Zwischenfazit
+Die Debug-Regel ist derzeit in zwei echten Fällen brauchbar:
+
+- problematischer Spät-Peak wurde korrekt markiert
+- guter Referenzfall blieb sauber
+
+Das ist noch keine Freigabe für die Hauptpipeline.
+Vor einer echten Übernahme sind weitere Referenzfälle nötig.

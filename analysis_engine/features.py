@@ -30,6 +30,24 @@ def _safe_std(values: np.ndarray) -> float:
     return float(np.std(values))
 
 
+def _cosine_distance(vector_a: np.ndarray, vector_b: np.ndarray) -> float:
+    a = np.asarray(vector_a, dtype=np.float32)
+    b = np.asarray(vector_b, dtype=np.float32)
+
+    a_norm = float(np.linalg.norm(a))
+    b_norm = float(np.linalg.norm(b))
+
+    if a_norm == 0.0 and b_norm == 0.0:
+        return 0.0
+
+    if a_norm == 0.0 or b_norm == 0.0:
+        return 1.0
+
+    similarity = float(np.dot(a, b) / (a_norm * b_norm))
+    similarity = max(-1.0, min(1.0, similarity))
+    return float(1.0 - similarity)
+
+
 def _slice_audio_by_seconds(
     audio: np.ndarray,
     sample_rate: int,
@@ -102,8 +120,54 @@ def analyze_features(
             feature_vector = [float(bar_metrics[name]) for name in BAR_FEATURE_NAMES]
             bar_feature_vectors.append(feature_vector)
 
+        feature_matrix = np.asarray(bar_feature_vectors, dtype=np.float32)
+        feature_means = np.mean(feature_matrix, axis=0)
+        feature_stds = np.std(feature_matrix, axis=0)
+        safe_feature_stds = np.where(feature_stds < 1e-8, 1.0, feature_stds)
+        normalized_feature_matrix = (feature_matrix - feature_means) / safe_feature_stds
+
+        bar_delta_from_prev: list[float] = []
+        bar_similarity_prev_to_here: list[float] = []
+        bar_forward_stability: list[float] = []
+
+        for index in range(len(bar_feature_vectors)):
+            current_array = normalized_feature_matrix[index]
+
+            if index == 0:
+                bar_delta_from_prev.append(0.0)
+                bar_similarity_prev_to_here.append(1.0)
+            else:
+                prev_start_index = max(0, index - 4)
+                prev_vectors = normalized_feature_matrix[prev_start_index:index]
+                prev_mean_vector = np.mean(prev_vectors, axis=0)
+
+                delta_value = _cosine_distance(current_array, prev_mean_vector)
+                similarity_value = 1.0 - delta_value
+                similarity_value = max(0.0, min(1.0, float(similarity_value)))
+
+                bar_delta_from_prev.append(float(delta_value))
+                bar_similarity_prev_to_here.append(float(similarity_value))
+
+            next_vectors = normalized_feature_matrix[index + 1:index + 3]
+            if len(next_vectors) == 0:
+                bar_forward_stability.append(0.0)
+            else:
+                similarity_to_next_values: list[float] = []
+
+                for next_array in next_vectors:
+                    next_delta = _cosine_distance(current_array, next_array)
+                    next_similarity = 1.0 - next_delta
+                    next_similarity = max(0.0, min(1.0, float(next_similarity)))
+                    similarity_to_next_values.append(float(next_similarity))
+
+                forward_stability_value = float(np.mean(similarity_to_next_values))
+                bar_forward_stability.append(forward_stability_value)
+
         result["feature_names"] = list(BAR_FEATURE_NAMES)
         result["bar_feature_vectors"] = bar_feature_vectors
         result["bar_vector_count"] = len(bar_feature_vectors)
+        result["bar_delta_from_prev"] = bar_delta_from_prev
+        result["bar_similarity_prev_to_here"] = bar_similarity_prev_to_here
+        result["bar_forward_stability"] = bar_forward_stability
 
     return result
