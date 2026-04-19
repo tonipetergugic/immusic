@@ -218,3 +218,34 @@ Die Debug-Regel ist derzeit in zwei echten Fällen brauchbar:
 
 Das ist noch keine Freigabe für die Hauptpipeline.
 Vor einer echten Übernahme sind weitere Referenzfälle nötig.
+
+## Validierter Debug-Befund: early peak before stable arrival
+
+Bei **Crazy Love** wurde der problematische Bereich um **Bar 145** lokal geprüft.
+
+Lokale Werte:
+
+- Bar 145 → novelty 0.5945, delta 0.4801, prev_sim 0.5199, forward 0.8773
+- Bar 146 → delta 0.5459, forward 0.9899
+- Bar 147 → forward 0.9821
+- Bar 148 → forward 0.9879
+- Bar 149 → prev_sim 0.9616
+
+Bedeutung:
+
+- Der Peak bei Bar 145 ist **kein late novelty drift suspect**
+- Es gibt dort **einen realen Wechsel**
+- Aber die stabilere neue Phase liegt wahrscheinlich **1–3 Bars später**
+- Das passt zum bereits validierten Hörbefund:
+  **pre-drop vocal / Vorveränderung wird zu früh als Boundary gelesen, echte Ankunft kommt später**
+
+Wichtige Schlussfolgerung:
+
+Dieser Fall darf **nicht** mit late novelty drift verwechselt werden.
+
+Vorläufige Lesart:
+
+- **late novelty drift** = Peak kommt zu spät, obwohl lokal kaum echter Wechsel vorliegt
+- **early peak before stable arrival** = Peak kommt früh auf eine Vorveränderung, stabile neue Phase folgt kurz danach
+
+Diese Muster müssen in der Boundary-Logik getrennt gedacht werden.
