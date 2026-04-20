@@ -524,3 +524,17 @@ Freaky 1 bleibt der aktuell klar verifizierte Referenz-Track für zwei verschied
 Konsequenz:
 Das Problem ist im aktuellen Benchmark-Stand nicht breit über alle geprüften Tracks verteilt.
 Mit dem präzisen Removed-Near-Boundary-Debug ist es aktuell klar nur in Freaky 1 nachweisbar.
+
+## Ergänzender Benchmark-Befund: Bob Sinclar removed near-boundary check
+
+Zusätzlich geprüft mit:
+- `analysis_engine/debug_classify_removed_near_boundaries.py`
+
+Track:
+- Bob Sinclar – World Hold On feat. Steve Edwards (Fisher Rework, Extended Mix)
+
+Ergebnis:
+- keine entfernten Near-Boundaries
+
+Konsequenz:
+Auch nach Einbezug von Bob Sinclar bleibt der aktuell klar verifizierte Removed-Near-Boundary-Fall im Benchmark-Stand auf Freaky 1 isoliert.
