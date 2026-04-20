@@ -6,17 +6,22 @@ from pathlib import Path
 from typing import Any
 
 
-MAX_SHIFT = 2
-MAX_LATE_DRIFT_SHIFT = 3
+MAX_SHIFT = 1
+MAX_LATE_DRIFT_SHIFT = 0
 
 MIN_FORWARD_IMPROVEMENT = 0.08
 MIN_DELTA_IMPROVEMENT = 0.05
 MIN_NOVELTY_FLOOR_RATIO = 0.5
+MIN_CURRENT_FORWARD_FOR_SHIFT = 0.45
 LATE_DRIFT_MIN_NOVELTY = 0.12
 LATE_DRIFT_MAX_DELTA = 0.02
 LATE_DRIFT_MIN_FORWARD = 0.80
 LATE_DRIFT_TARGET_MIN_DELTA = 0.20
 LATE_DRIFT_TARGET_MIN_FORWARD = 0.90
+HIGH_NOVELTY_MIN = 0.90
+HIGH_NOVELTY_CURRENT_FORWARD_MIN = 0.75
+HIGH_NOVELTY_CURRENT_FORWARD_MAX = 0.85
+STABLE_ARRIVAL_CURRENT_FORWARD_MAX = 0.85
 
 
 def _safe_float(value: Any) -> float | None:
@@ -96,6 +101,14 @@ def _choose_shift(
     if current_novelty is None or current_delta is None or current_forward is None:
         return ("stay", candidate_bar)
 
+    if current_forward < MIN_CURRENT_FORWARD_FOR_SHIFT:
+        return ("stay", candidate_bar)
+
+    is_high_novelty_candidate = current_novelty >= HIGH_NOVELTY_MIN
+
+    if not is_high_novelty_candidate and current_forward >= STABLE_ARRIVAL_CURRENT_FORWARD_MAX:
+        return ("stay", candidate_bar)
+
     best_label = "stay"
     best_bar = candidate_bar
     best_forward_gain = 0.0
@@ -114,6 +127,12 @@ def _choose_shift(
 
         if shifted_novelty is None or shifted_delta is None or shifted_forward is None:
             continue
+
+        if is_high_novelty_candidate:
+            if current_forward < HIGH_NOVELTY_CURRENT_FORWARD_MIN:
+                continue
+            if current_forward > HIGH_NOVELTY_CURRENT_FORWARD_MAX:
+                continue
 
         if shifted_novelty < novelty_floor:
             continue

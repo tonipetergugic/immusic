@@ -354,3 +354,82 @@ Aber der derzeitige Minimalstand trennt in den bisher geprüften Referenzfällen
 
 Wichtig:
 Vor einer echten Übernahme in die Pipeline muss diese Logik noch an weiteren Referenztracks geprüft werden.
+
+## Validierter Debug-Befund: conservative shift pass
+
+Der aktuelle konservative Shift-Durchlauf ist als Debug-Zwischenschritt deutlich sauberer als die frühere aggressivere Variante.
+
+Validierte verbleibende Shift-Fälle im aktuellen Debug-Stand:
+- David Forbes: Bar 56 -> 57
+- Solar Vision: Bar 56 -> 57
+- Crazy Love: Bar 32 -> 33
+- Crazy Love: Bar 96 -> 97
+
+Wichtige Negativ-Befunde im aktuellen Debug-Stand:
+- David Forbes: Bar 15 bleibt korrekt auf stay
+- David Forbes: Bar 83 bleibt korrekt auf stay
+- Solar Vision: Bar 17 bleibt korrekt auf stay
+- Crazy Love: Bar 145 bleibt korrekt auf stay
+- Crazy Love: Bar 177 bleibt korrekt auf stay
+
+Interpretation:
+- Die aktuelle Debug-Logik ist jetzt bewusst konservativ.
+- Problematische Überverschiebungen wurden im Benchmark deutlich reduziert.
+- Der Stand ist als Debug-Befund brauchbar, soll aber noch nicht blind in die Haupt-Engine übernommen werden.
+- Vor einer echten Übernahme braucht es weitere Hörvalidierung und danach erst eine saubere Integrationsentscheidung.
+
+## Validierter Debug-Befund: forward-stability guard for conservative shift pass
+
+Der konservative Shift-Pass wurde weiter eingegrenzt, damit kein Shift aus sehr instabilen Kandidaten heraus empfohlen wird.
+
+Validierter Stand nach der Anpassung:
+- Rezz / Entropy: Bar 36 bleibt korrekt auf 36.
+- David Forbes / Techno Is My Only Drug: Bar 56 → 57 bleibt sinnvoll.
+- Solar Vision / Coming Home Again: Bar 56 → 57 bleibt sinnvoll.
+- Crazy Love: Bar 32 → 33 bleibt sinnvoll.
+- Crazy Love: Bar 96 → 97 bleibt sinnvoll.
+- David Forbes: Bar 83 bleibt korrekt auf 83.
+- Solar Vision: Bar 17 bleibt korrekt auf 17.
+- Crazy Love: Bar 145 bleibt korrekt auf 145.
+
+Zwischenfazit:
+Ein zusätzlicher Guard auf die aktuelle forward_stability macht den Shift-Pass robuster und verhindert unnötige Verschiebungen aus bereits schwachen oder instabilen Ausgangskandidaten.
+
+Wichtig:
+Das ist weiterhin ein Debug-Befund und noch keine Produktionslogik. Vor einer echten Übernahme in die Pipeline muss die Regel mit weiteren Tracks geprüft werden.
+
+## Validierter Debug-Befund: ambiguous +1 shift case at Bob 128
+
+Der Fall Bob Sinclar / Fisher Rework bei Boundary-Bar 128 ist ein validierter Grenzfall gegen den konservativen Shift-Pass.
+
+Hörurteil:
+- 128 ist korrekt.
+- 129 ist zu spät.
+
+Messbild:
+- 128 hat bereits starke Boundary-Signale.
+- 129 zeigt trotzdem die typische Debug-Verbesserung bei `forward_stability` und zusätzlich höheres `delta_from_prev`.
+- Damit sieht 128 → 129 in den aktuellen drei Signalen formal ähnlich aus wie valide +1-Fälle.
+
+Schluss:
+- Mit nur `novelty_curve`, `bar_delta_from_prev` und `bar_forward_stability` ist dieser Fall derzeit nicht robust von guten +1-Shifts trennbar.
+- Weitere Threshold-Verschärfung wäre Blindflug und würde voraussichtlich gute Fälle beschädigen.
+
+Konsequenz:
+- Keine weitere Threshold-Optimierung für den konservativen Shift-Pass auf Basis dieser drei Signale allein.
+- Bob 128 bleibt als dokumentierter Counterexample im Benchmark.
+- Ein späterer neuer Shift-Versuch braucht zusätzliche Evidenz jenseits der aktuellen drei Debug-Signale.
+
+## Vorläufige Entscheidung: conservative boundary shift bleibt Debug-only
+
+Der konservative Boundary-Shift-Pass bleibt vorläufig ein reiner Debug-Mechanismus und wird nicht in die echte Boundary-Pipeline übernommen.
+
+Begründung:
+- Einige +1-Fälle wirken im Hörvergleich sinnvoll.
+- Gleichzeitig existieren validierte Gegenbeispiele, insbesondere Bob 128, die mit den aktuellen drei Signalen nicht robust trennbar sind.
+- Weitere Threshold-Anpassungen auf derselben Signalbasis wären nicht belastbar genug.
+
+Arbeitsentscheidung:
+- Die aktuelle Boundary-Pipeline bleibt unverändert.
+- `debug_candidate_shift_recommendation.py` und `debug_apply_boundary_shift.py` bleiben Debug-Werkzeuge.
+- Ein zukünftiger echter Shift-Ansatz wird nur dann neu geprüft, wenn zusätzliche Evidenzsignale definiert und separat validiert wurden.
