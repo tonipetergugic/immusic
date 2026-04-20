@@ -142,7 +142,7 @@ def _print_shift_compare(rows: list[dict[str, Any]], target_bar: int, max_shift:
 
 def main() -> int:
     if len(sys.argv) < 3:
-        print("Usage: python analysis_engine/debug_candidate_windows.py <analysis.json> <target_bar> [<target_bar> ...]")
+        print("Usage: python -m analysis_engine.debug.debug_candidate_windows <analysis.json> <target_bar> [<target_bar> ...]")
         return 1
 
     json_path = Path(sys.argv[1])

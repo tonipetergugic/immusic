@@ -13,6 +13,7 @@ from analysis_engine.config import ensure_output_dir
 from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
 from analysis_engine.loudness import analyze_loudness
+from analysis_engine.macro_sections import analyze_macro_sections
 from analysis_engine.novelty import analyze_novelty
 from analysis_engine.plots import save_structure_plot, save_waveform_plot
 from analysis_engine.report import write_analysis_json
@@ -72,29 +73,38 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     )
 
     result.structure = analyze_structure_baseline(audio_mono, mono_sr)
+    bars = result.structure.get("bars", [])
     result.features = analyze_features(
         audio_mono,
         mono_sr,
-        bars=result.structure.get("bars", []),
+        bars=bars,
     )
     result.similarity = analyze_similarity(
         result.features.get("bar_feature_vectors", [])
     )
     result.novelty = analyze_novelty(
         result.similarity.get("matrix", []),
-        result.structure.get("bars", []),
+        bars,
         bar_delta_from_prev=result.features.get("bar_delta_from_prev", []),
         bar_similarity_prev_to_here=result.features.get("bar_similarity_prev_to_here", []),
         bar_forward_stability=result.features.get("bar_forward_stability", []),
     )
     result.boundary_decision = analyze_boundary_decision(
         boundary_candidates=result.novelty.get("boundary_candidates", []),
-        bars=result.structure.get("bars", []),
+        bars=bars,
     )
-    result.sections = analyze_sections(
-        result.structure.get("bars", []),
+    sections = analyze_sections(
+        bars,
         result.boundary_decision.get("final_boundaries", []),
     )
+    result.sections = sections
+    macro_sections = analyze_macro_sections(
+        sections=sections.get("sections", []),
+        bars=bars,
+    )
+    result.macro_sections = macro_sections
+    base_to_dict = result.to_dict
+    result.to_dict = lambda: {**base_to_dict(), "macro_sections": macro_sections}
     result.loudness = analyze_loudness(audio_mono, mono_sr)
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)

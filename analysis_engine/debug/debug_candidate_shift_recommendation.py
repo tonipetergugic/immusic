@@ -191,7 +191,7 @@ def _choose_shift(
 
 def main() -> int:
     if len(sys.argv) != 2:
-        print("Usage: python -m analysis_engine.debug_candidate_shift_recommendation <analysis.json>")
+        print("Usage: python -m analysis_engine.debug.debug_candidate_shift_recommendation <analysis.json>")
         return 1
 
     json_path = Path(sys.argv[1])

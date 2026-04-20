@@ -181,7 +181,7 @@ def _select_winner(
 def main() -> int:
     if len(sys.argv) != 3:
         _die(
-            'Usage: python analysis_engine/debug_rescore_candidates.py "<path-to-analysis.json>" <target_bar>',
+            'Usage: python -m analysis_engine.debug.debug_rescore_candidates "<path-to-analysis.json>" <target_bar>',
             1,
         )
 

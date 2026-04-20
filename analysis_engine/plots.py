@@ -72,6 +72,12 @@ def save_structure_plot(
         return None
 
     sections = result.sections.get("sections", []) if isinstance(result.sections, dict) else []
+    macro_payload = getattr(result, "macro_sections", {})
+    macro_sections = (
+        macro_payload.get("macro_sections", [])
+        if isinstance(macro_payload, dict)
+        else []
+    )
 
     fig, ax = plt.subplots(figsize=(16, 5))
     ax.set_facecolor("#fafafa")
@@ -91,23 +97,67 @@ def save_structure_plot(
     ax.set_ylabel("Amplitude")
     ax.xaxis.set_major_formatter(FuncFormatter(_format_seconds_mmss))
     ax.set_xlim(float(times[0]), float(times[-1]))
+    x_min, x_max = ax.get_xlim()
+    x_span = max(0.0, x_max - x_min)
+    label_x_margin = x_span * 0.03
+    label_x_min = x_min + label_x_margin
+    label_x_max = x_max - label_x_margin
+
+    macro_label_y_top = 1.06
+    macro_label_y_bottom = 1.01
+    label_y_top = 0.96
+    label_y_bottom = 0.905
+
+    for macro_section in macro_sections:
+        start_sec = float(macro_section["start_sec"])
+        end_sec = float(macro_section["end_sec"])
+        macro_index = int(macro_section["index"])
+        center_sec = (start_sec + end_sec) / 2.0
+        label_center_sec = min(max(center_sec, label_x_min), label_x_max)
+        start_label = _format_seconds_mmss(start_sec, 0)
+        end_label = _format_seconds_mmss(end_sec, 0)
+        label = f"M{macro_index + 1} ({start_label}-{end_label})"
+        label_y = macro_label_y_top if macro_index % 2 == 0 else macro_label_y_bottom
+
+        ax.axvline(start_sec, color="#1f2d3d", linewidth=1.8, alpha=0.9, zorder=4)
+        ax.text(
+            label_center_sec,
+            label_y,
+            label,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="top",
+            fontsize=8,
+            fontweight="bold",
+            bbox={
+                "boxstyle": "round,pad=0.24",
+                "facecolor": "#f7f1df",
+                "edgecolor": "#a67c00",
+                "alpha": 0.95,
+            },
+            zorder=5,
+        )
 
     for section in sections:
         start_sec = float(section["start_sec"])
         end_sec = float(section["end_sec"])
         section_index = int(section["index"])
         center_sec = (start_sec + end_sec) / 2.0
-        label = f"S{section_index + 1}"
+        label_center_sec = min(max(center_sec, label_x_min), label_x_max)
+        start_label = _format_seconds_mmss(start_sec, 0)
+        end_label = _format_seconds_mmss(end_sec, 0)
+        label = f"S{section_index + 1}\n({start_label}-{end_label})"
+        label_y = label_y_top if section_index % 2 == 0 else label_y_bottom
 
         ax.axvline(start_sec, color="#5b6470", linewidth=1.0, alpha=0.7, zorder=3)
         ax.text(
-            center_sec,
-            0.965,
+            label_center_sec,
+            label_y,
             label,
             transform=ax.get_xaxis_transform(),
             ha="center",
             va="top",
-            fontsize=10,
+            fontsize=8,
             fontweight="bold",
             bbox={
                 "boxstyle": "round,pad=0.2",
@@ -121,8 +171,11 @@ def save_structure_plot(
     if sections:
         last_end_sec = float(sections[-1]["end_sec"])
         ax.axvline(last_end_sec, color="#5b6470", linewidth=1.0, alpha=0.7, zorder=3)
+    if macro_sections:
+        last_macro_end_sec = float(macro_sections[-1]["end_sec"])
+        ax.axvline(last_macro_end_sec, color="#1f2d3d", linewidth=1.8, alpha=0.9, zorder=4)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.88))
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
 

@@ -11,7 +11,7 @@ SIMILARITY_THRESHOLD = 0.95
 
 def main() -> int:
     if len(sys.argv) != 2:
-        print("Usage: python -m analysis_engine.debug_flag_late_novelty_drift /path/to/analysis.json")
+        print("Usage: python -m analysis_engine.debug.debug_flag_late_novelty_drift /path/to/analysis.json")
         return 1
 
     json_path = Path(sys.argv[1])

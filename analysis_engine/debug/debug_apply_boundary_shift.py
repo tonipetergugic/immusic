@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from analysis_engine.debug_candidate_shift_recommendation import _choose_shift, _get_float_list
+from analysis_engine.debug.debug_candidate_shift_recommendation import _choose_shift, _get_float_list
 
 
 def _safe_float(value: Any) -> float | None:
@@ -29,7 +29,7 @@ def _format_time(value: float | None) -> str:
 
 def main() -> int:
     if len(sys.argv) != 2:
-        print("Usage: python -m analysis_engine.debug_apply_boundary_shift <analysis.json>")
+        print("Usage: python -m analysis_engine.debug.debug_apply_boundary_shift <analysis.json>")
         return 1
 
     json_path = Path(sys.argv[1])

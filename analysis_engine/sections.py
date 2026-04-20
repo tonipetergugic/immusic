@@ -27,30 +27,6 @@ def _extract_sorted_boundary_indices(
     return sorted(set(indices))
 
 
-def _filter_boundaries_by_min_section_bars(
-    boundary_indices: list[int],
-    bar_count: int,
-    min_section_bars: int,
-) -> list[int]:
-    if not boundary_indices:
-        return []
-
-    accepted: list[int] = []
-    current_section_start = 0
-
-    for boundary_index in boundary_indices:
-        if boundary_index - current_section_start < min_section_bars:
-            continue
-
-        accepted.append(boundary_index)
-        current_section_start = boundary_index
-
-    while accepted and (bar_count - accepted[-1]) < min_section_bars:
-        accepted.pop()
-
-    return accepted
-
-
 def analyze_sections(
     bars: list[dict[str, float | int]],
     boundary_candidates: list[dict[str, float | int]],
@@ -60,6 +36,7 @@ def analyze_sections(
         return {
             "method": "boundary_candidates_to_neutral_sections",
             "min_section_bars": min_section_bars,
+            "min_section_bars_filter_applied": False,
             "boundary_bar_indices": [],
             "sections": [],
             "section_count": 0,
@@ -73,11 +50,8 @@ def analyze_sections(
         bar_count=bar_count,
     )
 
-    boundary_indices = _filter_boundaries_by_min_section_bars(
-        boundary_indices=boundary_indices,
-        bar_count=bar_count,
-        min_section_bars=min_section_bars,
-    )
+    # Boundary filtering is now handled upstream in boundary_decision.py.
+    # Sections must translate the final productive boundary indices as-is.
 
     section_starts = [0, *boundary_indices]
     section_end_starts = [*boundary_indices, bar_count]
@@ -115,6 +89,7 @@ def analyze_sections(
     return {
         "method": "boundary_candidates_to_neutral_sections",
         "min_section_bars": min_section_bars,
+        "min_section_bars_filter_applied": False,
         "boundary_bar_indices": boundary_indices,
         "sections": sections,
         "section_count": len(sections),

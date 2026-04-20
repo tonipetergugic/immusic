@@ -106,7 +106,7 @@ def _classify_pair(earlier: dict[str, Any], later: dict[str, Any]) -> str:
 def main() -> int:
     if len(sys.argv) not in (2, 3):
         print(
-            "Usage: python -m analysis_engine.debug_classify_removed_near_boundaries "
+            "Usage: python -m analysis_engine.debug.debug_classify_removed_near_boundaries "
             "<analysis.json> [min_section_bars]"
         )
         return 1

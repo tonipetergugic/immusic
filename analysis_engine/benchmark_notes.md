@@ -538,3 +538,41 @@ Ergebnis:
 
 Konsequenz:
 Auch nach Einbezug von Bob Sinclar bleibt der aktuell klar verifizierte Removed-Near-Boundary-Fall im Benchmark-Stand auf Freaky 1 isoliert.
+
+---
+
+
+Validierter Benchmark-Befund: Ali Love, Vintage Culture, Max Styler - Freaky 1 (Original Mix)
+
+Hörvalidierung gegen aktuelle produktive Boundary-Decision:
+
+Bestätigte korrekte Boundaries:
+- 52 passt
+- 75 passt
+- 92 passt
+- 120 passt
+- 128 passt
+- 136 passt
+
+Bestätigte Fehlboundaries:
+- 59 zu früh
+- 67 zu früh
+- 102 zu spät
+- 112 unnötig
+- 151 zu früh
+
+Interpretation der Fehlklassen:
+- 59 und 67 sind kein simples Duplicate-Paar, sondern ein early cluster / ramp-split vor der musikalisch plausibleren späteren Ankunft.
+- 102 ist keine duplicate-artige Boundary, sondern eher eine real vorhandene Boundary, die zu spät getroffen wurde.
+- 112 ist duplicate-/continuation-artig und musikalisch unnötig.
+- 151 ist eine terminale Fehlboundary im Outro-/Endbereich.
+
+Wichtige Schlussfolgerung:
+Die aktuelle Boundary-Decision hat jetzt zwar das reine Duplicate-Problem um 106 sauber reduziert, zeigt aber weiterhin drei offene Fehlerklassen:
+1. early cluster / ramp split
+2. late real boundary
+3. terminal false boundary
+
+Konsequenz:
+Vor dem nächsten produktiven Patch keine neue Schnellheuristik einbauen.
+Zuerst minimal entscheiden, welche dieser drei Fehlerklassen als nächstes gezielt adressiert werden soll.
