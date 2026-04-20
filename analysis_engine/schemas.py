@@ -63,6 +63,7 @@ class AnalysisResult:
     novelty: JsonDict = field(default_factory=dict)
     boundary_decision: JsonDict = field(default_factory=dict)
     sections: JsonDict = field(default_factory=dict)
+    macro_sections: JsonDict = field(default_factory=dict)
     loudness: JsonDict = field(default_factory=dict)
     stereo: JsonDict = field(default_factory=dict)
 

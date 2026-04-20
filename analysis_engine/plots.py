@@ -78,6 +78,10 @@ def save_structure_plot(
         if isinstance(macro_payload, dict)
         else []
     )
+    ignored_boundary_bar_indices = set(
+        int(bar_index)
+        for bar_index in macro_payload.get("ignored_boundary_bar_indices", [])
+    ) if isinstance(macro_payload, dict) else set()
 
     fig, ax = plt.subplots(figsize=(16, 5))
     ax.set_facecolor("#fafafa")
@@ -105,8 +109,8 @@ def save_structure_plot(
 
     macro_label_y_top = 1.06
     macro_label_y_bottom = 1.01
-    label_y_top = 0.96
-    label_y_bottom = 0.905
+    label_y_top = 0.78
+    label_y_bottom = 0.62
 
     for macro_section in macro_sections:
         start_sec = float(macro_section["start_sec"])
@@ -149,7 +153,24 @@ def save_structure_plot(
         label = f"S{section_index + 1}\n({start_label}-{end_label})"
         label_y = label_y_top if section_index % 2 == 0 else label_y_bottom
 
-        ax.axvline(start_sec, color="#5b6470", linewidth=1.0, alpha=0.7, zorder=3)
+        is_ignored_boundary = int(section["start_bar_index"]) in ignored_boundary_bar_indices
+
+        line_color = "#b8c1cd" if is_ignored_boundary else "#4f5965"
+        line_alpha = 0.5 if is_ignored_boundary else 0.9
+        line_width = 1.0 if is_ignored_boundary else 1.25
+
+        bbox_facecolor = "#f6f8fb" if is_ignored_boundary else "white"
+        bbox_edgecolor = "#d8dee8" if is_ignored_boundary else "#c7cfdb"
+        bbox_alpha = 0.65 if is_ignored_boundary else 0.9
+        text_alpha = 0.6 if is_ignored_boundary else 1.0
+
+        ax.axvline(
+            start_sec,
+            color=line_color,
+            linewidth=line_width,
+            alpha=line_alpha,
+            zorder=3,
+        )
         ax.text(
             label_center_sec,
             label_y,
@@ -157,15 +178,18 @@ def save_structure_plot(
             transform=ax.get_xaxis_transform(),
             ha="center",
             va="top",
+            rotation=90,
+            rotation_mode="anchor",
             fontsize=8,
             fontweight="bold",
+            alpha=text_alpha,
             bbox={
                 "boxstyle": "round,pad=0.2",
-                "facecolor": "white",
-                "edgecolor": "#c7cfdb",
-                "alpha": 0.9,
+                "facecolor": bbox_facecolor,
+                "edgecolor": bbox_edgecolor,
+                "alpha": bbox_alpha,
             },
-            zorder=4,
+            zorder=5,
         )
 
     if sections:

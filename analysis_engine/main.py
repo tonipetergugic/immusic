@@ -101,10 +101,10 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     macro_sections = analyze_macro_sections(
         sections=sections.get("sections", []),
         bars=bars,
+        final_boundaries=result.boundary_decision.get("final_boundaries", []),
+        scored_candidates=result.boundary_decision.get("scored_candidates", []),
     )
     result.macro_sections = macro_sections
-    base_to_dict = result.to_dict
-    result.to_dict = lambda: {**base_to_dict(), "macro_sections": macro_sections}
     result.loudness = analyze_loudness(audio_mono, mono_sr)
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)
