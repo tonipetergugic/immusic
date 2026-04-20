@@ -433,3 +433,94 @@ Arbeitsentscheidung:
 - Die aktuelle Boundary-Pipeline bleibt unverändert.
 - `debug_candidate_shift_recommendation.py` und `debug_apply_boundary_shift.py` bleiben Debug-Werkzeuge.
 - Ein zukünftiger echter Shift-Ansatz wird nur dann neu geprüft, wenn zusätzliche Evidenzsignale definiert und separat validiert wurden.
+
+## Validierter Benchmark-Befund: two different near-boundary failure types in Freaky 1
+
+Track:
+- Ali Love, Vintage Culture, Max Styler – Freaky 1 (Original Mix)
+
+Im produktiven Pass-through-Stand wurden 14 final_boundaries an `sections.py` übergeben.
+`sections.py` übernahm davon 12 Boundary-Bar-Indizes und entfernte 2 nahe Nachbarn:
+- 59
+- 106
+
+Grund:
+- 59 liegt nur 7 Bars nach 52
+- 106 liegt nur 4 Bars nach 102
+- bei `min_section_bars = 8` werden diese Kandidaten in `sections.py` korrekt verworfen
+
+Wichtiger Befund:
+Diese zwei entfernten Kandidaten sind musikalisch / technisch nicht vom gleichen Typ.
+
+### Falltyp 1: starker Cluster-Fall
+
+Boundary-Paar:
+- 52 / 59
+
+Befund:
+- 52 zeigt einen starken echten Wechsel
+- 59 zeigt ebenfalls starke Boundary-Signale
+- 59 wirkt nicht wie bloßes Rauschen oder schwacher Nachzügler
+- der Kandidat wird aktuell nur wegen Mindestabstand entfernt
+
+Bedeutung:
+Das ist kein Shift-Fall.
+Das ist ein Cluster-Fall mit zwei nahen starken Kandidaten.
+Eine spätere produktive Lösung braucht hier eher Cluster-Entscheidung als Boundary-Shift.
+
+### Falltyp 2: schwacher Doppel-Kandidat
+
+Boundary-Paar:
+- 102 / 106
+
+Befund:
+- 102 wirkt wie die eigentliche Boundary
+- 106 hat deutlich schwächere Boundary-Evidenz
+- 106 zeigt nur kleines `delta_from_prev`, hohe `similarity_prev_to_here` und hohe `forward_stability`
+- 106 wirkt eher wie ein später Rest-/Nachschwing-Kandidat innerhalb derselben neuen Phase
+
+Bedeutung:
+Das ist kein echter Konkurrenzfall wie 52 / 59.
+Das ist ein schwacher Doppel-Kandidat, der plausibel verworfen werden kann.
+
+Konsequenz:
+Der Track liefert zwei klar getrennte Fehlertypen für nahe Kandidaten:
+- starker Cluster-Fall
+- schwacher Doppel-Kandidat
+
+Wichtig für die weitere Engine-Arbeit:
+Die nächste produktive Logik sollte nicht pauschal auf Boundary-Shift zielen, sondern zwischen diesen beiden Falltypen unterscheiden können.
+
+## Validierter Benchmark-Befund: removed near-boundary cases across four benchmark tracks
+
+Verwendetes Debug-Tool:
+- `analysis_engine/debug_classify_removed_near_boundaries.py`
+
+Geprüfte Tracks:
+- Ali Love, Vintage Culture, Max Styler – Freaky 1 (Original Mix)
+- Solar Vision – Coming Home Again (Original Mix)
+- David Forbes – Techno Is My Only Drug (Mixed)
+- Above & Beyond, Zoe Johnston – Crazy Love feat. Zoë Johnston (Extended Mix)
+
+Ergebnis:
+
+### Freaky 1
+Entfernte Near-Boundaries vorhanden:
+- 52 -> 59 = `strong_cluster`
+- 102 -> 106 = `weak_duplicate`
+
+Bedeutung:
+Freaky 1 bleibt der aktuell klar verifizierte Referenz-Track für zwei verschiedene entfernte Near-Boundary-Fehlertypen.
+
+### Solar Vision
+- keine entfernten Near-Boundaries
+
+### David Forbes
+- keine entfernten Near-Boundaries
+
+### Crazy Love
+- keine entfernten Near-Boundaries
+
+Konsequenz:
+Das Problem ist im aktuellen Benchmark-Stand nicht breit über alle geprüften Tracks verteilt.
+Mit dem präzisen Removed-Near-Boundary-Debug ist es aktuell klar nur in Freaky 1 nachweisbar.

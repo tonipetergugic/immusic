@@ -61,6 +61,7 @@ class AnalysisResult:
     features: JsonDict = field(default_factory=dict)
     similarity: JsonDict = field(default_factory=dict)
     novelty: JsonDict = field(default_factory=dict)
+    boundary_decision: JsonDict = field(default_factory=dict)
     sections: JsonDict = field(default_factory=dict)
     loudness: JsonDict = field(default_factory=dict)
     stereo: JsonDict = field(default_factory=dict)

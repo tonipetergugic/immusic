@@ -8,6 +8,7 @@ from analysis_engine.audio_io import (
     load_audio_stereo,
     read_audio_file_info,
 )
+from analysis_engine.boundary_decision import analyze_boundary_decision
 from analysis_engine.config import ensure_output_dir
 from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
@@ -86,9 +87,13 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         bar_similarity_prev_to_here=result.features.get("bar_similarity_prev_to_here", []),
         bar_forward_stability=result.features.get("bar_forward_stability", []),
     )
+    result.boundary_decision = analyze_boundary_decision(
+        boundary_candidates=result.novelty.get("boundary_candidates", []),
+        bars=result.structure.get("bars", []),
+    )
     result.sections = analyze_sections(
         result.structure.get("bars", []),
-        result.novelty.get("boundary_candidates", []),
+        result.boundary_decision.get("final_boundaries", []),
     )
     result.loudness = analyze_loudness(audio_mono, mono_sr)
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
