@@ -315,3 +315,83 @@ The Section Build Layer is responsible only for:
 - preserving output structure
 
 It should not re-decide macro-boundary logic.
+
+## Current rule status
+
+- `outro_guard`: active
+- `weak_transition`: active
+- `early_entry`: active
+- `late_arrival`: active
+
+## Validation policy for this contract
+
+- This contract must not claim validation from a single track or a single reference outcome.
+- Track-specific examples may help exploration, but they must not be written here as validated rule proof.
+- Rule acceptance must be based on broader multi-track review and architectural plausibility.
+- This document defines intended rule behavior and guardrails, not track-calibrated truth.
+
+## Opening-boundary refinement target
+
+Scope:
+- this refinement target applies only to the opening macro-boundary decision of a track
+- it is only about early-entry behavior near the beginning of a track
+- it must not change grouping behavior
+- it must not globally loosen all early-entry decisions
+
+Problem to solve:
+- an early candidate near the beginning of a track can act like a strong pre-impulse
+- a later candidate in the same local group can mark the more plausible end of the opening block
+- the current rule may still keep the earlier anchor too aggressively in that narrow situation
+
+Desired behavior:
+- for the opening macro-boundary decision, the rule should better protect a plausible opening block
+- a later candidate may be preferred even if it is not the strongest raw boundary-score candidate
+- this must remain a narrow opening-boundary refinement, not a global relaxation
+
+Guardrails:
+- do not use this as a reason to weaken all early-entry thresholds
+- do not merge this with grouping fixes
+- do not affect non-opening macro-boundary groups in this refinement step
+
+## Opening-boundary decision shape
+
+Narrow decision shape:
+- this shape applies only to the opening local boundary group in a track
+- it is only relevant when the currently selected anchor would end the opening block unusually early
+- it only applies when there is a later candidate in the same local group
+- the later candidate does not need to win on every raw metric
+- the main question is whether the later candidate preserves a more plausible opening block
+
+Interpretation target:
+- the earlier candidate may be a strong pre-impulse
+- the later candidate may represent the more believable end of the opening section
+- this is an opening-boundary plausibility correction, not a global score override
+
+What this refinement should explicitly allow:
+- choosing the later candidate even if its raw boundary_score is somewhat lower
+- choosing the later candidate even if delta_norm or forward_stability are not globally stronger
+- prioritizing opening-block plausibility over raw local peak strength in this narrow case
+
+What this refinement must still forbid:
+- moving anchors to clearly weak later candidates
+- changing non-opening groups with the same logic
+- turning early-entry into a general right-shift rule
+
+## Opening-boundary refinement
+
+Purpose:
+Describe a narrow decision-layer refinement for the opening local boundary group near the beginning of a track.
+
+Intent:
+In some cases, the first selected boundary may capture an early pre-signal instead of the more plausible end of the opening macro block. The refinement exists to evaluate whether a direct later candidate should be preferred in that narrow situation.
+
+Scope:
+- Only relevant for the opening local boundary group
+- Only a decision-layer refinement
+- Not a global macro retuning rule
+
+Constraint:
+This rule must not be justified by calibrating to a single track or a single reference outcome. It must only be accepted if it remains architecturally plausible and stable across multiple test cases.
+
+Current status:
+Defined as a narrow architectural refinement target. It should be treated as provisional unless broader multi-track validation supports it.

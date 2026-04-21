@@ -13,6 +13,11 @@ MIN_LATE_ARRIVAL_FORWARD_STABILITY_GAIN = 0.15
 MAX_WEAK_TRANSITION_BOUNDARY_SCORE = 0.55
 MAX_WEAK_TRANSITION_DELTA_NORM = 0.45
 MIN_WEAK_TRANSITION_SIMILARITY_PREV_TO_HERE = 0.55
+START_OF_TRACK_MAX_SELECTED_BAR_INDEX = 12
+START_OF_TRACK_MAX_GROUP_SPAN_BARS = 8
+START_OF_TRACK_MIN_SELECTED_FORWARD_STABILITY = 0.9
+START_OF_TRACK_MAX_SELECTED_DELTA_NORM = 0.55
+START_OF_TRACK_MIN_LATER_BOUNDARY_SCORE = 0.6
 
 
 def _build_neutral_rule_result(
@@ -261,9 +266,14 @@ def evaluate_early_entry_rule(
     evidence: dict[str, Any] = {
         "selected_bar_index": selected_bar_index,
         "group_bar_indices": group_bar_indices,
+        "is_opening_group": bool(group_context.get("is_opening_group")),
+        "group_index": group_context.get("group_index"),
+        "group_count": group_context.get("group_count"),
         "max_boundary_score_drop": MAX_EARLY_ENTRY_BOUNDARY_SCORE_DROP,
         "min_delta_norm_gain": MIN_EARLY_ENTRY_DELTA_NORM_GAIN,
         "max_forward_stability_drop": MAX_EARLY_ENTRY_FORWARD_STABILITY_DROP,
+        "opening_boundary_refinement_checked": False,
+        "opening_boundary_refinement_applies": False,
     }
 
     if selected_bar_index is None:
@@ -369,6 +379,30 @@ def evaluate_early_entry_rule(
             ),
         }
     )
+
+    opening_boundary_refinement_applies = (
+        bool(group_context.get("is_opening_group"))
+        and len(group_bar_indices) >= 2
+        and selected_group_position == 0
+        and normalized_selected_bar_index <= START_OF_TRACK_MAX_SELECTED_BAR_INDEX
+        and later_bar_index - normalized_selected_bar_index
+        <= START_OF_TRACK_MAX_GROUP_SPAN_BARS
+        and selected_forward_stability >= START_OF_TRACK_MIN_SELECTED_FORWARD_STABILITY
+        and selected_delta_norm <= START_OF_TRACK_MAX_SELECTED_DELTA_NORM
+        and later_boundary_score >= START_OF_TRACK_MIN_LATER_BOUNDARY_SCORE
+    )
+    evidence["opening_boundary_refinement_checked"] = True
+    evidence["opening_boundary_refinement_applies"] = opening_boundary_refinement_applies
+
+    if opening_boundary_refinement_applies:
+        return {
+            "rule_name": "early_entry",
+            "applies": True,
+            "action": "replace_with_candidate",
+            "preferred_bar_index": later_bar_index,
+            "reason": "opening-boundary refinement shifts opening boundary to later candidate",
+            "evidence": evidence,
+        }
 
     if not boundary_score_is_close_enough:
         return _build_keep_selected_rule_result(

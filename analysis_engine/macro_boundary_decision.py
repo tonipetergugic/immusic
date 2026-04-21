@@ -110,6 +110,8 @@ def _select_group_anchor_decision(
     group_bar_indices: list[int],
     candidate_lookup: dict[int, dict[str, Any]],
     *,
+    group_index: int,
+    group_count: int,
     is_last_group: bool,
     track_end_bar_index: int,
 ) -> dict[str, Any]:
@@ -160,6 +162,9 @@ def _select_group_anchor_decision(
         "group_bar_indices": normalized_group_bar_indices,
         "selected_bar_index": initial_selected_bar_index,
         "candidate_summaries": candidate_summaries,
+        "group_index": group_index,
+        "group_count": group_count,
+        "is_opening_group": group_index == 0,
         "is_last_group": is_last_group,
         "bars_to_track_end": trailing_bar_count,
         "track_end_bar_index": track_end_bar_index,
@@ -211,6 +216,8 @@ def analyze_macro_boundary_decisions(
             _select_group_anchor_decision(
                 group_bar_indices=group_bar_indices,
                 candidate_lookup=candidate_lookup,
+                group_index=group_index,
+                group_count=len(local_boundary_groups),
                 is_last_group=group_index == len(local_boundary_groups) - 1,
                 track_end_bar_index=track_end_bar_index,
             )
