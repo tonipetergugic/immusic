@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 
-MIN_MACRO_SECTION_BARS = 16
-
-
 def _collect_final_boundary_bar_indices(
     final_boundaries: list[dict[str, Any]],
 ) -> list[int]:
@@ -97,45 +94,6 @@ def _build_macro_sections_from_boundary_indices(
     return macro_sections
 
 
-def _merge_trailing_short_macro_section(
-    macro_sections: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    if len(macro_sections) < 2:
-        return macro_sections
-
-    last_section = macro_sections[-1]
-    last_bar_count = int(last_section["bar_count"])
-
-    if last_bar_count >= MIN_MACRO_SECTION_BARS:
-        return macro_sections
-
-    merged_source_section_indices = [
-        int(index)
-        for index in (
-            list(macro_sections[-2]["source_section_indices"])
-            + list(last_section["source_section_indices"])
-        )
-    ]
-
-    merged_section = {
-        "index": int(macro_sections[-2]["index"]),
-        "start_bar_index": int(macro_sections[-2]["start_bar_index"]),
-        "end_bar_index": int(last_section["end_bar_index"]),
-        "bar_count": int(last_section["end_bar_index"]) - int(macro_sections[-2]["start_bar_index"]) + 1,
-        "start_sec": float(macro_sections[-2]["start_sec"]),
-        "end_sec": float(last_section["end_sec"]),
-        "duration_sec": float(last_section["end_sec"]) - float(macro_sections[-2]["start_sec"]),
-        "source_section_indices": merged_source_section_indices,
-    }
-
-    rebuilt_sections = macro_sections[:-2] + [merged_section]
-
-    for index, section in enumerate(rebuilt_sections):
-        section["index"] = index
-
-    return rebuilt_sections
-
-
 def build_macro_sections_payload(
     sections: list[dict[str, float | int]],
     bars: list[dict[str, float | int]],
@@ -147,7 +105,6 @@ def build_macro_sections_payload(
         bars=bars,
         sections=sections,
     )
-    macro_sections = _merge_trailing_short_macro_section(macro_sections)
 
     macro_boundary_bar_indices = [
         int(macro_section["start_bar_index"])
