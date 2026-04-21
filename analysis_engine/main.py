@@ -23,6 +23,7 @@ from analysis_engine.schemas import (
     AnalysisArtifactPaths,
     AnalysisResult,
     StereoMetrics,
+    SummaryMetrics,
 )
 from analysis_engine.sections import analyze_sections
 from analysis_engine.similarity import analyze_similarity
@@ -44,18 +45,18 @@ def build_artifact_paths(audio_path: Path) -> AnalysisArtifactPaths:
     )
 
 
-def build_summary(result: AnalysisResult) -> dict[str, object]:
+def build_summary(result: AnalysisResult) -> SummaryMetrics:
     structure = result.structure
-    return {
-        "filename": result.file_info.filename,
-        "duration_sec": result.file_info.duration_sec,
-        "sample_rate": result.file_info.sample_rate,
-        "channels": result.file_info.channels,
-        "tempo_estimate": structure.get("tempo_estimate"),
-        "beat_count": structure.get("beat_count"),
-        "downbeat_count": structure.get("downbeat_count"),
-        "bar_count": structure.get("bar_count"),
-    }
+    return SummaryMetrics(
+        filename=result.file_info.filename,
+        duration_sec=result.file_info.duration_sec,
+        sample_rate=result.file_info.sample_rate,
+        channels=result.file_info.channels,
+        tempo_estimate=structure.get("tempo_estimate"),
+        beat_count=structure.get("beat_count"),
+        downbeat_count=structure.get("downbeat_count"),
+        bar_count=structure.get("bar_count"),
+    )
 
 
 def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult:
@@ -177,10 +178,10 @@ def main() -> None:
     print(f"Duration: {result.file_info.duration_sec:.2f}s")
     print(f"Sample rate: {result.file_info.sample_rate}")
     print(f"Channels: {result.file_info.channels}")
-    print(f"Tempo estimate: {result.summary.get('tempo_estimate')}")
-    print(f"Beats: {result.summary.get('beat_count')}")
-    print(f"Downbeats: {result.summary.get('downbeat_count')}")
-    print(f"Bars: {result.summary.get('bar_count')}")
+    print(f"Tempo estimate: {result.summary.tempo_estimate}")
+    print(f"Beats: {result.summary.beat_count}")
+    print(f"Downbeats: {result.summary.downbeat_count}")
+    print(f"Bars: {result.summary.bar_count}")
     print(f"JSON: {result.artifacts.json_path}")
     if result.artifacts.waveform_plot_path:
         print(f"Waveform plot: {result.artifacts.waveform_plot_path}")

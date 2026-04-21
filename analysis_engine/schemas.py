@@ -84,11 +84,25 @@ class StereoMetrics:
 
 
 @dataclass
+class SummaryMetrics:
+    filename: str | None = None
+    duration_sec: float | None = None
+    sample_rate: int | None = None
+    channels: int | None = None
+    tempo_estimate: float | None = None
+    beat_count: int | None = None
+    downbeat_count: int | None = None
+    bar_count: int | None = None
+
+
+@dataclass
 class AnalysisResult:
+    # These fields are the current stable root contract of the analysis output.
     file_info: AudioFileInfo
     artifacts: AnalysisArtifactPaths
-    summary: JsonDict = field(default_factory=dict)
+    summary: SummaryMetrics = field(default_factory=SummaryMetrics)
     issues: JsonList = field(default_factory=list)
+    # These fields are internal working/debug blocks and are intentionally not treated as stable product contracts yet.
     structure: JsonDict = field(default_factory=dict)
     features: JsonDict = field(default_factory=dict)
     similarity: JsonDict = field(default_factory=dict)
