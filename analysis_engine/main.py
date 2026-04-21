@@ -13,6 +13,7 @@ from analysis_engine.config import ensure_output_dir
 from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
 from analysis_engine.loudness import analyze_loudness
+from analysis_engine.low_end import analyze_low_end
 from analysis_engine.macro_sections import analyze_macro_sections
 from analysis_engine.novelty import analyze_novelty
 from analysis_engine.plots import save_structure_plot, save_waveform_plot
@@ -74,10 +75,14 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
 
     result.structure = analyze_structure_baseline(audio_mono, mono_sr)
     bars = result.structure.get("bars", [])
+
+    result.loudness = analyze_loudness(audio_stereo, stereo_sr)
+
     result.features = analyze_features(
         audio_mono,
         mono_sr,
         bars=bars,
+        loudness_result=result.loudness,
     )
     result.similarity = analyze_similarity(
         result.features.get("bar_feature_vectors", [])
@@ -105,7 +110,6 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         scored_candidates=result.boundary_decision.get("scored_candidates", []),
     )
     result.macro_sections = macro_sections
-    result.loudness = analyze_loudness(audio_mono, mono_sr)
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)
     else:
@@ -122,6 +126,8 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
             "side_mid_ratio": None,
             "correlation": None,
         }
+
+    result.low_end = analyze_low_end(audio_stereo, stereo_sr)
 
     issues: list[dict[str, object]] = []
 

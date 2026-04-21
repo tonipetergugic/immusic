@@ -102,23 +102,30 @@ def analyze_features(
     crest_factor = peak_dbfs - rms_dbfs
     dynamics["crest_factor"] = float(crest_factor)
 
-    # Dynamic Movement (basierend auf Short-Term vs Integrated LUFS)
+    # Dynamic Movement nur bei echter Messbasis
+    dynamic_movement: float | None = None
+    integrated = None
+    short_term_max = None
+    lra = None
+
     if loudness_result:
         integrated = loudness_result.get("integrated_lufs")
         short_term_max = loudness_result.get("short_term_max_lufs")
-        if integrated is not None and short_term_max is not None:
-            dynamic_movement = abs(short_term_max - integrated)
-        else:
-            dynamic_movement = 5.6
+        lra = loudness_result.get("loudness_range_lu")
+
+    if integrated is not None and short_term_max is not None:
+        dynamic_movement = abs(float(short_term_max) - float(integrated))
+
+    dynamics["dynamic_movement"] = (
+        float(dynamic_movement) if dynamic_movement is not None else None
+    )
+
+    # Dynamics Score nur bei echter Messbasis
+    if lra is not None and dynamic_movement is not None:
+        score = 70 + (float(lra) * 3.5) + (crest_factor * 1.2) - (dynamic_movement * 2.0)
+        dynamics["dynamics_score"] = min(100.0, max(0.0, float(score)))
     else:
-        dynamic_movement = 5.6
-
-    dynamics["dynamic_movement"] = float(dynamic_movement)
-
-    # Dynamics Score (0-100) – einfache Heuristik
-    lra = loudness_result.get("loudness_range_lu", 5.75) if loudness_result else 5.75
-    score = 70 + (lra * 3.5) + (crest_factor * 1.2) - (dynamic_movement * 2.0)
-    dynamics["dynamics_score"] = min(100.0, max(0.0, float(score)))
+        dynamics["dynamics_score"] = None
 
     result["dynamics"] = dynamics
 
