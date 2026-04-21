@@ -5,6 +5,8 @@ from typing import Any
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 
+from analysis_engine.schemas import LowEndMetrics
+
 
 EPSILON = 1e-12
 
@@ -78,7 +80,6 @@ def _analyze_band(
     avg_lr_rms = (left_rms + right_rms) / 2.0
 
     if avg_lr_rms <= EPSILON:
-        mono_retention = None
         mono_loss = None
     else:
         mono_retention = float(np.clip((mono_rms / avg_lr_rms) * 100.0, 0.0, 100.0))
@@ -87,8 +88,6 @@ def _analyze_band(
     phase_correlation = _safe_phase_correlation(left_band, right_band)
 
     result: dict[str, Any] = {
-        "range_hz": [int(low_hz), int(high_hz)],
-        "mono_energy_retention_percent": mono_retention,
         "mono_loss_percent": mono_loss,
         "phase_correlation": phase_correlation,
     }
@@ -111,30 +110,14 @@ def _analyze_band(
     return result
 
 
-def analyze_low_end(audio_stereo: np.ndarray, sample_rate: int) -> dict[str, Any]:
+def analyze_low_end(audio_stereo: np.ndarray, sample_rate: int) -> LowEndMetrics:
     if audio_stereo.ndim != 2 or audio_stereo.shape[0] != 2:
-        return {
-            "sample_rate": int(sample_rate),
-            "low_band_range_hz": [20, 120],
-            "mono_energy_retention_low_band_percent": None,
-            "mono_loss_low_band_percent": None,
-            "phase_correlation_low_band": None,
-            "low_band_balance_db": None,
-            "sub_band_detail": {
-                "20_60_hz": {
-                    "range_hz": [20, 60],
-                    "mono_energy_retention_percent": None,
-                    "mono_loss_percent": None,
-                    "phase_correlation": None,
-                },
-                "60_120_hz": {
-                    "range_hz": [60, 120],
-                    "mono_energy_retention_percent": None,
-                    "mono_loss_percent": None,
-                    "phase_correlation": None,
-                },
-            },
-        }
+        return LowEndMetrics(
+            sample_rate=int(sample_rate),
+            mono_loss_low_band_percent=None,
+            phase_correlation_low_band=None,
+            low_band_balance_db=None,
+        )
 
     left = audio_stereo[0]
     right = audio_stereo[1]
@@ -148,33 +131,13 @@ def analyze_low_end(audio_stereo: np.ndarray, sample_rate: int) -> dict[str, Any
         include_balance=True,
     )
 
-    sub_20_60 = _analyze_band(
-        left,
-        right,
-        sample_rate,
-        20.0,
-        60.0,
-        include_balance=False,
-    )
+    mono_loss_low_band_percent = main_band["mono_loss_percent"]
+    phase_correlation_low_band = main_band["phase_correlation"]
+    low_band_balance_db = main_band["low_band_balance_db"]
 
-    sub_60_120 = _analyze_band(
-        left,
-        right,
-        sample_rate,
-        60.0,
-        120.0,
-        include_balance=False,
+    return LowEndMetrics(
+        sample_rate=int(sample_rate),
+        mono_loss_low_band_percent=mono_loss_low_band_percent,
+        phase_correlation_low_band=phase_correlation_low_band,
+        low_band_balance_db=low_band_balance_db,
     )
-
-    return {
-        "sample_rate": int(sample_rate),
-        "low_band_range_hz": [20, 120],
-        "mono_energy_retention_low_band_percent": main_band["mono_energy_retention_percent"],
-        "mono_loss_low_band_percent": main_band["mono_loss_percent"],
-        "phase_correlation_low_band": main_band["phase_correlation"],
-        "low_band_balance_db": main_band["low_band_balance_db"],
-        "sub_band_detail": {
-            "20_60_hz": sub_20_60,
-            "60_120_hz": sub_60_120,
-        },
-    }

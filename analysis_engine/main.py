@@ -19,7 +19,11 @@ from analysis_engine.macro_sections import analyze_macro_sections
 from analysis_engine.novelty import analyze_novelty
 from analysis_engine.plots import save_structure_plot, save_waveform_plot
 from analysis_engine.report import write_analysis_json
-from analysis_engine.schemas import AnalysisArtifactPaths, AnalysisResult
+from analysis_engine.schemas import (
+    AnalysisArtifactPaths,
+    AnalysisResult,
+    StereoMetrics,
+)
 from analysis_engine.sections import analyze_sections
 from analysis_engine.similarity import analyze_similarity
 from analysis_engine.stereo import analyze_stereo
@@ -118,19 +122,12 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)
     else:
-        result.stereo = {
-            "sample_rate": int(mono_sr),
-            "left_rms": None,
-            "right_rms": None,
-            "mid_rms": None,
-            "side_rms": None,
-            "left_rms_dbfs": None,
-            "right_rms_dbfs": None,
-            "mid_rms_dbfs": None,
-            "side_rms_dbfs": None,
-            "side_mid_ratio": None,
-            "correlation": None,
-        }
+        result.stereo = StereoMetrics(
+            sample_rate=int(mono_sr),
+            side_mid_ratio=None,
+            phase_correlation=None,
+            stereo_width=None,
+        )
 
     result.low_end = analyze_low_end(audio_stereo, stereo_sr)
 
