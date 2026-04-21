@@ -13,6 +13,7 @@ from analysis_engine.config import ensure_output_dir
 from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
 from analysis_engine.loudness import analyze_loudness
+from analysis_engine.dynamics import analyze_dynamics
 from analysis_engine.low_end import analyze_low_end
 from analysis_engine.macro_sections import analyze_macro_sections
 from analysis_engine.novelty import analyze_novelty
@@ -78,11 +79,15 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
 
     result.loudness = analyze_loudness(audio_stereo, stereo_sr)
 
+    result.dynamics = analyze_dynamics(
+        audio_stereo,
+        loudness_result=result.loudness,
+    )
+
     result.features = analyze_features(
         audio_mono,
         mono_sr,
         bars=bars,
-        loudness_result=result.loudness,
     )
     result.similarity = analyze_similarity(
         result.features.get("bar_feature_vectors", [])

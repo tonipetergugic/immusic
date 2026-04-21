@@ -65,6 +65,7 @@ class AnalysisResult:
     sections: JsonDict = field(default_factory=dict)
     macro_sections: JsonDict = field(default_factory=dict)
     loudness: JsonDict = field(default_factory=dict)
+    dynamics: JsonDict = field(default_factory=dict)
     stereo: JsonDict = field(default_factory=dict)
     low_end: JsonDict = field(default_factory=dict)
 

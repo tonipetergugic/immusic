@@ -3,8 +3,6 @@ from __future__ import annotations
 import numpy as np
 import librosa
 
-from analysis_engine.loudness import analyze_loudness
-
 
 def _cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
     norm_a = float(np.linalg.norm(a))
@@ -73,7 +71,6 @@ def analyze_features(
     audio_mono: np.ndarray,
     sample_rate: int,
     bars: list[dict] | None = None,
-    loudness_result: dict | None = None,
 ) -> dict:
     audio = np.asarray(audio_mono, dtype=np.float32)
 
@@ -90,44 +87,6 @@ def analyze_features(
         "frame_count": int(rms.shape[0]),
         **global_metrics,
     }
-
-    # === DYNAMICS METRICS ===
-    dynamics = {}
-
-    # Crest Factor (Peak dBFS - RMS dBFS)
-    peak_linear = np.max(np.abs(audio)) + 1e-12
-    rms_linear = np.sqrt(np.mean(np.square(audio))) + 1e-12
-    peak_dbfs = 20 * np.log10(peak_linear)
-    rms_dbfs = 20 * np.log10(rms_linear)
-    crest_factor = peak_dbfs - rms_dbfs
-    dynamics["crest_factor"] = float(crest_factor)
-
-    # Dynamic Movement nur bei echter Messbasis
-    dynamic_movement: float | None = None
-    integrated = None
-    short_term_max = None
-    lra = None
-
-    if loudness_result:
-        integrated = loudness_result.get("integrated_lufs")
-        short_term_max = loudness_result.get("short_term_max_lufs")
-        lra = loudness_result.get("loudness_range_lu")
-
-    if integrated is not None and short_term_max is not None:
-        dynamic_movement = abs(float(short_term_max) - float(integrated))
-
-    dynamics["dynamic_movement"] = (
-        float(dynamic_movement) if dynamic_movement is not None else None
-    )
-
-    # Dynamics Score nur bei echter Messbasis
-    if lra is not None and dynamic_movement is not None:
-        score = 70 + (float(lra) * 3.5) + (crest_factor * 1.2) - (dynamic_movement * 2.0)
-        dynamics["dynamics_score"] = min(100.0, max(0.0, float(score)))
-    else:
-        dynamics["dynamics_score"] = None
-
-    result["dynamics"] = dynamics
 
     if bars:
         bar_feature_vectors: list[list[float]] = []
