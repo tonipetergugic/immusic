@@ -109,6 +109,9 @@ def _build_local_boundary_groups(
 def _select_group_anchor_decision(
     group_bar_indices: list[int],
     candidate_lookup: dict[int, dict[str, Any]],
+    *,
+    is_last_group: bool,
+    track_end_bar_index: int,
 ) -> dict[str, Any]:
     candidate_summaries: list[dict[str, Any]] = []
 
@@ -151,13 +154,16 @@ def _select_group_anchor_decision(
     )
 
     initial_selected_bar_index = int(selected_candidate["bar_index"])
+    trailing_bar_count = track_end_bar_index - initial_selected_bar_index
 
     group_context = {
         "group_bar_indices": normalized_group_bar_indices,
         "selected_bar_index": initial_selected_bar_index,
         "candidate_summaries": candidate_summaries,
-        "is_last_group": False,
-        "bars_to_track_end": None,
+        "is_last_group": is_last_group,
+        "bars_to_track_end": trailing_bar_count,
+        "track_end_bar_index": track_end_bar_index,
+        "trailing_bar_count": trailing_bar_count,
     }
 
     rule_decision = evaluate_macro_boundary_rules(group_context=group_context)
@@ -192,17 +198,23 @@ def _select_group_anchor_decision(
 
 def analyze_macro_boundary_decisions(
     scored_candidates: list[dict[str, Any]],
+    *,
+    track_end_bar_index: int,
 ) -> dict[str, Any]:
     local_boundary_groups = _build_local_boundary_groups(scored_candidates)
     candidate_lookup = _build_candidate_lookup(scored_candidates)
 
-    macro_boundary_decisions = [
-        _select_group_anchor_decision(
-            group_bar_indices=group_bar_indices,
-            candidate_lookup=candidate_lookup,
+    macro_boundary_decisions = []
+
+    for group_index, group_bar_indices in enumerate(local_boundary_groups):
+        macro_boundary_decisions.append(
+            _select_group_anchor_decision(
+                group_bar_indices=group_bar_indices,
+                candidate_lookup=candidate_lookup,
+                is_last_group=group_index == len(local_boundary_groups) - 1,
+                track_end_bar_index=track_end_bar_index,
+            )
         )
-        for group_bar_indices in local_boundary_groups
-    ]
 
     selected_group_anchor_bar_indices = [
         int(decision["selected_bar_index"])

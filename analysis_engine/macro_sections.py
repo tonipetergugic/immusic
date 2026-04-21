@@ -25,7 +25,11 @@ def analyze_macro_sections(
             "is_empty": True,
         }
 
-    decision_payload = analyze_macro_boundary_decisions(scored_candidates)
+    track_end_bar_index = max(int(bar["index"]) for bar in bars)
+    decision_payload = analyze_macro_boundary_decisions(
+        scored_candidates,
+        track_end_bar_index=track_end_bar_index,
+    )
     build_payload = build_macro_sections_payload(
         sections=sections,
         bars=bars,
