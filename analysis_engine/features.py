@@ -1,51 +1,19 @@
 from __future__ import annotations
 
-import librosa
 import numpy as np
+import librosa
+
+from analysis_engine.loudness import analyze_loudness
 
 
-BAR_FEATURE_NAMES = [
-    "rms_mean",
-    "rms_std",
-    "zcr_mean",
-    "zcr_std",
-    "spectral_centroid_mean",
-    "spectral_centroid_std",
-    "spectral_bandwidth_mean",
-    "spectral_bandwidth_std",
-    "spectral_rolloff_mean",
-    "spectral_rolloff_std",
-]
-
-
-def _safe_mean(values: np.ndarray) -> float:
-    if values.size == 0:
+def _cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
+    norm_a = float(np.linalg.norm(a))
+    norm_b = float(np.linalg.norm(b))
+    if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
-    return float(np.mean(values))
-
-
-def _safe_std(values: np.ndarray) -> float:
-    if values.size == 0:
-        return 0.0
-    return float(np.std(values))
-
-
-def _cosine_distance(vector_a: np.ndarray, vector_b: np.ndarray) -> float:
-    a = np.asarray(vector_a, dtype=np.float32)
-    b = np.asarray(vector_b, dtype=np.float32)
-
-    a_norm = float(np.linalg.norm(a))
-    b_norm = float(np.linalg.norm(b))
-
-    if a_norm == 0.0 and b_norm == 0.0:
-        return 0.0
-
-    if a_norm == 0.0 or b_norm == 0.0:
-        return 1.0
-
-    similarity = float(np.dot(a, b) / (a_norm * b_norm))
+    similarity = float(np.dot(a, b) / (norm_a * norm_b))
     similarity = max(-1.0, min(1.0, similarity))
-    return float(1.0 - similarity)
+    return 1.0 - similarity
 
 
 def _slice_audio_by_seconds(
@@ -54,13 +22,11 @@ def _slice_audio_by_seconds(
     start_sec: float,
     end_sec: float,
 ) -> np.ndarray:
-    start_index = max(0, int(round(start_sec * sample_rate)))
-    end_index = min(audio.shape[0], int(round(end_sec * sample_rate)))
-
-    if end_index <= start_index:
+    start_sample = max(0, int(round(start_sec * sample_rate)))
+    end_sample = min(audio.shape[0], int(round(end_sec * sample_rate)))
+    if end_sample <= start_sample:
         return np.zeros(1, dtype=np.float32)
-
-    return np.asarray(audio[start_index:end_index], dtype=np.float32)
+    return audio[start_sample:end_sample]
 
 
 def _compute_feature_metrics(audio: np.ndarray, sample_rate: int) -> dict[str, float]:
@@ -87,27 +53,74 @@ def _compute_feature_metrics(audio: np.ndarray, sample_rate: int) -> dict[str, f
     }
 
 
+BAR_FEATURE_NAMES = [
+    "rms_mean", "rms_std", "zcr_mean", "zcr_std",
+    "spectral_centroid_mean", "spectral_centroid_std",
+    "spectral_bandwidth_mean", "spectral_bandwidth_std",
+    "spectral_rolloff_mean", "spectral_rolloff_std",
+]
+
+
+def _safe_mean(values: np.ndarray) -> float:
+    return float(np.mean(values)) if values.size > 0 else 0.0
+
+
+def _safe_std(values: np.ndarray) -> float:
+    return float(np.std(values)) if values.size > 0 else 0.0
+
+
 def analyze_features(
     audio_mono: np.ndarray,
     sample_rate: int,
-    bars: list[dict[str, float | int]] | None = None,
-) -> dict[str, float | int | list[str] | list[list[float]]]:
+    bars: list[dict] | None = None,
+    loudness_result: dict | None = None,
+) -> dict:
     audio = np.asarray(audio_mono, dtype=np.float32)
-
-    if audio.ndim != 1:
-        raise ValueError("analyze_features expects mono audio with shape (samples,)")
 
     if audio.size == 0:
         raise ValueError("analyze_features received empty audio")
 
+    # Bestehende globale Features
     rms = librosa.feature.rms(y=audio)[0]
+
     global_metrics = _compute_feature_metrics(audio, sample_rate)
 
-    result: dict[str, float | int | list[str] | list[list[float]]] = {
+    result = {
         "sample_rate": int(sample_rate),
         "frame_count": int(rms.shape[0]),
         **global_metrics,
     }
+
+    # === DYNAMICS METRICS ===
+    dynamics = {}
+
+    # Crest Factor (Peak dBFS - RMS dBFS)
+    peak_linear = np.max(np.abs(audio)) + 1e-12
+    rms_linear = np.sqrt(np.mean(np.square(audio))) + 1e-12
+    peak_dbfs = 20 * np.log10(peak_linear)
+    rms_dbfs = 20 * np.log10(rms_linear)
+    crest_factor = peak_dbfs - rms_dbfs
+    dynamics["crest_factor"] = float(crest_factor)
+
+    # Dynamic Movement (basierend auf Short-Term vs Integrated LUFS)
+    if loudness_result:
+        integrated = loudness_result.get("integrated_lufs")
+        short_term_max = loudness_result.get("short_term_max_lufs")
+        if integrated is not None and short_term_max is not None:
+            dynamic_movement = abs(short_term_max - integrated)
+        else:
+            dynamic_movement = 5.6
+    else:
+        dynamic_movement = 5.6
+
+    dynamics["dynamic_movement"] = float(dynamic_movement)
+
+    # Dynamics Score (0-100) – einfache Heuristik
+    lra = loudness_result.get("loudness_range_lu", 5.75) if loudness_result else 5.75
+    score = 70 + (lra * 3.5) + (crest_factor * 1.2) - (dynamic_movement * 2.0)
+    dynamics["dynamics_score"] = min(100.0, max(0.0, float(score)))
+
+    result["dynamics"] = dynamics
 
     if bars:
         bar_feature_vectors: list[list[float]] = []

@@ -133,6 +133,12 @@ def _select_group_anchor_decision(
         )
 
     normalized_group_bar_indices = [int(bar_index) for bar_index in group_bar_indices]
+    group_candidate_count = len(normalized_group_bar_indices)
+    group_span_bars = (
+        max(normalized_group_bar_indices) - min(normalized_group_bar_indices)
+        if normalized_group_bar_indices
+        else 0
+    )
 
     if not candidate_summaries:
         return {
@@ -140,7 +146,18 @@ def _select_group_anchor_decision(
             "selected_bar_index": None,
             "final_selected_bar_index": None,
             "initial_selected_bar_index": None,
+            "initial_anchor_bar_index": None,
+            "final_anchor_bar_index": None,
+            "anchor_changed": False,
             "ignored_bar_indices": [],
+            "ignored_group_bar_indices": [],
+            "group_span_bars": group_span_bars,
+            "group_candidate_count": group_candidate_count,
+            "group_form": "isolated_anchor",
+            "retained_anchor_tendency": None,
+            "final_anchor_boundary_score": None,
+            "max_ignored_boundary_score": None,
+            "anchor_score_dominance": None,
             "selection_method": "highest_boundary_score",
             "final_action": "keep_selected",
             "applied_rule_name": None,
@@ -185,12 +202,109 @@ def _select_group_anchor_decision(
         if selected_bar_index is None or int(bar_index) != selected_bar_index
     ]
 
+    final_anchor_boundary_score = None
+    max_ignored_boundary_score = None
+    anchor_score_dominance = None
+
+    is_retained_anchor_with_ignored_neighbors = (
+        final_selected_bar_index is not None
+        and initial_selected_bar_index == final_selected_bar_index
+        and rule_decision.get("applied_rule_name") is None
+        and len(ignored_bar_indices) > 0
+    )
+
+    if is_retained_anchor_with_ignored_neighbors:
+        candidate_by_bar_index = {
+            int(candidate["bar_index"]): candidate
+            for candidate in candidate_summaries
+            if candidate.get("bar_index") is not None
+        }
+
+        final_anchor_candidate = candidate_by_bar_index.get(final_selected_bar_index)
+        ignored_candidates = [
+            candidate_by_bar_index[bar_index]
+            for bar_index in ignored_bar_indices
+            if bar_index in candidate_by_bar_index
+        ]
+
+        if (
+            final_anchor_candidate is not None
+            and final_anchor_candidate.get("boundary_score") is not None
+        ):
+            final_anchor_boundary_score = float(final_anchor_candidate["boundary_score"])
+
+            ignored_boundary_scores = [
+                float(candidate["boundary_score"])
+                for candidate in ignored_candidates
+                if candidate.get("boundary_score") is not None
+            ]
+
+            if ignored_boundary_scores:
+                max_ignored_boundary_score = max(ignored_boundary_scores)
+                anchor_score_dominance = (
+                    final_anchor_boundary_score - max_ignored_boundary_score
+                )
+
+    anchor_changed = initial_selected_bar_index != final_selected_bar_index
+
+    if final_selected_bar_index is None and anchor_changed:
+        group_form = "suppressed_group"
+    elif (
+        final_selected_bar_index is not None
+        and anchor_changed
+        and rule_decision.get("applied_rule_name") is not None
+    ):
+        group_form = "rule_shifted_anchor"
+    elif (
+        final_selected_bar_index is not None
+        and not anchor_changed
+        and len(ignored_bar_indices) > 0
+        and rule_decision.get("applied_rule_name") is None
+    ):
+        group_form = "retained_anchor_with_ignored_neighbors"
+    else:
+        group_form = "isolated_anchor"
+
+    retained_anchor_tendency = None
+
+    if group_form == "retained_anchor_with_ignored_neighbors":
+        if (
+            anchor_score_dominance is not None
+            and anchor_score_dominance >= 0.35
+            and group_span_bars <= 8
+            and group_candidate_count <= 3
+        ):
+            retained_anchor_tendency = "duplicate_leaning"
+        elif (
+            (
+                anchor_score_dominance is not None
+                and anchor_score_dominance <= 0.18
+                and group_span_bars >= 8
+            )
+            or group_candidate_count >= 4
+            or group_span_bars >= 20
+        ):
+            retained_anchor_tendency = "cluster_leaning"
+        else:
+            retained_anchor_tendency = "mixed"
+
     return {
         "group_bar_indices": normalized_group_bar_indices,
         "selected_bar_index": selected_bar_index,
         "final_selected_bar_index": final_selected_bar_index,
         "initial_selected_bar_index": initial_selected_bar_index,
+        "initial_anchor_bar_index": initial_selected_bar_index,
+        "final_anchor_bar_index": final_selected_bar_index,
+        "anchor_changed": anchor_changed,
         "ignored_bar_indices": ignored_bar_indices,
+        "ignored_group_bar_indices": ignored_bar_indices,
+        "group_span_bars": group_span_bars,
+        "group_candidate_count": group_candidate_count,
+        "group_form": group_form,
+        "retained_anchor_tendency": retained_anchor_tendency,
+        "final_anchor_boundary_score": final_anchor_boundary_score,
+        "max_ignored_boundary_score": max_ignored_boundary_score,
+        "anchor_score_dominance": anchor_score_dominance,
         "selection_method": "highest_boundary_score",
         "final_action": str(rule_decision.get("final_action", "keep_selected")),
         "applied_rule_name": rule_decision.get("applied_rule_name"),
