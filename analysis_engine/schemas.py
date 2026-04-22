@@ -41,6 +41,59 @@ class StructureBar:
 
 
 @dataclass
+class StructureSegment:
+    index: int
+    start_sec: float
+    end_sec: float
+    start_bar: int
+    end_bar: int
+
+
+@dataclass
+class StructureMetrics:
+    """
+    Final minimal artist-facing structure contract.
+
+    Target contract:
+    {
+      "tempo_estimate": float,
+      "beat_count": int,
+      "downbeat_count": int,
+      "segment_count": int,
+      "segments": [
+        {
+          "index": int,
+          "start_sec": float,
+          "end_sec": float,
+          "start_bar": int,
+          "end_bar": int
+        }
+      ],
+      "repetition_score": float,
+      "development_score": float,
+      "contrast_score": float,
+      "transition_score": float,
+      "density_score": float
+    }
+
+    Notes:
+    - This class documents the intended final product contract for `structure`.
+    - It does not mean the full logic is implemented yet.
+    - Internal debug / working fields must not be added here.
+    """
+    tempo_estimate: float | None = None
+    beat_count: int | None = None
+    downbeat_count: int | None = None
+    segment_count: int | None = None
+    segments: list[StructureSegment] = field(default_factory=list)
+    repetition_score: float | None = None
+    development_score: float | None = None
+    contrast_score: float | None = None
+    transition_score: float | None = None
+    density_score: float | None = None
+
+
+@dataclass
 class AnalysisIssue:
     code: str
     severity: str
@@ -103,7 +156,7 @@ class AnalysisResult:
     summary: SummaryMetrics = field(default_factory=SummaryMetrics)
     issues: JsonList = field(default_factory=list)
     # These fields are internal working/debug blocks and are intentionally not treated as stable product contracts yet.
-    structure: JsonDict = field(default_factory=dict)
+    structure: StructureMetrics = field(default_factory=StructureMetrics)
     features: JsonDict = field(default_factory=dict)
     similarity: JsonDict = field(default_factory=dict)
     novelty: JsonDict = field(default_factory=dict)

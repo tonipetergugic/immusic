@@ -28,6 +28,7 @@ from analysis_engine.schemas import (
 from analysis_engine.sections import analyze_sections
 from analysis_engine.similarity import analyze_similarity
 from analysis_engine.stereo import analyze_stereo
+from analysis_engine.structure.product import build_structure_metrics_with_segments
 from analysis_engine.structure import analyze_structure_baseline
 
 
@@ -52,10 +53,10 @@ def build_summary(result: AnalysisResult) -> SummaryMetrics:
         duration_sec=result.file_info.duration_sec,
         sample_rate=result.file_info.sample_rate,
         channels=result.file_info.channels,
-        tempo_estimate=structure.get("tempo_estimate"),
-        beat_count=structure.get("beat_count"),
-        downbeat_count=structure.get("downbeat_count"),
-        bar_count=structure.get("bar_count"),
+        tempo_estimate=structure.tempo_estimate,
+        beat_count=structure.beat_count,
+        downbeat_count=structure.downbeat_count,
+        bar_count=structure.downbeat_count,
     )
 
 
@@ -79,8 +80,8 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         artifacts=artifacts,
     )
 
-    result.structure = analyze_structure_baseline(audio_mono, mono_sr)
-    bars = result.structure.get("bars", [])
+    structure_baseline = analyze_structure_baseline(audio_mono, mono_sr)
+    bars = structure_baseline.get("bars", [])
 
     result.loudness = analyze_loudness(audio_stereo, stereo_sr)
 
@@ -120,6 +121,10 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         scored_candidates=result.boundary_decision.get("scored_candidates", []),
     )
     result.macro_sections = macro_sections
+    result.structure = build_structure_metrics_with_segments(
+        structure_baseline=structure_baseline,
+        macro_sections_payload=macro_sections,
+    )
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)
     else:
