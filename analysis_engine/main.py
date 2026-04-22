@@ -46,17 +46,24 @@ def build_artifact_paths(audio_path: Path) -> AnalysisArtifactPaths:
     )
 
 
-def build_summary(result: AnalysisResult) -> SummaryMetrics:
-    structure = result.structure
+def build_summary(
+    result: AnalysisResult,
+    structure_baseline: dict[str, object],
+) -> SummaryMetrics:
+    tempo_value = structure_baseline.get("tempo_estimate")
+    beat_count_value = structure_baseline.get("beat_count")
+    downbeat_count_value = structure_baseline.get("downbeat_count")
+    bar_count_value = structure_baseline.get("bar_count")
+
     return SummaryMetrics(
         filename=result.file_info.filename,
         duration_sec=result.file_info.duration_sec,
         sample_rate=result.file_info.sample_rate,
         channels=result.file_info.channels,
-        tempo_estimate=structure.tempo_estimate,
-        beat_count=structure.beat_count,
-        downbeat_count=structure.downbeat_count,
-        bar_count=structure.downbeat_count,
+        tempo_estimate=float(tempo_value) if tempo_value is not None else None,
+        beat_count=int(beat_count_value) if beat_count_value is not None else None,
+        downbeat_count=int(downbeat_count_value) if downbeat_count_value is not None else None,
+        bar_count=int(bar_count_value) if bar_count_value is not None else None,
     )
 
 
@@ -124,6 +131,7 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     result.structure = build_structure_metrics_with_segments(
         structure_baseline=structure_baseline,
         macro_sections_payload=macro_sections,
+        track_duration_sec=result.file_info.duration_sec,
     )
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)
@@ -158,7 +166,10 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         )
 
     result.issues = issues
-    result.summary = build_summary(result)
+    result.summary = build_summary(
+        result,
+        structure_baseline=structure_baseline,
+    )
 
     save_waveform_plot(audio_mono, mono_sr, result)
     save_structure_plot(audio_mono, mono_sr, result)

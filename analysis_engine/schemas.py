@@ -52,11 +52,10 @@ class StructureSegment:
 @dataclass
 class StructureMetrics:
     """
-    Final minimal artist-facing structure contract.
+    Current artist-facing structure contract.
 
     Target contract:
     {
-      "tempo_estimate": float,
       "beat_count": int,
       "downbeat_count": int,
       "segment_count": int,
@@ -70,27 +69,22 @@ class StructureMetrics:
         }
       ],
       "repetition_score": float,
-      "development_score": float,
       "contrast_score": float,
-      "transition_score": float,
-      "density_score": float
+      "transition_score": float
     }
 
     Notes:
-    - This class documents the intended final product contract for `structure`.
-    - It does not mean the full logic is implemented yet.
+    - `tempo_estimate` is intentionally not part of the artist-facing structure contract.
+    - Parked scores must not be exposed here.
     - Internal debug / working fields must not be added here.
     """
-    tempo_estimate: float | None = None
     beat_count: int | None = None
     downbeat_count: int | None = None
     segment_count: int | None = None
     segments: list[StructureSegment] = field(default_factory=list)
     repetition_score: float | None = None
-    development_score: float | None = None
     contrast_score: float | None = None
     transition_score: float | None = None
-    density_score: float | None = None
 
 
 @dataclass
