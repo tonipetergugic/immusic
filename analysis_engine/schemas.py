@@ -75,6 +75,7 @@ class StructureMetrics:
 
     Notes:
     - `tempo_estimate` is intentionally not part of the artist-facing structure contract.
+    - `contrast_score` currently represents a form-based baseline score derived from macro-segment size variation. It is not yet an audio-feature contrast metric.
     - Parked scores must not be exposed here.
     - Internal debug / working fields must not be added here.
     """

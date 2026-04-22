@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+# PARKED:
+# This score is intentionally not wired into the current artist-facing
+# StructureMetrics contract. The implementation is kept for later validation
+# and possible reuse, but must not be exposed in the product output yet.
+
 
 def compute_density_score(macro_sections_payload: dict[str, Any]) -> float | None:
     """

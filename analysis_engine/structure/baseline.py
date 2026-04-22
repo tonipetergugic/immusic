@@ -34,6 +34,8 @@ def _estimate_last_bar_end(beat_times: list[float], start_index: int) -> float:
 def _build_full_bars_from_beats(beat_times: list[float]) -> list[dict[str, float | int]]:
     bars: list[dict[str, float | int]] = []
 
+    # Assumes a 4/4 time signature.
+    # This is sufficient for the current EDM / techno-focused use case.
     full_bar_count = len(beat_times) // 4
     if full_bar_count == 0:
         return bars
