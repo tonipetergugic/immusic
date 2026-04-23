@@ -48,6 +48,31 @@ def _build_retained_anchor_tendency_summary(
     return summary
 
 
+def _resolve_last_macro_section_end_sec(
+    macro_section: dict[str, Any],
+    sections: list[dict[str, float | int]],
+    track_duration_sec: float,
+) -> float:
+    sections_by_index = {
+        int(section["index"]): section
+        for section in sections
+        if "index" in section and "end_sec" in section
+    }
+
+    source_section_indices = macro_section.get("source_section_indices", []) or []
+
+    for source_section_index in reversed(source_section_indices):
+        section = sections_by_index.get(int(source_section_index))
+        if section is None:
+            continue
+        return float(section["end_sec"])
+
+    if sections:
+        return float(sections[-1]["end_sec"])
+
+    return float(track_duration_sec)
+
+
 def analyze_macro_sections(
     sections: list[dict[str, float | int]],
     bars: list[dict[str, float | int]],
@@ -92,6 +117,17 @@ def analyze_macro_sections(
         final_boundaries=final_boundaries,
         track_duration_sec=track_duration_sec,
     )
+    macro_sections = build_payload.get("macro_sections", []) or []
+    if macro_sections:
+        last_macro_section = macro_sections[-1]
+        end_sec = _resolve_last_macro_section_end_sec(
+            macro_section=last_macro_section,
+            sections=sections,
+            track_duration_sec=track_duration_sec,
+        )
+        start_sec = float(last_macro_section["start_sec"])
+        last_macro_section["end_sec"] = end_sec
+        last_macro_section["duration_sec"] = end_sec - start_sec
     group_form_summary = _build_group_form_summary(
         decision_payload["macro_boundary_decisions"]
     )
