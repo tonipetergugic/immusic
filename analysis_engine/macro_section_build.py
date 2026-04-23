@@ -36,11 +36,8 @@ def _build_macro_section(
 
 def _build_macro_sections_from_boundary_indices(
     boundary_bar_indices: list[int],
-    bars: list[dict[str, float | int]],
     sections: list[dict[str, float | int]],
 ) -> list[dict[str, Any]]:
-    del bars
-
     if not sections:
         return []
 
@@ -96,13 +93,11 @@ def _build_macro_sections_from_boundary_indices(
 
 def build_macro_sections_payload(
     sections: list[dict[str, float | int]],
-    bars: list[dict[str, float | int]],
     selected_group_anchor_bar_indices: list[int],
     final_boundaries: list[dict[str, Any]],
 ) -> dict[str, Any]:
     macro_sections = _build_macro_sections_from_boundary_indices(
         boundary_bar_indices=selected_group_anchor_bar_indices,
-        bars=bars,
         sections=sections,
     )
 

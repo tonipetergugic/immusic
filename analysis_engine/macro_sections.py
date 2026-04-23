@@ -87,7 +87,6 @@ def analyze_macro_sections(
     )
     build_payload = build_macro_sections_payload(
         sections=sections,
-        bars=bars,
         selected_group_anchor_bar_indices=decision_payload["selected_group_anchor_bar_indices"],
         final_boundaries=final_boundaries,
     )

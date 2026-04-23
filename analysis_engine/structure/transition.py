@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 
@@ -64,9 +65,9 @@ def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | 
     Decision rules:
     - Core quality comes from boundary_score and delta_norm
     - The core uses a harmonic mean instead of a friendly arithmetic mean
-    - similarity_prev_to_here is only a small capped bonus
+    - similarity_prev_to_here is only a very small capped bonus
     - very weak boundaries are softly downweighted instead of hard-removed
-    - few transitions reduce confidence via a count-based multiplier
+    - few transitions reduce confidence via a stricter count-based multiplier
     """
     macro_boundary_decisions = macro_sections_payload.get("macro_boundary_decisions") or []
 
@@ -107,14 +108,15 @@ def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | 
             continue
 
         similarity_bonus = 0.0
-        if similarity_prev_to_here is not None:
-            similarity_bonus = 0.10 * (1.0 - similarity_prev_to_here)
 
         transition_quality = min(1.0, core_quality + similarity_bonus)
 
         quality_weight = 1.0
-        if boundary_score is not None and boundary_score < 0.40:
-            quality_weight = 0.5
+        if boundary_score is not None:
+            if boundary_score <= 0.40:
+                quality_weight = 0.50
+            elif boundary_score < 0.70:
+                quality_weight = 0.50 + 0.50 * ((boundary_score - 0.40) / 0.30)
 
         weighted_total += transition_quality * quality_weight
         weight_sum += quality_weight
@@ -124,6 +126,6 @@ def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | 
         return None
 
     average_quality = weighted_total / weight_sum
-    confidence = 0.5 + 0.5 * min(1.0, transition_count / 3.0)
+    confidence = 0.40 + 0.45 * math.sqrt(min(1.0, transition_count / 5.0))
 
     return average_quality * confidence
