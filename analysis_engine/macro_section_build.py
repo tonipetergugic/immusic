@@ -16,16 +16,11 @@ def _collect_final_boundary_bar_indices(
 def _build_macro_section(
     source_sections: list[dict[str, float | int]],
     index: int,
-    is_last: bool = False,
-    track_duration_sec: float | None = None,
 ) -> dict[str, Any]:
     start_bar_index = int(source_sections[0]["start_bar_index"])
     end_bar_index = int(source_sections[-1]["end_bar_index"])
     start_sec = 0.0 if index == 0 else float(source_sections[0]["start_sec"])
     end_sec = float(source_sections[-1]["end_sec"])
-
-    if is_last and track_duration_sec is not None:
-        end_sec = float(track_duration_sec)
 
     return {
         "index": index,
@@ -42,7 +37,6 @@ def _build_macro_section(
 def _build_macro_sections_from_boundary_indices(
     boundary_bar_indices: list[int],
     sections: list[dict[str, float | int]],
-    track_duration_sec: float | None = None,
 ) -> list[dict[str, Any]]:
     if not sections:
         return []
@@ -52,8 +46,6 @@ def _build_macro_sections_from_boundary_indices(
             _build_macro_section(
                 sections,
                 index=0,
-                is_last=True,
-                track_duration_sec=track_duration_sec,
             )
         ]
 
@@ -98,8 +90,6 @@ def _build_macro_sections_from_boundary_indices(
             _build_macro_section(
                 current_macro_source_sections,
                 index=len(macro_sections),
-                is_last=True,
-                track_duration_sec=track_duration_sec,
             )
         )
 
@@ -110,12 +100,10 @@ def build_macro_sections_payload(
     sections: list[dict[str, float | int]],
     selected_group_anchor_bar_indices: list[int],
     final_boundaries: list[dict[str, Any]],
-    track_duration_sec: float,
 ) -> dict[str, Any]:
     macro_sections = _build_macro_sections_from_boundary_indices(
         boundary_bar_indices=selected_group_anchor_bar_indices,
         sections=sections,
-        track_duration_sec=track_duration_sec,
     )
 
     macro_boundary_bar_indices = [

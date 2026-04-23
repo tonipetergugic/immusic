@@ -69,7 +69,7 @@ def analyze_sections(
         start_bar = bars[start_bar_index]
         end_bar = bars[end_bar_index]
 
-        start_sec = float(start_bar["start"])
+        start_sec = 0.0 if section_index == 0 else float(start_bar["start"])
         end_sec = float(end_bar["end"])
         duration_sec = end_sec - start_sec
         section_bar_count = end_bar_index - start_bar_index + 1

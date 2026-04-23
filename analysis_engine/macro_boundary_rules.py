@@ -4,6 +4,9 @@ from typing import Any
 
 
 MIN_OUTRO_GUARD_TRAILING_BARS = 16
+OUTRO_GUARD_STRONG_MIN_TRAILING_BARS = 12
+OUTRO_GUARD_STRONG_MIN_BOUNDARY_SCORE = 0.80
+OUTRO_GUARD_STRONG_MIN_DELTA_NORM = 0.80
 MAX_EARLY_ENTRY_BOUNDARY_SCORE_DROP = 0.08
 MIN_EARLY_ENTRY_DELTA_NORM_GAIN = 0.20
 MAX_EARLY_ENTRY_FORWARD_STABILITY_DROP = 0.10
@@ -66,16 +69,10 @@ def evaluate_outro_guard_rule(
     selected_bar_index = group_context.get("selected_bar_index")
     is_last_group = bool(group_context.get("is_last_group"))
     trailing_bar_count = group_context.get("trailing_bar_count")
-
-    creates_too_small_trailing_block = (
-        trailing_bar_count is not None
-        and int(trailing_bar_count) < MIN_OUTRO_GUARD_TRAILING_BARS
-    )
     evidence: dict[str, Any] = {
         "selected_bar_index": selected_bar_index,
         "is_last_group": is_last_group,
         "trailing_bar_count": trailing_bar_count,
-        "creates_too_small_trailing_block": creates_too_small_trailing_block,
     }
 
     if not is_last_group:
@@ -109,12 +106,40 @@ def evaluate_outro_guard_rule(
         }
 
     trailing_bar_count_int = int(trailing_bar_count)
-    evidence["trailing_bar_count"] = trailing_bar_count_int
-    evidence["creates_too_small_trailing_block"] = (
-        trailing_bar_count_int < MIN_OUTRO_GUARD_TRAILING_BARS
+    selected_candidate = {}
+    candidate_summaries = list(group_context.get("candidate_summaries", []))
+    candidate_lookup = _build_candidate_lookup_by_bar_index(candidate_summaries)
+    if selected_bar_index is not None:
+        selected_candidate = candidate_lookup.get(int(selected_bar_index), {})
+
+    selected_boundary_score = float(selected_candidate.get("boundary_score", 0.0))
+    selected_delta_norm = float(selected_candidate.get("delta_norm", 0.0))
+
+    strong_outro_candidate = (
+        selected_boundary_score >= OUTRO_GUARD_STRONG_MIN_BOUNDARY_SCORE
+        and selected_delta_norm >= OUTRO_GUARD_STRONG_MIN_DELTA_NORM
     )
 
-    if trailing_bar_count_int >= MIN_OUTRO_GUARD_TRAILING_BARS:
+    minimum_trailing_bars = (
+        OUTRO_GUARD_STRONG_MIN_TRAILING_BARS
+        if strong_outro_candidate
+        else MIN_OUTRO_GUARD_TRAILING_BARS
+    )
+
+    creates_too_small_trailing_block = trailing_bar_count_int < minimum_trailing_bars
+
+    evidence["trailing_bar_count"] = trailing_bar_count_int
+    evidence["minimum_trailing_bars"] = minimum_trailing_bars
+    evidence["strong_outro_candidate"] = strong_outro_candidate
+    evidence["selected_boundary_score"] = selected_boundary_score
+    evidence["selected_delta_norm"] = selected_delta_norm
+    evidence["strong_boundary_score_threshold"] = (
+        OUTRO_GUARD_STRONG_MIN_BOUNDARY_SCORE
+    )
+    evidence["strong_delta_norm_threshold"] = OUTRO_GUARD_STRONG_MIN_DELTA_NORM
+    evidence["creates_too_small_trailing_block"] = creates_too_small_trailing_block
+
+    if not creates_too_small_trailing_block:
         return {
             "rule_name": "outro_guard",
             "applies": False,
@@ -124,7 +149,6 @@ def evaluate_outro_guard_rule(
             "evidence": evidence,
         }
 
-    evidence["minimum_trailing_bars"] = MIN_OUTRO_GUARD_TRAILING_BARS
     evidence["summary"] = "last boundary would create a trailing mini-section"
 
     return {
