@@ -6,6 +6,7 @@ from analysis_engine.macro_boundary_rules import evaluate_macro_boundary_rules
 
 
 LOCAL_BOUNDARY_GROUP_MAX_GAP_BARS = 8
+LOCAL_BOUNDARY_GROUP_MAX_SPAN_BARS = 12
 DOMINANT_ANCHOR_SPLIT_MIN_GROUP_SIZE = 5
 DOMINANT_ANCHOR_SPLIT_MIN_BOUNDARY_SCORE_GAP = 0.25
 
@@ -87,8 +88,15 @@ def _build_local_boundary_groups(
     for boundary in sorted_boundaries[1:]:
         bar_index = int(boundary["bar_index"])
         previous_bar_index = raw_groups[-1][-1]
+        current_group_start_bar_index = raw_groups[-1][0]
 
-        if bar_index - previous_bar_index <= LOCAL_BOUNDARY_GROUP_MAX_GAP_BARS:
+        gap_bars = bar_index - previous_bar_index
+        projected_group_span_bars = bar_index - current_group_start_bar_index
+
+        if (
+            gap_bars <= LOCAL_BOUNDARY_GROUP_MAX_GAP_BARS
+            and projected_group_span_bars <= LOCAL_BOUNDARY_GROUP_MAX_SPAN_BARS
+        ):
             raw_groups[-1].append(bar_index)
         else:
             raw_groups.append([bar_index])
