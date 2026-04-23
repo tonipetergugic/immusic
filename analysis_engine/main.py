@@ -126,6 +126,7 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         bars=bars,
         final_boundaries=result.boundary_decision.get("final_boundaries", []),
         scored_candidates=result.boundary_decision.get("scored_candidates", []),
+        track_duration_sec=result.file_info.duration_sec,
     )
     result.macro_sections = macro_sections
     result.structure = build_structure_metrics_with_segments(

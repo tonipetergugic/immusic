@@ -53,6 +53,7 @@ def analyze_macro_sections(
     bars: list[dict[str, float | int]],
     final_boundaries: list[dict[str, Any]],
     scored_candidates: list[dict[str, Any]],
+    track_duration_sec: float,
 ) -> dict[str, Any]:
     if not sections:
         return {
@@ -89,6 +90,7 @@ def analyze_macro_sections(
         sections=sections,
         selected_group_anchor_bar_indices=decision_payload["selected_group_anchor_bar_indices"],
         final_boundaries=final_boundaries,
+        track_duration_sec=track_duration_sec,
     )
     group_form_summary = _build_group_form_summary(
         decision_payload["macro_boundary_decisions"]

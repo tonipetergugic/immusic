@@ -109,7 +109,8 @@ def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | 
 
         similarity_bonus = 0.0
 
-        transition_quality = min(1.0, core_quality + similarity_bonus)
+        capped_core_quality = min(core_quality, 0.90)
+        transition_quality = min(1.0, capped_core_quality + similarity_bonus)
 
         quality_weight = 1.0
         if boundary_score is not None:
