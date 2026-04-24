@@ -18,30 +18,32 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
   const adminClient = asAdminClient(admin);
   const { data: queueRow, error: queueErr } = await adminClient
     .from("tracks_ai_queue")
-    .select("audio_hash, main_genre, genre, reference_artist, reference_track")
+    .select("audio_hash, version, main_genre, genre, bpm, key, reference_artist, reference_track")
     .eq("id", queueId)
     .maybeSingle();
 
   const queueAudioHash = queueRow?.audio_hash ?? null;
-  const queueMainGenre =
-    typeof queueRow?.main_genre === "string" && queueRow.main_genre.trim()
-      ? queueRow.main_genre.trim()
-      : null;
+  const cleanStringOrNull = (value: unknown): string | null =>
+    typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 
-  const queueSubgenre =
-    typeof queueRow?.genre === "string" && queueRow.genre.trim()
-      ? queueRow.genre.trim()
-      : null;
+  const cleanNumberOrNull = (value: unknown): number | null => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
 
-  const queueReferenceArtist =
-    typeof queueRow?.reference_artist === "string" && queueRow.reference_artist.trim()
-      ? queueRow.reference_artist.trim()
-      : null;
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
 
-  const queueReferenceTrack =
-    typeof queueRow?.reference_track === "string" && queueRow.reference_track.trim()
-      ? queueRow.reference_track.trim()
-      : null;
+    return null;
+  };
+
+  const queueVersion = cleanStringOrNull(queueRow?.version);
+  const queueMainGenre = cleanStringOrNull(queueRow?.main_genre);
+  const queueSubgenre = cleanStringOrNull(queueRow?.genre);
+  const queueBpm = cleanNumberOrNull(queueRow?.bpm);
+  const queueKey = cleanStringOrNull(queueRow?.key);
+  const queueReferenceArtist = cleanStringOrNull(queueRow?.reference_artist);
+  const queueReferenceTrack = cleanStringOrNull(queueRow?.reference_track);
 
   if (queueErr || !queueAudioHash) {
     return;
@@ -293,6 +295,9 @@ export async function writeFeedbackPayloadIfUnlocked(params: {
     audioHash: queueAudioHash,
     mainGenre: queueMainGenre,
     subgenre: queueSubgenre,
+    version: queueVersion,
+    declaredBpm: queueBpm,
+    declaredKey: queueKey,
     referenceArtist: queueReferenceArtist,
     referenceTrack: queueReferenceTrack,
     decision,

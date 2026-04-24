@@ -499,6 +499,9 @@ export type StructureAnalysisV1 = {
     genre_context: {
       declared_main_genre: string | null;
       declared_subgenre: string | null;
+      declared_version: string | null;
+      declared_bpm: number | null;
+      declared_key: string | null;
       declared_reference_artist: string | null;
       declared_reference_track: string | null;
       active_genre_profile:
@@ -650,6 +653,9 @@ export type StructureAnalysisV1 = {
   genre_context?: {
     declared_main_genre: string | null;
     declared_subgenre: string | null;
+    declared_version: string | null;
+    declared_bpm: number | null;
+    declared_key: string | null;
     declared_reference_artist: string | null;
     declared_reference_track: string | null;
   };

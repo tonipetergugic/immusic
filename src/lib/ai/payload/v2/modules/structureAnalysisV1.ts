@@ -202,6 +202,9 @@ export function buildStructureAnalysisV1(input: {
   p95ShortCrestDb?: number | null | undefined;
   mainGenre?: string | null | undefined;
   subgenre?: string | null | undefined;
+  version?: string | null | undefined;
+  declaredBpm?: number | null | undefined;
+  declaredKey?: string | null | undefined;
   referenceArtist?: string | null | undefined;
   referenceTrack?: string | null | undefined;
 }): StructureAnalysisV1 | null {
@@ -216,6 +219,21 @@ export function buildStructureAnalysisV1(input: {
   const declaredSubgenre =
     typeof input.subgenre === "string" && input.subgenre.trim().length > 0
       ? input.subgenre.trim()
+      : null;
+
+  const declaredVersion =
+    typeof input.version === "string" && input.version.trim().length > 0
+      ? input.version.trim()
+      : null;
+
+  const declaredBpm =
+    typeof input.declaredBpm === "number" && Number.isFinite(input.declaredBpm)
+      ? input.declaredBpm
+      : null;
+
+  const declaredKey =
+    typeof input.declaredKey === "string" && input.declaredKey.trim().length > 0
+      ? input.declaredKey.trim()
       : null;
 
   const declaredReferenceArtist =
@@ -1855,6 +1873,9 @@ export function buildStructureAnalysisV1(input: {
     genre_context: {
       declared_main_genre: declaredMainGenre,
       declared_subgenre: declaredSubgenre,
+      declared_version: declaredVersion,
+      declared_bpm: declaredBpm,
+      declared_key: declaredKey,
       declared_reference_artist: declaredReferenceArtist,
       declared_reference_track: declaredReferenceTrack,
       active_genre_profile: decision_rule_context.active_genre_profile,
@@ -2045,6 +2066,9 @@ export function buildStructureAnalysisV1(input: {
     genre_context: {
       declared_main_genre: declaredMainGenre,
       declared_subgenre: declaredSubgenre,
+      declared_version: declaredVersion,
+      declared_bpm: declaredBpm,
+      declared_key: declaredKey,
       declared_reference_artist: declaredReferenceArtist,
       declared_reference_track: declaredReferenceTrack,
     },

@@ -37,6 +37,9 @@ export type ConsultantPromptInput = {
     genre_context?: {
       declared_main_genre?: string | null
       declared_subgenre?: string | null
+      declared_version?: string | null
+      declared_bpm?: number | null
+      declared_key?: string | null
       declared_reference_artist?: string | null
       declared_reference_track?: string | null
       active_genre_profile?: string | null
@@ -459,6 +462,24 @@ function buildConsultantPayloadSummary(
       ? genreContext.active_genre_profile.trim()
       : null
 
+  const declaredVersion =
+    typeof genreContext?.declared_version === "string" &&
+    genreContext.declared_version.trim().length > 0
+      ? genreContext.declared_version.trim()
+      : null
+
+  const declaredBpm =
+    typeof genreContext?.declared_bpm === "number" &&
+    Number.isFinite(genreContext.declared_bpm)
+      ? genreContext.declared_bpm
+      : null
+
+  const declaredKey =
+    typeof genreContext?.declared_key === "string" &&
+    genreContext.declared_key.trim().length > 0
+      ? genreContext.declared_key.trim()
+      : null
+
   const repetitiveMatched =
     typeof repetitiveBranch?.matched === "boolean" ? repetitiveBranch.matched : null
 
@@ -665,6 +686,9 @@ function buildConsultantPayloadSummary(
   if (
     declaredSubgenre ||
     declaredMainGenre ||
+    declaredVersion ||
+    declaredBpm !== null ||
+    declaredKey ||
     activeGenreProfile ||
     declaredReferenceArtist ||
     declaredReferenceTrack
@@ -674,6 +698,9 @@ function buildConsultantPayloadSummary(
         "Genre Context:",
         declaredSubgenre ? `subgenre=${declaredSubgenre}` : null,
         declaredMainGenre ? `main_genre=${declaredMainGenre}` : null,
+        declaredVersion ? `version=${declaredVersion}` : null,
+        declaredBpm !== null ? `bpm=${declaredBpm}` : null,
+        declaredKey ? `key=${declaredKey}` : null,
         activeGenreProfile ? `profile=${activeGenreProfile}` : null,
         declaredReferenceArtist ? `reference_artist=${declaredReferenceArtist}` : null,
         declaredReferenceTrack ? `reference_track=${declaredReferenceTrack}` : null,

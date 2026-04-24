@@ -34,6 +34,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
   decision: "approved" | "rejected";
   mainGenre?: string | null;
   subgenre?: string | null;
+  version?: string | null;
+  declaredBpm?: number | null;
+  declaredKey?: string | null;
   referenceArtist?: string | null;
   referenceTrack?: string | null;
   durationS?: number | null;
@@ -81,6 +84,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
     decision,
     mainGenre = null,
     subgenre = null,
+    version = null,
+    declaredBpm = null,
+    declaredKey = null,
     referenceArtist = null,
     referenceTrack = null,
     durationS = null,
@@ -935,6 +941,9 @@ export function buildFeedbackPayloadV2Mvp(params: {
     p95ShortCrestDb: p95ShortCrestDb,
     mainGenre,
     subgenre,
+    version,
+    declaredBpm,
+    declaredKey,
     referenceArtist,
     referenceTrack,
   });
