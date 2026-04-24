@@ -50,10 +50,6 @@ def build_structure_metrics_with_segments(
     Current product decision:
     - The active macro score set is intentionally limited to repetition, contrast,
       and transition.
-    - `development_score` and `density_score` are intentionally parked and must
-      not be exposed here yet.
-
-    Parked scores must not be exposed here.
     """
     metrics = build_structure_metrics_baseline(structure_baseline)
     segments = build_structure_segments_from_macro_sections(

@@ -86,8 +86,6 @@ class StructureMetrics:
 
     Explicit non-goals:
     - `tempo_estimate` is intentionally not part of the artist-facing structure contract.
-    - `development_score` and `density_score` are intentionally parked and must not
-      be exposed here yet.
     - Parked scores must not be exposed here.
     - Internal debug / working fields must not be added here.
     """
@@ -171,6 +169,7 @@ class AnalysisResult:
     sections: JsonDict = field(default_factory=dict)
     macro_sections: JsonDict = field(default_factory=dict)
     fusion: JsonDict = field(default_factory=dict)
+    micro: JsonDict = field(default_factory=dict)
     loudness: LoudnessMetrics = field(default_factory=LoudnessMetrics)
     dynamics: DynamicsMetrics = field(default_factory=DynamicsMetrics)
     stereo: StereoMetrics = field(default_factory=StereoMetrics)

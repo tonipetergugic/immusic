@@ -30,6 +30,7 @@ from analysis_engine.similarity import analyze_similarity
 from analysis_engine.stereo import analyze_stereo
 from analysis_engine.structure.product import build_structure_metrics_with_segments
 from analysis_engine.structure.fusion import compute_bar_structure_fusion
+from analysis_engine.structure.micro import analyze_micro_structure
 from analysis_engine.structure import analyze_structure_baseline
 
 
@@ -132,6 +133,10 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         features_payload=result.features,
         novelty_payload=result.novelty,
         macro_sections_payload=macro_sections,
+    )
+    result.micro = analyze_micro_structure(
+        macro_sections_payload=result.macro_sections,
+        fusion_payload=result.fusion,
     )
     result.structure = build_structure_metrics_with_segments(
         structure_baseline=structure_baseline,
