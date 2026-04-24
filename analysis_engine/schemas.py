@@ -160,6 +160,8 @@ class AnalysisResult:
     artifacts: AnalysisArtifactPaths
     summary: SummaryMetrics = field(default_factory=SummaryMetrics)
     issues: JsonList = field(default_factory=list)
+    product_payload: JsonDict = field(default_factory=dict)
+    consultant_input: JsonDict = field(default_factory=dict)
     # These fields are internal working/debug blocks and are intentionally not treated as stable product contracts yet.
     structure: StructureMetrics = field(default_factory=StructureMetrics)
     features: JsonDict = field(default_factory=dict)
