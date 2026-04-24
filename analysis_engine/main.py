@@ -142,6 +142,7 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         structure_baseline=structure_baseline,
         macro_sections_payload=macro_sections,
         track_duration_sec=result.file_info.duration_sec,
+        features_payload=result.features,
     )
     if audio_stereo.ndim == 2 and audio_stereo.shape[0] == 2:
         result.stereo = analyze_stereo(audio_stereo, mono_sr)

@@ -74,9 +74,9 @@ class StructureMetrics:
     }
 
     Score meanings:
-    - `repetition_score` describes how strongly the coarse structure reuses a small
-      number of large segments across the full track form. It is a macro-form score,
-      not a micro-loop detector.
+    - `repetition_score` describes how strongly bar-level feature material returns
+      later in the track while ignoring near-neighbor continuity. It is a real
+      feature-reuse score, not a pure segment-count proxy.
     - `contrast_score` describes form-based contrast across the coarse structure,
       currently derived from macro-segment size variation. It is not a timbral,
       mix, or sound-design contrast score.

@@ -34,6 +34,7 @@ def build_structure_metrics_with_segments(
     structure_baseline: dict[str, Any],
     macro_sections_payload: dict[str, Any],
     track_duration_sec: float | None = None,
+    features_payload: dict[str, Any] | None = None,
 ) -> StructureMetrics:
     """
     Build structure metrics including the stable timing foundation and clean segments.
@@ -64,6 +65,7 @@ def build_structure_metrics_with_segments(
     total_bars = int(total_bars_value) if total_bars_value is not None else None
 
     metrics.repetition_score = compute_repetition_score(
+        bar_feature_vectors=(features_payload or {}).get("bar_feature_vectors"),
         total_bars=total_bars,
         segment_count=metrics.segment_count,
     )
