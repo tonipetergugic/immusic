@@ -50,7 +50,6 @@ def _build_retained_anchor_tendency_summary(
 
 def analyze_macro_sections(
     sections: list[dict[str, float | int]],
-    bars: list[dict[str, float | int]],
     final_boundaries: list[dict[str, Any]],
     scored_candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -80,7 +79,7 @@ def analyze_macro_sections(
             "is_empty": True,
         }
 
-    track_end_bar_index = max(int(bar["index"]) for bar in bars)
+    track_end_bar_index = int(sections[-1]["end_bar_index"])
     decision_payload = analyze_macro_boundary_decisions(
         scored_candidates,
         track_end_bar_index=track_end_bar_index,

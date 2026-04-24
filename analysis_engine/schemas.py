@@ -73,9 +73,21 @@ class StructureMetrics:
       "transition_score": float
     }
 
-    Notes:
+    Score meanings:
+    - `repetition_score` describes how strongly the coarse structure reuses a small
+      number of large segments across the full track form. It is a macro-form score,
+      not a micro-loop detector.
+    - `contrast_score` describes form-based contrast across the coarse structure,
+      currently derived from macro-segment size variation. It is not a timbral,
+      mix, or sound-design contrast score.
+    - `transition_score` describes the quality of selected coarse structural
+      transitions, based on boundary strength and change strength at accepted
+      macro-boundary anchors. It is not a transition count score.
+
+    Explicit non-goals:
     - `tempo_estimate` is intentionally not part of the artist-facing structure contract.
-    - `contrast_score` currently represents a form-based baseline score derived from macro-segment size variation. It is not yet an audio-feature contrast metric.
+    - `development_score` and `density_score` are intentionally parked and must not
+      be exposed here yet.
     - Parked scores must not be exposed here.
     - Internal debug / working fields must not be added here.
     """
@@ -158,6 +170,7 @@ class AnalysisResult:
     boundary_decision: JsonDict = field(default_factory=dict)
     sections: JsonDict = field(default_factory=dict)
     macro_sections: JsonDict = field(default_factory=dict)
+    fusion: JsonDict = field(default_factory=dict)
     loudness: LoudnessMetrics = field(default_factory=LoudnessMetrics)
     dynamics: DynamicsMetrics = field(default_factory=DynamicsMetrics)
     stereo: StereoMetrics = field(default_factory=StereoMetrics)

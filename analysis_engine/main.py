@@ -29,6 +29,7 @@ from analysis_engine.sections import analyze_sections
 from analysis_engine.similarity import analyze_similarity
 from analysis_engine.stereo import analyze_stereo
 from analysis_engine.structure.product import build_structure_metrics_with_segments
+from analysis_engine.structure.fusion import compute_bar_structure_fusion
 from analysis_engine.structure import analyze_structure_baseline
 
 
@@ -123,11 +124,15 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     result.sections = sections
     macro_sections = analyze_macro_sections(
         sections=sections.get("sections", []),
-        bars=bars,
         final_boundaries=result.boundary_decision.get("final_boundaries", []),
         scored_candidates=result.boundary_decision.get("scored_candidates", []),
     )
     result.macro_sections = macro_sections
+    result.fusion = compute_bar_structure_fusion(
+        features_payload=result.features,
+        novelty_payload=result.novelty,
+        macro_sections_payload=macro_sections,
+    )
     result.structure = build_structure_metrics_with_segments(
         structure_baseline=structure_baseline,
         macro_sections_payload=macro_sections,

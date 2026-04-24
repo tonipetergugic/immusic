@@ -60,14 +60,15 @@ def _find_final_candidate(decision: dict[str, Any]) -> dict[str, Any] | None:
 
 def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | None:
     """
-    Compute a stricter artist-facing transition score from selected macro-boundary decisions.
+    Compute the artist-facing transition score from selected macro-boundary decisions.
 
     Decision rules:
-    - Core quality comes from boundary_score and delta_norm
-    - The core uses a harmonic mean instead of a friendly arithmetic mean
-    - similarity_prev_to_here is only a very small capped bonus
-    - very weak boundaries are softly downweighted instead of hard-removed
-    - few transitions reduce confidence via a stricter count-based multiplier
+    - Only selected / final selected macro-boundary transitions are considered
+    - Core transition quality comes from boundary_score and delta_norm
+    - The core uses a harmonic mean so one weak signal cannot overinflate the result
+    - Very weak boundaries are softly downweighted instead of hard-removed
+    - There is no similarity bonus in this version
+    - Sparse tracks get only a small transition-count correction
     """
     macro_boundary_decisions = macro_sections_payload.get("macro_boundary_decisions") or []
 
@@ -76,41 +77,16 @@ def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | 
     transition_count = 0
 
     for decision in macro_boundary_decisions:
-        candidates = decision.get("candidates") or []
-
-        selected_bar_index = decision.get("final_selected_bar_index")
-        if selected_bar_index is None:
-            selected_bar_index = decision.get("selected_bar_index")
-
-        if selected_bar_index is None:
-            continue
-
-        selected_candidate = next(
-            (
-                candidate
-                for candidate in candidates
-                if candidate.get("bar_index") == selected_bar_index
-            ),
-            None,
-        )
-
+        selected_candidate = _find_final_candidate(decision)
         if not isinstance(selected_candidate, dict):
             continue
 
         boundary_score = _clamp_01(selected_candidate.get("boundary_score"))
         delta_norm = _clamp_01(selected_candidate.get("delta_norm"))
-        similarity_prev_to_here = _clamp_01(
-            selected_candidate.get("similarity_prev_to_here")
-        )
 
-        core_quality = _harmonic_mean([boundary_score, delta_norm])
-        if core_quality is None:
+        transition_quality = _harmonic_mean([boundary_score, delta_norm])
+        if transition_quality is None:
             continue
-
-        similarity_bonus = 0.0
-
-        capped_core_quality = min(core_quality, 0.90)
-        transition_quality = min(1.0, capped_core_quality + similarity_bonus)
 
         quality_weight = 1.0
         if boundary_score is not None:
@@ -127,6 +103,12 @@ def compute_transition_score(macro_sections_payload: dict[str, Any]) -> float | 
         return None
 
     average_quality = weighted_total / weight_sum
-    confidence = 0.40 + 0.45 * math.sqrt(min(1.0, transition_count / 5.0))
+
+    if transition_count == 1:
+        confidence = 0.85
+    elif transition_count == 2:
+        confidence = 0.92
+    else:
+        confidence = 1.0
 
     return average_quality * confidence
