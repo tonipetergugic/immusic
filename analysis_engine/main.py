@@ -20,7 +20,10 @@ from analysis_engine.macro_sections import analyze_macro_sections
 from analysis_engine.novelty import analyze_novelty
 from analysis_engine.plots import save_structure_plot, save_waveform_plot
 from analysis_engine.product_payload import build_product_payload
-from analysis_engine.report import write_analysis_json
+from analysis_engine.report import (
+    write_analysis_json,
+    write_artist_decision_payload_json,
+)
 from analysis_engine.schemas import (
     AnalysisArtifactPaths,
     AnalysisResult,
@@ -189,6 +192,7 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     save_waveform_plot(audio_mono, mono_sr, result)
     save_structure_plot(audio_mono, mono_sr, result)
     write_analysis_json(result)
+    write_artist_decision_payload_json(result)
 
     return result
 
