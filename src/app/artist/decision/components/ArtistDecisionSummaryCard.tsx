@@ -11,7 +11,8 @@ function formatScore(score: ScoreCard["score"]) {
     return "—";
   }
 
-  return `${Math.round(score)}%`;
+  const clampedScore = Math.max(0, Math.min(1, score));
+  return `${Math.round(clampedScore * 100)}%`;
 }
 
 function formatStatus(status: ScoreCard["status"]) {

@@ -450,7 +450,7 @@ function buildFromNewEnginePayload(feedbackPayload: JsonRecord): ArtistDecisionP
     summary,
     what_works_well: whatWorksWell,
     what_may_be_worth_checking: whatMayBeWorthChecking,
-    score_cards: buildUnavailableScoreCards(),
+    score_cards: buildScoreCardsFromStructure(structure),
     structure_movement: {
       main_message: mainMessage,
       supporting_points: supportingPoints,
@@ -561,7 +561,7 @@ function buildFromLegacyPayload(feedbackPayload: JsonRecord): ArtistDecisionPayl
     summary,
     what_works_well: whatWorksWell,
     what_may_be_worth_checking: whatMayBeWorthChecking,
-    score_cards: buildScoreCardsFromStructure(structure),
+    score_cards: buildUnavailableScoreCards(),
     structure_movement: {
       main_message: mainMessage,
       supporting_points: supportingPoints,
