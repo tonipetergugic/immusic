@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import { FileText, GitBranch, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatTrackTitle } from "@/lib/formatTrackTitle";
 import { readFeedbackState } from "@/lib/ai/track-check/read-feedback-state";
@@ -27,15 +27,6 @@ type DecisionTrackRow = {
   source_queue_id: string | null;
   created_at: string | null;
 };
-
-const connectedBlocks = [
-  "decision_summary",
-  "decision_rule_context",
-  "decision_trace",
-  "explanation_inputs",
-  "wording_payload",
-  "consultant_payload",
-];
 
 export default async function ArtistDecisionPage({
   searchParams,
@@ -143,11 +134,11 @@ export default async function ArtistDecisionPage({
           <div className="flex items-center gap-3">
             <ShieldCheck className="h-5 w-5 text-[#00FFC6]" />
             <h2 className="text-2xl font-semibold tracking-tight text-white">
-              Active track context
+              Current track review
             </h2>
           </div>
           <p className="mt-2 text-sm text-[#B3B3B3]">
-            The Decision Center is the main artist surface for track decisions. Use the active track navigation above or the track switcher on the left to move between tracks.
+            Choose a track on the left and review the current structure summary, score cards, and next listening step.
           </p>
 
           {tracks.length === 0 ? (
@@ -161,7 +152,7 @@ export default async function ArtistDecisionPage({
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                  Active decision view
+                  TRACK REVIEW
                 </div>
 
                 <div className="mt-4">
@@ -183,51 +174,29 @@ export default async function ArtistDecisionPage({
 
                   <ArtistDecisionSummaryCard artistDecisionPayload={artistDecisionPayload} />
 
-                  <DecisionTechnicalDetails
-                    selectedTrack={selectedTrack}
-                    feedbackState={feedbackState}
-                  />
+                  <details className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-5 py-5">
+                    <summary className="cursor-pointer list-none text-sm font-semibold text-white/85">
+                      Technical details and raw decision data
+                      <span className="ml-2 text-xs font-normal text-white/45">
+                        Optional
+                      </span>
+                    </summary>
+
+                    <p className="mt-2 text-sm leading-6 text-white/55">
+                      This section contains the detailed engine output, evidence, rule profile,
+                      decision trace, and AI review input for deeper inspection.
+                    </p>
+
+                    <div className="mt-5">
+                      <DecisionTechnicalDetails selectedTrack={selectedTrack} feedbackState={feedbackState} />
+                    </div>
+                  </details>
                 </div>
               </div>
             </div>
           )}
         </section>
 
-        <section className="border-b border-white/10 pb-10">
-          <div className="flex items-center gap-3">
-            <GitBranch className="h-5 w-5 text-[#00FFC6]" />
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
-              Current system status
-            </h2>
-          </div>
-          <p className="mt-2 text-sm text-[#B3B3B3]">
-            The Decision Center is no longer only a shell. These blocks are already connected for the selected track.
-          </p>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {connectedBlocks.map((block) => (
-              <div
-                key={block}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4"
-              >
-                <div className="text-sm font-medium text-white/90">{block}</div>
-                <div className="mt-1 text-xs text-[#B8FFF0]">Connected</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="pb-4">
-          <div className="flex items-center gap-3">
-            <FileText className="h-5 w-5 text-[#00FFC6]" />
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
-              Feedback integration
-            </h2>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-[#B3B3B3]">
-            The old feedback flow will not remain the main product surface. Relevant feedback content will later be attached to this Decision Center in a controlled way.
-          </p>
-        </section>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ export function DecisionCenterHeader() {
         Track Decision Center
       </h1>
       <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[#B3B3B3]">
-        This is the central artist view for track decisions. The page now shows the current decision output, explanation layer, evidence, rule profile, decision trace, and AI review input for the selected track.
+        Review the current track analysis in a clear, artist-focused way. Start with the main impression, then check the key structure signals and optional technical details.
       </p>
     </div>
   );

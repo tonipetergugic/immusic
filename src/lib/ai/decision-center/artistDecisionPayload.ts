@@ -6,10 +6,25 @@ export type ArtistDecisionTechnicalCheck = {
   message: string;
 };
 
+export type ArtistDecisionScoreCardKey =
+  | "repetition"
+  | "contrast"
+  | "transition";
+
+export type ArtistDecisionScoreCard = {
+  key: ArtistDecisionScoreCardKey;
+  label: string;
+  score: number | null;
+  explanation: string;
+  practical_hint: string;
+  status: ArtistDecisionPayloadStatus;
+};
+
 export type ArtistDecisionPayload = {
   summary: string;
   what_works_well: string[];
   what_may_be_worth_checking: string[];
+  score_cards: ArtistDecisionScoreCard[];
   structure_movement: {
     main_message: string;
     supporting_points: string[];
@@ -27,6 +42,7 @@ const FALLBACK_ARTIST_DECISION_PAYLOAD: ArtistDecisionPayload = {
   what_may_be_worth_checking: [
     "Review the detailed feedback before making release decisions.",
   ],
+  score_cards: buildUnavailableScoreCards(),
   structure_movement: {
     main_message:
       "The structure needs a careful listen before a clear recommendation can be shown here.",
@@ -55,6 +71,157 @@ function asString(value: unknown): string | null {
 function asNumber(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return value;
+}
+
+function clampScore(value: number | null): number | null {
+  if (value === null) return null;
+  return Math.max(0, Math.min(1, value));
+}
+
+function buildUnavailableScoreCards(): ArtistDecisionScoreCard[] {
+  return [
+    {
+      key: "repetition",
+      label: "Repetition",
+      score: null,
+      explanation:
+        "No reliable repetition signal is available for this track yet.",
+      practical_hint:
+        "Listen once and check whether important ideas return in a way that feels intentional.",
+      status: "check",
+    },
+    {
+      key: "contrast",
+      label: "Contrast / Form",
+      score: null,
+      explanation:
+        "No reliable form contrast signal is available for this track yet.",
+      practical_hint:
+        "Check whether the main parts feel clearly different from each other.",
+      status: "check",
+    },
+    {
+      key: "transition",
+      label: "Transition",
+      score: null,
+      explanation:
+        "No reliable transition signal is available for this track yet.",
+      practical_hint:
+        "Listen to the main changes and check whether they feel clear and intentional.",
+      status: "check",
+    },
+  ];
+}
+
+function getRepetitionStatus(score: number | null): ArtistDecisionPayloadStatus {
+  if (score === null) return "check";
+  if (score > 0.82) return "attention";
+  if (score > 0.7 || score < 0.35) return "check";
+  return "pass";
+}
+
+function getContrastStatus(score: number | null): ArtistDecisionPayloadStatus {
+  if (score === null) return "check";
+  if (score < 0.4) return "attention";
+  if (score < 0.5) return "check";
+  return "pass";
+}
+
+function getTransitionStatus(score: number | null): ArtistDecisionPayloadStatus {
+  if (score === null) return "check";
+  if (score < 0.45) return "attention";
+  if (score < 0.55) return "check";
+  return "pass";
+}
+
+function buildScoreCardsFromStructure(
+  structure: JsonRecord
+): ArtistDecisionScoreCard[] {
+  const repetitionScore = clampScore(asNumber(structure.repetition_score));
+  const contrastScore = clampScore(asNumber(structure.contrast_score));
+  const transitionScore = clampScore(asNumber(structure.transition_score));
+
+  return [
+    {
+      key: "repetition",
+      label: "Repetition",
+      score: repetitionScore,
+      explanation:
+        "Shows how strongly arrangement material returns across the track.",
+      practical_hint:
+        repetitionScore !== null && repetitionScore > 0.7
+          ? "Check whether repeated ideas still feel purposeful and developing."
+          : repetitionScore !== null && repetitionScore < 0.35
+            ? "Check whether the track has enough recognizable ideas that return."
+            : "Keep the returning ideas intentional and avoid adding variation only for its own sake.",
+      status: getRepetitionStatus(repetitionScore),
+    },
+    {
+      key: "contrast",
+      label: "Contrast / Form",
+      score: contrastScore,
+      explanation:
+        "Shows how clearly the overall form creates contrast between the main parts.",
+      practical_hint:
+        contrastScore !== null && contrastScore < 0.5
+          ? "Check whether the main parts could differ more clearly in role, energy, or arrangement."
+          : "Keep the form contrast clear while preserving the track's flow.",
+      status: getContrastStatus(contrastScore),
+    },
+    {
+      key: "transition",
+      label: "Transition",
+      score: transitionScore,
+      explanation:
+        "Shows how clearly important changes appear across the arrangement.",
+      practical_hint:
+        transitionScore !== null && transitionScore < 0.55
+          ? "Check whether the most important changes feel clear enough for a listener."
+          : "The main changes seem readable; keep them clear and intentional.",
+      status: getTransitionStatus(transitionScore),
+    },
+  ];
+}
+
+function normalizeScoreCards(value: unknown): ArtistDecisionScoreCard[] {
+  if (!Array.isArray(value)) return buildUnavailableScoreCards();
+
+  const cards = value
+    .map((item) => {
+      const row = asRecord(item);
+      const key = asString(row.key);
+      const label = asString(row.label);
+      const explanation = asString(row.explanation);
+      const practicalHint = asString(row.practical_hint);
+      const status = asString(row.status);
+      const score = clampScore(asNumber(row.score));
+
+      if (
+        key !== "repetition" &&
+        key !== "contrast" &&
+        key !== "transition"
+      ) {
+        return null;
+      }
+
+      if (!label || !explanation || !practicalHint) return null;
+
+      if (status !== "pass" && status !== "check" && status !== "attention") {
+        return null;
+      }
+
+      return {
+        key,
+        label,
+        score,
+        explanation,
+        practical_hint: practicalHint,
+        status,
+      };
+    })
+    .filter((item): item is ArtistDecisionScoreCard => Boolean(item));
+
+  return cards.length > 0 ? cards : buildUnavailableScoreCards();
 }
 
 function asStringArray(value: unknown): string[] {
@@ -104,6 +271,7 @@ function normalizeArtistDecisionPayload(value: unknown): ArtistDecisionPayload |
     summary,
     what_works_well: asStringArray(payload.what_works_well),
     what_may_be_worth_checking: asStringArray(payload.what_may_be_worth_checking),
+    score_cards: normalizeScoreCards(payload.score_cards),
     structure_movement: {
       main_message: mainMessage,
       supporting_points: asStringArray(structureMovement.supporting_points),
@@ -282,6 +450,7 @@ function buildFromNewEnginePayload(feedbackPayload: JsonRecord): ArtistDecisionP
     summary,
     what_works_well: whatWorksWell,
     what_may_be_worth_checking: whatMayBeWorthChecking,
+    score_cards: buildUnavailableScoreCards(),
     structure_movement: {
       main_message: mainMessage,
       supporting_points: supportingPoints,
@@ -392,6 +561,7 @@ function buildFromLegacyPayload(feedbackPayload: JsonRecord): ArtistDecisionPayl
     summary,
     what_works_well: whatWorksWell,
     what_may_be_worth_checking: whatMayBeWorthChecking,
+    score_cards: buildScoreCardsFromStructure(structure),
     structure_movement: {
       main_message: mainMessage,
       supporting_points: supportingPoints,

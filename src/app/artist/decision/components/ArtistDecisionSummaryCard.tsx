@@ -4,6 +4,34 @@ type ArtistDecisionSummaryCardProps = {
   artistDecisionPayload: ArtistDecisionPayload;
 };
 
+type ScoreCard = ArtistDecisionPayload["score_cards"][number];
+
+function formatScore(score: ScoreCard["score"]) {
+  if (typeof score !== "number" || !Number.isFinite(score)) {
+    return "—";
+  }
+
+  return `${Math.round(score)}%`;
+}
+
+function formatStatus(status: ScoreCard["status"]) {
+  if (status === "pass") return "Strong";
+  if (status === "check") return "Check";
+  return "Unavailable";
+}
+
+function getStatusClassName(status: ScoreCard["status"]) {
+  if (status === "pass") {
+    return "border-[#00FFC6]/30 bg-[#00FFC6]/10 text-[#B8FFF0]";
+  }
+
+  if (status === "check") {
+    return "border-yellow-400/25 bg-yellow-400/10 text-yellow-100";
+  }
+
+  return "border-white/10 bg-white/[0.03] text-white/45";
+}
+
 export function ArtistDecisionSummaryCard({
   artistDecisionPayload,
 }: ArtistDecisionSummaryCardProps) {
@@ -13,49 +41,53 @@ export function ArtistDecisionSummaryCard({
         Artist decision summary
       </div>
 
-      <p className="mt-3 text-sm leading-6 text-white/85">
+      <p className="mt-3 max-w-3xl text-base leading-7 text-white/88">
         {artistDecisionPayload.summary}
       </p>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div>
-          <div className="text-sm font-medium text-white/85">
-            What works well
-          </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        {artistDecisionPayload.score_cards.map((card) => (
+          <div
+            key={card.key}
+            className="rounded-2xl border border-white/10 bg-black/20 px-5 py-5"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-white/90">
+                  {card.label}
+                </div>
 
-          {artistDecisionPayload.what_works_well.length > 0 ? (
-            <ul className="mt-2 space-y-2 text-sm leading-6 text-white/65">
-              {artistDecisionPayload.what_works_well.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm leading-6 text-white/55">
-              No clear strength note is available yet.
+                <div className="mt-3 text-4xl font-semibold tracking-tight text-white">
+                  {formatScore(card.score)}
+                </div>
+              </div>
+
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusClassName(
+                  card.status,
+                )}`}
+              >
+                {formatStatus(card.status)}
+              </span>
+            </div>
+
+            <p className="mt-4 text-sm leading-6 text-white/62">
+              {card.explanation}
             </p>
-          )}
-        </div>
 
-        <div>
-          <div className="text-sm font-medium text-white/85">
-            Worth checking
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">
+                Practical hint
+              </div>
+              <p className="mt-2 text-sm leading-6 text-white/68">
+                {card.practical_hint}
+              </p>
+            </div>
           </div>
-
-          {artistDecisionPayload.what_may_be_worth_checking.length > 0 ? (
-            <ul className="mt-2 space-y-2 text-sm leading-6 text-white/65">
-              {artistDecisionPayload.what_may_be_worth_checking.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm leading-6 text-white/55">
-              No major check point is highlighted by the available decision data.
-            </p>
-          )}
-        </div>
+        ))}
       </div>
 
-      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+      <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
         <div className="text-sm font-medium text-white/85">
           Structure / Movement
         </div>
@@ -72,30 +104,6 @@ export function ArtistDecisionSummaryCard({
           </ul>
         ) : null}
       </div>
-
-      {artistDecisionPayload.technical_release_checks.length > 0 ? (
-        <div className="mt-5">
-          <div className="text-sm font-medium text-white/85">
-            Technical release checks
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {artistDecisionPayload.technical_release_checks.map((check) => (
-              <div
-                key={`${check.label}-${check.message}`}
-                className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
-              >
-                <div className="text-sm font-medium text-white/85">
-                  {check.label}
-                </div>
-                <p className="mt-1 text-sm leading-6 text-white/60">
-                  {check.message}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       <div className="mt-5 border-t border-white/10 pt-4">
         <div className="text-sm font-medium text-white/85">
