@@ -37,6 +37,8 @@ def build_artist_decision_payload(analysis: AnalysisData) -> DecisionPayload:
     release_readiness = _build_release_readiness(analysis, issues)
     track_status = _build_track_status(release_readiness)
     critical_warnings = _build_critical_warnings(issues)
+    key_strengths = _build_key_strengths(analysis, release_readiness, technical_checks)
+    things_to_check = _build_things_to_check(release_readiness, issues, technical_checks)
     next_step = _build_next_step(release_readiness, issues)
     optional_feedback = _build_optional_feedback(analysis)
     meta_warnings = _build_meta_warnings(analysis)
@@ -46,6 +48,8 @@ def build_artist_decision_payload(analysis: AnalysisData) -> DecisionPayload:
         "track_status": track_status,
         "release_readiness": release_readiness,
         "critical_warnings": critical_warnings,
+        "key_strengths": key_strengths,
+        "things_to_check": things_to_check,
         "technical_release_checks": technical_checks,
         "next_step": next_step,
         "optional_feedback": optional_feedback,
@@ -205,6 +209,165 @@ def _build_critical_warnings(issues: list[dict[str, Any]]) -> list[dict[str, Any
         for issue in issues
         if issue["severity"] in {"warning", "problem"}
     ]
+
+
+def _build_key_strengths(
+    analysis: AnalysisData,
+    release_readiness: Mapping[str, Any],
+    technical_checks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    strengths: list[dict[str, Any]] = []
+    state = str(release_readiness.get("state") or "incomplete")
+
+    if state == "ready":
+        strengths.append(
+            {
+                "title": "No blocking release issue found",
+                "text": "The current track check did not report a critical release issue.",
+                "area": "release_readiness",
+            }
+        )
+
+    if state == "almost_ready":
+        strengths.append(
+            {
+                "title": "Close to release-ready",
+                "text": "The track check found only one point that should be reviewed before release.",
+                "area": "release_readiness",
+            }
+        )
+
+    ok_areas = {
+        str(check.get("area"))
+        for check in technical_checks
+        if str(check.get("state")) == "ok"
+    }
+
+    if {"loudness", "peaks"}.issubset(ok_areas):
+        strengths.append(
+            {
+                "title": "Mastering basics look covered",
+                "text": "Loudness and peak measurements are available, with no critical issue reported.",
+                "area": "master",
+            }
+        )
+
+    if {"stereo", "low_end"}.issubset(ok_areas):
+        strengths.append(
+            {
+                "title": "Translation checks are available",
+                "text": "Stereo and low-end measurements are available, with no critical issue reported.",
+                "area": "translation",
+            }
+        )
+
+    if "dynamics" in ok_areas:
+        strengths.append(
+            {
+                "title": "Dynamics check is available",
+                "text": "The dynamics measurement is available, with no critical issue reported.",
+                "area": "dynamics",
+            }
+        )
+
+    product_payload = _as_mapping(analysis.get("product_payload"))
+    structure = _as_mapping(product_payload.get("structure"))
+    segment_count = _first_present_number(structure.get("segment_count"))
+
+    if segment_count is not None:
+        strengths.append(
+            {
+                "title": "Structure data is ready for review",
+                "text": "The analysis produced structure movement data for the extended feedback area.",
+                "area": "structure",
+            }
+        )
+
+    if not strengths and technical_checks:
+        strengths.append(
+            {
+                "title": "Track check data is available",
+                "text": "The analysis produced technical data that can be reviewed in the Decision Center.",
+                "area": "track_check",
+            }
+        )
+
+    return strengths[:4]
+
+
+def _build_things_to_check(
+    release_readiness: Mapping[str, Any],
+    issues: list[dict[str, Any]],
+    technical_checks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    checks: list[dict[str, Any]] = []
+
+    for issue in issues:
+        if issue["severity"] not in {"warning", "problem"}:
+            continue
+
+        checks.append(
+            {
+                "title": issue["title"],
+                "text": issue["text"],
+                "severity": issue["severity"],
+                "area": issue["area"],
+            }
+        )
+
+    unavailable_checks = [
+        check
+        for check in technical_checks
+        if str(check.get("state")) == "unavailable"
+    ]
+
+    if unavailable_checks:
+        labels = ", ".join(
+            _first_present_string(check.get("label"), check.get("area"), "Check")
+            for check in unavailable_checks[:3]
+        )
+        checks.append(
+            {
+                "title": "Some measurements are unavailable",
+                "text": f"These areas could not be fully shown yet: {labels}.",
+                "severity": "info",
+                "area": "missing_data",
+            }
+        )
+
+    state = str(release_readiness.get("state") or "incomplete")
+
+    if not checks and state == "ready":
+        checks.append(
+            {
+                "title": "Final listening pass",
+                "text": "Before release, listen once on your target systems and confirm that the creative result still feels right.",
+                "severity": "info",
+                "area": "creative_review",
+            }
+        )
+
+    if not checks and state == "incomplete":
+        checks.append(
+            {
+                "title": "Run the track check again",
+                "text": "The analysis data is incomplete, so the track check should be run again before release.",
+                "severity": "warning",
+                "area": "track_check",
+            }
+        )
+
+    if not checks:
+        checks.append(
+            {
+                "title": "Manual review recommended",
+                "text": "Review the track check result before making the final release decision.",
+                "severity": "info",
+                "area": "manual_review",
+            }
+        )
+
+    return checks[:4]
 
 
 def _build_technical_release_checks(
