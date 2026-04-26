@@ -542,6 +542,22 @@ def _technical_short_text(
     area_issues: list[dict[str, Any]],
 ) -> str:
     if area_issues:
+        if state == "problem":
+            problem_issue = next(
+                (issue for issue in area_issues if issue["severity"] == "problem"),
+                None,
+            )
+            if problem_issue is not None:
+                return str(problem_issue["text"])
+
+        if state == "warning":
+            warning_issue = next(
+                (issue for issue in area_issues if issue["severity"] == "warning"),
+                None,
+            )
+            if warning_issue is not None:
+                return str(warning_issue["text"])
+
         return str(area_issues[0]["text"])
 
     if state == "unavailable":
