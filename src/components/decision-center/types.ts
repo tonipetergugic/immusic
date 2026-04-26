@@ -53,13 +53,19 @@ export type ThingToCheck = {
 };
 
 export type ArtistDecisionPayload = {
-  track?: {
-    title?: string;
-    artist_name?: string;
-    main_genre?: string;
-    subgenre?: string;
+  track: {
+    title: string;
+    artist_name: string | null;
+    version: string | null;
+    duration_sec: number | null;
+    declared_bpm: number | null;
+    declared_key: string | null;
+    main_genre: string | null;
+    subgenre: string | null;
+    artwork_url: string | null;
+  } & {
     bpm?: number;
-    key?: string;
+    key?: string | null;
     duration_sec?: number;
   };
   track_status?: StatusBlock;
@@ -70,8 +76,9 @@ export type ArtistDecisionPayload = {
   things_to_check?: ThingToCheck[];
   next_step?: NextStep;
   optional_feedback?: OptionalFeedback;
-  meta?: {
-    source?: string;
-    warnings?: string[];
+  meta: {
+    warnings: string[];
+    source: string;
+    created_at: string | null;
   };
 };
