@@ -116,6 +116,7 @@ class LoudnessMetrics:
     loudness_range_lu: float | None = None
     true_peak_dbtp: float | None = None
     peak_dbfs: float | None = None
+    clipped_sample_count: int | None = None
 
 
 @dataclass

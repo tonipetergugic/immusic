@@ -39,6 +39,17 @@ def _safe_peak_dbfs(audio: np.ndarray) -> float:
     return 20.0 * math.log10(peak)
 
 
+def _count_clipped_samples(audio: np.ndarray) -> int:
+    array = np.asarray(audio, dtype=np.float32)
+    if array.size == 0:
+        return 0
+
+    # Count actual full-scale sample clipping.
+    # This intentionally avoids near-full-scale counting because the old KI-check
+    # hard-fail rule was based on FFmpeg astats clipped samples, not headroom risk.
+    return int(np.count_nonzero(np.abs(array) >= 1.0))
+
+
 def _true_peak_approx_dbtp(audio: np.ndarray) -> float:
     array = _prepare_audio_for_loudness(audio)
 
@@ -74,6 +85,7 @@ def analyze_loudness(
             loudness_range_lu=None,
             true_peak_dbtp=None,
             peak_dbfs=None,
+            clipped_sample_count=None,
         )
 
     if audio.size == 0:
@@ -83,6 +95,7 @@ def analyze_loudness(
             loudness_range_lu=None,
             true_peak_dbtp=None,
             peak_dbfs=None,
+            clipped_sample_count=None,
         )
 
     meter = pyln.Meter(sample_rate)
@@ -96,6 +109,7 @@ def analyze_loudness(
 
     peak_dbfs = _safe_peak_dbfs(audio)
     true_peak_dbtp = _true_peak_approx_dbtp(audio)
+    clipped_sample_count = _count_clipped_samples(audio)
 
     return LoudnessMetrics(
         sample_rate=int(sample_rate),
@@ -103,4 +117,5 @@ def analyze_loudness(
         loudness_range_lu=loudness_range_lu,
         true_peak_dbtp=true_peak_dbtp,
         peak_dbfs=peak_dbfs,
+        clipped_sample_count=clipped_sample_count,
     )

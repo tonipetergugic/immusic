@@ -30,17 +30,18 @@ def collect_technical_release_issues(
 
     Current scope:
     - Source true peak / headroom
+    - Clipped sample count hard fail
     - Low-end mono stability
     - Very compressed dynamics suspicion
     - Global stereo phase suspicion
 
     Not included yet:
     - Post-encode codec simulation, because the Python engine does not generate it yet.
-    - Clipped sample count, because the Python engine does not measure it yet.
     """
     issues: list[dict[str, Any]] = []
 
     issues.extend(_collect_true_peak_issues(loudness))
+    issues.extend(_collect_clipping_issues(loudness))
     issues.extend(_collect_low_end_issues(low_end))
     issues.extend(_collect_dynamics_issues(dynamics))
     issues.extend(_collect_stereo_issues(stereo))
@@ -121,6 +122,42 @@ def _collect_true_peak_issues(loudness: LoudnessMetrics) -> list[dict[str, Any]]
                     "headroom_to_zero_dbtp": headroom_to_zero,
                     "threshold": 0.3,
                     "source_rule": "old_headroom_health_source_true_peak",
+                },
+            )
+        )
+
+    return issues
+
+
+def _collect_clipping_issues(loudness: LoudnessMetrics) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+
+    raw_count = loudness.clipped_sample_count
+    if raw_count is None or isinstance(raw_count, bool):
+        return issues
+
+    try:
+        clipped_sample_count = int(raw_count)
+    except (TypeError, ValueError):
+        return issues
+
+    # Old KI-check hard-fail policy:
+    # Massive clipping is an objective technical release blocker.
+    if clipped_sample_count >= 100:
+        issues.append(
+            create_issue(
+                code="clipped_sample_count_hard_fail",
+                severity="error",
+                message=(
+                    f"Detected {clipped_sample_count} full-scale clipped samples. "
+                    "This is an objective technical release blocker."
+                ),
+                details={
+                    "area": "peaks",
+                    "metric": "clipped_sample_count",
+                    "value": clipped_sample_count,
+                    "threshold": 100,
+                    "source_rule": "old_ki_check_hard_fail_policy",
                 },
             )
         )
