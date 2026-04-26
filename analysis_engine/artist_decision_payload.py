@@ -23,6 +23,11 @@ TECHNICAL_LABELS: dict[str, str] = {
     "file": "File",
 }
 
+ADVISORY_ISSUE_CODES: set[str] = {
+    "source_true_peak_over_zero_dbtp",
+    "source_true_peak_tight_headroom",
+}
+
 
 def build_artist_decision_payload(analysis: AnalysisData) -> DecisionPayload:
     """Build the first artist-facing Decision Center payload from analysis.json data.
@@ -166,8 +171,14 @@ def _build_release_readiness(
             "text": "The analysis data is incomplete, so no reliable release decision can be shown.",
         }
 
-    problem_issues = [issue for issue in issues if issue["severity"] == "problem"]
-    warning_issues = [issue for issue in issues if issue["severity"] == "warning"]
+    problem_issues = [
+        issue for issue in issues if issue["severity"] == "problem"
+    ]
+    readiness_warning_issues = [
+        issue
+        for issue in issues
+        if issue["severity"] == "warning" and _is_readiness_relevant_issue(issue)
+    ]
 
     if problem_issues:
         first_issue = problem_issues[0]
@@ -177,14 +188,14 @@ def _build_release_readiness(
             "text": f"The track should not be released until this issue is fixed: {first_issue['title']}.",
         }
 
-    if len(warning_issues) >= 2:
+    if len(readiness_warning_issues) >= 2:
         return {
             "state": "needs_revision",
             "label": "NEEDS REVISION",
             "text": "The track is not blocked, but multiple points should be reviewed before release.",
         }
 
-    if len(warning_issues) == 1:
+    if len(readiness_warning_issues) == 1:
         return {
             "state": "almost_ready",
             "label": "ALMOST READY",
@@ -556,6 +567,7 @@ def _normalise_issues(raw_issues: Any) -> list[dict[str, Any]]:
 
             normalised.append(
                 {
+                    "code": None,
                     "title": "Check recommended",
                     "text": text,
                     "severity": "warning",
@@ -568,9 +580,11 @@ def _normalise_issues(raw_issues: Any) -> list[dict[str, Any]]:
         if not issue:
             continue
 
+        code = _first_present_string_or_none(issue.get("code"))
+
         title = _first_present_string(
             issue.get("title"),
-            issue.get("code"),
+            code,
             issue.get("name"),
             "Check recommended",
         )
@@ -583,14 +597,16 @@ def _normalise_issues(raw_issues: Any) -> list[dict[str, Any]]:
 
         normalised.append(
             {
+                "code": code,
                 "title": title,
                 "text": text,
                 "severity": _normalise_severity(issue),
                 "area": _normalise_area(
                     _first_present_string(
                         issue.get("area"),
+                        _issue_details_area(issue),
                         issue.get("category"),
-                        issue.get("code"),
+                        code,
                         title,
                         text,
                     )
@@ -640,6 +656,18 @@ def _normalise_area(raw_value: Any) -> str:
     return "other"
 
 
+def _is_readiness_relevant_issue(issue: Mapping[str, Any]) -> bool:
+    code = _first_present_string(
+        issue.get("code"),
+        issue.get("title"),
+    )
+
+    if code in ADVISORY_ISSUE_CODES:
+        return False
+
+    return True
+
+
 def _has_issue(
     issues: list[dict[str, Any]],
     *,
@@ -675,6 +703,15 @@ def _first_present_string(*values: Any) -> str:
 def _first_present_string_or_none(*values: Any) -> str | None:
     value = _first_present_string(*values)
     return value or None
+
+
+def _issue_details_area(issue: Mapping[str, Any]) -> str | None:
+    details = issue.get("details")
+
+    if not isinstance(details, Mapping):
+        return None
+
+    return _first_present_string_or_none(details.get("area"))
 
 
 def _first_present_number(*values: Any) -> float | int | None:

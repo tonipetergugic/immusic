@@ -13,6 +13,7 @@ from analysis_engine.config import ensure_output_dir
 from analysis_engine.consultant_input import build_consultant_input
 from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
+from analysis_engine.technical_release_issues import collect_technical_release_issues
 from analysis_engine.loudness import analyze_loudness
 from analysis_engine.dynamics import analyze_dynamics
 from analysis_engine.low_end import analyze_low_end
@@ -161,7 +162,12 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
 
     result.low_end = analyze_low_end(audio_stereo, stereo_sr)
 
-    issues: list[dict[str, object]] = []
+    issues: list[dict[str, object]] = collect_technical_release_issues(
+        loudness=result.loudness,
+        dynamics=result.dynamics,
+        stereo=result.stereo,
+        low_end=result.low_end,
+    )
 
     if result.file_info.duration_sec <= 0:
         issues.append(
