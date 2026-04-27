@@ -12,7 +12,6 @@ import { EngineSummaryPanel } from "./components/EngineSummaryPanel";
 import { LabTrackSelector } from "./components/LabTrackSelector";
 import { IssueDebugScoreContextPanel } from "./components/IssueDebugScoreContextPanel";
 import { PayloadWarningsPanel } from "./components/PayloadWarningsPanel";
-import { RawJsonInspectorPanel } from "./components/RawJsonInspectorPanel";
 import { StructureMetricsPanel } from "./components/StructureMetricsPanel";
 import { TechnicalMetricsRawPanel } from "./components/TechnicalMetricsRawPanel";
 import { BoundarySectionDebugPanel } from "./components/BoundarySectionDebugPanel";
@@ -159,8 +158,6 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
                   <TechnicalMetricsRawPanel analysis={selectedItem.analysis} />
 
                   <IssueDebugScoreContextPanel analysis={selectedItem.analysis} />
-
-                  <RawJsonInspectorPanel analysis={selectedItem.analysis} />
                 </div>
 
                 <aside className="lg:sticky lg:top-8 lg:self-start">

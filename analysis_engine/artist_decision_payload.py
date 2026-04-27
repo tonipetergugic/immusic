@@ -210,6 +210,16 @@ def _build_release_readiness(
 
 
 def _build_critical_warnings(issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    critical_issues = [
+        issue
+        for issue in issues
+        if issue["severity"] == "problem"
+        or (
+            issue["severity"] == "warning"
+            and _is_readiness_relevant_issue(issue)
+        )
+    ]
+
     return [
         {
             "title": issue["title"],
@@ -217,8 +227,7 @@ def _build_critical_warnings(issues: list[dict[str, Any]]) -> list[dict[str, Any
             "severity": issue["severity"],
             "area": issue["area"],
         }
-        for issue in issues
-        if issue["severity"] in {"warning", "problem"}
+        for issue in critical_issues
     ]
 
 
