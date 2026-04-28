@@ -36,17 +36,29 @@ def save_waveform_plot(
         return None
 
     times = _get_audio_times(audio_mono, sample_rate)
+    if times.size == 0:
+        return None
 
-    fig, ax = plt.subplots(figsize=(14, 4))
-    ax.plot(times, audio_mono, linewidth=0.5)
-    ax.set_title("Waveform")
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Amplitude")
-    ax.xaxis.set_major_formatter(FuncFormatter(_format_seconds_mmss))
-    ax.set_xlim(float(times[0]), float(times[-1]) if times.size > 0 else 0.0)
+    fig, ax = plt.subplots(figsize=(14, 3))
 
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
+    fig.patch.set_alpha(0.0)
+    ax.set_facecolor("none")
+
+    ax.plot(times, audio_mono, linewidth=0.45, alpha=0.95)
+
+    ax.set_xlim(float(times[0]), float(times[-1]))
+    ax.set_ylim(-1.05, 1.05)
+
+    ax.axis("off")
+
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    fig.savefig(
+        output_path,
+        dpi=150,
+        transparent=True,
+        bbox_inches="tight",
+        pad_inches=0,
+    )
     plt.close(fig)
 
     return output_path

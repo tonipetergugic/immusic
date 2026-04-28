@@ -8,12 +8,7 @@ import { ExtendedFeedbackPreview } from "@/components/decision-center/ExtendedFe
 import { NextStepPanel } from "@/components/decision-center/NextStepPanel";
 import { ReleaseReadinessPanel } from "@/components/decision-center/ReleaseReadinessPanel";
 import { TechnicalReleaseChecksPanel } from "@/components/decision-center/TechnicalReleaseChecksPanel";
-import { EngineSummaryPanel } from "./components/EngineSummaryPanel";
 import { LabTrackSelector } from "./components/LabTrackSelector";
-import { PayloadWarningsPanel } from "./components/PayloadWarningsPanel";
-import { StructureMetricsPanel } from "./components/StructureMetricsPanel";
-import { TechnicalMetricsRawPanel } from "./components/TechnicalMetricsRawPanel";
-import { BoundarySectionDebugPanel } from "./components/BoundarySectionDebugPanel";
 import type {
   AnalysisPayload,
   ArtistDecisionPayload,
@@ -119,7 +114,7 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
     <>
       <ScrollUnlock />
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(22,78,99,0.16),transparent_26%),linear-gradient(180deg,#09090b_0%,#0b0b0f_100%)] px-4 py-8 text-white md:px-8 lg:px-12">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8">
           {selectedItem ? (
             <>
               <DecisionTrackHeader payload={selectedItem.payload} />
@@ -143,18 +138,6 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
                     keyStrengths={selectedItem.payload.key_strengths || []}
                     thingsToCheck={selectedItem.payload.things_to_check || []}
                   />
-
-                  <PayloadWarningsPanel
-                    warnings={selectedItem.payload.meta?.warnings || []}
-                  />
-
-                  <EngineSummaryPanel analysis={selectedItem.analysis} />
-
-                  <StructureMetricsPanel analysis={selectedItem.analysis} />
-
-                  <BoundarySectionDebugPanel analysis={selectedItem.analysis} />
-
-                  <TechnicalMetricsRawPanel analysis={selectedItem.analysis} />
 
                 </div>
 

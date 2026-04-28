@@ -110,6 +110,31 @@ class AnalysisIssue:
 
 
 @dataclass
+class ShortTermLufsPoint:
+    t: float
+    lufs_s: float | None = None
+
+
+@dataclass
+class ShortTermLufsSummary:
+    min_lufs_s: float | None = None
+    max_lufs_s: float | None = None
+    avg_lufs_s: float | None = None
+    p10_lufs_s: float | None = None
+    p90_lufs_s: float | None = None
+    dynamic_range_lu: float | None = None
+
+
+@dataclass
+class ShortTermLufsSeries:
+    status: str = "not_available"
+    window_sec: float = 3.0
+    hop_sec: float = 1.0
+    points: list[ShortTermLufsPoint] = field(default_factory=list)
+    summary: ShortTermLufsSummary = field(default_factory=ShortTermLufsSummary)
+
+
+@dataclass
 class LoudnessMetrics:
     sample_rate: int | None = None
     integrated_lufs: float | None = None
@@ -117,6 +142,7 @@ class LoudnessMetrics:
     true_peak_dbtp: float | None = None
     peak_dbfs: float | None = None
     clipped_sample_count: int | None = None
+    short_term_lufs_series: ShortTermLufsSeries = field(default_factory=ShortTermLufsSeries)
 
 
 @dataclass
@@ -128,10 +154,95 @@ class LowEndMetrics:
 
 
 @dataclass
+class SpectralRmsBasis:
+    method: str = "stft_band_rms_dbfs"
+    fft_size: int = 4096
+    hop_length: int = 1024
+    bands_hz: dict[str, list[float]] = field(
+        default_factory=lambda: {
+            "sub": [20.0, 60.0],
+            "low": [60.0, 250.0],
+            "mid": [250.0, 2000.0],
+            "high": [2000.0, 8000.0],
+            "air": [8000.0, 16000.0],
+        }
+    )
+
+
+@dataclass
+class SpectralRmsMetrics:
+    status: str = "not_available"
+    sub_rms_dbfs: float | None = None
+    low_rms_dbfs: float | None = None
+    mid_rms_dbfs: float | None = None
+    high_rms_dbfs: float | None = None
+    air_rms_dbfs: float | None = None
+    basis: SpectralRmsBasis = field(default_factory=SpectralRmsBasis)
+
+
+@dataclass
+class TransientTimelineItem:
+    start_sec: float
+    end_sec: float
+    transient_count: int
+    density_per_sec: float
+    mean_short_crest_db: float | None = None
+    p95_short_crest_db: float | None = None
+
+
+@dataclass
+class TransientsBasis:
+    method: str | None = None
+    window_sec: float | None = None
+    hop_sec: float | None = None
+    peak_pick_delta: float | None = None
+
+
+@dataclass
+class TransientsMetrics:
+    status: str = "not_available"
+    attack_strength: float | None = None
+    transient_density_per_sec: float | None = None
+    mean_short_crest_db: float | None = None
+    p95_short_crest_db: float | None = None
+    transient_density_cv: float | None = None
+    timeline: list[TransientTimelineItem] = field(default_factory=list)
+    basis: TransientsBasis = field(default_factory=TransientsBasis)
+
+
+@dataclass
 class DynamicsMetrics:
     crest_factor_db: float | None = None
     integrated_rms_dbfs: float | None = None
     plr_lu: float | None = None
+
+
+@dataclass
+class LimiterStressTimelineItem:
+    start_sec: float
+    end_sec: float
+    stress_event_count: int
+    max_peak_dbtp: float | None = None
+    risk: str = "low"
+
+
+@dataclass
+class LimiterStressBasis:
+    window_sec: float = 10.0
+    event_frame_sec: float = 0.1
+    stress_threshold_dbtp: float = -1.0
+    critical_threshold_dbtp: float = -0.2
+    peak_method: str = "sample_peak_dbfs_per_100ms_frame"
+
+
+@dataclass
+class LimiterStressMetrics:
+    status: str = "not_available"
+    events_per_min: float | None = None
+    max_events_per_10s: int | None = None
+    p95_events_per_10s: int | None = None
+    timeline: list[LimiterStressTimelineItem] = field(default_factory=list)
+    basis: LimiterStressBasis = field(default_factory=LimiterStressBasis)
 
 
 @dataclass
@@ -177,6 +288,9 @@ class AnalysisResult:
     dynamics: DynamicsMetrics = field(default_factory=DynamicsMetrics)
     stereo: StereoMetrics = field(default_factory=StereoMetrics)
     low_end: LowEndMetrics = field(default_factory=LowEndMetrics)
+    limiter_stress: LimiterStressMetrics = field(default_factory=LimiterStressMetrics)
+    spectral_rms: SpectralRmsMetrics = field(default_factory=SpectralRmsMetrics)
+    transients: TransientsMetrics = field(default_factory=TransientsMetrics)
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

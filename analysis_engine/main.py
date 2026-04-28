@@ -15,6 +15,10 @@ from analysis_engine.features import analyze_features
 from analysis_engine.issues import create_issue
 from analysis_engine.technical_release_issues import collect_technical_release_issues
 from analysis_engine.loudness import analyze_loudness
+from analysis_engine.loudness_timeseries import analyze_short_term_lufs_series
+from analysis_engine.limiter_stress import analyze_limiter_stress
+from analysis_engine.spectral_rms import analyze_spectral_rms
+from analysis_engine.transients import analyze_transients
 from analysis_engine.dynamics import analyze_dynamics
 from analysis_engine.low_end import analyze_low_end
 from analysis_engine.macro_sections import analyze_macro_sections
@@ -99,11 +103,18 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
     bars = structure_baseline.get("bars", [])
 
     result.loudness = analyze_loudness(audio_stereo, stereo_sr)
+    result.loudness.short_term_lufs_series = analyze_short_term_lufs_series(
+        audio_stereo,
+        stereo_sr,
+    )
 
     result.dynamics = analyze_dynamics(
         audio_stereo,
         loudness_result=result.loudness,
     )
+    result.limiter_stress = analyze_limiter_stress(audio_stereo, stereo_sr)
+    result.spectral_rms = analyze_spectral_rms(audio_stereo, stereo_sr)
+    result.transients = analyze_transients(audio_mono, mono_sr)
 
     result.features = analyze_features(
         audio_mono,
