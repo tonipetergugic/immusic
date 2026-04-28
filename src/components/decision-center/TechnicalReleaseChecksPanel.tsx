@@ -61,56 +61,68 @@ export function TechnicalReleaseChecksPanel({
   checks: TechnicalReleaseCheck[];
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-        Technical Release Checks
-      </p>
+    <section className="rounded-[2rem] border border-white/10 bg-white/[0.025] p-5 md:p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FFC6]/80">
+            Technical Release Checks
+          </p>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {checks.map((check, index) => (
-          (() => {
-            const meta = getCheckStateMeta(check.state);
-            const Icon = meta.icon;
+          <h2 className="mt-2 text-xl font-semibold tracking-[-0.025em] text-white">
+            Release-ready basics
+          </h2>
 
-            return (
-              <article
-                key={`${check.area || "check"}-${index}`}
-                className={[
-                  "rounded-2xl border px-4 py-3.5",
-                  meta.wrapper,
-                ].join(" ")}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 shrink-0">
-                    <Icon className={["h-4.5 w-4.5", meta.dot].join(" ")} />
-                  </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+            A compact safety pass before the deeper technical meter view.
+          </p>
+        </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-white">
-                        {check.label || "Check"}
-                      </h3>
-                      <span
-                        className={[
-                          "rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]",
-                          meta.chip,
-                        ].join(" ")}
-                      >
-                        {meta.label}
-                      </span>
-                    </div>
+        <div className="w-fit rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-medium text-zinc-500">
+          {checks.length} checks
+        </div>
+      </div>
 
-                    {check.short_text ? (
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/58">
-                        {check.short_text}
-                      </p>
-                    ) : null}
-                  </div>
+      <div className="mt-5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+        {checks.map((check, index) => {
+          const meta = getCheckStateMeta(check.state);
+          const Icon = meta.icon;
+
+          return (
+            <article
+              key={`${check.area || "check"}-${index}`}
+              className="rounded-2xl border border-white/10 bg-black/18 p-3.5"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035]">
+                  <Icon className={["h-4 w-4", meta.dot].join(" ")} />
                 </div>
-              </article>
-            );
-          })()
-        ))}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="text-sm font-semibold leading-5 text-white">
+                      {check.label || "Check"}
+                    </h3>
+
+                    <span
+                      className={[
+                        "rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]",
+                        meta.chip,
+                      ].join(" ")}
+                    >
+                      {meta.label}
+                    </span>
+                  </div>
+
+                  {check.short_text ? (
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">
+                      {check.short_text}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

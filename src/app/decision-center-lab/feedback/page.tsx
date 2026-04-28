@@ -205,15 +205,6 @@ export default async function DecisionCenterLabFeedbackPage({
               optionalFeedback={selectedTrack.payload.optional_feedback}
             />
 
-            <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#00FFC6]/80">
-                Technical Release Checks
-              </p>
-              <p className="mt-1 text-sm text-zinc-400">
-                Compact release-safety checks before the deeper technical meter view.
-              </p>
-            </section>
-
             <TechnicalReleaseChecksPanel
               checks={selectedTrack.payload.technical_release_checks ?? []}
             />
