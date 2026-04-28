@@ -3,15 +3,18 @@ import type { ArtistDecisionPayload } from "@/components/decision-center/types";
 
 type LabTrackSelectorItem = {
   folderName: string;
-  payload: ArtistDecisionPayload;
+  payload?: ArtistDecisionPayload;
+  title?: string;
 };
 
 export function LabTrackSelector({
   items,
   selectedFolderName,
+  pathname = "/decision-center-lab",
 }: {
   items: LabTrackSelectorItem[];
   selectedFolderName: string;
+  pathname?: string;
 }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
@@ -22,13 +25,14 @@ export function LabTrackSelector({
       <div className="flex flex-col gap-2">
         {items.map((item) => {
           const isActive = item.folderName === selectedFolderName;
-          const title = item.payload.track?.title || item.folderName;
+          const title =
+            item.title || item.payload?.track?.title || item.folderName;
 
           return (
             <Link
               key={item.folderName}
               href={{
-                pathname: "/decision-center-lab",
+                pathname,
                 query: { track: item.folderName },
               }}
               className={[

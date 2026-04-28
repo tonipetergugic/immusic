@@ -5,11 +5,12 @@ import {
   type WaveformSegment,
 } from "@/components/decision-center/WaveformSegmentTimeline";
 import { StructureMovementPanel } from "@/components/decision-center/StructureMovementPanel";
-import { AiConsultantPanel } from "@/components/decision-center/AiConsultantPanel";
+import { ConsultantSummaryPanel } from "@/components/decision-center/ConsultantSummaryPanel";
+import { FeedbackInsightCards } from "@/components/decision-center/FeedbackInsightCards";
 import { TrackAnalysisContextPanel } from "@/components/decision-center/TrackAnalysisContextPanel";
-import { CriticalWarningsPanel } from "@/components/decision-center/CriticalWarningsPanel";
 import { TechnicalReleaseChecksPanel } from "@/components/decision-center/TechnicalReleaseChecksPanel";
 import { ScrollUnlock } from "../ScrollUnlock";
+import { LabTrackSelector } from "../components/LabTrackSelector";
 import { readLocalFeedbackPageData } from "./readLocalFeedbackPageData";
 
 type DecisionCenterLabFeedbackPageProps = {
@@ -76,122 +77,146 @@ export default async function DecisionCenterLabFeedbackPage({
   return (
     <>
       <ScrollUnlock />
-      <main className="min-h-screen bg-[#05070b] px-4 py-6 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-        <header className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-          <Link
-            href="/decision-center-lab"
-            className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
-          >
-            ← Back to Decision Center
-          </Link>
+      <main className="relative min-h-screen overflow-hidden bg-[#05070b] px-4 py-8 text-white sm:px-6 lg:px-8 lg:py-10">
+        <div className="relative mx-auto flex w-full max-w-[1440px] flex-col gap-8">
+        <header className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-2xl shadow-black/30 md:p-8 lg:p-10">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-80"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(0, 255, 198, 0.12), transparent 34%), radial-gradient(circle at 82% 18%, rgba(0, 255, 198, 0.10), transparent 28%)",
+            }}
+          />
 
-          <div className="mt-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              AI Consultant & Detailed Feedback
-            </p>
+          <div className="relative grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+            <div>
+              <Link
+                href="/decision-center-lab"
+                className="text-sm font-medium text-[#00FFC6] transition hover:text-white"
+              >
+                ← Back to Decision Center
+              </Link>
 
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">
-              Detailed track analysis
-            </h1>
+              <p className="mt-8 text-xs font-semibold uppercase tracking-[0.24em] text-[#00FFC6]/80">
+                AI Consultant & Detailed Feedback
+              </p>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Deeper track feedback, waveform timeline, structure explanation,
-              technical details, and AI consultant output will be built here
-              step by step.
-            </p>
+              <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl lg:text-6xl">
+                AI Consultant & Detailed Analysis
+              </h1>
+
+              <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-300 md:text-lg">
+                A calm, guided feedback view to understand what works, what may need
+                attention, and how the track moves from start to finish.
+              </p>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="#consultant-summary"
+                  className="inline-flex items-center justify-center rounded-full bg-[#00FFC6] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white"
+                >
+                  Unlock full insights
+                </a>
+
+                {selectedTrack ? (
+                  <Link
+                    href={`/decision-center-lab/feedback/meters?track=${encodeURIComponent(
+                      selectedTrack.folderName,
+                    )}`}
+                    className="inline-flex items-center justify-center rounded-full border border-[#00FFC6]/35 bg-[#00FFC6]/10 px-5 py-2.5 text-sm font-medium text-[#00FFC6] transition hover:border-[#00FFC6]/70 hover:bg-[#00FFC6]/15"
+                  >
+                    Open meters
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+
+            {selectedTrack ? (
+              <div className="rounded-[1.75rem] border border-white/10 bg-black/30 p-4 shadow-2xl shadow-black/30 backdrop-blur">
+                <div className="flex gap-4">
+                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                    {selectedTrack.payload.track?.artwork_url ? (
+                      <div
+                        className="h-full w-full bg-cover bg-center"
+                        style={{
+                          backgroundImage: `url(${selectedTrack.payload.track.artwork_url})`,
+                        }}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-[#00FFC6]">
+                        AI
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                      Current track
+                    </p>
+
+                    <h2 className="mt-2 line-clamp-2 text-lg font-semibold leading-snug text-white">
+                      {selectedTrack.payload.track?.title || selectedTrack.folderName}
+                    </h2>
+
+                    {selectedTrack.payload.track?.artist_name ? (
+                      <p className="mt-1 truncate text-sm text-zinc-400">
+                        {selectedTrack.payload.track.artist_name}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {selectedTrack.waveformAvailable ? (
+                  <div className="mt-5 overflow-hidden rounded-2xl border border-[#00FFC6]/20 bg-black/40">
+                    <img
+                      src={`/decision-center-lab/assets?track=${encodeURIComponent(
+                        selectedTrack.folderName,
+                      )}&file=waveform.png`}
+                      alt={`Waveform preview for ${
+                        selectedTrack.payload.track?.title || selectedTrack.folderName
+                      }`}
+                      className="h-28 w-full object-cover opacity-90"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-sm text-zinc-500">
+                      Waveform preview is not available for this local output.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </header>
 
-        {data.items.length > 0 ? (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Local test tracks
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {data.items.map((item) => {
-                const isSelected =
-                  selectedTrack?.folderName === item.folderName;
-
-                return (
-                  <Link
-                    key={item.folderName}
-                    href={`/decision-center-lab/feedback?track=${encodeURIComponent(
-                      item.folderName,
-                    )}`}
-                    className={[
-                      "rounded-full border px-3 py-1.5 text-sm transition",
-                      isSelected
-                        ? "border-cyan-300/70 bg-cyan-300/10 text-cyan-100"
-                        : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/20 hover:bg-white/[0.06]",
-                    ].join(" ")}
-                  >
-                    {item.title}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
-
         {selectedTrack ? (
-          <>
-            <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                Selected track
-              </p>
-
-              <h2 className="mt-3 text-xl font-semibold text-white">
-                {selectedTrack.payload.track?.title || selectedTrack.folderName}
-              </h2>
-
-              {selectedTrack.payload.track?.artist_name ? (
-                <p className="mt-1 text-sm text-zinc-400">
-                  {selectedTrack.payload.track.artist_name}
-                </p>
-              ) : null}
-            </section>
-
+          <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+            <div className="flex flex-col gap-6">
             <TrackAnalysisContextPanel payload={selectedTrack.payload} />
 
-            <AiConsultantPanel payload={selectedTrack.payload} />
+            <ConsultantSummaryPanel payload={selectedTrack.payload} />
 
-            <CriticalWarningsPanel
-              warnings={selectedTrack.payload.critical_warnings ?? []}
+            <FeedbackInsightCards
+              keyStrengths={selectedTrack.payload.key_strengths ?? []}
+              thingsToCheck={selectedTrack.payload.things_to_check ?? []}
+              criticalWarnings={selectedTrack.payload.critical_warnings ?? []}
+              optionalFeedback={selectedTrack.payload.optional_feedback}
             />
+
+            <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#00FFC6]/80">
+                Technical Release Checks
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Compact release-safety checks before the deeper technical meter view.
+              </p>
+            </section>
 
             <TechnicalReleaseChecksPanel
               checks={selectedTrack.payload.technical_release_checks ?? []}
             />
-
-            <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                    Meters & Technical Modules
-                  </p>
-
-                  <h2 className="mt-3 text-xl font-semibold text-white">
-                    Look at your meters
-                  </h2>
-
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                    Open detailed loudness, stereo, phase, limiter, transient and
-                    tonal balance modules.
-                  </p>
-                </div>
-
-                <Link
-                  href={`/decision-center-lab/feedback/meters?track=${encodeURIComponent(
-                    selectedTrack.folderName,
-                  )}`}
-                  className="inline-flex w-fit items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/15"
-                >
-                  Open meters
-                </Link>
-              </div>
-            </section>
 
             {selectedTrack.waveformAvailable ? (
               <>
@@ -213,7 +238,16 @@ export default async function DecisionCenterLabFeedbackPage({
             )}
 
             <StructureMovementPanel analysis={selectedTrack.analysis} />
-          </>
+            </div>
+
+            <aside className="lg:sticky lg:top-8 lg:self-start">
+              <LabTrackSelector
+                items={data.items}
+                selectedFolderName={selectedTrack.folderName}
+                pathname="/decision-center-lab/feedback"
+              />
+            </aside>
+          </div>
         ) : (
           <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-5">
             <p className="text-sm text-zinc-400">

@@ -47,21 +47,30 @@ export function WaveformSegmentTimeline({
   );
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-      <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-          Structure timeline
-        </p>
-        <h2 className="mt-2 text-lg font-semibold text-white">
-          Track sections
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          A simple overview of how the track moves through its main parts.
-        </p>
+    <section className="rounded-[2rem] border border-white/10 bg-white/[0.025] p-5 md:p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FFC6]/80">
+            Structure timeline
+          </p>
+
+          <h2 className="mt-2 text-xl font-semibold tracking-[-0.025em] text-white">
+            Main track sections
+          </h2>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+            A compact view of how the arrangement is divided across the full
+            track.
+          </p>
+        </div>
+
+        <div className="w-fit rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-medium text-zinc-500">
+          {validSegments.length} parts
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-        <div className="flex h-10 w-full">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+        <div className="flex h-12 w-full">
           {validSegments.map((segment, segmentIndex) => {
             const widthPercent =
               ((segment.end_sec - segment.start_sec) / durationSec) * 100;
@@ -69,12 +78,14 @@ export function WaveformSegmentTimeline({
             return (
               <div
                 key={`${segment.start_sec}-${segment.end_sec}-${segmentIndex}`}
-                className="border-r border-white/10 bg-white/[0.06] last:border-r-0"
+                className="border-r border-black/40 bg-[#00FFC6]/[0.09] last:border-r-0"
                 style={{ width: `${widthPercent}%` }}
                 title={`Part ${segmentIndex + 1}: ${formatSecondsToTime(
                   segment.start_sec,
                 )}–${formatSecondsToTime(segment.end_sec)}`}
-              />
+              >
+                <div className="h-full w-full bg-gradient-to-b from-[#00FFC6]/18 to-transparent" />
+              </div>
             );
           })}
         </div>
@@ -84,12 +95,13 @@ export function WaveformSegmentTimeline({
         {validSegments.map((segment, segmentIndex) => (
           <div
             key={`${segment.start_sec}-${segment.end_sec}-${segmentIndex}-label`}
-            className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2"
+            className="rounded-2xl border border-white/8 bg-black/15 px-3 py-2"
           >
-            <p className="text-sm font-medium text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
               Part {segmentIndex + 1}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-400">
+
+            <p className="mt-1 text-sm font-medium text-white">
               {formatSecondsToTime(segment.start_sec)}–
               {formatSecondsToTime(segment.end_sec)}
             </p>

@@ -138,36 +138,48 @@ export function StructureMovementPanel({
   const items = [materialReturn, contrast, transitions];
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-      <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-          Structure & Movement
-        </p>
+    <section className="rounded-[2rem] border border-[#00FFC6]/15 bg-[linear-gradient(135deg,rgba(0,255,198,0.06),rgba(255,255,255,0.025)_34%,rgba(255,255,255,0.015))] p-6 shadow-2xl shadow-black/20 md:p-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FFC6]/80">
+            Structure & Movement
+          </p>
 
-        <h2 className="mt-2 text-lg font-semibold text-white">
-          How the track moves
-        </h2>
+          <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white md:text-3xl">
+            How the track moves
+          </h2>
 
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
-          A simple artist-facing view of repetition, contrast, and transition
-          clarity. These are listening hints, not final judgments.
-        </p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+            A calm artist-facing view of repetition, contrast, and transition
+            clarity. These are listening hints, not final judgments.
+          </p>
+        </div>
+
+        <div className="hidden rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-medium text-zinc-500 md:block">
+          Arrangement feel
+        </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="mt-7 grid gap-4 lg:grid-cols-3">
         {items.map((item) => (
-          <div
+          <article
             key={item.title}
-            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+            className="rounded-3xl border border-white/10 bg-black/20 p-5"
           >
-            <p className="text-sm font-medium text-zinc-300">{item.title}</p>
-            <p className="mt-2 text-base font-semibold text-white">
-              {item.label}
+            <div className="h-1 w-10 rounded-full bg-[#00FFC6]" />
+
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              {item.title}
             </p>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">
+
+            <h3 className="mt-3 text-lg font-semibold tracking-[-0.025em] text-white">
+              {item.label}
+            </h3>
+
+            <p className="mt-3 text-sm leading-6 text-zinc-400">
               {item.text}
             </p>
-          </div>
+          </article>
         ))}
       </div>
     </section>
