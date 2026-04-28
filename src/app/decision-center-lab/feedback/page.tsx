@@ -155,46 +155,46 @@ export default async function DecisionCenterLabFeedbackPage({
 
             <TrackAnalysisContextPanel payload={selectedTrack.payload} />
 
+            <AiConsultantPanel payload={selectedTrack.payload} />
+
+            <CriticalWarningsPanel
+              warnings={selectedTrack.payload.critical_warnings ?? []}
+            />
+
+            <TechnicalReleaseChecksPanel
+              checks={selectedTrack.payload.technical_release_checks ?? []}
+            />
+
+            <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
+                    Meters & Technical Modules
+                  </p>
+
+                  <h2 className="mt-3 text-xl font-semibold text-white">
+                    Look at your meters
+                  </h2>
+
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                    Open detailed loudness, stereo, phase, limiter, transient and
+                    tonal balance modules.
+                  </p>
+                </div>
+
+                <Link
+                  href={`/decision-center-lab/feedback/meters?track=${encodeURIComponent(
+                    selectedTrack.folderName,
+                  )}`}
+                  className="inline-flex w-fit items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/15"
+                >
+                  Open meters
+                </Link>
+              </div>
+            </section>
+
             {selectedTrack.waveformAvailable ? (
               <>
-                <AiConsultantPanel payload={selectedTrack.payload} />
-
-                <CriticalWarningsPanel
-                  warnings={selectedTrack.payload.critical_warnings ?? []}
-                />
-
-                <TechnicalReleaseChecksPanel
-                  checks={selectedTrack.payload.technical_release_checks ?? []}
-                />
-
-                <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                        Meters & Technical Modules
-                      </p>
-
-                      <h2 className="mt-3 text-xl font-semibold text-white">
-                        Look at your meters
-                      </h2>
-
-                      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                        Open detailed loudness, stereo, phase, limiter,
-                        transient and tonal balance modules.
-                      </p>
-                    </div>
-
-                    <Link
-                      href={`/decision-center-lab/feedback/meters?track=${encodeURIComponent(
-                        selectedTrack.folderName,
-                      )}`}
-                      className="inline-flex w-fit items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/15"
-                    >
-                      Open meters
-                    </Link>
-                  </div>
-                </section>
-
                 <TrackWaveformPanel
                   trackFolderName={selectedTrack.folderName}
                   trackTitle={
@@ -203,8 +203,6 @@ export default async function DecisionCenterLabFeedbackPage({
                 />
 
                 <WaveformSegmentTimeline segments={selectedSegments} />
-
-                <StructureMovementPanel analysis={selectedTrack.analysis} />
               </>
             ) : (
               <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-5">
@@ -213,12 +211,14 @@ export default async function DecisionCenterLabFeedbackPage({
                 </p>
               </section>
             )}
+
+            <StructureMovementPanel analysis={selectedTrack.analysis} />
           </>
         ) : (
           <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-5">
             <p className="text-sm text-zinc-400">
-              No local analysis output with artist_decision_payload.json was
-              found in analysis_engine/output.
+              No local analysis output with artist_decision_payload.json was found in
+              analysis_engine/output.
             </p>
           </section>
         )}

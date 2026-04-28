@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import path from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { ScrollUnlock } from "./ScrollUnlock";
@@ -138,6 +139,35 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
                     keyStrengths={selectedItem.payload.key_strengths || []}
                     thingsToCheck={selectedItem.payload.things_to_check || []}
                   />
+
+                  <section className="rounded-3xl border border-cyan-300/20 bg-cyan-300/[0.06] p-5">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
+                          AI Consultant & Detailed Feedback
+                        </p>
+
+                        <h2 className="mt-3 text-xl font-semibold text-white">
+                          Open detailed track analysis
+                        </h2>
+
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                          Continue to the deeper feedback view with consultant
+                          notes, structure, waveform, technical checks and
+                          detailed modules.
+                        </p>
+                      </div>
+
+                      <Link
+                        href={`/decision-center-lab/feedback?track=${encodeURIComponent(
+                          selectedItem.folderName,
+                        )}`}
+                        className="inline-flex w-fit items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/15"
+                      >
+                        Open detailed feedback
+                      </Link>
+                    </div>
+                  </section>
 
                 </div>
 
