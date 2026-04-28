@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MeterSection } from "@/components/decision-center/meters/MeterSection";
 import { LowEndMonoMeterCard } from "@/components/decision-center/meters/LowEndMonoMeterCard";
 import { LimiterStressMeterCard } from "@/components/decision-center/meters/LimiterStressMeterCard";
 import { PhaseCorrelationMeterCard } from "@/components/decision-center/meters/PhaseCorrelationMeterCard";
@@ -715,106 +716,131 @@ export default async function DecisionCenterLabMetersPage({
       <main className="min-h-screen bg-[#05070b] px-4 py-6 text-white sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
           <header className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <Link
-              href={buildFeedbackHref(selectedTrack?.folderName)}
-              className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
-            >
-              ← Back to detailed feedback
-            </Link>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <Link
+                  href={buildFeedbackHref(selectedTrack?.folderName)}
+                  className="text-sm font-medium text-cyan-300 hover:text-cyan-200"
+                >
+                  ← Back to detailed feedback
+                </Link>
 
-            <div className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                Meters & Technical Modules
-              </p>
+                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
+                  Meters & Technical Modules
+                </p>
 
-              <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">
-                Look at your meters
-              </h1>
+                <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">
+                  Technical meter view
+                </h1>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                Detailed loudness, stereo, phase, limiter, transient and tonal
-                balance modules will be restored here step by step.
-              </p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">
+                  Detailed loudness, limiter, stereo, mono, tonal balance and transient
+                  checks based on the current local analysis output.
+                </p>
+              </div>
+
+              {selectedTrack ? (
+                <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 lg:min-w-[320px]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    Selected track
+                  </p>
+
+                  <h2 className="mt-2 text-base font-semibold leading-snug text-white">
+                    {selectedTrack.payload.track?.title || selectedTrack.folderName}
+                  </h2>
+
+                  {selectedTrack.payload.track?.artist_name ? (
+                    <p className="mt-1 text-sm text-zinc-400">
+                      {selectedTrack.payload.track.artist_name}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </header>
 
           {selectedTrack ? (
-            <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                Selected track
-              </p>
-
-              <h2 className="mt-3 text-xl font-semibold text-white">
-                {selectedTrack.payload.track?.title || selectedTrack.folderName}
-              </h2>
-
-              {selectedTrack.payload.track?.artist_name ? (
-                <p className="mt-1 text-sm text-zinc-400">
-                  {selectedTrack.payload.track.artist_name}
-                </p>
-              ) : null}
-
-              <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                <PhaseCorrelationMeterCard value={phaseCorrelationValue} />
-                <LowEndMonoMeterCard
-                  phaseCorrelationLowBand={
-                    lowEndMonoValues.phaseCorrelationLowBand
-                  }
-                  monoLossLowBandPercent={
-                    lowEndMonoValues.monoLossLowBandPercent
-                  }
-                  lowBandBalanceDb={lowEndMonoValues.lowBandBalanceDb}
-                />
-                <StreamingNormalizationMeterCard
-                  integratedLufs={
-                    streamingNormalizationValues.integratedLufs
-                  }
-                  truePeakDbtp={
-                    streamingNormalizationValues.truePeakDbtp
-                  }
-                />
-                <ShortTermLufsMeterCard
-                  integratedLufs={shortTermLufsValues.integratedLufs}
-                  dynamicRangeLu={shortTermLufsValues.dynamicRangeLu}
-                  points={shortTermLufsValues.points}
-                />
-                <LimiterStressMeterCard
-                  truePeakDbtp={limiterStressValues.truePeakDbtp}
-                  peakDbfs={limiterStressValues.peakDbfs}
-                  clippedSampleCount={
-                    limiterStressValues.clippedSampleCount
-                  }
-                  plrLu={limiterStressValues.plrLu}
-                  crestFactorDb={limiterStressValues.crestFactorDb}
-                  eventsPerMin={limiterStressValues.eventsPerMin}
-                  maxEventsPer10s={limiterStressValues.maxEventsPer10s}
-                  p95EventsPer10s={limiterStressValues.p95EventsPer10s}
-                  timeline={limiterStressValues.timeline}
-                />
-                <EngineeringDynamicsMeterCard
-                  integratedLufs={engineeringDynamicsValues.integratedLufs}
-                  loudnessRangeLu={
-                    engineeringDynamicsValues.loudnessRangeLu
-                  }
-                  crestFactorDb={engineeringDynamicsValues.crestFactorDb}
-                  plrLu={engineeringDynamicsValues.plrLu}
-                  integratedRmsDbfs={
-                    engineeringDynamicsValues.integratedRmsDbfs
-                  }
-                />
+            <section className="flex flex-col gap-6">
+              <MeterSection
+                eyebrow="Release Safety"
+                title="Streaming and limiter risk"
+                description="Checks that help identify possible release, clipping, peak and platform-normalization risks."
+                gridClassName="grid gap-4 xl:grid-cols-2"
+              >
                 <StreamingRiskGaugeMeterCard
                   integratedLufs={streamingRiskGaugeValues.integratedLufs}
                   truePeakDbtp={streamingRiskGaugeValues.truePeakDbtp}
-                  clippedSampleCount={
-                    streamingRiskGaugeValues.clippedSampleCount
-                  }
+                  clippedSampleCount={streamingRiskGaugeValues.clippedSampleCount}
                   peakDbfs={streamingRiskGaugeValues.peakDbfs}
+                />
+                <StreamingNormalizationMeterCard
+                  integratedLufs={streamingNormalizationValues.integratedLufs}
+                  truePeakDbtp={streamingNormalizationValues.truePeakDbtp}
+                />
+                <div className="xl:col-span-2">
+                  <LimiterStressMeterCard
+                    truePeakDbtp={limiterStressValues.truePeakDbtp}
+                    peakDbfs={limiterStressValues.peakDbfs}
+                    clippedSampleCount={limiterStressValues.clippedSampleCount}
+                    plrLu={limiterStressValues.plrLu}
+                    crestFactorDb={limiterStressValues.crestFactorDb}
+                    eventsPerMin={limiterStressValues.eventsPerMin}
+                    maxEventsPer10s={limiterStressValues.maxEventsPer10s}
+                    p95EventsPer10s={limiterStressValues.p95EventsPer10s}
+                    timeline={limiterStressValues.timeline}
+                  />
+                </div>
+              </MeterSection>
+
+              <MeterSection
+                eyebrow="Loudness & Dynamics"
+                title="Movement over time"
+                description="Loudness movement and engineering dynamics for checking stability, density and musical headroom."
+                gridClassName="grid gap-4 xl:grid-cols-2"
+              >
+                <div className="xl:col-span-2">
+                  <ShortTermLufsMeterCard
+                    integratedLufs={shortTermLufsValues.integratedLufs}
+                    dynamicRangeLu={shortTermLufsValues.dynamicRangeLu}
+                    points={shortTermLufsValues.points}
+                  />
+                </div>
+                <div className="xl:col-span-2">
+                  <EngineeringDynamicsMeterCard
+                    integratedLufs={engineeringDynamicsValues.integratedLufs}
+                    loudnessRangeLu={engineeringDynamicsValues.loudnessRangeLu}
+                    crestFactorDb={engineeringDynamicsValues.crestFactorDb}
+                    plrLu={engineeringDynamicsValues.plrLu}
+                    integratedRmsDbfs={engineeringDynamicsValues.integratedRmsDbfs}
+                  />
+                </div>
+              </MeterSection>
+
+              <MeterSection
+                eyebrow="Stereo & Mono"
+                title="Translation and phase stability"
+                description="Stereo image, phase relationship and low-end mono compatibility."
+                gridClassName="grid gap-4 xl:grid-cols-3"
+              >
+                <PhaseCorrelationMeterCard value={phaseCorrelationValue} />
+                <LowEndMonoMeterCard
+                  phaseCorrelationLowBand={lowEndMonoValues.phaseCorrelationLowBand}
+                  monoLossLowBandPercent={lowEndMonoValues.monoLossLowBandPercent}
+                  lowBandBalanceDb={lowEndMonoValues.lowBandBalanceDb}
                 />
                 <MidSideMeterCard
                   stereoWidth={midSideValues.stereoWidth}
                   sideMidRatio={midSideValues.sideMidRatio}
                   phaseCorrelation={midSideValues.phaseCorrelation}
                 />
+              </MeterSection>
+
+              <MeterSection
+                eyebrow="Frequency & Punch"
+                title="Tonal balance and transient detail"
+                description="Spectral energy distribution and transient behavior across the track."
+                gridClassName="grid gap-4 xl:grid-cols-2"
+              >
                 <SpectralRmsMeterCard
                   subRmsDbfs={spectralRmsValues.subRmsDbfs}
                   lowRmsDbfs={spectralRmsValues.lowRmsDbfs}
@@ -824,15 +850,13 @@ export default async function DecisionCenterLabMetersPage({
                 />
                 <TransientsMeterCard
                   attackStrength={transientsValues.attackStrength}
-                  transientDensityPerSec={
-                    transientsValues.transientDensityPerSec
-                  }
+                  transientDensityPerSec={transientsValues.transientDensityPerSec}
                   p95ShortCrestDb={transientsValues.p95ShortCrestDb}
                   meanShortCrestDb={transientsValues.meanShortCrestDb}
                   transientDensityCv={transientsValues.transientDensityCv}
                   timeline={transientsValues.timeline}
                 />
-              </div>
+              </MeterSection>
             </section>
           ) : (
             <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-5">
