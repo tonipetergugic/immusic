@@ -20,6 +20,12 @@ def _as_list(value: Any) -> list[Any]:
     return []
 
 
+def _strip_private_consultant_fields(summary: dict[str, Any]) -> dict[str, Any]:
+    cleaned = dict(summary)
+    cleaned.pop("evidence", None)
+    return cleaned
+
+
 def _as_number(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
@@ -204,8 +210,8 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
         },
         "structure_summary": _build_structure_summary(structure),
         "section_character_summary": section_character_summary,
-        "arrangement_development_summary": build_arrangement_development_summary(
-            result, section_character_summary
+        "arrangement_development_summary": _strip_private_consultant_fields(
+            build_arrangement_development_summary(result, section_character_summary)
         ),
         "musical_flow_summary": build_musical_flow_summary(result),
         "score_context": {

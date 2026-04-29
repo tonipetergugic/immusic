@@ -55,6 +55,10 @@ Language:
 How to use the input:
 - Use artist_declared_context as the main musical context for the feedback.
 - Use structure_summary to describe the listener-facing flow of the track in plain language.
+- Musical flow summary guidance:
+  - Use `musical_flow_summary.movement_signal` only as cautious evidence about overall energy and density movement across the track.
+  - Do not treat it as the same signal as `arrangement_development_summary.development_signal`.
+  - Do not turn it into a hard judgment about songwriting, arrangement quality, drops, builds, motifs, loops, or samples.
 - Section character summary guidance:
   - Use section_character_summary only as cautious evidence for how larger passages may feel.
   - Translate roles like opening part, reduced passage, stronger passage, main passage, and closing part into natural artist language.

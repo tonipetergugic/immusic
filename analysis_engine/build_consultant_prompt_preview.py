@@ -82,7 +82,7 @@ def _build_musical_flow_summary_section(consultant_input: dict) -> str:
             "## Musical flow summary\n\n"
             "- Energy movement: not available\n"
             "- Density movement: not available\n"
-            "- Development signal: not available\n"
+            "- Movement signal: not available\n"
             "- Possible repeated focus: not available\n"
             "- Listening check: not available"
         )
@@ -91,7 +91,7 @@ def _build_musical_flow_summary_section(consultant_input: dict) -> str:
         "## Musical flow summary\n\n"
         f"- Energy movement: {_as_text(musical_flow_summary.get('energy_movement'))}\n"
         f"- Density movement: {_as_text(musical_flow_summary.get('density_movement'))}\n"
-        f"- Development signal: {_as_text(musical_flow_summary.get('development_signal'))}\n"
+        f"- Movement signal: {_as_text(musical_flow_summary.get('movement_signal'))}\n"
         f"- Possible repeated focus: {_as_yes_no(musical_flow_summary.get('possible_repeated_focus'))}\n"
         f"- Listening check: {_as_text(musical_flow_summary.get('listening_check'))}"
     )
@@ -178,6 +178,7 @@ def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
     arrangement_development_summary = consultant_input.get("arrangement_development_summary")
     if isinstance(arrangement_development_summary, dict):
         arrangement_development_summary.pop("wording_note", None)
+        arrangement_development_summary.pop("evidence", None)
 
     local_artist_context = _load_local_artist_context(analysis_json_path.parent.name)
     if local_artist_context is not None:

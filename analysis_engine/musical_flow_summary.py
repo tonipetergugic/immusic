@@ -47,7 +47,7 @@ def _density_movement_from_transients(transient_density_cv: float | None) -> str
     return "varied"
 
 
-def _development_signal(
+def _movement_signal(
     *,
     energy_movement: str,
     density_movement: str,
@@ -122,7 +122,7 @@ def _possible_repeated_focus(
 
 def _listening_check(
     *,
-    development_signal: str,
+    movement_signal: str,
     possible_repeated_focus: bool,
 ) -> str:
     if possible_repeated_focus:
@@ -131,19 +131,19 @@ def _listening_check(
             "or a special moment over the full track."
         )
 
-    if development_signal == "limited":
+    if movement_signal == "limited":
         return (
             "Check whether the larger track areas create enough movement, contrast, "
             "or development over time."
         )
 
-    if development_signal == "moderate":
+    if movement_signal == "moderate":
         return (
             "Check whether the track's development feels intentional and whether one "
             "later moment adds enough fresh interest."
         )
 
-    if development_signal == "noticeable":
+    if movement_signal == "noticeable":
         return (
             "Use a normal reference listening pass to confirm that the larger movement "
             "feels intentional for the declared genre."
@@ -173,7 +173,7 @@ def build_musical_flow_summary(result: AnalysisResult) -> dict[str, Any]:
 
     energy_movement = _energy_movement_from_loudness(dynamic_range_lu)
     density_movement = _density_movement_from_transients(transient_density_cv)
-    development_signal = _development_signal(
+    movement_signal = _movement_signal(
         energy_movement=energy_movement,
         density_movement=density_movement,
         repetition_score=repetition_score,
@@ -188,17 +188,17 @@ def build_musical_flow_summary(result: AnalysisResult) -> dict[str, Any]:
     )
 
     status = "available"
-    if development_signal == "unavailable":
+    if movement_signal == "unavailable":
         status = "not_available"
 
     return {
         "status": status,
         "energy_movement": energy_movement,
         "density_movement": density_movement,
-        "development_signal": development_signal,
+        "movement_signal": movement_signal,
         "possible_repeated_focus": repeated_focus,
         "listening_check": _listening_check(
-            development_signal=development_signal,
+            movement_signal=movement_signal,
             possible_repeated_focus=repeated_focus,
         ),
         "wording_note": (
