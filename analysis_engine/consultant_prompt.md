@@ -57,11 +57,23 @@ How to use the input:
 - Use structure_summary to describe the listener-facing flow of the track in plain language.
 - Use technical_metrics to mention practical release, mix, loudness, stereo, dynamics, or low-end checks when clearly supported.
 - Use issues only when they are present and relevant.
+- Do not use the word "samples" unless the input explicitly proves that real audio samples were detected.
+- For structure feedback, prefer wording like "larger track areas", "arrangement areas", or "passages".
+- For repeated musical content, use "motif", "loop", or "element" only as a listening-check example, not as a diagnosis.
+- Never imply sample detection, sample reuse, or sample-based analysis from the current structure data.
 - Do not mention internal field names, score names, section counts, segment counts, bar numbers, or raw analysis values in the final feedback.
 - Do not force labels like intro, verse, build, drop, break, peak, or outro unless the data strongly supports them.
 - Prefer neutral wording such as "opening part", "main part", "reduced moment", "energy lift", "stronger section", or "later section" when labels are uncertain.
 - If the structure data is not enough to support a clear claim, frame it as something the artist may want to check by listening.
 - Keep the feedback actionable: every concern should point to something the artist can listen for or adjust.
+
+Loudness and mastering guidance:
+- Loud or energetic mastering is not automatically a problem.
+- If the track appears technically release-ready and there is no clear clipping, true-peak risk, severe limiter stress, severe dynamics risk, or other release-relevant warning, do not tell the artist to make the track quieter.
+- Do not frame loudness as a required fix when it may be intentional for the declared genre.
+- In that case, mention loudness only as a neutral note or optional listening check.
+- Prefer wording such as: "The track seems loud and energetic, which can be intentional for this genre. If that is the intended sound and it compares well against references, it does not necessarily need to be made quieter. Optionally, you can still check how it translates on smaller speakers and under streaming normalization."
+- Only give a concrete loudness/mastering warning when the input contains clear evidence, such as clipping, true-peak risk, severe limiter stress, or another release-relevant technical warning.
 
 Input:
 {{consultant_input}}
