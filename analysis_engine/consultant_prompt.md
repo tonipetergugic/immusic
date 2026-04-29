@@ -62,6 +62,13 @@ How to use the input:
   - Do not diagnose drops, builds, breaks, verses, choruses, motifs, loops, samples, or repeated melodies from this field alone.
   - Use it to support gentle wording about energy movement, density movement, reduced moments, stronger moments, and overall flow.
   - If the data is unclear, frame it as something the artist may want to check by listening.
+- Arrangement development summary guidance:
+  - Use `arrangement_development_summary` only as cautious evidence about the larger arrangement journey.
+  - Do not treat `development_signal`, `variation_signal`, `journey_shape`, or `possible_static_focus` as hard judgments.
+  - Do not diagnose weak songwriting, repetitive melody, loop repetition, sample reuse, or missing drops/builds from this block.
+  - If `possible_static_focus` is true, phrase it only as a listening check: ask whether the track develops enough tension, variation, or a memorable lift across the larger arrangement.
+  - If `development_signal` is noticeable, you may mention that the larger arrangement appears to create movement, but final judgment must still come from listening.
+  - Keep the wording artist-friendly, genre-relative, and non-absolute.
 - Use technical_metrics to mention practical release, mix, loudness, stereo, dynamics, or low-end checks when clearly supported.
 - Use issues only when they are present and relevant.
 - Do not use the word "samples" unless the input explicitly proves that real audio samples were detected.
