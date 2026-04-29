@@ -4,6 +4,7 @@ from typing import Any
 
 from analysis_engine.schemas import AnalysisResult
 from analysis_engine.musical_flow_summary import build_musical_flow_summary
+from analysis_engine.section_character_summary import build_section_character_summary
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -179,6 +180,7 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
     segments, debug blocks, feature vectors, similarity matrices, novelty data,
     boundary decisions, macro sections, fusion, and micro analysis.
     The musical flow summary is a compact derived summary, not a debug export.
+    section_character_summary provides cautious section-level character hints for the Consultant.
     """
     product_payload = _as_dict(result.product_payload)
 
@@ -199,6 +201,7 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
             "transition_score": structure.get("transition_score"),
         },
         "structure_summary": _build_structure_summary(structure),
+        "section_character_summary": build_section_character_summary(result),
         "musical_flow_summary": build_musical_flow_summary(result),
         "score_context": {
             "scale": "0.0 = low, 1.0 = high",

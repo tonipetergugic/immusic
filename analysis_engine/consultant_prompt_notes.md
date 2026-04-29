@@ -62,6 +62,8 @@ The words motif, loop, or element may be used only as listening-check examples, 
 
 The word samples should not be used unless actual sample detection is explicitly available.
 
+musical_flow_summary.possible_repeated_focus is only a cautious listening-check signal. It must not be treated as proof that a melody, loop, motif, element, or sample is repetitive. It may only support wording such as checking whether a central idea gets enough variation, tension, or a special moment over time.
+
 ## Loudness and mastering wording
 
 Loud or energetic mastering should not automatically be presented as a problem.

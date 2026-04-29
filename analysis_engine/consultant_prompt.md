@@ -55,6 +55,13 @@ Language:
 How to use the input:
 - Use artist_declared_context as the main musical context for the feedback.
 - Use structure_summary to describe the listener-facing flow of the track in plain language.
+- Section character summary guidance:
+  - Use section_character_summary only as cautious evidence for how larger passages may feel.
+  - Translate roles like opening part, reduced passage, stronger passage, main passage, and closing part into natural artist language.
+  - Do not expose section counts, raw labels, internal roles, score names, bar numbers, or raw analysis values.
+  - Do not diagnose drops, builds, breaks, verses, choruses, motifs, loops, samples, or repeated melodies from this field alone.
+  - Use it to support gentle wording about energy movement, density movement, reduced moments, stronger moments, and overall flow.
+  - If the data is unclear, frame it as something the artist may want to check by listening.
 - Use technical_metrics to mention practical release, mix, loudness, stereo, dynamics, or low-end checks when clearly supported.
 - Use issues only when they are present and relevant.
 - Do not use the word "samples" unless the input explicitly proves that real audio samples were detected.
