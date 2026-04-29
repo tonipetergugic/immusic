@@ -2,6 +2,8 @@ export type WaveformSegment = {
   index?: number;
   start_sec: number;
   end_sec: number;
+  start_bar?: number;
+  end_bar?: number;
 };
 
 type WaveformSegmentTimelineProps = {
@@ -20,6 +22,37 @@ function formatSecondsToTime(seconds: number) {
   return `${String(minutes).padStart(2, "0")}:${String(
     remainingSeconds,
   ).padStart(2, "0")}`;
+}
+
+function getSegmentBarCount(segment: WaveformSegment) {
+  if (
+    typeof segment.start_bar !== "number" ||
+    typeof segment.end_bar !== "number" ||
+    !Number.isFinite(segment.start_bar) ||
+    !Number.isFinite(segment.end_bar) ||
+    segment.end_bar < segment.start_bar
+  ) {
+    return null;
+  }
+
+  return segment.end_bar - segment.start_bar + 1;
+}
+
+function formatSegmentBars(segment: WaveformSegment) {
+  const barCount = getSegmentBarCount(segment);
+
+  if (
+    typeof segment.start_bar !== "number" ||
+    typeof segment.end_bar !== "number" ||
+    !Number.isFinite(segment.start_bar) ||
+    !Number.isFinite(segment.end_bar)
+  ) {
+    return null;
+  }
+
+  return `Bars ${segment.start_bar}–${segment.end_bar}${
+    barCount === null ? "" : ` · ${barCount} bars`
+  }`;
 }
 
 export function WaveformSegmentTimeline({
@@ -82,7 +115,11 @@ export function WaveformSegmentTimeline({
                 style={{ width: `${widthPercent}%` }}
                 title={`Part ${segmentIndex + 1}: ${formatSecondsToTime(
                   segment.start_sec,
-                )}–${formatSecondsToTime(segment.end_sec)}`}
+                )}–${formatSecondsToTime(segment.end_sec)}${
+                  formatSegmentBars(segment)
+                    ? ` · ${formatSegmentBars(segment)}`
+                    : ""
+                }`}
               >
                 <div className="h-full w-full bg-gradient-to-b from-[#00FFC6]/18 to-transparent" />
               </div>
@@ -105,6 +142,12 @@ export function WaveformSegmentTimeline({
               {formatSecondsToTime(segment.start_sec)}–
               {formatSecondsToTime(segment.end_sec)}
             </p>
+
+            {formatSegmentBars(segment) ? (
+              <p className="mt-1 text-xs text-zinc-500">
+                {formatSegmentBars(segment)}
+              </p>
+            ) : null}
           </div>
         ))}
       </div>

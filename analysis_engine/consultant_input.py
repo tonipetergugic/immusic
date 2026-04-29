@@ -17,6 +17,159 @@ def _as_list(value: Any) -> list[Any]:
     return []
 
 
+def _as_number(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    return None
+
+
+def _as_int(value: Any) -> int | None:
+    number = _as_number(value)
+
+    if number is None:
+        return None
+
+    return int(number)
+
+
+def _round_number(value: Any, digits: int = 3) -> float | None:
+    number = _as_number(value)
+
+    if number is None:
+        return None
+
+    return round(number, digits)
+
+
+def _signal_level(value: Any) -> str:
+    number = _as_number(value)
+
+    if number is None:
+        return "unavailable"
+
+    if number < 0.4:
+        return "low"
+
+    if number < 0.7:
+        return "moderate"
+
+    return "high"
+
+
+def _build_structure_summary(structure: dict[str, Any]) -> dict[str, Any]:
+    sections: list[dict[str, Any]] = []
+
+    for position, raw_segment in enumerate(_as_list(structure.get("segments"))):
+        segment = _as_dict(raw_segment)
+
+        start_sec = _round_number(segment.get("start_sec"), 2)
+        end_sec = _round_number(segment.get("end_sec"), 2)
+        start_bar = _as_int(segment.get("start_bar"))
+        end_bar = _as_int(segment.get("end_bar"))
+
+        duration_sec = None
+        if start_sec is not None and end_sec is not None:
+            duration_sec = round(max(0.0, end_sec - start_sec), 2)
+
+        length_bars = None
+        if start_bar is not None and end_bar is not None and end_bar >= start_bar:
+            length_bars = end_bar - start_bar + 1
+
+        sections.append(
+            {
+                "index": _as_int(segment.get("index")) or position,
+                "start_sec": start_sec,
+                "end_sec": end_sec,
+                "duration_sec": duration_sec,
+                "start_bar": start_bar,
+                "end_bar": end_bar,
+                "length_bars": length_bars,
+            }
+        )
+
+    return {
+        "section_count": structure.get("segment_count"),
+        "sections": sections,
+        "readable_signals": {
+            "material_reuse": _signal_level(structure.get("repetition_score")),
+            "form_contrast": _signal_level(structure.get("contrast_score")),
+            "transition_clarity": _signal_level(structure.get("transition_score")),
+        },
+        "raw_scores": {
+            "repetition_score": _round_number(structure.get("repetition_score")),
+            "contrast_score": _round_number(structure.get("contrast_score")),
+            "transition_score": _round_number(structure.get("transition_score")),
+        },
+        "labeling_note": "Sections are neutral structural parts. Do not force build, drop, break, verse, or intro labels unless strongly supported elsewhere.",
+    }
+
+
+def _copy_metric(record: dict[str, Any], key: str, digits: int = 3) -> Any:
+    if key not in record:
+        return None
+
+    number = _as_number(record.get(key))
+
+    if number is None:
+        return record.get(key)
+
+    return round(number, digits)
+
+
+def _pick_metrics(record: dict[str, Any], keys: list[str]) -> dict[str, Any]:
+    return {key: _copy_metric(record, key) for key in keys if key in record}
+
+
+def _build_loudness_summary(loudness: dict[str, Any]) -> dict[str, Any]:
+    short_term = _as_dict(loudness.get("short_term_lufs_series"))
+    short_term_summary = _as_dict(short_term.get("summary"))
+
+    return {
+        "integrated_lufs": _copy_metric(loudness, "integrated_lufs"),
+        "loudness_range_lu": _copy_metric(loudness, "loudness_range_lu"),
+        "true_peak_dbtp": _copy_metric(loudness, "true_peak_dbtp"),
+        "peak_dbfs": _copy_metric(loudness, "peak_dbfs"),
+        "clipped_sample_count": _copy_metric(loudness, "clipped_sample_count", digits=0),
+        "short_term_lufs_summary": {
+            "status": short_term.get("status"),
+            "window_sec": _copy_metric(short_term, "window_sec"),
+            "hop_sec": _copy_metric(short_term, "hop_sec"),
+            "min_lufs_s": _copy_metric(short_term_summary, "min_lufs_s"),
+            "max_lufs_s": _copy_metric(short_term_summary, "max_lufs_s"),
+            "avg_lufs_s": _copy_metric(short_term_summary, "avg_lufs_s"),
+            "p10_lufs_s": _copy_metric(short_term_summary, "p10_lufs_s"),
+            "p90_lufs_s": _copy_metric(short_term_summary, "p90_lufs_s"),
+            "dynamic_range_lu": _copy_metric(short_term_summary, "dynamic_range_lu"),
+        },
+    }
+
+
+def _build_technical_metrics(technical_metrics: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "loudness": _build_loudness_summary(_as_dict(technical_metrics.get("loudness"))),
+        "dynamics": _pick_metrics(
+            _as_dict(technical_metrics.get("dynamics")),
+            ["crest_factor_db", "integrated_rms_dbfs", "plr_lu", "psr_lu"],
+        ),
+        "stereo": _pick_metrics(
+            _as_dict(technical_metrics.get("stereo")),
+            ["side_mid_ratio", "phase_correlation", "stereo_width"],
+        ),
+        "low_end": _pick_metrics(
+            _as_dict(technical_metrics.get("low_end")),
+            [
+                "mono_loss_low_band_percent",
+                "phase_correlation_low_band",
+                "low_band_balance_db",
+            ],
+        ),
+    }
+
+
 def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
     """
     Build the minimal OpenAI-facing input from the stable product payload.
@@ -35,9 +188,7 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
         "track_context": {
             "duration_sec": track.get("duration_sec"),
         },
-        "summary": {
-            "tempo_estimate": _as_dict(product_payload.get("summary")).get("tempo_estimate"),
-        },
+        "summary": {},
         "issues": _as_list(product_payload.get("issues")),
         "structure": {
             "segment_count": structure.get("segment_count"),
@@ -45,16 +196,12 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
             "contrast_score": structure.get("contrast_score"),
             "transition_score": structure.get("transition_score"),
         },
+        "structure_summary": _build_structure_summary(structure),
         "score_context": {
             "scale": "0.0 = low, 1.0 = high",
             "repetition_score": "Bar-level arrangement/material reuse. This does not directly measure melodic monotony.",
             "contrast_score": "Structural form contrast based on section shape. This does not directly measure sound, melody, density, or energy contrast.",
             "transition_score": "Transition and change clarity based on accepted structural change points.",
         },
-        "technical_metrics": {
-            "loudness": _as_dict(technical_metrics.get("loudness")),
-            "dynamics": _as_dict(technical_metrics.get("dynamics")),
-            "stereo": _as_dict(technical_metrics.get("stereo")),
-            "low_end": _as_dict(technical_metrics.get("low_end")),
-        },
+        "technical_metrics": _build_technical_metrics(technical_metrics),
     }

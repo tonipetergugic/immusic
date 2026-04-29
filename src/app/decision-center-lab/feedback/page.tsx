@@ -49,6 +49,8 @@ function getStructureSegments(analysis: unknown): WaveformSegment[] {
       const endSec = Number(segmentRecord.end_sec);
       const rawIndex = segmentRecord.index;
       const index = rawIndex === undefined ? undefined : Number(rawIndex);
+      const startBar = Number(segmentRecord.start_bar);
+      const endBar = Number(segmentRecord.end_bar);
 
       if (!Number.isFinite(startSec) || !Number.isFinite(endSec)) {
         continue;
@@ -58,6 +60,8 @@ function getStructureSegments(analysis: unknown): WaveformSegment[] {
         index: Number.isFinite(index) ? index : undefined,
         start_sec: startSec,
         end_sec: endSec,
+        start_bar: Number.isFinite(startBar) ? startBar : undefined,
+        end_bar: Number.isFinite(endBar) ? endBar : undefined,
       });
   }
 
