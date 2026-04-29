@@ -50,6 +50,40 @@ def _load_local_artist_context(track_output_name: str) -> dict | None:
     return context
 
 
+def _as_text(value: object) -> str:
+    if value is None:
+        return "not available"
+    return str(value)
+
+
+def _as_yes_no(value: object) -> str:
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return "not available"
+
+
+def _build_musical_flow_summary_section(consultant_input: dict) -> str:
+    musical_flow_summary = consultant_input.get("musical_flow_summary")
+    if not isinstance(musical_flow_summary, dict):
+        return (
+            "## Musical flow summary\n\n"
+            "- Energy movement: not available\n"
+            "- Density movement: not available\n"
+            "- Development signal: not available\n"
+            "- Possible repeated focus: not available\n"
+            "- Listening check: not available"
+        )
+
+    return (
+        "## Musical flow summary\n\n"
+        f"- Energy movement: {_as_text(musical_flow_summary.get('energy_movement'))}\n"
+        f"- Density movement: {_as_text(musical_flow_summary.get('density_movement'))}\n"
+        f"- Development signal: {_as_text(musical_flow_summary.get('development_signal'))}\n"
+        f"- Possible repeated focus: {_as_yes_no(musical_flow_summary.get('possible_repeated_focus'))}\n"
+        f"- Listening check: {_as_text(musical_flow_summary.get('listening_check'))}"
+    )
+
+
 def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
     analysis_json_path = analysis_json_path.expanduser().resolve()
     analysis_data = _load_json(analysis_json_path)
@@ -64,6 +98,10 @@ def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
         summary.pop("tempo_estimate", None)
         if not summary:
             consultant_input.pop("summary", None)
+
+    musical_flow_summary = consultant_input.get("musical_flow_summary")
+    if isinstance(musical_flow_summary, dict):
+        musical_flow_summary.pop("wording_note", None)
 
     local_artist_context = _load_local_artist_context(analysis_json_path.parent.name)
     if local_artist_context is not None:
@@ -81,7 +119,9 @@ def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
         indent=2,
     )
 
-    prompt_preview = prompt_template.replace(PLACEHOLDER, consultant_input_json)
+    musical_flow_summary_section = _build_musical_flow_summary_section(consultant_input)
+    prompt_preview_input = f"{musical_flow_summary_section}\n\n{consultant_input_json}"
+    prompt_preview = prompt_template.replace(PLACEHOLDER, prompt_preview_input)
 
     output_path = analysis_json_path.parent / "consultant_prompt_preview.md"
     output_path.write_text(prompt_preview, encoding="utf-8")
