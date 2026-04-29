@@ -134,6 +134,24 @@ def _build_section_character_summary_section(consultant_input: dict[str, Any]) -
     return "\n".join(lines)
 
 
+def _build_arrangement_development_summary_section(consultant_input: dict[str, Any]) -> str:
+    arrangement_development_summary = consultant_input.get("arrangement_development_summary")
+    if not isinstance(arrangement_development_summary, dict):
+        return ""
+
+    if arrangement_development_summary.get("status") != "available":
+        return ""
+
+    return (
+        "## Arrangement development summary\n\n"
+        f"- Development signal: {_as_text(arrangement_development_summary.get('development_signal'))}\n"
+        f"- Variation signal: {_as_text(arrangement_development_summary.get('variation_signal'))}\n"
+        f"- Journey shape: {_as_text(arrangement_development_summary.get('journey_shape'))}\n"
+        f"- Possible static focus: {_as_yes_no(arrangement_development_summary.get('possible_static_focus'))}\n"
+        f"- Listening check: {_as_text(arrangement_development_summary.get('listening_check'))}"
+    )
+
+
 def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
     analysis_json_path = analysis_json_path.expanduser().resolve()
     analysis_data = _load_json(analysis_json_path)
@@ -157,6 +175,10 @@ def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
     if isinstance(section_character_summary, dict):
         section_character_summary.pop("wording_note", None)
 
+    arrangement_development_summary = consultant_input.get("arrangement_development_summary")
+    if isinstance(arrangement_development_summary, dict):
+        arrangement_development_summary.pop("wording_note", None)
+
     local_artist_context = _load_local_artist_context(analysis_json_path.parent.name)
     if local_artist_context is not None:
         consultant_input["artist_declared_context"] = local_artist_context
@@ -175,9 +197,14 @@ def build_consultant_prompt_preview(analysis_json_path: Path) -> Path:
 
     musical_flow_summary_section = _build_musical_flow_summary_section(consultant_input)
     section_character_summary_section = _build_section_character_summary_section(consultant_input)
+    arrangement_development_summary_section = _build_arrangement_development_summary_section(
+        consultant_input
+    )
     prompt_preview_input_parts = [musical_flow_summary_section]
     if section_character_summary_section:
         prompt_preview_input_parts.append(section_character_summary_section)
+    if arrangement_development_summary_section:
+        prompt_preview_input_parts.append(arrangement_development_summary_section)
     prompt_preview_input_parts.append(consultant_input_json)
     prompt_preview_input = "\n\n".join(prompt_preview_input_parts)
     prompt_preview = prompt_template.replace(PLACEHOLDER, prompt_preview_input)

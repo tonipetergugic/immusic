@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from analysis_engine.arrangement_development_summary import build_arrangement_development_summary
 from analysis_engine.schemas import AnalysisResult
 from analysis_engine.musical_flow_summary import build_musical_flow_summary
 from analysis_engine.section_character_summary import build_section_character_summary
@@ -187,6 +188,7 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
     track = _as_dict(product_payload.get("track"))
     structure = _as_dict(product_payload.get("structure"))
     technical_metrics = _as_dict(product_payload.get("technical_metrics"))
+    section_character_summary = build_section_character_summary(result)
 
     return {
         "track_context": {
@@ -201,7 +203,10 @@ def build_consultant_input(result: AnalysisResult) -> dict[str, Any]:
             "transition_score": structure.get("transition_score"),
         },
         "structure_summary": _build_structure_summary(structure),
-        "section_character_summary": build_section_character_summary(result),
+        "section_character_summary": section_character_summary,
+        "arrangement_development_summary": build_arrangement_development_summary(
+            result, section_character_summary
+        ),
         "musical_flow_summary": build_musical_flow_summary(result),
         "score_context": {
             "scale": "0.0 = low, 1.0 = high",
