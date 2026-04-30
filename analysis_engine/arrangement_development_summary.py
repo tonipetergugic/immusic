@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import isfinite
 from typing import Any
 
 from analysis_engine.section_character_summary import build_section_character_summary
@@ -72,10 +73,17 @@ def build_arrangement_development_summary(
         contrast_score=contrast_score,
     )
     journey_shape = _journey_shape(movement_values)
-    possible_static_focus = _possible_static_focus(
+    possible_low_contrast_arrangement_focus = _possible_low_contrast_arrangement_focus(
         variation_signal=variation_signal,
         repetition_score=repetition_score,
         contrast_score=contrast_score,
+    )
+    (
+        possible_extended_core_arrangement_span,
+        extended_core_arrangement_span_evidence,
+    ) = _possible_extended_core_arrangement_span(
+        result=result,
+        sections=sections,
     )
 
     return {
@@ -83,10 +91,13 @@ def build_arrangement_development_summary(
         "development_signal": development_signal,
         "variation_signal": variation_signal,
         "journey_shape": journey_shape,
-        "possible_static_focus": possible_static_focus,
+        "possible_low_contrast_arrangement_focus": possible_low_contrast_arrangement_focus,
+        "possible_extended_core_arrangement_span": possible_extended_core_arrangement_span,
+        "extended_core_arrangement_span_evidence": extended_core_arrangement_span_evidence,
         "listening_check": _listening_check(
             development_signal=development_signal,
-            possible_static_focus=possible_static_focus,
+            possible_low_contrast_arrangement_focus=possible_low_contrast_arrangement_focus,
+            possible_extended_core_arrangement_span=possible_extended_core_arrangement_span,
         ),
         "evidence": {
             "energy_variety": energy_variety,
@@ -112,8 +123,125 @@ def _as_number(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return float(value)
+        number = float(value)
+        if isfinite(number):
+            return number
     return None
+
+
+def _as_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return None
+
+
+def _format_mmss(seconds: float | None) -> str | None:
+    if seconds is None:
+        return None
+    whole_seconds = int(seconds)
+    if whole_seconds < 0:
+        whole_seconds = 0
+    minutes = whole_seconds // 60
+    remaining_seconds = whole_seconds % 60
+    return f"{minutes}:{remaining_seconds:02d}"
+
+
+def _get(value: Any, key: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(key)
+    return getattr(value, key, None)
+
+
+def _track_duration_sec(result: Any, segments: list[Any]) -> float | None:
+    for segment in reversed(segments):
+        end_sec = _as_number(_get(segment, "end_sec"))
+        if end_sec is not None and end_sec > 0:
+            return end_sec
+
+    file_info = getattr(result, "file_info", None)
+    duration_from_file = _as_number(_get(file_info, "duration_sec"))
+    if duration_from_file is not None and duration_from_file > 0:
+        return duration_from_file
+
+    summary = getattr(result, "summary", None)
+    duration_from_summary = _as_number(_get(summary, "duration_sec"))
+    if duration_from_summary is not None and duration_from_summary > 0:
+        return duration_from_summary
+
+    return None
+
+
+def _possible_extended_core_arrangement_span(
+    *,
+    result: Any,
+    sections: list[Any],
+) -> tuple[bool, dict[str, Any] | None]:
+    structure = getattr(result, "structure", None)
+    segments = _get(structure, "segments")
+    if not isinstance(segments, list) or not segments:
+        return False, None
+
+    track_duration_sec = _track_duration_sec(result, segments)
+
+    for list_index, segment in enumerate(segments):
+        section = sections[list_index] if list_index < len(sections) and isinstance(sections[list_index], dict) else {}
+        relative_role = _as_text(section.get("relative_role"))
+        if relative_role in {"opening_area", "closing_area"}:
+            continue
+
+        start_sec = _as_number(_get(segment, "start_sec"))
+        end_sec = _as_number(_get(segment, "end_sec"))
+        duration_sec = None
+        if start_sec is not None and end_sec is not None:
+            duration_sec = max(0.0, end_sec - start_sec)
+        start_time = _format_mmss(start_sec)
+        end_time = _format_mmss(end_sec)
+
+        duration_share = None
+        if (
+            duration_sec is not None
+            and track_duration_sec is not None
+            and track_duration_sec > 0
+        ):
+            duration_share = duration_sec / track_duration_sec
+
+        is_extended = (
+            (duration_share is not None and duration_share >= 0.35)
+            or (duration_sec is not None and duration_sec >= 70.0)
+        )
+        if not is_extended:
+            continue
+
+        segment_index = _as_int(_get(segment, "index"))
+        if segment_index is None:
+            segment_index = list_index
+
+        start_bar = _as_int(_get(segment, "start_bar"))
+        end_bar = _as_int(_get(segment, "end_bar"))
+        bars = None
+        if start_bar is not None and end_bar is not None and end_bar >= start_bar:
+            bars = end_bar - start_bar + 1
+
+        return True, {
+            "segment_index": segment_index,
+            "start_sec": start_sec,
+            "end_sec": end_sec,
+            "start_time": start_time,
+            "end_time": end_time,
+            "duration_sec": duration_sec,
+            "duration_share": duration_share,
+            "bars": bars,
+            "relative_role": relative_role,
+            "movement": _as_text(section.get("movement")),
+            "energy_level": _as_text(section.get("energy_level")),
+            "density_level": _as_text(section.get("density_level")),
+        }
+
+    return False, None
 
 
 def _variety_signal(values: set[str]) -> str:
@@ -199,7 +327,7 @@ def _journey_shape(movement_values: list[str]) -> str:
     return "changing"
 
 
-def _possible_static_focus(
+def _possible_low_contrast_arrangement_focus(
     *,
     variation_signal: str,
     repetition_score: float | None,
@@ -217,8 +345,20 @@ def _possible_static_focus(
     return False
 
 
-def _listening_check(*, development_signal: str, possible_static_focus: bool) -> str:
-    if possible_static_focus:
+def _listening_check(
+    *,
+    development_signal: str,
+    possible_low_contrast_arrangement_focus: bool,
+    possible_extended_core_arrangement_span: bool,
+) -> str:
+    if possible_extended_core_arrangement_span:
+        return (
+            "Check whether one larger central arrangement area stays similar for long "
+            "enough that the track may need more noticeable development, variation, "
+            "or a memorable lift."
+        )
+
+    if possible_low_contrast_arrangement_focus:
         return (
             "Check whether the larger arrangement arc introduces enough new tension, "
             "variation, or a memorable lift over time."

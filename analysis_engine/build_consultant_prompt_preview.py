@@ -63,6 +63,52 @@ def _as_yes_no(value: object) -> str:
     return "not available"
 
 
+def _as_number(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _format_mmss(seconds: float | None) -> str | None:
+    if seconds is None:
+        return None
+    whole_seconds = int(seconds)
+    if whole_seconds < 0:
+        whole_seconds = 0
+    minutes = whole_seconds // 60
+    remaining_seconds = whole_seconds % 60
+    return f"{minutes}:{remaining_seconds:02d}"
+
+
+def _derive_time_range_from_structure(
+    consultant_input: dict[str, Any],
+    segment_index: int | None,
+) -> tuple[str | None, str | None]:
+    if segment_index is None:
+        return None, None
+
+    structure_summary = consultant_input.get("structure_summary")
+    if not isinstance(structure_summary, dict):
+        return None, None
+
+    sections = structure_summary.get("sections")
+    if not isinstance(sections, list):
+        return None, None
+
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        if section.get("index") != segment_index:
+            continue
+        start_sec = _as_number(section.get("start_sec"))
+        end_sec = _as_number(section.get("end_sec"))
+        return _format_mmss(start_sec), _format_mmss(end_sec)
+
+    return None, None
+
+
 def _display_relative_role(value: object) -> str:
     role = _as_text(value)
     role_map = {
@@ -142,12 +188,44 @@ def _build_arrangement_development_summary_section(consultant_input: dict[str, A
     if arrangement_development_summary.get("status") != "available":
         return ""
 
+    extended_span_evidence = arrangement_development_summary.get(
+        "extended_core_arrangement_span_evidence"
+    )
+    extended_span_evidence_line = ""
+    if isinstance(extended_span_evidence, dict):
+        segment_index = _as_text(extended_span_evidence.get("segment_index"))
+        start_time = extended_span_evidence.get("start_time")
+        end_time = extended_span_evidence.get("end_time")
+        segment_index_number = extended_span_evidence.get("segment_index")
+        segment_index_value = segment_index_number if isinstance(segment_index_number, int) else None
+        if not (isinstance(start_time, str) and start_time and isinstance(end_time, str) and end_time):
+            start_time, end_time = _derive_time_range_from_structure(
+                consultant_input,
+                segment_index=segment_index_value,
+            )
+        duration_sec = _as_text(extended_span_evidence.get("duration_sec"))
+        duration_share = _as_text(extended_span_evidence.get("duration_share"))
+        if isinstance(start_time, str) and start_time and isinstance(end_time, str) and end_time:
+            extended_span_evidence_line = (
+                "\n"
+                f"- Extended core span evidence: approx. {start_time}–{end_time}, "
+                f"segment {segment_index}, duration {duration_sec}s, share {duration_share}\n"
+            )
+        else:
+            extended_span_evidence_line = (
+                "\n"
+                f"- Extended core span evidence: segment {segment_index}, "
+                f"duration {duration_sec}s, share {duration_share}\n"
+            )
+
     return (
         "## Arrangement development summary\n\n"
         f"- Development signal: {_as_text(arrangement_development_summary.get('development_signal'))}\n"
         f"- Variation signal: {_as_text(arrangement_development_summary.get('variation_signal'))}\n"
         f"- Journey shape: {_as_text(arrangement_development_summary.get('journey_shape'))}\n"
-        f"- Possible static focus: {_as_yes_no(arrangement_development_summary.get('possible_static_focus'))}\n"
+        f"- Possible low-contrast arrangement focus: {_as_yes_no(arrangement_development_summary.get('possible_low_contrast_arrangement_focus'))}\n"
+        f"- Possible extended core arrangement span: {_as_yes_no(arrangement_development_summary.get('possible_extended_core_arrangement_span'))}\n"
+        f"{extended_span_evidence_line}"
         f"- Listening check: {_as_text(arrangement_development_summary.get('listening_check'))}"
     )
 

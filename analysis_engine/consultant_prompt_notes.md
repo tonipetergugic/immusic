@@ -40,6 +40,8 @@ The final feedback should be:
 
 The prompt should avoid absolute musical claims. It should frame possible concerns as listening checks or optional improvements.
 
+For all German AI-generated ImMusic output, do not use gendered forms such as "Hörer:innen", "Künstler:innen", "Artist:innen", or "Produzent:innen". Use simple, respectful, non-gendered wording such as "Hörer", "Publikum", "Artists", "Produzenten", or "Nutzer" depending on context.
+
 ## Structure wording
 
 Structure feedback should not force labels such as build, drop, break, verse, intro, peak, or outro unless strongly supported elsewhere.
@@ -101,3 +103,60 @@ key: C Major
 language: de
 
 The simulated German Artist Output for Roots of Eternity was accepted as fitting.
+
+## possible_repeated_structure_focus calibration note
+
+Current status:
+- The rule is kept unchanged for now.
+- `possible_repeated_structure_focus` is a cautious structural listening-check signal, not a proof of repetitive melody, loop, motif, element, or sample use.
+- Listening check: Crazy Love and Freaky were considered plausible true positives.
+- Near-threshold cases to watch in future calibration: Rezz - Entropy and David Forbes - Techno Is My Only Drug.
+- No threshold tuning yet, because the current validation set is too small.
+- Future calibration should compare this signal against a larger reference set and user-confirmed listening impressions.
+
+## possible_extended_core_arrangement_span validated wording note
+
+Current status:
+- `possible_extended_core_arrangement_span` was validated on Roots of Eternity as a plausible listening-check signal.
+- The signal must not be phrased as a hard judgment.
+- The feedback must not say that a track is boring.
+- The feedback must not claim that songwriting, melody, loop behavior, sample reuse, drop, or build quality is objectively problematic.
+- When this signal is true, the practical next step should stay focused on the longer central arrangement area.
+- Preferred practical-next-step focus: check development, variation, tension, lift, or forward motion within that central area.
+- Avoid drifting into unrelated generic practical checks unless other engine evidence clearly supports them.
+- Allowed artist wording direction:
+  - A larger central arrangement area can stay relatively similar in its effect over a comparatively long stretch.
+  - This can be an intentional artistic choice.
+  - As a listening check, it can be worth verifying whether enough new tension, variation, or a clearly memorable lift appears after an energetic build-up.
+- The output may simultaneously acknowledge that a track can feel controlled, technically clean, and close to release-ready.
+
+## Validated note: possible_extended_core_arrangement_span
+
+The `possible_extended_core_arrangement_span` signal is intended as a cautious listening-check signal, not as a hard judgment.
+
+Validated example:
+- Track: Roots of Eternity
+- Signal: `possible_extended_core_arrangement_span = true`
+- Evidence range: approx. `0:44–2:00`
+- Evidence source: existing arrangement segment data, not manual listening context
+- Intended artist-facing meaning: one larger central arrangement area may stay similar long enough that the artist should check whether the track needs more noticeable development, variation, tension, lift, or forward motion in that area.
+
+Important wording constraints:
+- Do not present this as proof that the track is boring, weak, repetitive, loop-based, or structurally wrong.
+- Do not mention samples, loop reuse, melody repetition, missing drops, or missing builds unless directly supported by future engine evidence.
+- Do not turn manual listening impressions into engine-derived claims.
+- If approximate start/end times are available, the German artist-facing output may mention the range as a helpful listening reference, for example: `im Bereich ca. 0:44–2:00`.
+- The practical next step should stay focused on that longer central arrangement area when this signal is true.
+
+Regression expectation:
+- In the current six-track sample, only Roots of Eternity triggers this signal.
+- Other tracks remain unaffected.
+- Existing signals such as `possible_low_contrast_arrangement_focus` and `possible_repeated_structure_focus` remain separate and unchanged.
+
+## Manual listening boundary note
+
+Current status:
+- Manual listening is for validation/calibration only.
+- Manual listening must not become part of the normal AI Consultant runtime input contract.
+- Runtime input should remain limited to artist-declared metadata/context and engine evidence (`consultant_input`).
+- Manually reported impressions (for example "build-up feels tense") must not be turned into generic Consultant claims.
