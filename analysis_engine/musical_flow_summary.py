@@ -95,7 +95,7 @@ def _movement_signal(
     return "noticeable"
 
 
-def _possible_repeated_focus(
+def _possible_repeated_structure_focus(
     *,
     energy_movement: str,
     density_movement: str,
@@ -123,9 +123,9 @@ def _possible_repeated_focus(
 def _listening_check(
     *,
     movement_signal: str,
-    possible_repeated_focus: bool,
+    possible_repeated_structure_focus: bool,
 ) -> str:
-    if possible_repeated_focus:
+    if possible_repeated_structure_focus:
         return (
             "Check whether the energy and density flow keeps enough forward motion "
             "while the central idea stays in focus."
@@ -180,7 +180,7 @@ def build_musical_flow_summary(result: AnalysisResult) -> dict[str, Any]:
         contrast_score=contrast_score,
         transition_score=transition_score,
     )
-    repeated_focus = _possible_repeated_focus(
+    repeated_structure_focus = _possible_repeated_structure_focus(
         energy_movement=energy_movement,
         density_movement=density_movement,
         repetition_score=repetition_score,
@@ -196,10 +196,10 @@ def build_musical_flow_summary(result: AnalysisResult) -> dict[str, Any]:
         "energy_movement": energy_movement,
         "density_movement": density_movement,
         "movement_signal": movement_signal,
-        "possible_repeated_focus": repeated_focus,
+        "possible_repeated_structure_focus": repeated_structure_focus,
         "listening_check": _listening_check(
             movement_signal=movement_signal,
-            possible_repeated_focus=repeated_focus,
+            possible_repeated_structure_focus=repeated_structure_focus,
         ),
         "wording_note": (
             "Use this as cautious musical-flow evidence only. Do not describe it as "
