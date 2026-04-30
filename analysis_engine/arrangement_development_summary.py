@@ -220,17 +220,17 @@ def _possible_static_focus(
 def _listening_check(*, development_signal: str, possible_static_focus: bool) -> str:
     if possible_static_focus:
         return (
-            "Check whether the track develops enough new tension, variation, or a "
-            "memorable lift across the larger arrangement areas."
+            "Check whether the larger arrangement arc introduces enough new tension, "
+            "variation, or a memorable lift over time."
         )
 
     if development_signal == "noticeable":
         return (
-            "The larger arrangement areas appear to create a noticeable sense of "
-            "movement, but final judgment should still come from listening."
+            "The larger arrangement areas suggest a noticeable sense of progression, "
+            "but final judgment should still come from listening."
         )
 
     return (
-        "Check whether the track develops enough new tension, variation, or a "
-        "memorable lift across the larger arrangement areas."
+        "Check whether the larger arrangement arc introduces enough new tension, "
+        "variation, or a memorable lift over time."
     )

@@ -127,26 +127,26 @@ def _listening_check(
 ) -> str:
     if possible_repeated_focus:
         return (
-            "Check whether the central musical idea gets enough variation, tension, "
-            "or a special moment over the full track."
+            "Check whether the energy and density flow keeps enough forward motion "
+            "while the central idea stays in focus."
         )
 
     if movement_signal == "limited":
         return (
-            "Check whether the larger track areas create enough movement, contrast, "
-            "or development over time."
+            "Check whether the energy and density flow creates enough forward motion "
+            "between the larger track areas."
         )
 
     if movement_signal == "moderate":
         return (
-            "Check whether the track's development feels intentional and whether one "
-            "later moment adds enough fresh interest."
+            "Check whether the energy and density changes feel intentional and help "
+            "the track keep moving over time."
         )
 
     if movement_signal == "noticeable":
         return (
-            "Use a normal reference listening pass to confirm that the larger movement "
-            "feels intentional for the declared genre."
+            "Use a normal reference listening pass to confirm that the energy and "
+            "density movement feels natural for the declared genre."
         )
 
     return "Musical flow evidence is currently limited; rely on a normal listening pass."
