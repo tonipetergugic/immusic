@@ -160,3 +160,29 @@ Current status:
 - Manual listening must not become part of the normal AI Consultant runtime input contract.
 - Runtime input should remain limited to artist-declared metadata/context and engine evidence (`consultant_input`).
 - Manually reported impressions (for example "build-up feels tense") must not be turned into generic Consultant claims.
+
+## Validated Movement + Extended Core Span Behavior
+
+The AI Consultant may treat the combination of:
+
+- `musical_flow_summary.movement_profile = energy_lift_with_limited_density_lift`
+- `arrangement_development_summary.possible_extended_core_arrangement_span = true`
+
+as a stronger listening-check signal than either value alone.
+
+Validated example:
+- Roots of Eternity shows this combination plausibly.
+- The relevant span is approximately 0:44–2:00.
+- The evidence suggests rising energy while density does not lift in the same way.
+- This may justify a cautious artist-facing check about whether the central arrangement area develops enough through variation, tension, or a clear lift.
+
+Important wording constraints:
+- Do not treat this as a hard flaw.
+- Do not diagnose melody repetition, loop repetition, sample reuse, missing drop, or bad songwriting from this signal.
+- Do not use manual listening impressions as runtime Consultant input.
+- Manual listening impressions are only allowed for validation and calibration.
+- Professional tracks may also show `energy_lift_with_limited_density_lift`; the combined signal only becomes more relevant when supported by `possible_extended_core_arrangement_span = true`.
+
+German wording constraint:
+- Do not use gendered forms such as `Hörer:innen`, `Künstler:innen`, `Artist:innen`, or `Produzent:innen`.
+- Use simple neutral wording such as `Hörer`, `Publikum`, `Artists`, `Produzenten`, or `Nutzer`.

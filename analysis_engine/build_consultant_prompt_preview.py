@@ -127,8 +127,11 @@ def _build_musical_flow_summary_section(consultant_input: dict) -> str:
         return (
             "## Musical flow summary\n\n"
             "- Energy movement: not available\n"
+            "- Energy direction: not available\n"
             "- Density movement: not available\n"
+            "- Density direction: not available\n"
             "- Movement signal: not available\n"
+            "- Movement profile: not available\n"
             "- Possible repeated structure focus: not available\n"
             "- Listening check: not available"
         )
@@ -136,8 +139,11 @@ def _build_musical_flow_summary_section(consultant_input: dict) -> str:
     return (
         "## Musical flow summary\n\n"
         f"- Energy movement: {_as_text(musical_flow_summary.get('energy_movement'))}\n"
+        f"- Energy direction: {_as_text(musical_flow_summary.get('energy_direction'))}\n"
         f"- Density movement: {_as_text(musical_flow_summary.get('density_movement'))}\n"
+        f"- Density direction: {_as_text(musical_flow_summary.get('density_direction'))}\n"
         f"- Movement signal: {_as_text(musical_flow_summary.get('movement_signal'))}\n"
+        f"- Movement profile: {_as_text(musical_flow_summary.get('movement_profile'))}\n"
         f"- Possible repeated structure focus: {_as_yes_no(musical_flow_summary.get('possible_repeated_structure_focus'))}\n"
         f"- Listening check: {_as_text(musical_flow_summary.get('listening_check'))}"
     )
