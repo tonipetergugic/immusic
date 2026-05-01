@@ -8,6 +8,7 @@ import type {
 const ARTIST_DECISION_PAYLOAD_FILE = "artist_decision_payload.json";
 const ANALYSIS_FILE = "analysis.json";
 const WAVEFORM_FILE = "waveform.png";
+const AI_CONSULTANT_SUMMARY_FILE = "ai_consultant_summary.md";
 
 export type FeedbackLabTrackItem = {
   folderName: string;
@@ -22,6 +23,7 @@ export type FeedbackPageTrackData = {
   waveformPath: string;
   waveformSrc: string;
   waveformAvailable: boolean;
+  consultantSummaryText: string | null;
   payload: ArtistDecisionPayload;
   analysis: AnalysisPayload | null;
 };
@@ -57,6 +59,16 @@ async function readJsonFile<T>(filePath: string) {
   return JSON.parse(raw) as T;
 }
 
+async function readOptionalTextFile(filePath: string): Promise<string | null> {
+  try {
+    const raw = await readFile(filePath, "utf-8");
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readTrackFolder(
   outputRoot: string,
   folderName: string,
@@ -68,6 +80,11 @@ async function readTrackFolder(
   );
   const analysisPath = path.join(outputRoot, folderName, ANALYSIS_FILE);
   const waveformPath = path.join(outputRoot, folderName, WAVEFORM_FILE);
+  const consultantSummaryPath = path.join(
+    outputRoot,
+    folderName,
+    AI_CONSULTANT_SUMMARY_FILE,
+  );
 
   try {
     const payload = await readJsonFile<ArtistDecisionPayload>(payloadPath);
@@ -86,6 +103,7 @@ async function readTrackFolder(
       waveformPath,
       waveformSrc: buildAssetUrl(folderName, WAVEFORM_FILE),
       waveformAvailable: await fileExists(waveformPath),
+      consultantSummaryText: await readOptionalTextFile(consultantSummaryPath),
       payload,
       analysis,
     };

@@ -8,6 +8,12 @@ type MovementItem = {
   text: string;
 };
 
+type ArrangementFlowItem = {
+  title: string;
+  label: string;
+  text: string;
+};
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -24,6 +30,78 @@ function toFiniteNumber(value: unknown): number | null {
 function getStructureRecord(analysis: unknown) {
   const analysisRecord = asRecord(analysis);
   return asRecord(analysisRecord?.structure);
+}
+
+function asText(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function movementProfileLabel(profile: string): string {
+  if (profile === "combined_lift") return "Coherent lift";
+  if (profile === "energy_lift_with_limited_density_lift") return "Energy lift to verify";
+  if (profile === "density_lift_with_limited_energy_lift") return "Density lift to verify";
+  if (profile === "variable_without_clear_lift") return "Development check";
+  if (profile === "mostly_stable") return "Forward-motion check";
+  if (profile === "mixed_motion") return "Mixed movement";
+  return "Listening check";
+}
+
+function buildArrangementFlowItems(analysis: unknown): ArrangementFlowItem[] {
+  const analysisRecord = asRecord(analysis);
+  const consultantInput = asRecord(analysisRecord?.consultant_input);
+  const musicalFlowSummary = asRecord(consultantInput?.musical_flow_summary);
+  const arrangementDevelopmentSummary = asRecord(
+    consultantInput?.arrangement_development_summary,
+  );
+
+  const items: ArrangementFlowItem[] = [];
+
+  const movementProfile = asText(musicalFlowSummary?.movement_profile);
+  const movementListeningCheck = asText(musicalFlowSummary?.listening_check);
+
+  if (movementProfile || movementListeningCheck) {
+    items.push({
+      title: "Energy and density movement",
+      label: movementProfile ? movementProfileLabel(movementProfile) : "Listening check",
+      text:
+        movementListeningCheck ||
+        "Use a focused listening pass to confirm that the arrangement flow feels intentional over time.",
+    });
+  }
+
+  const hasExtendedCoreSpan =
+    arrangementDevelopmentSummary?.possible_extended_core_arrangement_span === true;
+
+  if (hasExtendedCoreSpan) {
+    const evidence = asRecord(
+      arrangementDevelopmentSummary?.extended_core_arrangement_span_evidence,
+    );
+    const startTime = asText(evidence?.start_time);
+    const endTime = asText(evidence?.end_time);
+    const arrangementListeningCheck = asText(
+      arrangementDevelopmentSummary?.listening_check,
+    );
+    const fallbackText =
+      "Check whether this central section develops enough through variation, tension, or a clear lift.";
+
+    const text =
+      startTime && endTime
+        ? `Around ${startTime}–${endTime}, one central arrangement area may be worth a focused listening check: ${arrangementListeningCheck || fallbackText}`
+        : arrangementListeningCheck || fallbackText;
+
+    items.push({
+      title: "Central arrangement span",
+      label: "Focused check",
+      text,
+    });
+  }
+
+  return items.slice(0, 2);
 }
 
 function describeMaterialReturn(score: number | null): MovementItem {
@@ -126,6 +204,7 @@ export function StructureMovementPanel({
   analysis,
 }: StructureMovementPanelProps) {
   const structure = getStructureRecord(analysis);
+  const arrangementFlowItems = buildArrangementFlowItems(analysis);
 
   const materialReturn = describeMaterialReturn(
     toFiniteNumber(structure?.repetition_score),
@@ -182,6 +261,41 @@ export function StructureMovementPanel({
           </article>
         ))}
       </div>
+
+      {arrangementFlowItems.length > 0 ? (
+        <div className="mt-8 rounded-3xl border border-white/10 bg-black/20 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            Arrangement flow checks
+          </p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+            These checks translate the current arrangement evidence into focused
+            listening points. They are not hard judgments.
+          </p>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {arrangementFlowItems.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-3xl border border-white/10 bg-black/20 p-5"
+              >
+                <div className="h-1 w-10 rounded-full bg-[#00FFC6]" />
+
+                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  {item.title}
+                </p>
+
+                <h3 className="mt-3 text-lg font-semibold tracking-[-0.025em] text-white">
+                  {item.label}
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-zinc-400">
+                  {item.text}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

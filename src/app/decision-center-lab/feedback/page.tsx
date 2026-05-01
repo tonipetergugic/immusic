@@ -9,6 +9,7 @@ import { ConsultantSummaryPanel } from "@/components/decision-center/ConsultantS
 import { FeedbackInsightCards } from "@/components/decision-center/FeedbackInsightCards";
 import { TrackAnalysisContextPanel } from "@/components/decision-center/TrackAnalysisContextPanel";
 import { TechnicalReleaseChecksPanel } from "@/components/decision-center/TechnicalReleaseChecksPanel";
+import { FeedbackSectionNav } from "@/components/decision-center/FeedbackSectionNav";
 import { ScrollUnlock } from "../ScrollUnlock";
 import { LabTrackSelector } from "../components/LabTrackSelector";
 import { readLocalFeedbackPageData } from "./readLocalFeedbackPageData";
@@ -200,7 +201,14 @@ export default async function DecisionCenterLabFeedbackPage({
             <div className="flex flex-col gap-6">
             <TrackAnalysisContextPanel payload={selectedTrack.payload} />
 
-            <ConsultantSummaryPanel payload={selectedTrack.payload} />
+            <FeedbackSectionNav />
+
+            <section id="ai-consultant" className="scroll-mt-24">
+              <ConsultantSummaryPanel
+                payload={selectedTrack.payload}
+                consultantSummaryText={selectedTrack.consultantSummaryText}
+              />
+            </section>
 
             <FeedbackInsightCards
               keyStrengths={selectedTrack.payload.key_strengths ?? []}
@@ -213,26 +221,30 @@ export default async function DecisionCenterLabFeedbackPage({
               checks={selectedTrack.payload.technical_release_checks ?? []}
             />
 
-            {selectedTrack.waveformAvailable ? (
-              <>
-                <TrackWaveformPanel
-                  trackFolderName={selectedTrack.folderName}
-                  trackTitle={
-                    selectedTrack.payload.track?.title || selectedTrack.folderName
-                  }
-                />
+            <section id="track-journey" className="scroll-mt-24">
+              {selectedTrack.waveformAvailable ? (
+                <>
+                  <TrackWaveformPanel
+                    trackFolderName={selectedTrack.folderName}
+                    trackTitle={
+                      selectedTrack.payload.track?.title || selectedTrack.folderName
+                    }
+                  />
 
-                <WaveformSegmentTimeline segments={selectedSegments} />
-              </>
-            ) : (
-              <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-5">
-                <p className="text-sm text-zinc-400">
-                  No waveform.png found for this local analysis output.
-                </p>
-              </section>
-            )}
+                  <WaveformSegmentTimeline segments={selectedSegments} />
+                </>
+              ) : (
+                <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-5">
+                  <p className="text-sm text-zinc-400">
+                    No waveform.png found for this local analysis output.
+                  </p>
+                </section>
+              )}
+            </section>
 
-            <StructureMovementPanel analysis={selectedTrack.analysis} />
+            <section id="structure-movement" className="scroll-mt-24">
+              <StructureMovementPanel analysis={selectedTrack.analysis} />
+            </section>
             </div>
 
             <aside className="lg:sticky lg:top-8 lg:self-start">
