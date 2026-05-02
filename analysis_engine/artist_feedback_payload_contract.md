@@ -140,6 +140,522 @@ Rules:
 - It must not claim that a mix is objectively bad.
 - It should use wording such as "may", "suggests", "check", and "reference-check".
 
+## 5.1 `structure_summary` field contract
+
+`artist_guidance.structure_summary` is a structure detail block for neutral section evidence.
+
+Path:
+
+```python
+payload["artist_guidance"]["structure_summary"]
+```
+
+Purpose:
+
+- provide neutral detected section spans
+- provide readable structure signals
+- provide raw score evidence for internal/detail views
+- support UI timelines and consultant context without forcing musical labels
+
+It is not a fixed song-form diagnosis.
+
+### Fields
+
+```text
+section_count
+sections
+readable_signals
+raw_scores
+labeling_note
+```
+
+### `section_count`
+
+Number of detected neutral structure sections.
+
+UI rule:
+
+- may be shown as neutral section count
+- must not imply official song parts
+- do not label sections as intro, verse, chorus, drop, breakdown, build, or outro from this alone
+
+### `sections`
+
+Array of neutral detected structure sections.
+
+Current section fields:
+
+```text
+index
+start_sec
+end_sec
+duration_sec
+start_bar
+end_bar
+length_bars
+```
+
+Usage rules:
+
+- `start_sec`, `end_sec`, and `duration_sec` may support timeline rendering
+- bar fields are internal/detail evidence
+- bar fields should not be the primary artist-facing language
+- section boundaries are detected structure spans, not guaranteed musical part labels
+
+### `readable_signals`
+
+Artist-readable mapping of the raw structure scores.
+
+Current fields:
+
+```text
+material_reuse
+form_contrast
+transition_clarity
+```
+
+Current values may include:
+
+```text
+high
+moderate
+low
+unavailable
+```
+
+Meaning:
+
+- `material_reuse`: cautious signal for arrangement/material reuse
+- `form_contrast`: cautious signal for detected section-shape contrast
+- `transition_clarity`: cautious signal for clarity of accepted structure changes
+
+Do not present these as quality judgments.
+
+### `raw_scores`
+
+Internal numeric score evidence.
+
+Current fields:
+
+```text
+repetition_score
+contrast_score
+transition_score
+```
+
+Usage rules:
+
+- can be used for debug/detail/consultant grounding
+- should not be shown without explanation
+- should not be used as a standalone artist-facing verdict
+
+### `labeling_note`
+
+Safety instruction for consumers.
+
+It must be respected by UI, AI Consultant, and future adapters.
+
+---
+
+## 5.2 `structure_overview` field contract
+
+`artist_guidance.structure_overview` is the artist-facing summary of the structure and movement guidance.
+
+Path:
+
+```python
+payload["artist_guidance"]["structure_overview"]
+```
+
+Purpose:
+
+- give one safe structure-related headline
+- provide a cautious observation
+- provide a focused listening instruction
+- optionally point to a safe time span
+
+This is the preferred artist-facing entry point for structure guidance.
+
+### Fields
+
+```text
+status
+headline
+main_observation
+listening_focus
+confidence
+timeline_hint
+```
+
+### `status`
+
+Availability state of the overview.
+
+Current values may include:
+
+```text
+available
+unavailable
+```
+
+### `headline`
+
+Short artist-facing summary.
+
+Rules:
+
+- must be cautious
+- must not claim a musical defect
+- must not diagnose missing drops, weak songwriting, repeated samples, or bad arrangement
+
+### `main_observation`
+
+Plain-language observation derived from available structure and movement evidence.
+
+Rules:
+
+- should describe what the engine can safely observe
+- should avoid internal score names
+- should avoid absolute claims
+
+### `listening_focus`
+
+Artist-facing listening instruction.
+
+Rules:
+
+- should tell the artist what to check
+- should be framed as reference listening
+- should mention declared genre when useful
+- should not prescribe a creative decision
+
+### `confidence`
+
+Confidence level for the overview.
+
+Current values may include:
+
+```text
+low
+medium
+high
+```
+
+### `timeline_hint`
+
+Optional plain-language time-span hint.
+
+Usage rules:
+
+- safe to show as a listening focus
+- should be phrased as "may be worth checking"
+- must not be shown as proof that the span is wrong
+
+---
+
+## 5.3 `musical_flow_summary` field contract
+
+`artist_guidance.musical_flow_summary` is a cautious movement summary based on energy and density development.
+
+Path:
+
+```python
+payload["artist_guidance"]["musical_flow_summary"]
+```
+
+Purpose:
+
+- summarize energy movement
+- summarize density movement
+- identify broad movement profiles
+- support listening checks and consultant grounding
+
+It does not diagnose composition quality, melody, hooks, drops, loops, samples, or songwriting.
+
+### Fields
+
+```text
+status
+energy_movement
+energy_direction
+density_movement
+density_direction
+movement_signal
+movement_profile
+possible_repeated_structure_focus
+listening_check
+evidence_summary
+wording_note
+```
+
+### Movement fields
+
+Current movement and direction values may include:
+
+```text
+strong
+moderate
+varied
+noticeable
+rising
+falling
+stable
+unavailable
+```
+
+Usage rules:
+
+- describe energy/density tendencies only
+- do not translate directly into quality judgments
+- do not claim that a track lacks development from these fields alone
+
+### `movement_profile`
+
+Current values may include:
+
+```text
+combined_lift
+energy_lift_with_limited_density_lift
+mixed_motion
+variable_without_clear_lift
+unavailable
+```
+
+Usage rules:
+
+- use only as cautious movement category
+- safe for consultant grounding
+- avoid exposing raw enum names directly in UI
+
+### `possible_repeated_structure_focus`
+
+Boolean caution flag.
+
+Rules:
+
+- this is not proof of repetition
+- this is not proof of loop/sample reuse
+- if used, frame only as a listening check
+
+### `listening_check`
+
+Artist-facing listening instruction.
+
+Rules:
+
+- safe to show
+- should remain cautious
+- should not become an automated verdict
+
+### `evidence_summary`
+
+Internal/detail evidence.
+
+Current fields may include:
+
+```text
+energy_range_lu
+density_cv
+energy_point_count
+density_point_count
+energy_direction
+density_direction
+```
+
+Nested direction evidence may include:
+
+```text
+early_avg_lufs_s
+late_avg_lufs_s
+delta_lu
+early_avg_density_per_sec
+late_avg_density_per_sec
+delta_density_per_sec
+```
+
+Usage rules:
+
+- can be used for debug/detail views
+- should not be shown raw without explanation
+- should not be used as standalone artist-facing text
+
+### `wording_note`
+
+Safety instruction for wording.
+
+Must be respected by UI, AI Consultant, and future adapters.
+
+---
+
+## 5.4 `arrangement_development_summary` field contract
+
+`artist_guidance.arrangement_development_summary` is a cautious arrangement-development evidence block.
+
+Path:
+
+```python
+payload["artist_guidance"]["arrangement_development_summary"]
+```
+
+Purpose:
+
+- summarize broad development signal
+- summarize variation signal
+- describe the larger journey shape
+- identify possible longer central spans for listening checks
+
+It is not proof of weak songwriting, missing drops/builds, repeated melody, loop repetition, or sample reuse.
+
+### Fields
+
+```text
+status
+reason
+development_signal
+variation_signal
+journey_shape
+possible_low_contrast_arrangement_focus
+possible_extended_core_arrangement_span
+extended_core_arrangement_span_evidence
+listening_check
+wording_note
+```
+
+### `status`
+
+Availability state.
+
+Current values may include:
+
+```text
+available
+unavailable
+```
+
+When unavailable, `reason` may explain why the summary could not be built.
+
+### Signal fields
+
+Current values may include:
+
+```text
+noticeable
+moderate
+varied
+changing
+alternating
+unavailable
+```
+
+Usage rules:
+
+- use as cautious arrangement evidence
+- do not present as a creative verdict
+- do not imply the arrangement is wrong
+
+### `possible_low_contrast_arrangement_focus`
+
+Boolean caution flag.
+
+Rules:
+
+- not proof of low musical quality
+- not proof of missing contrast
+- may support a focused listening check only
+
+### `possible_extended_core_arrangement_span`
+
+Boolean caution flag.
+
+Rules:
+
+- not proof that a section is too long
+- not proof that development is missing
+- may support a focused listening check only
+
+### `extended_core_arrangement_span_evidence`
+
+Optional evidence object for a longer detected central span.
+
+Current fields may include:
+
+```text
+segment_index
+start_sec
+end_sec
+start_time
+end_time
+duration_sec
+duration_share
+bars
+relative_role
+movement
+energy_level
+density_level
+```
+
+Usage rules:
+
+- `start_time` and `end_time` are safe for artist-facing time hints
+- raw bars and duration share are detail/evidence fields
+- do not expose as proof of a problem
+
+### `listening_check`
+
+Artist-facing listening instruction.
+
+Rules:
+
+- safe to show
+- should remain cautious
+- should ask the artist to verify development, variation, tension, or lift by listening
+
+### `wording_note`
+
+Safety instruction for wording.
+
+Must be respected by UI, AI Consultant, and future adapters.
+
+---
+
+## 5.5 `score_context` field contract
+
+`artist_guidance.score_context` explains how structure scores should be interpreted.
+
+Path:
+
+```python
+payload["artist_guidance"]["score_context"]
+```
+
+Purpose:
+
+- prevent score misuse
+- explain score meanings
+- keep UI and AI Consultant wording aligned
+
+### Fields
+
+```text
+scale
+repetition_score
+contrast_score
+transition_score
+```
+
+### Rules
+
+- always keep score explanations close to any exposed score
+- do not show raw scores without context
+- do not treat scores as musical quality ratings
+- do not treat scores as genre-specific pass/fail rules
+
+Current meanings:
+
+- `repetition_score`: bar-level arrangement/material reuse; not melodic monotony
+- `contrast_score`: structural form contrast based on section shape; not sound, melody, density, or energy contrast
+- `transition_score`: transition and change clarity based on accepted structural change points
+
 ## 6. listening_guidance
 
 Purpose: concrete artist listening checks.
