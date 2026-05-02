@@ -40,6 +40,35 @@ engine_signals
 technical_details
 ```
 
+### meta
+
+`meta` contains product and pipeline metadata for the generated payload.
+
+It is not primary artist-facing copy and should not be rendered as feedback text in the artist UI.
+
+Current fields:
+
+```text
+source
+schema
+created_at
+warnings
+```
+
+Field meanings:
+
+- `source`: identifies the payload producer. Current value: `analysis_engine`.
+- `schema`: identifies the payload schema name. Current value: `artist_feedback_payload`.
+- `created_at`: reserved timestamp field. It may currently be `null` in local engine output.
+- `warnings`: payload-level generation warnings. It may be an empty list.
+
+Rules:
+
+- `meta` should be kept available for adapters, debugging, validation, and future platform ingestion.
+- UI must not treat `created_at: null` as an analysis problem.
+- UI must not show `schema`, `source`, or empty warnings as artist feedback.
+- `warnings` is not the same as release warnings or technical warnings.
+
 ## 3. track
 
 Purpose: basic track context.
