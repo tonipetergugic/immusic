@@ -1069,6 +1069,291 @@ def _build_technical_overview(
     }
 
 
+def _safe_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if number != number or number in {float("inf"), float("-inf")}:
+        return None
+
+    return number
+
+
+def _mix_overview_available_blocks(technical_details: Mapping[str, Any]) -> set[str]:
+    available_blocks: set[str] = set()
+
+    low_end = _as_dict(technical_details.get("low_end"))
+    if any(
+        _safe_float(low_end.get(field_name)) is not None
+        for field_name in (
+            "mono_loss_low_band_percent",
+            "phase_correlation_low_band",
+            "low_band_balance_db",
+        )
+    ):
+        available_blocks.add("low_end")
+
+    stereo = _as_dict(technical_details.get("stereo"))
+    if any(
+        _safe_float(stereo.get(field_name)) is not None
+        for field_name in ("phase_correlation", "stereo_width", "side_mid_ratio")
+    ):
+        available_blocks.add("stereo")
+
+    spectral_rms = _as_dict(technical_details.get("spectral_rms"))
+    if any(
+        _safe_float(spectral_rms.get(field_name)) is not None
+        for field_name in (
+            "sub_rms_dbfs",
+            "low_rms_dbfs",
+            "mid_rms_dbfs",
+            "high_rms_dbfs",
+            "air_rms_dbfs",
+        )
+    ):
+        available_blocks.add("spectral_balance")
+
+    dynamics = _as_dict(technical_details.get("dynamics"))
+    if any(
+        _safe_float(value) is not None
+        for value in (
+            dynamics.get("plr_lu"),
+            dynamics.get("crest_factor_db"),
+        )
+    ):
+        available_blocks.add("dynamics")
+
+    return available_blocks
+
+
+def _mix_overview_confidence(available_blocks: set[str]) -> str:
+    if {"low_end", "stereo", "spectral_balance"}.issubset(available_blocks):
+        return "high"
+
+    if len(available_blocks) >= 2:
+        return "medium"
+
+    if available_blocks:
+        return "low"
+
+    return "low"
+
+
+def _mix_overview_candidates(
+    technical_details: Mapping[str, Any],
+) -> list[tuple[int, dict[str, Any]]]:
+    candidates: list[tuple[int, dict[str, Any]]] = []
+
+    low_end = _as_dict(technical_details.get("low_end"))
+    mono_loss = _safe_float(low_end.get("mono_loss_low_band_percent"))
+    low_phase = _safe_float(low_end.get("phase_correlation_low_band"))
+    low_balance = _safe_float(low_end.get("low_band_balance_db"))
+
+    if (
+        (mono_loss is not None and mono_loss >= 30.0)
+        or (low_phase is not None and low_phase < 0.25)
+        or (low_balance is not None and abs(low_balance) >= 4.0)
+    ):
+        candidates.append((
+            10,
+            {
+                "id": "low_end_translation_check",
+                "headline": "Check low-end translation and mono stability.",
+                "main_observation": (
+                    "The low-end signals suggest a focused translation check may be useful."
+                ),
+                "listening_focus": (
+                    "Listen to the kick and bass in mono, on small speakers, and on headphones. "
+                    "Check whether the low end stays stable and controlled."
+                ),
+                "export_focus": (
+                    "Review low-end mono compatibility before printing the final master."
+                ),
+                "evidence": {
+                    "mono_loss_low_band_percent": mono_loss,
+                    "phase_correlation_low_band": low_phase,
+                    "low_band_balance_db": low_balance,
+                },
+            },
+        ))
+
+    stereo = _as_dict(technical_details.get("stereo"))
+    phase_correlation = _safe_float(stereo.get("phase_correlation"))
+    side_mid_ratio = _safe_float(stereo.get("side_mid_ratio"))
+    stereo_width = _safe_float(stereo.get("stereo_width"))
+
+    if (
+        (phase_correlation is not None and phase_correlation < 0.2)
+        or (side_mid_ratio is not None and side_mid_ratio > 1.2)
+    ):
+        candidates.append((
+            20,
+            {
+                "id": "stereo_translation_check",
+                "headline": "Check stereo translation and mono compatibility.",
+                "main_observation": (
+                    "The stereo image may need a focused mono and translation check."
+                ),
+                "listening_focus": (
+                    "Switch between stereo and mono and check whether important elements "
+                    "remain stable, centered, and clear."
+                ),
+                "export_focus": (
+                    "Review very wide or phase-sensitive elements before final export."
+                ),
+                "evidence": {
+                    "phase_correlation": phase_correlation,
+                    "side_mid_ratio": side_mid_ratio,
+                    "stereo_width": stereo_width,
+                },
+            },
+        ))
+
+    dynamics = _as_dict(technical_details.get("dynamics"))
+    plr = _safe_float(dynamics.get("plr_lu"))
+    crest = _safe_float(dynamics.get("crest_factor_db"))
+
+    if (
+        (plr is not None and plr < 5.0)
+        or (crest is not None and crest < 6.0)
+    ):
+        candidates.append((
+            30,
+            {
+                "id": "limiter_pressure_check",
+                "headline": "Check whether the master still has enough punch and movement.",
+                "main_observation": (
+                    "The dynamics signals suggest a focused loud-section listening check may be useful."
+                ),
+                "listening_focus": (
+                    "Listen to the loudest section and check whether transients, groove, and "
+                    "impact still feel natural for the style."
+                ),
+                "export_focus": (
+                    "Review limiter pressure and final level before exporting the master."
+                ),
+                "evidence": {
+                    "plr_lu": plr,
+                    "crest_factor_db": crest,
+                },
+            },
+        ))
+
+    spectral_rms = _as_dict(technical_details.get("spectral_rms"))
+    sub_rms = _safe_float(spectral_rms.get("sub_rms_dbfs"))
+    low_rms = _safe_float(spectral_rms.get("low_rms_dbfs"))
+    mid_rms = _safe_float(spectral_rms.get("mid_rms_dbfs"))
+    high_rms = _safe_float(spectral_rms.get("high_rms_dbfs"))
+    air_rms = _safe_float(spectral_rms.get("air_rms_dbfs"))
+
+    if low_rms is not None and mid_rms is not None and low_rms - mid_rms >= 5.0:
+        candidates.append((
+            40,
+            {
+                "id": "low_mid_balance_check",
+                "headline": "Reference-check the low and low-mid balance.",
+                "main_observation": (
+                    "The band balance suggests the low or low-mid range may be prominent."
+                ),
+                "listening_focus": (
+                    "Compare against a trusted reference and check whether the bass, kick, "
+                    "and lower body leave enough space for the rest of the mix."
+                ),
+                "export_focus": (
+                    "Review low and low-mid balance before final export if the mix feels crowded."
+                ),
+                "evidence": {
+                    "low_rms_dbfs": low_rms,
+                    "mid_rms_dbfs": mid_rms,
+                    "low_minus_mid_db": low_rms - mid_rms,
+                    "sub_rms_dbfs": sub_rms,
+                },
+            },
+        ))
+
+    if high_rms is not None and mid_rms is not None and high_rms - mid_rms >= 4.0:
+        candidates.append((
+            50,
+            {
+                "id": "upper_balance_check",
+                "headline": "Reference-check the upper frequency balance.",
+                "main_observation": (
+                    "The band balance suggests the upper range may be prominent."
+                ),
+                "listening_focus": (
+                    "Listen for harshness, sharp hats, bright leads, or vocal edges in the "
+                    "loudest section and compare with a reference."
+                ),
+                "export_focus": (
+                    "Review the upper balance before export if the track feels sharp or tiring."
+                ),
+                "evidence": {
+                    "high_rms_dbfs": high_rms,
+                    "mid_rms_dbfs": mid_rms,
+                    "high_minus_mid_db": high_rms - mid_rms,
+                    "air_rms_dbfs": air_rms,
+                },
+            },
+        ))
+
+    return candidates
+
+
+def _build_mix_overview(technical_details: Mapping[str, Any]) -> dict[str, Any]:
+    available_blocks = _mix_overview_available_blocks(technical_details)
+
+    if not available_blocks:
+        return {
+            "status": "unavailable",
+            "headline": "The mix translation overview is incomplete.",
+            "main_observation": (
+                "There is not enough mix-related analysis data for a reliable overview."
+            ),
+            "listening_focus": (
+                "Run or refresh the analysis before making mix-balance decisions."
+            ),
+            "export_focus": "No mix export focus is available from the current data.",
+            "confidence": "low",
+        }
+
+    candidates = _mix_overview_candidates(technical_details)
+    confidence = _mix_overview_confidence(available_blocks)
+
+    if not candidates:
+        return {
+            "status": "available",
+            "headline": "No single mix translation focus stands out in the available signals.",
+            "main_observation": (
+                "The available mix-related signals do not point to one dominant correction area."
+            ),
+            "listening_focus": (
+                "Do a reference pass on headphones, small speakers, and mono to confirm "
+                "that the balance translates as intended."
+            ),
+            "export_focus": (
+                "No specific mix-balance correction is suggested from the available signals."
+            ),
+            "confidence": confidence,
+            "available_signal_groups": sorted(available_blocks),
+        }
+
+    selected = sorted(candidates, key=lambda item: item[0])[0][1]
+
+    return {
+        "status": "available",
+        "headline": selected["headline"],
+        "main_observation": selected["main_observation"],
+        "listening_focus": selected["listening_focus"],
+        "export_focus": selected["export_focus"],
+        "confidence": confidence,
+        "available_signal_groups": sorted(available_blocks),
+        "evidence": selected["evidence"],
+        "source_focus_id": selected["id"],
+    }
+
+
 def _build_technical_details(result: AnalysisResult) -> dict[str, Any]:
     return {
         "loudness": asdict(result.loudness),
@@ -1125,9 +1410,11 @@ def build_artist_feedback_payload(
         listening_guidance,
     )
     release_summary = _build_release_summary(decision_payload)
+    technical_details = _build_technical_details(result)
     artist_guidance["technical_overview"] = _build_technical_overview(
         release_summary
     )
+    artist_guidance["mix_overview"] = _build_mix_overview(technical_details)
 
     return {
         "track": _build_track(result),
@@ -1135,7 +1422,7 @@ def build_artist_feedback_payload(
         "artist_guidance": artist_guidance,
         "listening_guidance": listening_guidance,
         "engine_signals": engine_signals,
-        "technical_details": _build_technical_details(result),
+        "technical_details": technical_details,
         "ai_consultant": {
             "summary_status": "not_generated_by_engine",
             "local_summary_filename": AI_CONSULTANT_SUMMARY_FILENAME,
@@ -1182,9 +1469,11 @@ def build_artist_feedback_payload_from_analysis_dict(
         listening_guidance,
     )
     release_summary = _build_release_summary(decision_payload)
+    technical_details = _build_technical_details_from_analysis_dict(analysis_payload)
     artist_guidance["technical_overview"] = _build_technical_overview(
         release_summary
     )
+    artist_guidance["mix_overview"] = _build_mix_overview(technical_details)
 
     return {
         "track": _build_track_from_analysis_dict(analysis_payload),
@@ -1192,7 +1481,7 @@ def build_artist_feedback_payload_from_analysis_dict(
         "artist_guidance": artist_guidance,
         "listening_guidance": listening_guidance,
         "engine_signals": engine_signals,
-        "technical_details": _build_technical_details_from_analysis_dict(analysis_payload),
+        "technical_details": technical_details,
         "ai_consultant": {
             "summary_status": "not_generated_by_engine",
             "local_summary_filename": AI_CONSULTANT_SUMMARY_FILENAME,
