@@ -259,6 +259,37 @@ def _build_musical_flow_guidance(
     density_cv = _to_optional_float(evidence.get("density_cv"))
 
     if (
+        movement_profile == "combined_lift"
+        and energy_delta_lu is not None
+        and density_delta_per_sec is not None
+        and energy_range_lu is not None
+        and energy_delta_lu >= 1.6
+        and density_delta_per_sec >= 2.0
+        and energy_range_lu >= 4.8
+    ):
+        return {
+            "id": "combined_lift_clarity_check",
+            "area": "musical_flow",
+            "priority": "medium",
+            "confidence": "medium",
+            "headline": (
+                "Check whether the combined energy and density lift stays clear "
+                "across the arrangement"
+            ),
+            "what_to_listen_for": (
+                "Check whether the joint rise in energy and density feels easy to "
+                "follow from section to section, and whether key elements stay clear "
+                "while the track lifts."
+            ),
+            "evidence": evidence,
+            "wording_note": (
+                "This may help you verify perceived flow and clarity in a combined-lift "
+                "arc. Use as a neutral listening check, not as a quality verdict or "
+                "arrangement diagnosis."
+            ),
+        }
+
+    if (
         movement_profile == "energy_lift_with_limited_density_lift"
         and energy_delta_lu is not None
         and density_delta_per_sec is not None

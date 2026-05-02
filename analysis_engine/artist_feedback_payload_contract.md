@@ -1360,6 +1360,7 @@ Stable identifier for the listening check.
 Current values may include:
 
 - `mixed_motion_density_check`
+- `combined_lift_clarity_check`
 - `energy_lift_with_limited_density_lift`
 - `variable_without_clear_lift`
 - `possible_extended_core_arrangement_span`
