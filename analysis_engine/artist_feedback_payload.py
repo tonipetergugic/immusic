@@ -1093,6 +1093,250 @@ def _first_structure_overview_guidance(
     return None
 
 
+_STRUCTURE_OVERVIEW_ROLE_LABELS = {
+    "intro_like": "intro-like opening",
+    "breakdown_like": "breakdown-like reduced area",
+    "breakdown_or_rebuild_like": "breakdown/rebuild-like reduced area",
+    "main_area_like": "main-area-like section",
+    "main_or_drop_like": "main/drop-like section",
+    "peak_like": "peak-like section",
+    "outro_like": "outro-like closing",
+}
+
+
+def _structure_overview_section_sort_key(
+    section: Mapping[str, Any],
+) -> tuple[int, float]:
+    index_value = section.get("index")
+    if isinstance(index_value, bool):
+        section_index = 10**9
+    elif isinstance(index_value, int):
+        section_index = index_value
+    else:
+        try:
+            section_index = int(str(index_value))
+        except (TypeError, ValueError):
+            section_index = 10**9
+
+    time_range = _as_dict(section.get("time_range"))
+    start_sec = _to_optional_float(time_range.get("start_sec"))
+
+    return section_index, start_sec if start_sec is not None else float("inf")
+
+
+def _structure_overview_timeline_sections(section_timeline: Any) -> list[dict[str, Any]]:
+    if not isinstance(section_timeline, list):
+        return []
+
+    sections: list[dict[str, Any]] = []
+
+    for section in section_timeline:
+        if isinstance(section, Mapping):
+            sections.append(dict(section))
+
+    return sorted(sections, key=_structure_overview_section_sort_key)
+
+
+def _structure_overview_role_label(role_hint: Any) -> str | None:
+    role_hint_text = _clean_text(role_hint)
+    if role_hint_text is None:
+        return None
+
+    return _STRUCTURE_OVERVIEW_ROLE_LABELS.get(role_hint_text)
+
+
+def _structure_overview_compact_section_evidence(
+    section: Mapping[str, Any],
+) -> dict[str, Any]:
+    evidence: dict[str, Any] = {}
+
+    field_map = {
+        "section_index": section.get("index"),
+        "role_hint": section.get("role_hint"),
+        "position": section.get("position"),
+        "duration_character": section.get("duration_character"),
+        "relative_role": section.get("relative_role"),
+        "movement": section.get("movement"),
+        "energy_level": section.get("energy_level"),
+        "density_level": section.get("density_level"),
+        "duration_sec": section.get("duration_sec"),
+    }
+
+    for field_name, value in field_map.items():
+        if value is not None:
+            evidence[field_name] = value
+
+    time_range = _as_dict(section.get("time_range"))
+    if time_range:
+        evidence["time_range"] = time_range
+
+    return evidence
+
+
+def _build_structure_overview_role_journey(
+    timeline_sections: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    role_journey: list[dict[str, Any]] = []
+
+    for section in timeline_sections:
+        role_hint = _clean_text(section.get("role_hint"))
+        if role_hint is None:
+            continue
+
+        journey_item = _structure_overview_compact_section_evidence(section)
+        role_label = _structure_overview_role_label(role_hint)
+        if role_label is not None:
+            journey_item["role_label"] = role_label
+
+        role_journey.append(journey_item)
+
+    return role_journey
+
+
+def _build_structure_overview_timeline_summary(
+    timeline_sections: list[dict[str, Any]],
+) -> str | None:
+    if not timeline_sections:
+        return None
+
+    role_labels: list[str] = []
+
+    for section in timeline_sections:
+        role_label = _structure_overview_role_label(section.get("role_hint"))
+        if role_label is None:
+            continue
+
+        if not role_labels or role_labels[-1] != role_label:
+            role_labels.append(role_label)
+
+    section_count = len(timeline_sections)
+
+    if not role_labels:
+        return (
+            f"The section timeline contains {section_count} broad sections, but the "
+            "available role hints should be treated as cautious orientation only."
+        )
+
+    if len(role_labels) == 1:
+        return (
+            f"The section timeline suggests {section_count} broad sections with a "
+            f"dominant {role_labels[0]} orientation."
+        )
+
+    if len(role_labels) == 2:
+        return (
+            f"The section timeline suggests {section_count} broad sections, moving "
+            f"from a {role_labels[0]} toward a {role_labels[-1]}."
+        )
+
+    middle_labels = role_labels[1:-1]
+    visible_middle = middle_labels[:3]
+    middle_text = ", ".join(visible_middle)
+
+    if len(middle_labels) > len(visible_middle):
+        middle_text = f"{middle_text}, and other section roles"
+
+    return (
+        f"The section timeline suggests {section_count} broad sections, moving from "
+        f"a {role_labels[0]} through {middle_text} toward a {role_labels[-1]}."
+    )
+
+
+def _build_structure_overview_key_sections(
+    timeline_sections: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    key_sections: list[dict[str, Any]] = []
+    seen_indices: set[Any] = set()
+
+    def add_section(section: Mapping[str, Any], reason: str) -> None:
+        section_index = section.get("index")
+        if section_index in seen_indices:
+            return
+
+        seen_indices.add(section_index)
+        item = _structure_overview_compact_section_evidence(section)
+        item["reason"] = reason
+        key_sections.append(item)
+
+    if not timeline_sections:
+        return []
+
+    add_section(timeline_sections[0], "opening_orientation")
+
+    for section in timeline_sections:
+        if section.get("role_hint") in {"main_or_drop_like", "peak_like"}:
+            add_section(section, "main_or_peak_orientation")
+            break
+
+    for section in timeline_sections:
+        if section.get("duration_character") == "extended":
+            add_section(section, "extended_section_span")
+            break
+
+    add_section(timeline_sections[-1], "closing_orientation")
+
+    return key_sections[:4]
+
+
+def _build_structure_overview_role_hint_counts(
+    timeline_sections: list[dict[str, Any]],
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+
+    for section in timeline_sections:
+        role_hint = _clean_text(section.get("role_hint"))
+        if role_hint is None:
+            continue
+
+        counts[role_hint] = counts.get(role_hint, 0) + 1
+
+    return counts
+
+
+def _build_structure_overview_evidence(
+    first_guidance: dict[str, Any] | None,
+    timeline_sections: list[dict[str, Any]],
+    musical_flow_summary: Mapping[str, Any],
+    arrangement_development_summary: Mapping[str, Any],
+    section_character_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    source_signals: list[str] = []
+
+    if timeline_sections:
+        source_signals.append("artist_guidance.section_timeline")
+
+    if musical_flow_summary.get("status") == "available":
+        source_signals.append("artist_guidance.musical_flow_summary")
+
+    if arrangement_development_summary.get("status") == "available":
+        source_signals.append("artist_guidance.arrangement_development_summary")
+
+    if section_character_summary.get("status") == "available":
+        source_signals.append("artist_guidance.section_character_summary")
+
+    evidence: dict[str, Any] = {
+        "source_signals": source_signals,
+        "section_count": len(timeline_sections),
+        "role_hint_counts": _build_structure_overview_role_hint_counts(
+            timeline_sections
+        ),
+    }
+
+    if first_guidance is not None:
+        evidence["primary_guidance_id"] = first_guidance.get("id")
+        evidence["primary_guidance_area"] = first_guidance.get("area")
+
+    movement_profile = _clean_text(musical_flow_summary.get("movement_profile"))
+    if movement_profile is not None:
+        evidence["movement_profile"] = movement_profile
+
+    journey_shape = _clean_text(arrangement_development_summary.get("journey_shape"))
+    if journey_shape is not None:
+        evidence["journey_shape"] = journey_shape
+
+    return evidence
+
+
 def _build_structure_overview(
     artist_guidance: Mapping[str, Any],
     listening_guidance: Any,
@@ -1105,6 +1349,7 @@ def _build_structure_overview(
         artist_guidance.get("section_character_summary")
     )
     section_timeline = artist_guidance.get("section_timeline")
+    timeline_sections = _structure_overview_timeline_sections(section_timeline)
 
     first_guidance = _first_structure_overview_guidance(listening_guidance)
 
@@ -1125,30 +1370,32 @@ def _build_structure_overview(
         or has_section_evidence
     ):
         status = "available"
-    elif isinstance(section_timeline, list) and section_timeline:
+    elif timeline_sections:
         status = "limited"
     else:
         status = "unavailable"
 
-    headline = None
-    if first_guidance is not None:
-        headline = _clean_text(first_guidance.get("headline"))
+    timeline_summary = _build_structure_overview_timeline_summary(timeline_sections)
+    role_journey = _build_structure_overview_role_journey(timeline_sections)
+    key_sections = _build_structure_overview_key_sections(timeline_sections)
 
-    if headline is None:
-        headline = _structure_overview_text_for_movement_profile(
-            musical_flow_summary.get("movement_profile")
-        )
-
-    if headline is None:
-        headline = _structure_overview_text_for_journey_shape(
-            arrangement_development_summary.get("journey_shape")
-        )
-
-    if headline is None:
+    if status == "unavailable":
+        headline = "There is not enough structure information for a reliable overview."
+    elif timeline_sections:
         headline = (
-            "The track structure has enough information for a focused listening check."
-            if status != "unavailable"
-            else "There is not enough structure information for a reliable overview."
+            f"Structure journey available across {len(timeline_sections)} sections"
+        )
+    elif first_guidance is not None:
+        headline = _clean_text(first_guidance.get("headline"))
+    else:
+        headline = (
+            _structure_overview_text_for_movement_profile(
+                musical_flow_summary.get("movement_profile")
+            )
+            or _structure_overview_text_for_journey_shape(
+                arrangement_development_summary.get("journey_shape")
+            )
+            or "The track structure has enough information for a focused listening check."
         )
 
     if status == "unavailable":
@@ -1156,6 +1403,8 @@ def _build_structure_overview(
             "There is not enough reliable structure or movement evidence for a "
             "safe artist-facing observation."
         )
+    elif timeline_summary is not None:
+        main_observation = timeline_summary
     else:
         main_observation = (
             _structure_overview_text_for_movement_profile(
@@ -1171,22 +1420,16 @@ def _build_structure_overview(
             )
         )
 
-    if main_observation == headline:
-        main_observation = (
-            _structure_overview_text_for_journey_shape(
-                arrangement_development_summary.get("journey_shape")
-            )
-            or _structure_overview_text_for_section_overall(section_character_summary)
-            or (
-                "The available structure data can help guide a focused listening pass "
-                "without acting as a fixed musical judgment."
-            )
-        )
-
     if status == "unavailable":
         listening_focus = (
             "No reliable structure listening focus can be generated from the "
             "available engine data for this track."
+        )
+    elif role_journey:
+        listening_focus = (
+            "Listen through the section journey and check whether the intro-like, "
+            "reduced, main/peak-like, and closing areas feel intentional for the "
+            "declared genre."
         )
     else:
         listening_focus = None
@@ -1219,15 +1462,36 @@ def _build_structure_overview(
         confidence = _clean_confidence(first_guidance.get("confidence"))
 
     if confidence is None:
-        confidence = "low" if status == "unavailable" else "medium"
+        if status == "unavailable":
+            confidence = "low"
+        elif status == "limited":
+            confidence = "low"
+        else:
+            confidence = "medium"
 
-    overview = {
+    overview: dict[str, Any] = {
         "status": status,
         "headline": headline,
         "main_observation": main_observation,
         "listening_focus": listening_focus,
         "confidence": confidence,
+        "evidence": _build_structure_overview_evidence(
+            first_guidance,
+            timeline_sections,
+            musical_flow_summary,
+            arrangement_development_summary,
+            section_character_summary,
+        ),
     }
+
+    if timeline_summary is not None:
+        overview["timeline_summary"] = timeline_summary
+
+    if role_journey:
+        overview["role_journey"] = role_journey
+
+    if key_sections:
+        overview["key_sections"] = key_sections
 
     if timeline_hint is not None:
         overview["timeline_hint"] = timeline_hint

@@ -1684,3 +1684,115 @@ Avoid wording such as:
 - `artist_guidance.section_timeline[]`
 - section-timeline-based `listening_guidance[].evidence`
 - `from_section` / `to_section` evidence objects for transition-related guidance
+
+
+## `structure_overview` synthesis fields
+
+`structure_overview` may include additional synthesis fields derived from existing artist guidance data.
+
+These fields do not run new audio analysis. They combine already available evidence from:
+
+- `artist_guidance.section_timeline`
+- `section_timeline.role_hint`
+- `artist_guidance.musical_flow_summary`
+- `artist_guidance.arrangement_development_summary`
+- `artist_guidance.section_character_summary`
+- structure-related `listening_guidance`
+
+### `timeline_summary`
+
+Type: string
+
+Purpose: provides a short artist-facing summary of the broad section journey.
+
+Expected meaning:
+- number of broad sections
+- approximate movement from opening orientation through middle section roles toward closing orientation
+- based on cautious `role_hint` labels
+
+Wording rule: must not claim a fixed arrangement form or definitive section identity.
+
+### `role_journey`
+
+Type: array of objects
+
+Purpose: gives compact per-section orientation for the broad structure journey.
+
+Allowed fields per item:
+- `section_index`
+- `role_hint`
+- `role_label`
+- `position`
+- `duration_character`
+- `relative_role`
+- `movement`
+- `energy_level`
+- `density_level`
+- `duration_sec`
+- `time_range`
+
+Wording rule: values are orientation signals only, not hard musical truth.
+
+### `key_sections`
+
+Type: array of objects
+
+Purpose: highlights a small number of sections that may be useful for an artist listening pass.
+
+Expected reasons:
+- `opening_orientation`
+- `main_or_peak_orientation`
+- `extended_section_span`
+- `closing_orientation`
+
+Allowed fields per item:
+- all compact section evidence fields from `role_journey`
+- `reason`
+
+Wording rule: `key_sections` must not imply that non-listed sections are unimportant.
+
+### `evidence`
+
+Type: object
+
+Purpose: exposes machine-readable source information for the structure synthesis.
+
+Expected fields:
+- `source_signals`
+- `section_count`
+- `role_hint_counts`
+- optional `primary_guidance_id`
+- optional `primary_guidance_area`
+- optional `movement_profile`
+- optional `journey_shape`
+
+Expected `source_signals` values:
+- `artist_guidance.section_timeline`
+- `artist_guidance.musical_flow_summary`
+- `artist_guidance.arrangement_development_summary`
+- `artist_guidance.section_character_summary`
+
+### Status behavior
+
+Expected status behavior:
+- `available`: structure-related guidance, movement evidence, arrangement evidence, or section evidence exists
+- `limited`: only section timeline exists, without stronger structure evidence
+- `unavailable`: no reliable structure overview can be generated
+
+### Safety rules
+
+The synthesis must remain cautious.
+
+It may say:
+- "suggests"
+- "may read as"
+- "orientation"
+- "section journey"
+- "listening pass"
+
+It must not say:
+- "this is the drop"
+- "the breakdown is wrong"
+- "the track needs a build"
+- "the arrangement is incorrect"
+- "the ending is too long"
