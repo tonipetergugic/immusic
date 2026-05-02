@@ -364,3 +364,171 @@ Safer wording:
 - density tendency
 
 If the UI needs a display label, it should derive it from `relative_role` and `time_range`, not from hard-coded song-section assumptions.
+
+## 14. `listening_guidance` field contract
+
+`listening_guidance` is a top-level artist guidance list.
+
+It is not nested under `artist_guidance`.
+
+Current path:
+
+```text
+payload["listening_guidance"]
+```
+
+Each entry is a concrete listening check derived from available analysis evidence.
+
+Current item fields:
+
+```text
+id
+area
+priority
+confidence
+headline
+what_to_listen_for
+evidence
+wording_note
+```
+
+### `id`
+
+Stable identifier for the listening check.
+
+Current values may include:
+
+- `mixed_motion_density_check`
+- `energy_lift_with_limited_density_lift`
+- `variable_without_clear_lift`
+- `possible_extended_core_arrangement_span`
+- `section_timeline_extended_reduced_middle_check`
+
+### `area`
+
+Broad feedback area.
+
+Current values may include:
+
+- `musical_flow`
+- `arrangement`
+- `technical`
+- `mix`
+
+### `priority`
+
+How strongly the check should be surfaced.
+
+Current values may include:
+
+- `low`
+- `medium`
+- `high`
+
+### `confidence`
+
+How reliable the check is based on the available evidence.
+
+Current values may include:
+
+- `low`
+- `medium`
+- `high`
+
+### `headline`
+
+Short artist-facing listening-check title.
+
+Rules:
+
+- Use cautious wording.
+- Prefer "Check whether..." or "Reference-check whether...".
+- Do not present the headline as a diagnosis.
+- Do not claim that the arrangement, mix, melody, sample, drop, or songwriting is wrong.
+
+### `what_to_listen_for`
+
+Artist-facing explanation of what to check during playback.
+
+Rules:
+
+- Keep it actionable.
+- Keep it cautious.
+- Avoid absolute musical judgments.
+- Avoid claims about missing drops, weak songwriting, repeated samples, bad arrangement, or incorrect structure.
+
+### `evidence`
+
+Internal evidence object.
+
+This may contain source signals, numeric values, movement profiles, timeline data, technical values, or section-derived context.
+
+Rules:
+
+- Useful for validation, debugging, consultant input, and future detailed views.
+- Must not be rendered directly as primary artist-facing text.
+- UI may use safe subfields such as `time_range` when needed.
+- UI must not expose raw debug-style source names or unexplained numeric values.
+
+Examples of fields that should not be shown directly in the main artist-facing UI:
+
+- `source_signal`
+- `movement_profile`
+- `energy_delta_lu`
+- `density_delta_per_sec`
+- `bars`
+- raw technical/evidence values without explanation
+
+### `wording_note`
+
+Internal wording guardrail for UI, consultant, and future prompt-building.
+
+Rules:
+
+- Do not render this directly to artists.
+- Use it to prevent overclaiming.
+- It should protect against unsafe claims such as weak songwriting, missing drops/builds, repeated samples, or objective quality judgments.
+
+## 15. UI usage notes for `listening_guidance`
+
+The safest current UI representation is:
+
+- `headline`
+- `what_to_listen_for`
+- `area`
+- `priority`
+- `confidence`
+
+Optional UI usage:
+
+- show a safe time span from `evidence.time_range` when available
+- group checks by `area`
+- sort checks by `priority`
+
+The UI should not directly show:
+
+- `evidence`
+- `wording_note`
+- internal source signal names
+- raw numeric evidence without explanation
+
+Safe UI wording:
+
+- listening check
+- reference check
+- area to review
+- may be worth checking
+- listen for whether...
+- check whether...
+
+Avoid UI wording such as:
+
+- problem
+- failure
+- wrong structure
+- missing drop
+- weak songwriting
+- bad arrangement
+- bad mix
+- repeated sample
+- objective quality issue
