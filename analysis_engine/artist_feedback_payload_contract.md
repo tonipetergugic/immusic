@@ -295,8 +295,20 @@ Current values may include:
 
 ```text
 available
+limited
 unavailable
 ```
+
+Meaning:
+
+- `available`: enough structure/listening evidence is available for a normal artist-facing overview.
+- `limited`: only partial structure context is available; UI may show a cautious fallback overview.
+- `unavailable`: no reliable structure overview can be produced.
+
+Rules:
+
+- UI must treat `limited` as artist-facing but cautious.
+- `limited` must not be displayed as a problem or warning by itself.
 
 ### `headline`
 
