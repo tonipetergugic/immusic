@@ -963,9 +963,89 @@ Rules:
 
 ## 9. AI Consultant
 
-`ai_consultant` is a separate layer.
+`ai_consultant` is a separate status layer for AI Consultant output availability.
 
-The payload may expose whether consultant output is available, but the deterministic feedback payload must remain useful without an OpenAI-generated summary.
+Path:
+
+```python
+payload["ai_consultant"]
+```
+
+Current purpose:
+
+- expose whether AI Consultant output is available
+- keep the deterministic payload useful without OpenAI-generated text
+- document that local consultant summaries may exist separately for testing
+
+Current fields:
+
+```text
+summary_status
+local_summary_filename
+note
+```
+
+### `summary_status`
+
+Type: string.
+
+Current value:
+
+```text
+not_generated_by_engine
+```
+
+Meaning:
+
+The analysis engine did not generate a live AI Consultant summary.
+
+Rules:
+
+- This is not an analysis failure.
+- This is not a release-readiness failure.
+- This must not block `release` or `artist_guidance`.
+- Future values require a contract update before platform wiring.
+
+### `local_summary_filename`
+
+Type: string.
+
+Current value:
+
+```text
+ai_consultant_summary.md
+```
+
+Meaning:
+
+Optional local filename used for testing or locally generated markdown summaries.
+
+Rules:
+
+- This is not a public stable asset URL.
+- This is not a Supabase storage path.
+- This is not proof that live consultant output exists.
+- Production UI should not depend on this filename.
+
+### `note`
+
+Type: string.
+
+Human-readable guardrail explaining that the engine does not generate live AI consultant text.
+
+Rules:
+
+- Safe for internal QA or debug/detail views.
+- Product UI should prefer a clear user-facing state instead of exposing this raw note directly.
+- The note must not be treated as artist feedback content.
+
+### Product rules
+
+- `ai_consultant` is optional.
+- The deterministic feedback payload must remain complete without OpenAI-generated text.
+- Live AI Consultant output belongs to a future platform/service layer.
+- Do not merge generated consultant text into deterministic engine guidance without a separate contract.
+- Do not use `ai_consultant` as source data for release readiness, technical checks, structure guidance, or listening checks.
 
 ## 10. Current intentional limitations
 
