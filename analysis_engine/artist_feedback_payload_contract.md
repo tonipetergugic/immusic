@@ -576,6 +576,13 @@ unavailable
 
 When unavailable, `reason` may explain why the summary could not be built.
 
+Unavailable handling note:
+
+- `journey_shape` is only expected when `arrangement_development_summary.status` is `available`.
+- If `status` is `unavailable`, `journey_shape` may be `null` or absent.
+- `unavailable` means the engine did not have a stable enough structure/section-character basis to build this summary.
+- It must not be shown as an artist-facing quality judgment.
+
 ### Signal fields
 
 Current values may include:
