@@ -430,9 +430,293 @@ def _build_section_timeline_extended_reduced_middle_guidance(
     }
 
 
+def _section_timeline_section_index(section: Mapping[str, Any]) -> int:
+    index_value = section.get("index")
+    if isinstance(index_value, bool):
+        return 10**9
+    if isinstance(index_value, int):
+        return index_value
+
+    try:
+        return int(str(index_value))
+    except (TypeError, ValueError):
+        return 10**9
+
+
+def _section_timeline_duration(section: Mapping[str, Any]) -> float | None:
+    return _to_optional_float(section.get("duration_sec"))
+
+
+def _section_timeline_evidence(section: Mapping[str, Any]) -> dict[str, Any]:
+    evidence: dict[str, Any] = {
+        "source_signal": "artist_guidance.section_timeline",
+        "section_index": section.get("index"),
+        "position": section.get("position"),
+        "duration_character": section.get("duration_character"),
+        "relative_role": section.get("relative_role"),
+        "movement": section.get("movement"),
+        "energy_level": section.get("energy_level"),
+        "density_level": section.get("density_level"),
+    }
+
+    time_range = _as_dict(section.get("time_range"))
+    if time_range:
+        evidence["time_range"] = time_range
+
+    duration_sec = section.get("duration_sec")
+    if duration_sec is not None:
+        evidence["duration_sec"] = duration_sec
+
+    return evidence
+
+
+def _build_section_timeline_extended_closing_guidance(
+    section_timeline: Any,
+) -> dict[str, Any] | None:
+    if not isinstance(section_timeline, list):
+        return None
+
+    candidates: list[dict[str, Any]] = []
+
+    for section in section_timeline:
+        if not isinstance(section, Mapping):
+            continue
+
+        if section.get("position") != "closing":
+            continue
+
+        if section.get("duration_character") != "extended":
+            continue
+
+        candidates.append(dict(section))
+
+    if not candidates:
+        return None
+
+    section = sorted(
+        candidates,
+        key=lambda item: (
+            -(_section_timeline_duration(item) or -1.0),
+            _section_timeline_section_index(item),
+        ),
+    )[0]
+
+    return {
+        "id": "section_timeline_extended_closing_check",
+        "area": "arrangement",
+        "priority": "low",
+        "confidence": "low",
+        "headline": "Check whether the longer closing section feels intentional",
+        "what_to_listen_for": (
+            "Listen to the longer closing section and check whether the resolution, "
+            "variation, or gradual reduction feels intentional for the declared genre."
+        ),
+        "evidence": _section_timeline_evidence(section),
+        "wording_note": (
+            "Use this as cautious section-timeline guidance only. Do not present it "
+            "as proof that the ending is too long, weak, or incorrectly arranged."
+        ),
+    }
+
+
+def _build_section_timeline_contrast_transition_guidance(
+    section_timeline: Any,
+) -> dict[str, Any] | None:
+    if not isinstance(section_timeline, list):
+        return None
+
+    sections = [section for section in section_timeline if isinstance(section, Mapping)]
+    if len(sections) < 2:
+        return None
+
+    candidates: list[tuple[int, Mapping[str, Any], Mapping[str, Any]]] = []
+
+    for previous, current in zip(sections, sections[1:]):
+        previous_role = _clean_text(previous.get("relative_role"))
+        current_role = _clean_text(current.get("relative_role"))
+        previous_energy = _clean_text(previous.get("energy_level"))
+        current_energy = _clean_text(current.get("energy_level"))
+        previous_density = _clean_text(previous.get("density_level"))
+        current_density = _clean_text(current.get("density_level"))
+
+        role_lift = (
+            previous_role == "reduced_area"
+            and current_role in {"main_area", "stronger_area"}
+        )
+        energy_lift = previous_energy == "low" and current_energy == "high"
+        density_lift = previous_density == "low" and current_density == "high"
+
+        if not role_lift:
+            continue
+
+        if not energy_lift and not density_lift:
+            continue
+
+        score = 0
+        if energy_lift:
+            score += 2
+        if density_lift:
+            score += 2
+        if current_role == "stronger_area":
+            score += 1
+
+        candidates.append((score, previous, current))
+
+    if not candidates:
+        return None
+
+    _, previous, current = sorted(
+        candidates,
+        key=lambda item: (
+            -item[0],
+            _section_timeline_section_index(item[1]),
+            _section_timeline_section_index(item[2]),
+        ),
+    )[0]
+
+    return {
+        "id": "section_timeline_contrast_transition_check",
+        "area": "arrangement",
+        "priority": "medium",
+        "confidence": "medium",
+        "headline": "Check whether this section change reads clearly",
+        "what_to_listen_for": (
+            "Listen across this section change and check whether the shift in role, "
+            "energy, or density feels clear and natural for the declared genre."
+        ),
+        "evidence": {
+            "source_signal": "artist_guidance.section_timeline",
+            "from_section": _section_timeline_evidence(previous),
+            "to_section": _section_timeline_evidence(current),
+        },
+        "wording_note": (
+            "Use this as cautious transition guidance only. Do not describe it as a "
+            "missing drop, weak build, or fixed arrangement problem."
+        ),
+    }
+
+
+def _build_additional_section_timeline_guidance(
+    section_timeline: Any,
+) -> list[dict[str, Any]]:
+    guidance: list[dict[str, Any]] = []
+
+    contrast_transition_guidance = _build_section_timeline_contrast_transition_guidance(
+        section_timeline
+    )
+    if contrast_transition_guidance is not None:
+        guidance.append(contrast_transition_guidance)
+
+    extended_closing_guidance = _build_section_timeline_extended_closing_guidance(
+        section_timeline
+    )
+    if extended_closing_guidance is not None:
+        guidance.append(extended_closing_guidance)
+
+    return guidance[:2]
+
+
+def _build_technical_overview_listening_guidance(
+    technical_overview: Any,
+) -> dict[str, Any] | None:
+    overview = _as_dict(technical_overview)
+    status = _clean_text(overview.get("status"))
+    if status not in {"problem", "warning", "ok"}:
+        return None
+
+    headline = _clean_text(overview.get("headline"))
+    listening_focus = _clean_text(overview.get("listening_focus"))
+    if headline is None or listening_focus is None:
+        return None
+
+    priority_by_status = {
+        "problem": "high",
+        "warning": "medium",
+        "ok": "low",
+    }
+
+    evidence: dict[str, Any] = {
+        "source_signal": "artist_guidance.technical_overview",
+        "status": status,
+    }
+
+    main_observation = _clean_text(overview.get("main_observation"))
+    if main_observation is not None:
+        evidence["main_observation"] = main_observation
+
+    export_focus = _clean_text(overview.get("export_focus"))
+    if export_focus is not None:
+        evidence["export_focus"] = export_focus
+
+    return {
+        "id": "technical_release_listening_check",
+        "area": "technical",
+        "priority": priority_by_status[status],
+        "confidence": _clean_confidence(overview.get("confidence")) or "low",
+        "headline": headline,
+        "what_to_listen_for": listening_focus,
+        "evidence": evidence,
+        "wording_note": (
+            "Use this as cautious technical listening guidance only. Do not present it "
+            "as proof of poor mastering, bad mixing, or incorrect artistic decisions."
+        ),
+    }
+
+
+def _build_mix_overview_listening_guidance(
+    mix_overview: Any,
+) -> dict[str, Any] | None:
+    overview = _as_dict(mix_overview)
+    status = _clean_text(overview.get("status"))
+    if status != "available":
+        return None
+
+    headline = _clean_text(overview.get("headline"))
+    listening_focus = _clean_text(overview.get("listening_focus"))
+    if headline is None or listening_focus is None:
+        return None
+
+    source_focus_id = _clean_text(overview.get("source_focus_id"))
+
+    evidence: dict[str, Any] = {
+        "source_signal": "artist_guidance.mix_overview",
+    }
+
+    if source_focus_id is not None:
+        evidence["source_focus_id"] = source_focus_id
+
+    main_observation = _clean_text(overview.get("main_observation"))
+    if main_observation is not None:
+        evidence["main_observation"] = main_observation
+
+    export_focus = _clean_text(overview.get("export_focus"))
+    if export_focus is not None:
+        evidence["export_focus"] = export_focus
+
+    technical_evidence = _as_dict(overview.get("evidence"))
+    if technical_evidence:
+        evidence["technical_evidence"] = technical_evidence
+
+    return {
+        "id": "mix_translation_listening_check",
+        "area": "mix",
+        "priority": "medium" if source_focus_id is not None else "low",
+        "confidence": _clean_confidence(overview.get("confidence")) or "low",
+        "headline": headline,
+        "what_to_listen_for": listening_focus,
+        "evidence": evidence,
+        "wording_note": (
+            "Use this as cautious mix-translation listening guidance only. Do not present "
+            "it as proof that the mix is wrong or artistically invalid."
+        ),
+    }
+
+
 def _build_listening_guidance(
     consultant_input: Mapping[str, Any],
     section_timeline: Any | None = None,
+    technical_overview: Any | None = None,
+    mix_overview: Any | None = None,
 ) -> list[dict[str, Any]]:
     arrangement_development_summary = _as_dict(
         consultant_input.get("arrangement_development_summary")
@@ -457,6 +741,18 @@ def _build_listening_guidance(
         )
         if section_timeline_guidance is not None:
             guidance.append(section_timeline_guidance)
+
+    guidance.extend(_build_additional_section_timeline_guidance(section_timeline))
+
+    technical_guidance = _build_technical_overview_listening_guidance(
+        technical_overview
+    )
+    if technical_guidance is not None:
+        guidance.append(technical_guidance)
+
+    mix_guidance = _build_mix_overview_listening_guidance(mix_overview)
+    if mix_guidance is not None:
+        guidance.append(mix_guidance)
 
     return guidance
 
@@ -653,6 +949,51 @@ def _structure_overview_time_range_from_section_timeline(
     return _as_dict(selected.get("time_range"))
 
 
+def _structure_overview_has_available_movement_evidence(
+    musical_flow_summary: Mapping[str, Any],
+) -> bool:
+    if musical_flow_summary.get("status") != "available":
+        return False
+
+    evidence_fields = (
+        "movement_profile",
+        "movement_signal",
+        "energy_movement",
+        "energy_direction",
+        "density_movement",
+        "density_direction",
+    )
+
+    for field in evidence_fields:
+        value = _clean_text(musical_flow_summary.get(field))
+        if value is not None and value != "unavailable":
+            return True
+
+    return False
+
+
+def _structure_overview_has_available_arrangement_evidence(
+    arrangement_development_summary: Mapping[str, Any],
+) -> bool:
+    if arrangement_development_summary.get("status") != "available":
+        return False
+
+    return _structure_overview_text_for_journey_shape(
+        arrangement_development_summary.get("journey_shape")
+    ) is not None
+
+
+def _structure_overview_has_available_section_evidence(
+    section_character_summary: Mapping[str, Any],
+) -> bool:
+    if section_character_summary.get("status") != "available":
+        return False
+
+    return _structure_overview_text_for_section_overall(
+        section_character_summary
+    ) is not None
+
+
 def _build_structure_overview_timeline_hint(
     listening_guidance: Any,
     arrangement_development_summary: Mapping[str, Any],
@@ -681,6 +1022,40 @@ def _build_structure_overview_timeline_hint(
     )
 
 
+_STRUCTURE_OVERVIEW_GUIDANCE_AREAS = {"arrangement", "musical_flow"}
+
+_STRUCTURE_OVERVIEW_GUIDANCE_IDS = {
+    "possible_extended_core_arrangement_span",
+    "mixed_motion_density_check",
+    "energy_lift_with_limited_density_lift",
+    "combined_lift_clarity_check",
+    "variable_without_clear_lift",
+    "section_timeline_extended_reduced_middle_check",
+    "section_timeline_extended_closing_check",
+    "section_timeline_contrast_transition_check",
+}
+
+
+def _first_structure_overview_guidance(
+    listening_guidance: Any,
+) -> dict[str, Any] | None:
+    if not isinstance(listening_guidance, list):
+        return None
+
+    for item in listening_guidance:
+        guidance = _as_dict(item)
+        guidance_id = guidance.get("id")
+        guidance_area = guidance.get("area")
+
+        if guidance_id in _STRUCTURE_OVERVIEW_GUIDANCE_IDS:
+            return guidance
+
+        if guidance_area in _STRUCTURE_OVERVIEW_GUIDANCE_AREAS:
+            return guidance
+
+    return None
+
+
 def _build_structure_overview(
     artist_guidance: Mapping[str, Any],
     listening_guidance: Any,
@@ -694,11 +1069,24 @@ def _build_structure_overview(
     )
     section_timeline = artist_guidance.get("section_timeline")
 
-    first_guidance = _first_mapping_item(listening_guidance)
+    first_guidance = _first_structure_overview_guidance(listening_guidance)
 
-    if first_guidance is not None:
-        status = "available"
-    elif musical_flow_summary.get("status") == "available":
+    has_movement_evidence = _structure_overview_has_available_movement_evidence(
+        musical_flow_summary
+    )
+    has_arrangement_evidence = _structure_overview_has_available_arrangement_evidence(
+        arrangement_development_summary
+    )
+    has_section_evidence = _structure_overview_has_available_section_evidence(
+        section_character_summary
+    )
+
+    if (
+        first_guidance is not None
+        or has_movement_evidence
+        or has_arrangement_evidence
+        or has_section_evidence
+    ):
         status = "available"
     elif isinstance(section_timeline, list) and section_timeline:
         status = "limited"
@@ -726,19 +1114,25 @@ def _build_structure_overview(
             else "There is not enough structure information for a reliable overview."
         )
 
-    main_observation = (
-        _structure_overview_text_for_movement_profile(
-            musical_flow_summary.get("movement_profile")
+    if status == "unavailable":
+        main_observation = (
+            "There is not enough reliable structure or movement evidence for a "
+            "safe artist-facing observation."
         )
-        or _structure_overview_text_for_journey_shape(
-            arrangement_development_summary.get("journey_shape")
+    else:
+        main_observation = (
+            _structure_overview_text_for_movement_profile(
+                musical_flow_summary.get("movement_profile")
+            )
+            or _structure_overview_text_for_journey_shape(
+                arrangement_development_summary.get("journey_shape")
+            )
+            or _structure_overview_text_for_section_overall(section_character_summary)
+            or (
+                "The available structure data can help guide a focused listening pass, "
+                "but it should not be treated as a fixed musical judgment."
+            )
         )
-        or _structure_overview_text_for_section_overall(section_character_summary)
-        or (
-            "The available structure data can help guide a focused listening pass, "
-            "but it should not be treated as a fixed musical judgment."
-        )
-    )
 
     if main_observation == headline:
         main_observation = (
@@ -752,24 +1146,30 @@ def _build_structure_overview(
             )
         )
 
-    listening_focus = None
-    if first_guidance is not None:
-        listening_focus = _clean_text(first_guidance.get("what_to_listen_for"))
-
-    if listening_focus is None:
-        listening_focus = _clean_text(
-            arrangement_development_summary.get("listening_check")
-        )
-
-    if listening_focus is None:
-        listening_focus = _clean_text(musical_flow_summary.get("listening_check"))
-
-    if listening_focus is None:
+    if status == "unavailable":
         listening_focus = (
-            "Listen through the main sections and check whether the structure, "
-            "energy movement, and perceived development feel intentional for the "
-            "declared genre."
+            "No reliable structure listening focus can be generated from the "
+            "available engine data for this track."
         )
+    else:
+        listening_focus = None
+        if first_guidance is not None:
+            listening_focus = _clean_text(first_guidance.get("what_to_listen_for"))
+
+        if listening_focus is None:
+            listening_focus = _clean_text(
+                arrangement_development_summary.get("listening_check")
+            )
+
+        if listening_focus is None:
+            listening_focus = _clean_text(musical_flow_summary.get("listening_check"))
+
+        if listening_focus is None:
+            listening_focus = (
+                "Listen through the main sections and check whether the structure, "
+                "energy movement, and perceived development feel intentional for the "
+                "declared genre."
+            )
 
     timeline_hint = _build_structure_overview_timeline_hint(
         listening_guidance,
@@ -1248,6 +1648,40 @@ def _mix_overview_available_blocks(technical_details: Mapping[str, Any]) -> set[
     ):
         available_blocks.add("dynamics")
 
+    limiter_stress = _as_dict(technical_details.get("limiter_stress"))
+    limiter_timeline = limiter_stress.get("timeline")
+    if (
+        _clean_text(limiter_stress.get("status")) == "available"
+        or any(
+            _safe_float(limiter_stress.get(field_name)) is not None
+            for field_name in (
+                "events_per_min",
+                "max_events_per_10s",
+                "p95_events_per_10s",
+            )
+        )
+        or (isinstance(limiter_timeline, list) and len(limiter_timeline) > 0)
+    ):
+        available_blocks.add("limiter_stress")
+
+    transients = _as_dict(technical_details.get("transients"))
+    transient_timeline = transients.get("timeline")
+    if (
+        _clean_text(transients.get("status")) == "available"
+        or any(
+            _safe_float(transients.get(field_name)) is not None
+            for field_name in (
+                "attack_strength",
+                "transient_density_per_sec",
+                "mean_short_crest_db",
+                "p95_short_crest_db",
+                "transient_density_cv",
+            )
+        )
+        or (isinstance(transient_timeline, list) and len(transient_timeline) > 0)
+    ):
+        available_blocks.add("transients")
+
     return available_blocks
 
 
@@ -1624,17 +2058,22 @@ def build_artist_feedback_payload(
         engine_signals.get("sections"),
     )
     section_timeline = artist_guidance.get("section_timeline")
-    listening_guidance = _build_listening_guidance(consultant_input, section_timeline)
+    release_summary = _build_release_summary(decision_payload)
+    technical_details = _build_technical_details(result)
+    technical_overview = _build_technical_overview(release_summary)
+    mix_overview = _build_mix_overview(technical_details)
+    listening_guidance = _build_listening_guidance(
+        consultant_input,
+        section_timeline,
+        technical_overview,
+        mix_overview,
+    )
     artist_guidance["structure_overview"] = _build_structure_overview(
         artist_guidance,
         listening_guidance,
     )
-    release_summary = _build_release_summary(decision_payload)
-    technical_details = _build_technical_details(result)
-    artist_guidance["technical_overview"] = _build_technical_overview(
-        release_summary
-    )
-    artist_guidance["mix_overview"] = _build_mix_overview(technical_details)
+    artist_guidance["technical_overview"] = technical_overview
+    artist_guidance["mix_overview"] = mix_overview
 
     return {
         "track": _build_track(result),
@@ -1683,17 +2122,22 @@ def build_artist_feedback_payload_from_analysis_dict(
         engine_signals.get("sections"),
     )
     section_timeline = artist_guidance.get("section_timeline")
-    listening_guidance = _build_listening_guidance(consultant_input, section_timeline)
+    release_summary = _build_release_summary(decision_payload)
+    technical_details = _build_technical_details_from_analysis_dict(analysis_payload)
+    technical_overview = _build_technical_overview(release_summary)
+    mix_overview = _build_mix_overview(technical_details)
+    listening_guidance = _build_listening_guidance(
+        consultant_input,
+        section_timeline,
+        technical_overview,
+        mix_overview,
+    )
     artist_guidance["structure_overview"] = _build_structure_overview(
         artist_guidance,
         listening_guidance,
     )
-    release_summary = _build_release_summary(decision_payload)
-    technical_details = _build_technical_details_from_analysis_dict(analysis_payload)
-    artist_guidance["technical_overview"] = _build_technical_overview(
-        release_summary
-    )
-    artist_guidance["mix_overview"] = _build_mix_overview(technical_details)
+    artist_guidance["technical_overview"] = technical_overview
+    artist_guidance["mix_overview"] = mix_overview
 
     return {
         "track": _build_track_from_analysis_dict(analysis_payload),
