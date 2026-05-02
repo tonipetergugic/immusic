@@ -685,6 +685,45 @@ Purpose: internal or evidence-oriented structure signals.
 
 This block can help with validation and future detail pages, but should not be treated as the main artist-facing product contract.
 
+### Usage rules
+
+- Do not use `engine_signals` as primary artist-facing rendered content.
+- Do not present `engine_signals` as a standalone warning, verdict, or quality judgment.
+- Intended uses include debugging, validation, deeper detail views, consultant grounding, and future internal tooling.
+
+### Relationship to `artist_guidance.structure_summary`
+
+- `artist_guidance.structure_summary` is the artist-facing structure detail block (neutral section evidence and related context).
+- `engine_signals` is a reduced internal evidence mirror derived from `consultant_input`. It supports the same broad structure story but is not a substitute for showing `structure_summary` to artists.
+
+### Current top-level keys
+
+Path:
+
+```text
+payload["engine_signals"]
+```
+
+Current keys:
+
+```text
+structure_scores
+readable_structure_signals
+sections
+```
+
+- `structure_scores`: compact score-related evidence aligned with consultant structure inputs (for example segment counts and structure scores). Individual numeric fields may be `null` when reliable structure values are not available.
+
+- `readable_structure_signals`: cautious categorical structure signal levels derived from the readable signals in `structure_summary` (for example material reuse, form contrast, transition clarity).
+
+- `sections`: neutral detected structure section spans aligned with `structure_summary` sections. The list may be empty when no sections are available.
+
+Presence rules:
+
+- These keys are always present on the `engine_signals` object. Contents may still be empty objects, empty lists, or include `null` fields when the analysis does not provide reliable values. Empty or `null` content must not be treated as an error by UI, adapters, or the AI Consultant on its own.
+
+This section intentionally does not define a full nested schema for these objects.
+
 ## 7.1 `technical_overview` field contract
 
 `artist_guidance.technical_overview` is the artist-facing technical release overview.
