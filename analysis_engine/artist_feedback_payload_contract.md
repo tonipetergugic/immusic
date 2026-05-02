@@ -799,7 +799,7 @@ Purpose:
 - help the artist run a focused reference pass
 - avoid turning mix evidence into an absolute judgment
 
-Current fields:
+Current possible fields:
 
 ```text
 status
@@ -812,6 +812,17 @@ available_signal_groups
 evidence
 source_focus_id
 ```
+
+Field presence rules:
+
+- `status`, `headline`, `main_observation`, `listening_focus`, `export_focus`, and `confidence` are the core fields.
+- `available_signal_groups` is present when mix-related signal groups are available.
+- `available_signal_groups` may be omitted when `status` is `unavailable`.
+- `evidence` is only present when a dominant mix-translation focus was selected.
+- `source_focus_id` is only present when a dominant mix-translation focus was selected.
+- If `status` is `available` but no dominant focus was selected, `available_signal_groups` may be present while `evidence` and `source_focus_id` are omitted.
+- Missing `evidence` or `source_focus_id` must not be treated as an error by UI, adapters, or the AI Consultant.
+- Missing `evidence` or `source_focus_id` means: no single dominant mix focus was selected from the available signals.
 
 ### `status`
 
@@ -873,6 +884,8 @@ Current values may include:
 
 ### `available_signal_groups`
 
+Present when mix-related signal groups are available.
+
 Internal/supporting list of signal groups that were available when building the overview.
 
 Current values may include:
@@ -888,6 +901,8 @@ Rules:
 - Do not render this as primary artist-facing text.
 
 ### `evidence`
+
+Optional. Present only when a dominant mix focus was selected.
 
 Internal evidence object for the selected mix focus.
 
@@ -909,6 +924,8 @@ Rules:
 - Never show raw numeric values without context.
 
 ### `source_focus_id`
+
+Optional. Present only when a dominant mix focus was selected.
 
 Internal identifier for the selected dominant mix focus.
 
