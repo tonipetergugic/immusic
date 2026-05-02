@@ -1616,3 +1616,71 @@ Required source:
 - plus either an energy lift or density lift
 
 Wording rule: this check must not describe the change as a missing drop, weak build, or fixed arrangement problem.
+
+
+## `section_timeline.role_hint`
+
+`role_hint` is an optional artist-facing helper field generated for each `section_timeline` item.
+
+It is derived from already available section timeline fields such as:
+
+- `position`
+- `relative_role`
+- `energy_level`
+- `density_level`
+- `movement`
+
+It does not run new audio analysis.
+
+### Allowed values
+
+- `intro_like`
+- `breakdown_like`
+- `breakdown_or_rebuild_like`
+- `main_area_like`
+- `main_or_drop_like`
+- `peak_like`
+- `outro_like`
+
+### Meaning
+
+`role_hint` provides a cautious, human-readable orientation for the section.
+
+It may help the artist understand the approximate function of a section in the track journey, but it must not be treated as a hard musical classification.
+
+### Wording rules
+
+Do not use `role_hint` to claim that a section definitively is:
+
+- an intro
+- a breakdown
+- a build
+- a drop
+- a peak
+- an outro
+
+Use wording such as:
+
+- "intro-like"
+- "breakdown-like"
+- "main-area-like"
+- "drop-like"
+- "peak-like"
+- "outro-like"
+- "may function as"
+- "may read as"
+
+Avoid wording such as:
+
+- "this is the drop"
+- "the breakdown is wrong"
+- "the outro is too long"
+- "the build is missing"
+
+### Contract note
+
+`role_hint` is allowed inside:
+
+- `artist_guidance.section_timeline[]`
+- section-timeline-based `listening_guidance[].evidence`
+- `from_section` / `to_section` evidence objects for transition-related guidance

@@ -161,6 +161,35 @@ def _format_time_mm_ss(value: Any) -> str | None:
     return f"{minutes}:{seconds:02d}"
 
 
+def _section_timeline_role_hint(section: Mapping[str, Any]) -> str | None:
+    position = _clean_text(section.get("position"))
+    relative_role = _clean_text(section.get("relative_role"))
+    energy_level = _clean_text(section.get("energy_level"))
+    density_level = _clean_text(section.get("density_level"))
+    movement = _clean_text(section.get("movement"))
+
+    if relative_role == "opening_area" or position == "opening":
+        return "intro_like"
+
+    if relative_role == "closing_area" or position == "closing":
+        return "outro_like"
+
+    if relative_role == "reduced_area":
+        if movement in {"rising", "changing"}:
+            return "breakdown_or_rebuild_like"
+        return "breakdown_like"
+
+    if relative_role == "stronger_area":
+        return "peak_like"
+
+    if relative_role == "main_area":
+        if energy_level == "high" or density_level == "high":
+            return "main_or_drop_like"
+        return "main_area_like"
+
+    return None
+
+
 def _build_section_timeline(
     section_character_summary: Mapping[str, Any],
     engine_sections: Any,
@@ -213,6 +242,10 @@ def _build_section_timeline(
             "movement": character_section.get("movement"),
             "relative_role": character_section.get("relative_role"),
         }
+
+        role_hint = _section_timeline_role_hint(item)
+        if role_hint is not None:
+            item["role_hint"] = role_hint
 
         if time_range:
             item["time_range"] = time_range
@@ -458,6 +491,10 @@ def _section_timeline_evidence(section: Mapping[str, Any]) -> dict[str, Any]:
         "energy_level": section.get("energy_level"),
         "density_level": section.get("density_level"),
     }
+
+    role_hint = _clean_text(section.get("role_hint"))
+    if role_hint is not None:
+        evidence["role_hint"] = role_hint
 
     time_range = _as_dict(section.get("time_range"))
     if time_range:
