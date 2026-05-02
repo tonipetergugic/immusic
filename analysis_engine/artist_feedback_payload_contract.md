@@ -209,3 +209,158 @@ The payload must follow these rules:
 - avoid debug language in artist-facing summaries
 - keep release decisions separate from deeper guidance
 - keep raw technical data separate from artist-facing conclusions
+
+## 12. `section_timeline` field contract
+
+`artist_guidance.section_timeline` is an artist-facing timeline of detected arrangement areas.
+
+It is not a claim about official song sections such as intro, verse, chorus, break, drop, or outro. It is a cautious structure and movement timeline derived from available analysis signals.
+
+Current item fields:
+
+```text
+index
+position
+duration_character
+energy_level
+density_level
+movement
+relative_role
+time_range
+duration_sec
+```
+
+### `index`
+
+Zero-based timeline index.
+
+### `position`
+
+Broad placement in the track.
+
+Current values may include:
+
+- `opening`
+- `early`
+- `middle`
+- `closing`
+
+### `duration_character`
+
+Coarse duration description.
+
+Current values may include:
+
+- `short`
+- `medium`
+- `extended`
+
+### `energy_level`
+
+Relative energy level for this detected area.
+
+Current values may include:
+
+- `low`
+- `moderate`
+- `high`
+
+### `density_level`
+
+Relative arrangement density level for this detected area.
+
+Current values may include:
+
+- `low`
+- `moderate`
+- `high`
+
+### `movement`
+
+Coarse movement direction inside or around this area.
+
+Current values may include:
+
+- `rising`
+- `falling`
+- `stable`
+- `changing`
+
+### `relative_role`
+
+Cautious role description based on the available section signals.
+
+Current values may include:
+
+- `opening_area`
+- `reduced_area`
+- `main_area`
+- `stronger_area`
+- `closing_area`
+
+### Rules
+
+- These are not fixed musical section names.
+- These labels must not be presented as absolute arrangement judgments.
+- They should be shown as listening guidance or structural orientation only.
+
+### `time_range`
+
+Time information for the timeline item.
+
+Current fields:
+
+- `start_sec`
+- `start_time`
+- `end_sec`
+- `end_time`
+
+Example:
+
+```json
+{
+  "start_sec": 46.35,
+  "start_time": "0:46",
+  "end_sec": 125.71,
+  "end_time": "2:06"
+}
+```
+
+### `duration_sec`
+
+Duration of the detected area in seconds.
+
+## 13. UI usage notes for `section_timeline`
+
+For the feedback page, the safest current UI representation is:
+
+- time range
+- `relative_role`
+- `energy_level`
+- `density_level`
+- `movement`
+- `duration_character`
+
+The UI should avoid wording such as:
+
+- verse
+- chorus
+- drop
+- breakdown
+- official section
+- correct structure
+- wrong structure
+
+Safer wording:
+
+- detected area
+- opening area
+- reduced area
+- main area
+- stronger area
+- closing area
+- movement
+- energy tendency
+- density tendency
+
+If the UI needs a display label, it should derive it from `relative_role` and `time_range`, not from hard-coded song-section assumptions.
