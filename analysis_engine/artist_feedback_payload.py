@@ -850,6 +850,32 @@ def _technical_overview_selected_check(
     return sorted(candidates, key=lambda item: item[:3])[0][3]
 
 
+def _technical_overview_check_group(
+    selected_check: Mapping[str, Any] | None,
+) -> str | None:
+    if selected_check is None:
+        return None
+
+    area = _clean_text(selected_check.get("area"))
+    short_text = _clean_text(selected_check.get("short_text"))
+    if short_text is None:
+        return None
+
+    if area == "peaks" and "True Peak is above 0.0 dBTP" in short_text:
+        return "peaks.true_peak_over_zero"
+
+    if area == "peaks" and "Source headroom is tight" in short_text:
+        return "peaks.tight_headroom"
+
+    if area == "peaks" and "clipped samples" in short_text:
+        return "peaks.clipped_samples"
+
+    if area == "dynamics" and "Peak-to-loudness range is very low" in short_text:
+        return "dynamics.low_plr"
+
+    return None
+
+
 def _technical_overview_status(release_summary: Mapping[str, Any]) -> str:
     release_readiness = _as_dict(release_summary.get("release_readiness"))
     readiness_state = _clean_text(release_readiness.get("state"))
@@ -934,7 +960,23 @@ def _technical_overview_confidence(technical_release_checks: Any) -> str:
     return "low"
 
 
-def _technical_overview_headline(status: str) -> str:
+def _technical_overview_headline(
+    status: str,
+    selected_check: Mapping[str, Any] | None,
+) -> str:
+    check_group = _technical_overview_check_group(selected_check)
+    if check_group == "peaks.true_peak_over_zero":
+        return "Peak headroom should be checked before release export."
+
+    if check_group == "peaks.tight_headroom":
+        return "Headroom is very tight and worth a final safety check."
+
+    if check_group == "peaks.clipped_samples":
+        return "Clipping risk should be resolved before publishing."
+
+    if check_group == "dynamics.low_plr":
+        return "Limiter pressure should be reviewed before release."
+
     if status == "problem":
         return (
             "The track shows a technical release risk that should be reviewed "
@@ -1006,6 +1048,31 @@ def _technical_overview_listening_focus(
             "release."
         )
 
+    check_group = _technical_overview_check_group(selected_check)
+    if check_group == "peaks.true_peak_over_zero":
+        return (
+            "Listen to the loudest section and check for brittle highs, edge, or brief "
+            "crackle at peak moments."
+        )
+
+    if check_group == "peaks.tight_headroom":
+        return (
+            "Compare loudest moments to a trusted reference and check whether peaks "
+            "still feel controlled rather than constrained."
+        )
+
+    if check_group == "peaks.clipped_samples":
+        return (
+            "Listen for crackle, tearing, or harsh breakup on loud transients and "
+            "dense sections."
+        )
+
+    if check_group == "dynamics.low_plr":
+        return (
+            "Check whether kick, snare, and transients retain punch and movement in "
+            "loud sections."
+        )
+
     area = _clean_text(selected_check.get("area"))
 
     if area in {"peaks", "loudness"}:
@@ -1051,6 +1118,31 @@ def _technical_overview_export_focus(
             "technical checks."
         )
 
+    check_group = _technical_overview_check_group(selected_check)
+    if check_group == "peaks.true_peak_over_zero":
+        return (
+            "Lower final output level or limiter ceiling slightly and re-check peak "
+            "safety on export."
+        )
+
+    if check_group == "peaks.tight_headroom":
+        return (
+            "Leave a little more true-peak margin before final export and re-run the "
+            "technical check."
+        )
+
+    if check_group == "peaks.clipped_samples":
+        return (
+            "Reduce clipping at source or limiter stage, then export a clean file and "
+            "verify again."
+        )
+
+    if check_group == "dynamics.low_plr":
+        return (
+            "Reduce limiter pressure or rebalance gain staging to recover impact "
+            "before export."
+        )
+
     area = _clean_text(selected_check.get("area"))
 
     if area in {"peaks", "loudness"}:
@@ -1083,7 +1175,7 @@ def _build_technical_overview(
 
     return {
         "status": status,
-        "headline": _technical_overview_headline(status),
+        "headline": _technical_overview_headline(status, selected_check),
         "main_observation": _technical_overview_main_observation(
             selected_check,
             status,
