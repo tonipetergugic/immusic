@@ -1272,6 +1272,103 @@ def _mix_overview_candidates(
             },
         ))
 
+    limiter_stress = _as_dict(technical_details.get("limiter_stress"))
+    loudness = _as_dict(technical_details.get("loudness"))
+    true_peak = _safe_float(loudness.get("true_peak_dbtp"))
+    integrated_lufs_ctx = _safe_float(loudness.get("integrated_lufs"))
+
+    limiter_pressure_would_trigger = (plr is not None and plr < 5.0) or (
+        crest is not None and crest < 6.0
+    )
+
+    ls_status = limiter_stress.get("status")
+    ls_events_per_min = _safe_float(limiter_stress.get("events_per_min"))
+    ls_max_events_raw = limiter_stress.get("max_events_per_10s")
+    ls_max_events = _safe_float(ls_max_events_raw)
+    ls_p95_events = _safe_float(limiter_stress.get("p95_events_per_10s"))
+
+    timeline_max_stress_event_count: int | None = None
+    timeline_risk_values: list[str] = []
+    timeline_raw = limiter_stress.get("timeline")
+    if isinstance(timeline_raw, list):
+        for entry in timeline_raw:
+            row = _as_dict(entry)
+            count_raw = row.get("stress_event_count")
+            stress_int: int | None = None
+            if count_raw is not None:
+                try:
+                    stress_int = int(count_raw)
+                except (TypeError, ValueError):
+                    stress_int = None
+            if stress_int is not None:
+                timeline_max_stress_event_count = (
+                    stress_int
+                    if timeline_max_stress_event_count is None
+                    else max(timeline_max_stress_event_count, stress_int)
+                )
+            risk_val = row.get("risk")
+            if isinstance(risk_val, str):
+                timeline_risk_values.append(risk_val)
+
+    ls_burst_or_dense = False
+    if ls_events_per_min is not None and ls_events_per_min >= 400.0:
+        ls_burst_or_dense = True
+    if ls_p95_events is not None and ls_p95_events >= 95.0:
+        ls_burst_or_dense = True
+
+    ls_peak_window_stress = False
+    if ls_max_events is not None and ls_max_events >= 95.0:
+        ls_peak_window_stress = True
+    if timeline_max_stress_event_count is not None and timeline_max_stress_event_count >= 95:
+        ls_peak_window_stress = True
+
+    if (
+        ls_status == "available"
+        and ls_burst_or_dense
+        and ls_peak_window_stress
+        and true_peak is not None
+        and true_peak >= -0.2
+        and not limiter_pressure_would_trigger
+    ):
+        headroom_evidence: dict[str, Any] = {
+            "limiter_stress_status": ls_status,
+            "limiter_stress_events_per_min": ls_events_per_min,
+            "limiter_stress_max_events_per_10s": ls_max_events_raw,
+            "limiter_stress_p95_events_per_10s": limiter_stress.get("p95_events_per_10s"),
+            "limiter_stress_timeline_max_stress_event_count": timeline_max_stress_event_count,
+            "limiter_stress_timeline_risk_values": timeline_risk_values,
+            "true_peak_dbtp": true_peak,
+        }
+        if integrated_lufs_ctx is not None:
+            headroom_evidence["integrated_lufs"] = integrated_lufs_ctx
+        if plr is not None:
+            headroom_evidence["plr_lu"] = plr
+        if crest is not None:
+            headroom_evidence["crest_factor_db"] = crest
+
+        candidates.append((
+            31,
+            {
+                "id": "limiter_headroom_stress_check",
+                "headline": (
+                    "Reference-check whether loud sections feel steady under peak pressure"
+                ),
+                "main_observation": (
+                    "The limiter-stress and peak-headroom signals suggest a focused listening pass "
+                    "on loudest sections may be useful."
+                ),
+                "listening_focus": (
+                    "Listen to the loudest sections and check whether peaks, punch, and detail still "
+                    "feel stable and clear compared with a trusted reference."
+                ),
+                "export_focus": (
+                    "If anything feels edgy or unstable at peaks, review limiter ceiling, gain staging, "
+                    "and transient-heavy elements before final export."
+                ),
+                "evidence": headroom_evidence,
+            },
+        ))
+
     spectral_rms = _as_dict(technical_details.get("spectral_rms"))
     sub_rms = _safe_float(spectral_rms.get("sub_rms_dbfs"))
     low_rms = _safe_float(spectral_rms.get("low_rms_dbfs"))

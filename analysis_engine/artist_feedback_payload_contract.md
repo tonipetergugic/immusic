@@ -159,6 +159,7 @@ Current possible focus IDs:
 - `low_end_translation_check`
 - `stereo_translation_check`
 - `limiter_pressure_check`
+- `limiter_headroom_stress_check`
 - `low_mid_balance_check`
 - `upper_balance_check`
 
@@ -1002,6 +1003,7 @@ Current values may include:
 - `low_end_translation_check`
 - `stereo_translation_check`
 - `limiter_pressure_check`
+- `limiter_headroom_stress_check`
 - `low_mid_balance_check`
 - `upper_balance_check`
 
