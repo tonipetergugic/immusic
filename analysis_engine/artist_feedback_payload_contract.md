@@ -1503,3 +1503,116 @@ Avoid UI wording such as:
 - bad mix
 - repeated sample
 - objective quality issue
+
+
+## Additional `listening_guidance` ids
+
+The following `listening_guidance` ids are generated from already available artist guidance blocks. They do not run new audio analysis and must remain cautious, evidence-based listening prompts.
+
+### `technical_release_listening_check`
+
+Purpose: translates `artist_guidance.technical_overview` into a concrete technical listening check.
+
+Expected area: `technical`
+
+Expected priority:
+- `high` when `technical_overview.status = problem`
+- `medium` when `technical_overview.status = warning`
+- `low` when `technical_overview.status = ok`
+
+Expected evidence:
+- `source_signal = artist_guidance.technical_overview`
+- `status`
+- optional `main_observation`
+- optional `export_focus`
+
+Required source:
+- `artist_guidance.technical_overview.status` must be one of `problem`, `warning`, or `ok`
+- `artist_guidance.technical_overview.headline` must be available
+- `artist_guidance.technical_overview.listening_focus` must be available
+
+Wording rule: this check must not claim bad mastering, bad mixing, or incorrect artistic decisions.
+
+### `mix_translation_listening_check`
+
+Purpose: translates `artist_guidance.mix_overview` into a concrete mix-translation listening check.
+
+Expected area: `mix`
+
+Expected priority:
+- `medium` when `mix_overview.source_focus_id` is available
+- `low` when no specific source focus id is available
+
+Expected evidence:
+- `source_signal = artist_guidance.mix_overview`
+- optional `source_focus_id`
+- optional `main_observation`
+- optional `export_focus`
+- optional `technical_evidence`
+
+Required source:
+- `artist_guidance.mix_overview.status = available`
+- `artist_guidance.mix_overview.headline` must be available
+- `artist_guidance.mix_overview.listening_focus` must be available
+
+Wording rule: this check must not claim that the mix is wrong or artistically invalid.
+
+### `section_timeline_extended_closing_check`
+
+Purpose: highlights a longer closing section as a cautious listening check.
+
+Expected area: `arrangement`
+
+Expected priority: `low`
+
+Expected confidence: `low`
+
+Expected evidence:
+- `source_signal = artist_guidance.section_timeline`
+- `section_index`
+- `time_range`
+- `duration_sec`
+- `position`
+- `duration_character`
+- optional `relative_role`
+- optional `movement`
+- optional `energy_level`
+- optional `density_level`
+
+Required source:
+- at least one `section_timeline` item with `position = closing`
+- `duration_character = extended`
+
+Wording rule: this check must not claim that the ending is too long, weak, or incorrectly arranged.
+
+### `section_timeline_contrast_transition_check`
+
+Purpose: highlights a section change where role, energy, or density may be worth checking.
+
+Expected area: `arrangement`
+
+Expected priority: `medium`
+
+Expected confidence: `medium`
+
+Expected evidence:
+- `source_signal = artist_guidance.section_timeline`
+- `from_section`
+- `to_section`
+
+Each section evidence object should include:
+- `section_index`
+- `time_range`
+- `duration_sec`
+- `position`
+- `duration_character`
+- optional `relative_role`
+- optional `movement`
+- optional `energy_level`
+- optional `density_level`
+
+Required source:
+- a transition from a reduced area into a main or stronger area
+- plus either an energy lift or density lift
+
+Wording rule: this check must not describe the change as a missing drop, weak build, or fixed arrangement problem.
