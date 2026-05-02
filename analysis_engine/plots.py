@@ -20,6 +20,57 @@ def _get_audio_times(audio_mono: np.ndarray, sample_rate: int) -> np.ndarray:
     return np.arange(audio_mono.shape[0], dtype=np.float64) / float(sample_rate)
 
 
+def _clamp_label_x(x: float, x_min: float, x_max: float) -> float:
+    return float(min(max(x, x_min), x_max))
+
+
+def _assign_label_lanes(
+    x_positions: list[float],
+    min_gap: float,
+    num_lanes: int,
+    *,
+    use_farthest_lane_fallback: bool = False,
+) -> list[int]:
+    """Greedy lane assignment: sort by x, place each label on first lane with enough clearance."""
+    n = len(x_positions)
+    if n == 0:
+        return []
+    if num_lanes <= 1:
+        return [0] * n
+
+    lanes = [0] * n
+    last_x_in_lane = [-float("inf")] * num_lanes
+
+    for i in sorted(range(n), key=lambda idx: x_positions[idx]):
+        x = x_positions[i]
+        chosen: int | None = None
+        for lane in range(num_lanes):
+            if x - last_x_in_lane[lane] >= min_gap:
+                chosen = lane
+                break
+        if chosen is None:
+            if use_farthest_lane_fallback:
+                chosen = 0
+                best_dist = -float("inf")
+                for lane in range(num_lanes):
+                    dist = abs(x - last_x_in_lane[lane])
+                    if dist > best_dist:
+                        best_dist = dist
+                        chosen = lane
+            else:
+                chosen = i % num_lanes
+        last_x_in_lane[chosen] = x
+        lanes[i] = chosen
+
+    return lanes
+
+
+def _lane_y_fractions(num_lanes: int, y_high: float, y_low: float) -> np.ndarray:
+    if num_lanes <= 1:
+        return np.array([(y_high + y_low) / 2.0], dtype=np.float64)
+    return np.linspace(y_high, y_low, num_lanes, dtype=np.float64)
+
+
 def save_waveform_plot(
     audio_mono: np.ndarray,
     sample_rate: int,
@@ -119,21 +170,58 @@ def save_structure_plot(
     label_x_min = x_min + label_x_margin
     label_x_max = x_max - label_x_margin
 
-    macro_label_y_top = 1.06
-    macro_label_y_bottom = 1.01
-    label_y_top = 0.78
-    label_y_bottom = 0.62
+    macro_min_gap = max(x_span * 0.055, 14.0)
+    num_macro_lanes = min(8, max(2, len(macro_sections))) if macro_sections else 0
+    macro_xs = [
+        _clamp_label_x(
+            (float(m["start_sec"]) + float(m["end_sec"])) / 2.0,
+            label_x_min,
+            label_x_max,
+        )
+        for m in macro_sections
+    ]
+    macro_lane_by_index = (
+        _assign_label_lanes(macro_xs, macro_min_gap, num_macro_lanes) if macro_sections else []
+    )
+    macro_y_fracs = (
+        _lane_y_fractions(num_macro_lanes, 1.12, 1.00) if num_macro_lanes else np.array([])
+    )
 
-    for macro_section in macro_sections:
+    section_min_gap = max(x_span * 0.035, 8.0)
+    num_section_lanes = min(12, max(2, len(sections) // 4 + 2)) if sections else 0
+    section_xs = [
+        _clamp_label_x(
+            (float(s["start_sec"]) + float(s["end_sec"])) / 2.0,
+            label_x_min,
+            label_x_max,
+        )
+        for s in sections
+    ]
+    section_lane_by_index = (
+        _assign_label_lanes(
+            section_xs,
+            section_min_gap,
+            num_section_lanes,
+            use_farthest_lane_fallback=True,
+        )
+        if sections
+        else []
+    )
+    section_y_fracs = (
+        _lane_y_fractions(num_section_lanes, 0.88, 0.42) if num_section_lanes else np.array([])
+    )
+    section_fontsize = 7.0 if len(sections) >= 48 else (7.5 if len(sections) >= 28 else 8.0)
+
+    for macro_section, label_center_sec, lane_idx in zip(
+        macro_sections, macro_xs, macro_lane_by_index
+    ):
         start_sec = float(macro_section["start_sec"])
         end_sec = float(macro_section["end_sec"])
         macro_index = int(macro_section["index"])
-        center_sec = (start_sec + end_sec) / 2.0
-        label_center_sec = min(max(center_sec, label_x_min), label_x_max)
         start_label = _format_seconds_mmss(start_sec, 0)
         end_label = _format_seconds_mmss(end_sec, 0)
         label = f"M{macro_index + 1} ({start_label}-{end_label})"
-        label_y = macro_label_y_top if macro_index % 2 == 0 else macro_label_y_bottom
+        label_y = float(macro_y_fracs[lane_idx])
 
         ax.axvline(start_sec, color="#1f2d3d", linewidth=1.8, alpha=0.9, zorder=4)
         ax.text(
@@ -154,16 +242,16 @@ def save_structure_plot(
             zorder=5,
         )
 
-    for section in sections:
+    for section, label_center_sec, lane_idx in zip(
+        sections, section_xs, section_lane_by_index
+    ):
         start_sec = float(section["start_sec"])
         end_sec = float(section["end_sec"])
         section_index = int(section["index"])
-        center_sec = (start_sec + end_sec) / 2.0
-        label_center_sec = min(max(center_sec, label_x_min), label_x_max)
         start_label = _format_seconds_mmss(start_sec, 0)
         end_label = _format_seconds_mmss(end_sec, 0)
         label = f"S{section_index + 1}\n({start_label}-{end_label})"
-        label_y = label_y_top if section_index % 2 == 0 else label_y_bottom
+        label_y = float(section_y_fracs[lane_idx])
 
         is_ignored_boundary = int(section["start_bar_index"]) in ignored_boundary_bar_indices
 
@@ -192,7 +280,7 @@ def save_structure_plot(
             va="top",
             rotation=90,
             rotation_mode="anchor",
-            fontsize=8,
+            fontsize=section_fontsize,
             fontweight="bold",
             alpha=text_alpha,
             bbox={
