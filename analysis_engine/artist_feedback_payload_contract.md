@@ -157,6 +157,274 @@ Purpose: internal or evidence-oriented structure signals.
 
 This block can help with validation and future detail pages, but should not be treated as the main artist-facing product contract.
 
+## 7.1 `technical_overview` field contract
+
+`artist_guidance.technical_overview` is the artist-facing technical release overview.
+
+Current path:
+
+```text
+payload["artist_guidance"]["technical_overview"]
+```
+
+Purpose:
+
+- summarize the most important technical release/export risk
+- keep the wording understandable for artists
+- separate technical release checks from broader mix-translation advice
+
+Current fields:
+
+```text
+status
+headline
+main_observation
+listening_focus
+export_focus
+confidence
+```
+
+### `status`
+
+Overall technical overview status.
+
+Current values may include:
+
+- `ok`
+- `warning`
+- `problem`
+- `unavailable`
+
+### `headline`
+
+Short artist-facing summary.
+
+Rules:
+
+- Use clear release/export language.
+- Do not overstate non-blocking warnings.
+- Do not describe musical quality.
+
+### `main_observation`
+
+Main technical observation.
+
+Examples of valid topics:
+
+- True Peak above 0.0 dBTP
+- tight source headroom
+- clipped samples
+- very low peak-to-loudness range
+- no visible major technical release risk
+
+Rules:
+
+- May include concrete technical values when they are useful.
+- Keep the explanation short.
+- Avoid raw debug-style field names.
+
+### `listening_focus`
+
+Artist-facing listening check connected to the technical observation.
+
+Examples:
+
+- listen for clipping
+- listen for harshness
+- listen for limiter pressure
+- listen for loss of punch or flattened impact
+
+### `export_focus`
+
+Practical export or mastering action.
+
+Examples:
+
+- review limiter ceiling
+- leave safer peak headroom
+- review limiter pressure
+- no specific export correction suggested
+
+### `confidence`
+
+How reliable the overview is based on available technical checks.
+
+Current values may include:
+
+- `low`
+- `medium`
+- `high`
+
+## 7.2 `mix_overview` field contract
+
+`artist_guidance.mix_overview` is the artist-facing mix-translation overview.
+
+Current path:
+
+```text
+payload["artist_guidance"]["mix_overview"]
+```
+
+Purpose:
+
+- summarize the most useful mix/listening focus
+- help the artist run a focused reference pass
+- avoid turning mix evidence into an absolute judgment
+
+Current fields:
+
+```text
+status
+headline
+main_observation
+listening_focus
+export_focus
+confidence
+available_signal_groups
+evidence
+source_focus_id
+```
+
+### `status`
+
+Availability/status of the mix overview.
+
+Current values may include:
+
+- `available`
+- `unavailable`
+
+### `headline`
+
+Short artist-facing mix/listening-check title.
+
+Rules:
+
+- Use cautious wording.
+- Prefer "Check whether..." or "Reference-check...".
+- Do not claim the mix is objectively bad or wrong.
+
+### `main_observation`
+
+Main mix-related observation.
+
+Rules:
+
+- Keep the wording cautious.
+- Present the signal as something worth checking, not as proof of a defect.
+
+### `listening_focus`
+
+Artist-facing reference-listening instruction.
+
+Examples:
+
+- check translation on headphones, small speakers, and mono
+- compare bass, kick, and lower body against a trusted reference
+- check whether transients, groove, and impact still feel natural
+
+### `export_focus`
+
+Practical mix/master export attention point.
+
+Examples:
+
+- review low and low-mid balance if the mix feels crowded
+- review limiter pressure and final level before export
+- no specific mix-balance correction suggested
+
+### `confidence`
+
+How reliable the mix overview is based on available signal groups.
+
+Current values may include:
+
+- `low`
+- `medium`
+- `high`
+
+### `available_signal_groups`
+
+Internal/supporting list of signal groups that were available when building the overview.
+
+Current values may include:
+
+- `low_end`
+- `stereo`
+- `spectral_balance`
+- `dynamics`
+
+Rules:
+
+- Useful for debugging, validation, consultant input, and future detailed views.
+- Do not render this as primary artist-facing text.
+
+### `evidence`
+
+Internal evidence object for the selected mix focus.
+
+It may contain numeric technical or mix-related values.
+
+Examples may include:
+
+- `low_rms_dbfs`
+- `mid_rms_dbfs`
+- `low_minus_mid_db`
+- `sub_rms_dbfs`
+- `plr_lu`
+- `crest_factor_db`
+
+Rules:
+
+- Do not render raw evidence directly in the main artist-facing UI.
+- Use it only for validation, detailed views, consultant input, or explained technical displays.
+- Never show raw numeric values without context.
+
+### `source_focus_id`
+
+Internal identifier for the selected dominant mix focus.
+
+Current values may include:
+
+- `low_end_translation_check`
+- `stereo_translation_check`
+- `limiter_pressure_check`
+- `low_mid_balance_check`
+- `upper_balance_check`
+
+Rules:
+
+- Do not render this directly to artists.
+- UI may use it internally for grouping, icons, or safe labels.
+- Artist-facing labels should come from `headline`, not from this ID.
+
+## 7.3 UI usage notes for `technical_overview` and `mix_overview`
+
+Safe artist-facing fields:
+
+- `status`
+- `headline`
+- `main_observation`
+- `listening_focus`
+- `export_focus`
+- `confidence`
+
+Do not directly render:
+
+- `available_signal_groups`
+- `evidence`
+- `source_focus_id`
+- raw numeric evidence without explanation
+
+`technical_overview` should be used for release/export readiness context.
+
+`mix_overview` should be used for mix translation and reference-listening context.
+
+Do not merge them into one meaning:
+
+- technical release risk is not the same as mix translation focus
+- mix translation focus is not automatically a release blocker
+
 ## 8. technical_details
 
 Purpose: detailed technical data for validation, meters, and future detail views.
