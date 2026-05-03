@@ -337,10 +337,41 @@ def _check_section_timeline_guidance(payload: Mapping[str, Any], errors: list[st
             errors.append(f"{guidance_id} has incomplete section evidence")
 
 
+def _check_listening_guidance_contract(payload: Mapping[str, Any], errors: list[str]) -> None:
+    """Validate root-level listening_guidance item shape and evidence provenance."""
+
+    root_lg = payload.get("listening_guidance")
+    if not isinstance(root_lg, list):
+        errors.append("listening_guidance must be a list on payload root")
+        return
+
+    for index, item in enumerate(root_lg):
+        if not isinstance(item, dict):
+            errors.append(f"listening_guidance[{index}] must be a dict")
+            continue
+
+        if _clean_text(item.get("id")) is None:
+            errors.append(f"listening_guidance[{index}] missing non-empty string id")
+
+        if _clean_text(item.get("area")) is None:
+            errors.append(f"listening_guidance[{index}] missing non-empty string area")
+
+        evidence = item.get("evidence")
+        if not isinstance(evidence, dict):
+            errors.append(f"listening_guidance[{index}] evidence must be a dict")
+            continue
+
+        if _clean_text(evidence.get("source_signal")) is None:
+            errors.append(
+                f"listening_guidance[{index}] evidence.source_signal must be a non-empty string"
+            )
+
+
 def _audit_payload(payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
 
     _check_payload_structure_contract(payload, errors)
+    _check_listening_guidance_contract(payload, errors)
     _check_structure_overview(payload, errors)
     _check_technical_guidance(payload, errors)
     _check_mix_guidance(payload, errors)
