@@ -55,6 +55,31 @@ python3 -m analysis_engine.audit_artist_feedback_payload
 
 For future CI or versioned regression tests, use dedicated fixtures outside `analysis_engine/output/`.
 
+## Coverage audit
+
+`audit_artist_feedback_payload_coverage.py` reports non-gating coverage for existing generated `artist_feedback_payload.json` files.
+
+Command:
+
+```bash
+python3 -m analysis_engine.audit_artist_feedback_payload_coverage
+```
+
+The coverage audit is informational only. Missing coverage is not a contract failure.
+
+It reports coverage for:
+
+- release readiness states
+- track status labels/states
+- technical release check states by area
+- critical warning codes
+- structure_overview statuses and key field presence
+- technical_overview provenance fields
+- mix_overview provenance fields
+- listening_guidance item counts and evidence.source_signal values
+
+Use it to identify missing edge-case fixtures without making the main contract audit fail.
+
 ## What it checks
 
 The audit currently verifies:
