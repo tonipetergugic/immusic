@@ -190,6 +190,121 @@ def _has_section_evidence_fields(evidence: Mapping[str, Any]) -> bool:
     )
 
 
+def _check_payload_structure_contract(payload: Mapping[str, Any], errors: list[str]) -> None:
+    """Validate root paths, required blocks, and status-shaped fields on built payloads."""
+
+    root_lg = payload.get("listening_guidance")
+    if not isinstance(root_lg, list):
+        errors.append("payload.listening_guidance must exist and be a list")
+
+    artist_guidance = payload.get("artist_guidance")
+    if not isinstance(artist_guidance, Mapping):
+        errors.append("payload.artist_guidance must be a mapping")
+        artist_guidance = {}
+
+    if isinstance(artist_guidance, Mapping) and "listening_guidance" in artist_guidance:
+        errors.append("payload.artist_guidance.listening_guidance must not exist (use root listening_guidance)")
+
+    for key in (
+        "structure_overview",
+        "technical_overview",
+        "mix_overview",
+        "section_timeline",
+    ):
+        if key not in artist_guidance:
+            errors.append(f"artist_guidance missing required block: {key}")
+
+    release = payload.get("release")
+    if not isinstance(release, Mapping):
+        errors.append("payload.release must be a mapping")
+    else:
+        for key in (
+            "track_status",
+            "release_readiness",
+            "critical_warnings",
+            "technical_release_checks",
+            "next_step",
+        ):
+            if key not in release:
+                errors.append(f"release missing required block: {key}")
+
+    structure = artist_guidance.get("structure_overview")
+    if not isinstance(structure, Mapping):
+        errors.append("structure_overview must be a dict")
+    else:
+        if "status" not in structure:
+            errors.append("structure_overview missing status")
+
+        if structure.get("status") == "unavailable":
+            if (
+                structure.get("timeline_summary")
+                or structure.get("role_journey")
+                or structure.get("key_sections")
+            ):
+                errors.append(
+                    "structure_overview.status unavailable must not set timeline_summary, role_journey, or key_sections"
+                )
+
+        if structure.get("status") in {"available", "limited"}:
+            for field_name in (
+                "headline",
+                "main_observation",
+                "listening_focus",
+                "confidence",
+                "evidence",
+            ):
+                if not structure.get(field_name):
+                    errors.append(
+                        f"structure_overview.status {structure.get('status')} missing required field: {field_name}"
+                    )
+
+    timeline = artist_guidance.get("section_timeline")
+    if not isinstance(timeline, list):
+        errors.append("section_timeline must be a list")
+    else:
+        for index, item in enumerate(timeline):
+            if not isinstance(item, Mapping):
+                errors.append(f"section_timeline item {index} must be a dict")
+                continue
+            if _clean_text(item.get("role_hint")) is None:
+                errors.append(f"section_timeline item {index} missing role_hint")
+
+    technical = artist_guidance.get("technical_overview")
+    if not isinstance(technical, Mapping):
+        errors.append("technical_overview must be a dict")
+    else:
+        if "status" not in technical:
+            errors.append("technical_overview missing status")
+
+        if technical.get("status") in {"warning", "problem"}:
+            for field_name in (
+                "selected_check_id",
+                "selected_area",
+                "selected_severity",
+                "selection_reason",
+            ):
+                if not technical.get(field_name):
+                    errors.append(
+                        f"technical_overview.status {technical.get('status')} missing required field: {field_name}"
+                    )
+
+    mix = artist_guidance.get("mix_overview")
+    if not isinstance(mix, Mapping):
+        errors.append("mix_overview must be a dict")
+    else:
+        if "status" not in mix:
+            errors.append("mix_overview missing status")
+
+        if mix.get("status") == "available":
+            if not mix.get("selection_reason"):
+                errors.append("mix_overview.status available missing selection_reason")
+            if "available_signal_groups" not in mix:
+                errors.append("mix_overview.status available missing available_signal_groups")
+
+        if mix.get("source_focus_id") and not mix.get("evidence"):
+            errors.append("mix_overview.source_focus_id set without evidence")
+
+
 def _check_section_timeline_guidance(payload: Mapping[str, Any], errors: list[str]) -> None:
     artist_guidance = _as_dict(payload.get("artist_guidance"))
     section_timeline = _as_list(artist_guidance.get("section_timeline"))
@@ -225,6 +340,7 @@ def _check_section_timeline_guidance(payload: Mapping[str, Any], errors: list[st
 def _audit_payload(payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
 
+    _check_payload_structure_contract(payload, errors)
     _check_structure_overview(payload, errors)
     _check_technical_guidance(payload, errors)
     _check_mix_guidance(payload, errors)
