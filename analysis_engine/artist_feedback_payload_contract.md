@@ -2091,3 +2091,50 @@ In particular:
 - use `payload.release.technical_release_checks`
 
 Do not duplicate listening_guidance into artist_guidance.
+
+---
+
+## `listening_guidance` provenance contract
+
+Section topic: listening_guidance evidence source_signal provenance.
+
+`listening_guidance` is a root-level payload list.
+
+Canonical path:
+
+```
+payload["listening_guidance"]
+```
+
+Forbidden nested path:
+
+```
+payload["artist_guidance"]["listening_guidance"]
+```
+
+Every `listening_guidance` item must be a dictionary with:
+
+- `id`: non-empty string
+- `area`: non-empty string
+- `evidence`: dictionary
+- `evidence.source_signal`: non-empty string
+
+`evidence.source_signal` is the canonical provenance anchor for the listening guidance item. It must identify the engine/payload signal that caused the guidance item to be emitted.
+
+Known `source_signal` examples include:
+
+- `artist_guidance.technical_overview`
+- `artist_guidance.mix_overview`
+- `artist_guidance.section_timeline`
+- `musical_flow_summary.movement_profile`
+- `arrangement_development_summary.possible_extended_core_arrangement_span`
+
+There is currently no whitelist for `id` or `evidence.source_signal`. The contract requires structural provenance only.
+
+### Safety rules
+
+- Do not infer provenance from headline, summary, `what_to_listen_for`, or other prose fields.
+- Do not place `listening_guidance` under `artist_guidance`.
+- Do not emit a listening guidance item without `evidence.source_signal`.
+- UI code may use `id` and `area` for routing, and `evidence.source_signal` for provenance, grouping, debugging, or source display.
+- A top-level `source_signal` field is not required while `evidence.source_signal` remains mandatory.
