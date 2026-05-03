@@ -1,0 +1,167 @@
+{
+  "track": {
+    "title": "fixture_almost_ready.wav",
+    "filename": "fixture_almost_ready.wav",
+    "duration_sec": null,
+    "sample_rate": null,
+    "channels": null
+  },
+  "release": {
+    "track_status": {
+      "label": "Almost ready",
+      "text": "The track check is complete. One point should be reviewed before release."
+    },
+    "release_readiness": {
+      "state": "almost_ready",
+      "label": "ALMOST READY",
+      "text": "The track looks close to release-ready, but one point should be checked first."
+    },
+    "critical_warnings": [
+      {
+        "title": "Fixture single readiness warning",
+        "text": "Fixture warning used to cover the almost_ready release readiness state.",
+        "severity": "warning",
+        "area": "peaks"
+      }
+    ],
+    "technical_release_checks": [
+      {
+        "area": "loudness",
+        "check_id": "technical_loudness_check",
+        "label": "Loudness",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "peaks",
+        "check_id": "technical_peaks_check",
+        "label": "Peaks",
+        "state": "warning",
+        "short_text": "Fixture warning used to cover the almost_ready release readiness state.",
+        "source_issue_code": "fixture_single_readiness_warning",
+        "source_issue_title": "Fixture single readiness warning",
+        "source_issue_severity": "warning",
+        "source_issue_area": "peaks"
+      },
+      {
+        "area": "dynamics",
+        "check_id": "technical_dynamics_check",
+        "label": "Dynamics",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "stereo",
+        "check_id": "technical_stereo_check",
+        "label": "Stereo",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "low_end",
+        "check_id": "technical_low_end_check",
+        "label": "Low End",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "file",
+        "check_id": "technical_file_check",
+        "label": "File",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      }
+    ],
+    "next_step": {
+      "title": "Review the warning",
+      "text": "Review the remaining warning, then decide whether the track is ready for release.",
+      "button_label": "Review warning",
+      "action_type": "manual_review"
+    }
+  },
+  "artist_guidance": {
+    "structure_summary": {},
+    "section_character_summary": {},
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "section_timeline": [],
+    "structure_overview": {
+      "status": "unavailable",
+      "headline": "There is not enough structure information for a reliable overview.",
+      "main_observation": "There is not enough reliable structure or movement evidence for a safe artist-facing observation.",
+      "listening_focus": "No reliable structure listening focus can be generated from the available engine data for this track.",
+      "confidence": "low",
+      "evidence": {
+        "source_signals": [],
+        "section_count": 0,
+        "role_hint_counts": {}
+      }
+    },
+    "technical_overview": {
+      "status": "warning",
+      "headline": "The track looks close, but one technical point should be checked before release.",
+      "main_observation": "Fixture warning used to cover the almost_ready release readiness state.",
+      "listening_focus": "Listen to the loudest section and check whether the master feels strained, harsh, or clipped.",
+      "export_focus": "Review the final limiter or export level and leave safer peak headroom.",
+      "confidence": "low",
+      "selection_reason": "highest_priority_warning_check",
+      "selected_check_id": "technical_peaks_check",
+      "selected_issue_code": "fixture_single_readiness_warning",
+      "selected_issue_title": "Fixture single readiness warning",
+      "selected_area": "peaks",
+      "selected_severity": "warning"
+    },
+    "mix_overview": {
+      "status": "unavailable",
+      "headline": "The mix translation overview is incomplete.",
+      "main_observation": "There is not enough mix-related analysis data for a reliable overview.",
+      "listening_focus": "Run or refresh the analysis before making mix-balance decisions.",
+      "export_focus": "No mix export focus is available from the current data.",
+      "confidence": "low",
+      "selection_reason": "mix_signals_unavailable"
+    }
+  },
+  "listening_guidance": [
+    {
+      "id": "technical_release_listening_check",
+      "area": "technical",
+      "priority": "medium",
+      "confidence": "low",
+      "headline": "The track looks close, but one technical point should be checked before release.",
+      "what_to_listen_for": "Listen to the loudest section and check whether the master feels strained, harsh, or clipped.",
+      "evidence": {
+        "source_signal": "artist_guidance.technical_overview",
+        "status": "warning",
+        "main_observation": "Fixture warning used to cover the almost_ready release readiness state.",
+        "export_focus": "Review the final limiter or export level and leave safer peak headroom."
+      },
+      "wording_note": "Use this as cautious technical listening guidance only. Do not present it as proof of poor mastering, bad mixing, or incorrect artistic decisions."
+    }
+  ],
+  "engine_signals": {
+    "structure_scores": {},
+    "readable_structure_signals": {},
+    "sections": []
+  },
+  "technical_details": {
+    "loudness": {},
+    "dynamics": {},
+    "stereo": {},
+    "low_end": {},
+    "limiter_stress": {},
+    "spectral_rms": {},
+    "transients": {}
+  },
+  "ai_consultant": {
+    "summary_status": "not_generated_by_engine",
+    "local_summary_filename": "ai_consultant_summary.md",
+    "note": "The analysis engine does not generate live AI consultant text. Local markdown summaries may be generated separately for testing."
+  },
+  "meta": {
+    "source": "analysis_engine",
+    "schema": "artist_feedback_payload",
+    "created_at": null,
+    "warnings": []
+  }
+}

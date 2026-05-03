@@ -1,0 +1,35 @@
+{
+  "file_info": {
+    "filename": "fixture_almost_ready.wav"
+  },
+  "product_payload": {},
+  "summary": {},
+  "issues": [
+    {
+      "severity": "warning",
+      "area": "peaks",
+      "code": "fixture_single_readiness_warning",
+      "title": "Fixture single readiness warning",
+      "text": "Fixture warning used to cover the almost_ready release readiness state."
+    }
+  ],
+  "consultant_input": {
+    "track_context": {},
+    "summary": {},
+    "issues": [],
+    "structure": {},
+    "structure_summary": {},
+    "section_character_summary": {},
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "technical_metrics": {}
+  },
+  "loudness": {},
+  "dynamics": {},
+  "stereo": {},
+  "low_end": {},
+  "limiter_stress": {},
+  "spectral_rms": {},
+  "transients": {}
+}
