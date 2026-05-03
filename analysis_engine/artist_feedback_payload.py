@@ -2430,13 +2430,14 @@ def _build_technical_details(result: AnalysisResult) -> dict[str, Any]:
         "limiter_stress": asdict(result.limiter_stress),
         "spectral_rms": asdict(result.spectral_rms),
         "transients": asdict(result.transients),
+        "mix_basis": asdict(result.mix_basis),
     }
 
 
 def _build_technical_details_from_analysis_dict(
     analysis_payload: Mapping[str, Any],
 ) -> dict[str, Any]:
-    return {
+    technical_details = {
         "loudness": _as_dict(analysis_payload.get("loudness")),
         "dynamics": _as_dict(analysis_payload.get("dynamics")),
         "stereo": _as_dict(analysis_payload.get("stereo")),
@@ -2445,6 +2446,11 @@ def _build_technical_details_from_analysis_dict(
         "spectral_rms": _as_dict(analysis_payload.get("spectral_rms")),
         "transients": _as_dict(analysis_payload.get("transients")),
     }
+
+    if isinstance(analysis_payload.get("mix_basis"), Mapping):
+        technical_details["mix_basis"] = _as_dict(analysis_payload.get("mix_basis"))
+
+    return technical_details
 
 
 def build_artist_feedback_payload(
