@@ -1867,6 +1867,28 @@ def _technical_overview_export_focus(
     return "Review the highlighted technical check before final export."
 
 
+def _technical_overview_selection_reason(
+    selected_check: Mapping[str, Any] | None,
+    status: str,
+) -> str:
+    if selected_check is None:
+        if status == "ok":
+            return "no_warning_or_problem_check_selected"
+        if status == "unavailable":
+            return "technical_checks_unavailable"
+        return "no_specific_check_selected"
+
+    selected_state = _technical_overview_check_state(selected_check)
+
+    if selected_state == "problem":
+        return "highest_priority_problem_check"
+
+    if selected_state == "warning":
+        return "highest_priority_warning_check"
+
+    return "selected_check_without_warning_or_problem_state"
+
+
 def _build_technical_overview(
     release_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -1874,7 +1896,7 @@ def _build_technical_overview(
     selected_check = _technical_overview_selected_check(technical_release_checks)
     status = _technical_overview_status(release_summary)
 
-    return {
+    overview: dict[str, Any] = {
         "status": status,
         "headline": _technical_overview_headline(status, selected_check),
         "main_observation": _technical_overview_main_observation(
@@ -1890,7 +1912,38 @@ def _build_technical_overview(
             status,
         ),
         "confidence": _technical_overview_confidence(technical_release_checks),
+        "selection_reason": _technical_overview_selection_reason(
+            selected_check,
+            status,
+        ),
     }
+
+    if selected_check is not None:
+        selected_check_id = _clean_text(selected_check.get("check_id"))
+        selected_issue_code = _clean_text(selected_check.get("source_issue_code"))
+        selected_issue_title = _clean_text(selected_check.get("source_issue_title"))
+        selected_area = _clean_text(selected_check.get("area"))
+        selected_severity = _clean_text(
+            selected_check.get("source_issue_severity")
+            or selected_check.get("state")
+        )
+
+        if selected_check_id is not None:
+            overview["selected_check_id"] = selected_check_id
+
+        if selected_issue_code is not None:
+            overview["selected_issue_code"] = selected_issue_code
+
+        if selected_issue_title is not None:
+            overview["selected_issue_title"] = selected_issue_title
+
+        if selected_area is not None:
+            overview["selected_area"] = selected_area
+
+        if selected_severity is not None:
+            overview["selected_severity"] = selected_severity
+
+    return overview
 
 
 def _safe_float(value: Any) -> float | None:

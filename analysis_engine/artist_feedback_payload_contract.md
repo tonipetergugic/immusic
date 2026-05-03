@@ -1796,3 +1796,162 @@ It must not say:
 - "the track needs a build"
 - "the arrangement is incorrect"
 - "the ending is too long"
+
+## Technical check provenance fields
+
+`release.technical_release_checks[]` may include stable provenance fields for machine-readable traceability.
+
+These fields explain which technical issue, if any, caused a warning/problem check.
+
+### `release.technical_release_checks[].check_id`
+
+Type: string
+
+Purpose: stable identifier for the technical check row.
+
+Expected format:
+- `technical_loudness_check`
+- `technical_peaks_check`
+- `technical_dynamics_check`
+- `technical_stereo_check`
+- `technical_low_end_check`
+- `technical_file_check`
+
+### `release.technical_release_checks[].source_issue_code`
+
+Type: string, optional
+
+Purpose: stable issue code from the originating normalized issue.
+
+Examples:
+- `source_true_peak_over_zero_dbtp`
+- `source_true_peak_tight_headroom`
+- `clipped_sample_count_hard_fail`
+- `very_low_plr_lu`
+
+Rule: this field must only be present when the originating issue has a real code. It must not be guessed from text.
+
+### `release.technical_release_checks[].source_issue_title`
+
+Type: string, optional
+
+Purpose: normalized issue title used for artist-facing and audit traceability.
+
+Rule: may mirror the source issue code when no more specific title exists.
+
+### `release.technical_release_checks[].source_issue_severity`
+
+Type: string, optional
+
+Purpose: severity of the originating issue selected for that area.
+
+Known values:
+- `problem`
+- `warning`
+- `info`
+
+### `release.technical_release_checks[].source_issue_area`
+
+Type: string, optional
+
+Purpose: normalized technical area of the originating issue.
+
+Known values:
+- `loudness`
+- `peaks`
+- `dynamics`
+- `stereo`
+- `low_end`
+- `file`
+
+### Selection rule inside technical checks
+
+If multiple issues exist for one technical area, the selected source issue should be the highest severity issue for that area.
+
+Expected severity priority:
+1. `problem`
+2. `warning`
+3. `info`
+4. `ok`
+
+The selected source issue is used only for traceability. It must not change the measured technical result by itself.
+
+## `technical_overview` selection provenance fields
+
+`artist_guidance.technical_overview` may expose the provenance of the selected technical focus.
+
+### `selected_check_id`
+
+Type: string, optional
+
+Purpose: points to the selected `release.technical_release_checks[].check_id`.
+
+### `selected_issue_code`
+
+Type: string, optional
+
+Purpose: stable originating issue code copied from `source_issue_code`.
+
+Rule: optional because not every selected check has a source issue code. It must not be inferred from free text.
+
+### `selected_issue_title`
+
+Type: string, optional
+
+Purpose: normalized originating issue title copied from `source_issue_title`.
+
+### `selected_area`
+
+Type: string, optional
+
+Purpose: selected technical area.
+
+Known values:
+- `loudness`
+- `peaks`
+- `dynamics`
+- `stereo`
+- `low_end`
+- `file`
+
+### `selected_severity`
+
+Type: string, optional
+
+Purpose: selected issue severity if available, otherwise selected check state.
+
+Known values:
+- `problem`
+- `warning`
+- `ok`
+- `unavailable`
+
+### `selection_reason`
+
+Type: string
+
+Purpose: explains why the technical overview selected this focus.
+
+Known values:
+- `highest_priority_problem_check`
+- `highest_priority_warning_check`
+- `no_warning_or_problem_check_selected`
+- `technical_checks_unavailable`
+- `no_specific_check_selected`
+- `selected_check_without_warning_or_problem_state`
+
+### Safety and traceability rules
+
+Technical provenance fields are machine-readable traceability fields.
+
+They must:
+- be copied from stable issue/check fields
+- avoid parsing artist-facing text
+- avoid guessing issue codes
+- remain safe for tests, UI, and future consultant input
+
+They must not:
+- introduce new audio analysis
+- override release readiness
+- change issue severity
+- create hidden musical judgment

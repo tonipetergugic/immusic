@@ -396,18 +396,55 @@ def _build_technical_release_checks(
 ) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
 
+    severity_priority = {
+        "problem": 0,
+        "warning": 1,
+        "info": 2,
+        "ok": 3,
+    }
+
     for area in TECHNICAL_AREAS:
         source = _metric_source_for_area(analysis, area)
         area_issues = [issue for issue in issues if issue["area"] == area]
         state = _technical_state(source, area_issues)
-        checks.append(
-            {
-                "area": area,
-                "label": TECHNICAL_LABELS[area],
-                "state": state,
-                "short_text": _technical_short_text(state, area_issues),
-            }
-        )
+
+        primary_issue = None
+        if area_issues:
+            primary_issue = sorted(
+                area_issues,
+                key=lambda issue: severity_priority.get(
+                    str(issue.get("severity")),
+                    99,
+                ),
+            )[0]
+
+        check: dict[str, Any] = {
+            "area": area,
+            "check_id": f"technical_{area}_check",
+            "label": TECHNICAL_LABELS[area],
+            "state": state,
+            "short_text": _technical_short_text(state, area_issues),
+        }
+
+        if primary_issue is not None:
+            source_issue_code = primary_issue.get("code")
+            source_issue_title = primary_issue.get("title")
+            source_issue_severity = primary_issue.get("severity")
+            source_issue_area = primary_issue.get("area")
+
+            if source_issue_code is not None:
+                check["source_issue_code"] = source_issue_code
+
+            if source_issue_title is not None:
+                check["source_issue_title"] = source_issue_title
+
+            if source_issue_severity is not None:
+                check["source_issue_severity"] = source_issue_severity
+
+            if source_issue_area is not None:
+                check["source_issue_area"] = source_issue_area
+
+        checks.append(check)
 
     return checks
 
