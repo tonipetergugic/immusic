@@ -32,5 +32,6 @@ def build_product_payload(result: AnalysisResult) -> dict[str, Any]:
             "limiter_stress": asdict(result.limiter_stress),
             "spectral_rms": asdict(result.spectral_rms),
             "transients": asdict(result.transients),
+            "mix_basis": asdict(result.mix_basis),
         },
     }
