@@ -21,6 +21,7 @@ from analysis_engine.spectral_rms import analyze_spectral_rms
 from analysis_engine.transients import analyze_transients
 from analysis_engine.dynamics import analyze_dynamics
 from analysis_engine.low_end import analyze_low_end
+from analysis_engine.mix_basis import build_mix_basis
 from analysis_engine.macro_sections import analyze_macro_sections
 from analysis_engine.novelty import analyze_novelty
 from analysis_engine.plots import save_structure_plot, save_waveform_plot
@@ -173,6 +174,14 @@ def run_analysis(audio_path: str, track_id: str | None = None) -> AnalysisResult
         )
 
     result.low_end = analyze_low_end(audio_stereo, stereo_sr)
+    result.mix_basis = build_mix_basis(
+        stereo=result.stereo,
+        low_end=result.low_end,
+        spectral_rms=result.spectral_rms,
+        dynamics=result.dynamics,
+        limiter_stress=result.limiter_stress,
+        transients=result.transients,
+    )
 
     issues: list[dict[str, object]] = collect_technical_release_issues(
         loudness=result.loudness,
