@@ -1,0 +1,135 @@
+{
+  "track": {
+    "title": null,
+    "filename": null,
+    "duration_sec": null,
+    "sample_rate": null,
+    "channels": null
+  },
+  "release": {
+    "track_status": {
+      "label": "Check incomplete",
+      "text": "The track check could not produce a complete release decision."
+    },
+    "release_readiness": {
+      "state": "incomplete",
+      "label": "INCOMPLETE",
+      "text": "The analysis data is incomplete, so no reliable release decision can be shown."
+    },
+    "critical_warnings": [],
+    "technical_release_checks": [
+      {
+        "area": "loudness",
+        "check_id": "technical_loudness_check",
+        "label": "Loudness",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "peaks",
+        "check_id": "technical_peaks_check",
+        "label": "Peaks",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "dynamics",
+        "check_id": "technical_dynamics_check",
+        "label": "Dynamics",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "stereo",
+        "check_id": "technical_stereo_check",
+        "label": "Stereo",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "low_end",
+        "check_id": "technical_low_end_check",
+        "label": "Low End",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "file",
+        "check_id": "technical_file_check",
+        "label": "File",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      }
+    ],
+    "next_step": {
+      "title": "Run the track check again",
+      "text": "The analysis data is incomplete. Run the track check again before making a release decision.",
+      "button_label": "Run check again",
+      "action_type": "run_track_check_again"
+    }
+  },
+  "artist_guidance": {
+    "structure_summary": {},
+    "section_character_summary": {},
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "section_timeline": [],
+    "structure_overview": {
+      "status": "unavailable",
+      "headline": "There is not enough structure information for a reliable overview.",
+      "main_observation": "There is not enough reliable structure or movement evidence for a safe artist-facing observation.",
+      "listening_focus": "No reliable structure listening focus can be generated from the available engine data for this track.",
+      "confidence": "low",
+      "evidence": {
+        "source_signals": [],
+        "section_count": 0,
+        "role_hint_counts": {}
+      }
+    },
+    "technical_overview": {
+      "status": "unavailable",
+      "headline": "The technical release check is incomplete.",
+      "main_observation": "There is not enough technical release data for a reliable overview.",
+      "listening_focus": "Run or refresh the technical check before making a release decision.",
+      "export_focus": "Run the technical release check again before exporting the final master.",
+      "confidence": "low",
+      "selection_reason": "technical_checks_unavailable"
+    },
+    "mix_overview": {
+      "status": "unavailable",
+      "headline": "The mix translation overview is incomplete.",
+      "main_observation": "There is not enough mix-related analysis data for a reliable overview.",
+      "listening_focus": "Run or refresh the analysis before making mix-balance decisions.",
+      "export_focus": "No mix export focus is available from the current data.",
+      "confidence": "low",
+      "selection_reason": "mix_signals_unavailable"
+    }
+  },
+  "listening_guidance": [],
+  "engine_signals": {
+    "structure_scores": {},
+    "readable_structure_signals": {},
+    "sections": []
+  },
+  "technical_details": {
+    "loudness": {},
+    "dynamics": {},
+    "stereo": {},
+    "low_end": {},
+    "limiter_stress": {},
+    "spectral_rms": {},
+    "transients": {}
+  },
+  "ai_consultant": {
+    "summary_status": "not_generated_by_engine",
+    "local_summary_filename": "ai_consultant_summary.md",
+    "note": "The analysis engine does not generate live AI consultant text. Local markdown summaries may be generated separately for testing."
+  },
+  "meta": {
+    "source": "analysis_engine",
+    "schema": "artist_feedback_payload",
+    "created_at": null,
+    "warnings": []
+  }
+}
