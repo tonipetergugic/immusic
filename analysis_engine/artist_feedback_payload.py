@@ -2309,6 +2309,51 @@ def _mix_overview_candidates(
     return candidates
 
 
+_MIX_OVERVIEW_FOCUS_PROVENANCE: dict[str, dict[str, Any]] = {
+    "low_end_translation_check": {
+        "selected_area": "low_end",
+        "selected_signal_groups": ["low_end"],
+    },
+    "stereo_translation_check": {
+        "selected_area": "stereo",
+        "selected_signal_groups": ["stereo"],
+    },
+    "limiter_pressure_check": {
+        "selected_area": "dynamics",
+        "selected_signal_groups": ["dynamics"],
+    },
+    "limiter_headroom_stress_check": {
+        "selected_area": "limiter_stress",
+        "selected_signal_groups": ["limiter_stress", "loudness", "dynamics"],
+    },
+    "low_mid_balance_check": {
+        "selected_area": "spectral_balance",
+        "selected_signal_groups": ["spectral_balance"],
+    },
+    "upper_balance_check": {
+        "selected_area": "spectral_balance",
+        "selected_signal_groups": ["spectral_balance"],
+    },
+}
+
+
+def _mix_overview_focus_provenance(
+    source_focus_id: str | None,
+) -> dict[str, Any]:
+    if source_focus_id is None:
+        return {}
+
+    provenance = dict(_MIX_OVERVIEW_FOCUS_PROVENANCE.get(source_focus_id, {}))
+    signal_groups = provenance.get("selected_signal_groups")
+
+    if isinstance(signal_groups, list) and len(signal_groups) == 1:
+        selected_signal_group = _clean_text(signal_groups[0])
+        if selected_signal_group is not None:
+            provenance["selected_signal_group"] = selected_signal_group
+
+    return provenance
+
+
 def _build_mix_overview(technical_details: Mapping[str, Any]) -> dict[str, Any]:
     available_blocks = _mix_overview_available_blocks(technical_details)
 
@@ -2324,6 +2369,7 @@ def _build_mix_overview(technical_details: Mapping[str, Any]) -> dict[str, Any]:
             ),
             "export_focus": "No mix export focus is available from the current data.",
             "confidence": "low",
+            "selection_reason": "mix_signals_unavailable",
         }
 
     candidates = _mix_overview_candidates(technical_details)
@@ -2345,11 +2391,15 @@ def _build_mix_overview(technical_details: Mapping[str, Any]) -> dict[str, Any]:
             ),
             "confidence": confidence,
             "available_signal_groups": sorted(available_blocks),
+            "selected_guidance_id": "mix_translation_listening_check",
+            "selected_area": "mix",
+            "selection_reason": "no_specific_mix_focus_selected",
         }
 
-    selected = sorted(candidates, key=lambda item: item[0])[0][1]
+    selected_priority, selected = sorted(candidates, key=lambda item: item[0])[0]
+    source_focus_id = _clean_text(selected.get("id"))
 
-    return {
+    overview: dict[str, Any] = {
         "status": "available",
         "headline": selected["headline"],
         "main_observation": selected["main_observation"],
@@ -2358,8 +2408,17 @@ def _build_mix_overview(technical_details: Mapping[str, Any]) -> dict[str, Any]:
         "confidence": confidence,
         "available_signal_groups": sorted(available_blocks),
         "evidence": selected["evidence"],
-        "source_focus_id": selected["id"],
+        "selected_guidance_id": "mix_translation_listening_check",
+        "selection_reason": "highest_priority_mix_candidate",
+        "selection_priority": selected_priority,
     }
+
+    if source_focus_id is not None:
+        overview["source_focus_id"] = source_focus_id
+
+    overview.update(_mix_overview_focus_provenance(source_focus_id))
+
+    return overview
 
 
 def _build_technical_details(result: AnalysisResult) -> dict[str, Any]:

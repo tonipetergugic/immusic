@@ -1955,3 +1955,61 @@ They must not:
 - override release readiness
 - change issue severity
 - create hidden musical judgment
+
+## `mix_overview` selection provenance
+
+Section topic: mix_overview selection provenance.
+
+`artist_guidance.mix_overview` may include machine-readable provenance fields that explain why a mix translation focus was selected.
+
+These fields are not artist-facing judgments. They are intended for UI routing, auditability, and safe downstream explanation.
+
+### Fields
+
+- `selected_guidance_id`
+  - Stable listening-guidance id connected to the overview.
+  - Current value: `mix_translation_listening_check`.
+
+- `source_focus_id`
+  - Internal mix-focus id selected by the engine when one specific candidate is chosen.
+  - May be absent when no specific candidate stands out.
+
+- `selected_area`
+  - Broad selected area for routing.
+  - Current values include:
+    - `mix`
+    - `dynamics`
+    - `limiter_stress`
+    - `low_end`
+    - `stereo`
+    - `spectral_balance`
+
+- `selected_signal_group`
+  - Single selected signal group when the focus maps cleanly to one group.
+  - May be absent for multi-source focus types.
+
+- `selected_signal_groups`
+  - List of source signal groups used by the selected focus.
+  - Examples:
+    - `["dynamics"]`
+    - `["limiter_stress", "loudness", "dynamics"]`
+    - `["spectral_balance"]`
+
+- `selection_reason`
+  - Machine-readable reason for the selection path.
+  - Current values:
+    - `mix_signals_unavailable`
+    - `no_specific_mix_focus_selected`
+    - `highest_priority_mix_candidate`
+
+- `selection_priority`
+  - Numeric internal priority of the selected candidate.
+  - Only present when a concrete candidate was selected.
+
+### Safety rules
+
+- Do not infer missing signal groups from text.
+- Do not treat `source_focus_id` as an artist-facing diagnosis.
+- Do not present `selection_priority` to artists.
+- Use `selected_area` and `selected_signal_groups` for routing and audit only.
+- Artist-facing copy must continue to use cautious listening-check wording.
