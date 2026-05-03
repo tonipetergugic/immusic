@@ -2013,3 +2013,81 @@ These fields are not artist-facing judgments. They are intended for UI routing, 
 - Do not present `selection_priority` to artists.
 - Use `selected_area` and `selected_signal_groups` for routing and audit only.
 - Artist-facing copy must continue to use cautious listening-check wording.
+
+---
+
+## Artist feedback payload root structure
+
+The artist feedback payload uses a stable root-level structure.
+
+Top-level payload keys:
+
+- `track`
+- `release`
+- `artist_guidance`
+- `listening_guidance`
+- `engine_signals`
+- `technical_details`
+- `ai_consultant`
+- `meta`
+
+### Root-level `listening_guidance`
+
+`listening_guidance` is a root-level payload block.
+
+It must not be read from:
+
+```
+payload.artist_guidance.listening_guidance
+```
+
+Correct path:
+
+```
+payload.listening_guidance
+```
+
+This is intentional because listening_guidance combines guidance derived from structure, technical release checks, and mix overview signals.
+
+### `artist_guidance` block
+
+The stable `artist_guidance` block contains:
+
+- `structure_summary`
+- `section_character_summary`
+- `arrangement_development_summary`
+- `musical_flow_summary`
+- `score_context`
+- `section_timeline`
+- `structure_overview`
+- `technical_overview`
+- `mix_overview`
+
+`artist_guidance` should be treated as the structured artist-facing summary layer.
+
+It should not own the root-level `listening_guidance` list.
+
+### `release` block
+
+The stable `release` block contains:
+
+- `track_status`
+- `release_readiness`
+- `critical_warnings`
+- `technical_release_checks`
+- `next_step`
+
+### Safety rule
+
+Adapters, audits, and future UI readers must use the documented root paths exactly.
+
+In particular:
+
+- use `payload.listening_guidance`
+- use `payload.artist_guidance.structure_overview`
+- use `payload.artist_guidance.technical_overview`
+- use `payload.artist_guidance.mix_overview`
+- use `payload.artist_guidance.section_timeline`
+- use `payload.release.technical_release_checks`
+
+Do not duplicate listening_guidance into artist_guidance.
