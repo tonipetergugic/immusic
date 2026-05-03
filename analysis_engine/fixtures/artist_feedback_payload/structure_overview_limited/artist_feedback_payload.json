@@ -1,0 +1,370 @@
+{
+  "track": {
+    "title": "fixture_structure_overview_limited.wav",
+    "filename": "fixture_structure_overview_limited.wav",
+    "duration_sec": 96.0,
+    "sample_rate": 44100,
+    "channels": 2
+  },
+  "release": {
+    "track_status": {
+      "label": "Ready",
+      "text": "The track check is complete and no critical release issue was reported."
+    },
+    "release_readiness": {
+      "state": "ready",
+      "label": "READY",
+      "text": "The track is technically release-ready based on the current track check."
+    },
+    "critical_warnings": [],
+    "technical_release_checks": [
+      {
+        "area": "loudness",
+        "check_id": "technical_loudness_check",
+        "label": "Loudness",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "peaks",
+        "check_id": "technical_peaks_check",
+        "label": "Peaks",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "dynamics",
+        "check_id": "technical_dynamics_check",
+        "label": "Dynamics",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "stereo",
+        "check_id": "technical_stereo_check",
+        "label": "Stereo",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "low_end",
+        "check_id": "technical_low_end_check",
+        "label": "Low End",
+        "state": "unavailable",
+        "short_text": "No measurement available yet."
+      },
+      {
+        "area": "file",
+        "check_id": "technical_file_check",
+        "label": "File",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      }
+    ],
+    "next_step": {
+      "title": "Prepare the release",
+      "text": "No critical release issue was reported. You can continue preparing the release.",
+      "button_label": "Prepare release",
+      "action_type": "prepare_release"
+    }
+  },
+  "artist_guidance": {
+    "structure_summary": {
+      "sections": [
+        {
+          "index": 0,
+          "start_sec": 0.0,
+          "end_sec": 32.0
+        },
+        {
+          "index": 1,
+          "start_sec": 32.0,
+          "end_sec": 64.0
+        },
+        {
+          "index": 2,
+          "start_sec": 64.0,
+          "end_sec": 96.0
+        }
+      ]
+    },
+    "section_character_summary": {
+      "sections": [
+        {
+          "position": "opening",
+          "relative_role": "neutral_area",
+          "duration_character": "medium",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "movement": "steady"
+        },
+        {
+          "position": "middle",
+          "relative_role": "main_area",
+          "duration_character": "medium",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "movement": "steady"
+        },
+        {
+          "position": "closing",
+          "relative_role": "neutral_area",
+          "duration_character": "medium",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "movement": "steady"
+        }
+      ]
+    },
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "section_timeline": [
+      {
+        "index": 0,
+        "position": "opening",
+        "duration_character": "medium",
+        "energy_level": "medium",
+        "density_level": "medium",
+        "movement": "steady",
+        "relative_role": "neutral_area",
+        "role_hint": "intro_like",
+        "time_range": {
+          "start_sec": 0.0,
+          "start_time": "0:00",
+          "end_sec": 32.0,
+          "end_time": "0:32"
+        },
+        "duration_sec": 32.0
+      },
+      {
+        "index": 1,
+        "position": "middle",
+        "duration_character": "medium",
+        "energy_level": "medium",
+        "density_level": "medium",
+        "movement": "steady",
+        "relative_role": "main_area",
+        "role_hint": "main_area_like",
+        "time_range": {
+          "start_sec": 32.0,
+          "start_time": "0:32",
+          "end_sec": 64.0,
+          "end_time": "1:04"
+        },
+        "duration_sec": 32.0
+      },
+      {
+        "index": 2,
+        "position": "closing",
+        "duration_character": "medium",
+        "energy_level": "medium",
+        "density_level": "medium",
+        "movement": "steady",
+        "relative_role": "neutral_area",
+        "role_hint": "outro_like",
+        "time_range": {
+          "start_sec": 64.0,
+          "start_time": "1:04",
+          "end_sec": 96.0,
+          "end_time": "1:36"
+        },
+        "duration_sec": 32.0
+      }
+    ],
+    "structure_overview": {
+      "status": "limited",
+      "headline": "Structure journey available across 3 sections",
+      "main_observation": "The section timeline suggests 3 broad sections, moving from a intro-like opening through main-area-like section toward a outro-like closing.",
+      "listening_focus": "Listen through the section journey and check whether the intro-like, reduced, main/peak-like, and closing areas feel intentional for the declared genre.",
+      "confidence": "low",
+      "evidence": {
+        "source_signals": [
+          "artist_guidance.section_timeline"
+        ],
+        "section_count": 3,
+        "role_hint_counts": {
+          "intro_like": 1,
+          "main_area_like": 1,
+          "outro_like": 1
+        }
+      },
+      "timeline_summary": "The section timeline suggests 3 broad sections, moving from a intro-like opening through main-area-like section toward a outro-like closing.",
+      "role_journey": [
+        {
+          "section_index": 0,
+          "role_hint": "intro_like",
+          "position": "opening",
+          "duration_character": "medium",
+          "relative_role": "neutral_area",
+          "movement": "steady",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "duration_sec": 32.0,
+          "time_range": {
+            "start_sec": 0.0,
+            "start_time": "0:00",
+            "end_sec": 32.0,
+            "end_time": "0:32"
+          },
+          "role_label": "intro-like opening"
+        },
+        {
+          "section_index": 1,
+          "role_hint": "main_area_like",
+          "position": "middle",
+          "duration_character": "medium",
+          "relative_role": "main_area",
+          "movement": "steady",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "duration_sec": 32.0,
+          "time_range": {
+            "start_sec": 32.0,
+            "start_time": "0:32",
+            "end_sec": 64.0,
+            "end_time": "1:04"
+          },
+          "role_label": "main-area-like section"
+        },
+        {
+          "section_index": 2,
+          "role_hint": "outro_like",
+          "position": "closing",
+          "duration_character": "medium",
+          "relative_role": "neutral_area",
+          "movement": "steady",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "duration_sec": 32.0,
+          "time_range": {
+            "start_sec": 64.0,
+            "start_time": "1:04",
+            "end_sec": 96.0,
+            "end_time": "1:36"
+          },
+          "role_label": "outro-like closing"
+        }
+      ],
+      "key_sections": [
+        {
+          "section_index": 0,
+          "role_hint": "intro_like",
+          "position": "opening",
+          "duration_character": "medium",
+          "relative_role": "neutral_area",
+          "movement": "steady",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "duration_sec": 32.0,
+          "time_range": {
+            "start_sec": 0.0,
+            "start_time": "0:00",
+            "end_sec": 32.0,
+            "end_time": "0:32"
+          },
+          "reason": "opening_orientation"
+        },
+        {
+          "section_index": 2,
+          "role_hint": "outro_like",
+          "position": "closing",
+          "duration_character": "medium",
+          "relative_role": "neutral_area",
+          "movement": "steady",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "duration_sec": 32.0,
+          "time_range": {
+            "start_sec": 64.0,
+            "start_time": "1:04",
+            "end_sec": 96.0,
+            "end_time": "1:36"
+          },
+          "reason": "closing_orientation"
+        }
+      ]
+    },
+    "technical_overview": {
+      "status": "ok",
+      "headline": "No major technical release risks are visible in the available checks.",
+      "main_observation": "The available technical checks do not show a major release risk.",
+      "listening_focus": "Do one final listening pass on your target playback systems before release.",
+      "export_focus": "No specific export correction is suggested from the available technical checks.",
+      "confidence": "low",
+      "selection_reason": "no_warning_or_problem_check_selected"
+    },
+    "mix_overview": {
+      "status": "unavailable",
+      "headline": "The mix translation overview is incomplete.",
+      "main_observation": "There is not enough mix-related analysis data for a reliable overview.",
+      "listening_focus": "Run or refresh the analysis before making mix-balance decisions.",
+      "export_focus": "No mix export focus is available from the current data.",
+      "confidence": "low",
+      "selection_reason": "mix_signals_unavailable"
+    }
+  },
+  "listening_guidance": [
+    {
+      "id": "technical_release_listening_check",
+      "area": "technical",
+      "priority": "low",
+      "confidence": "low",
+      "headline": "No major technical release risks are visible in the available checks.",
+      "what_to_listen_for": "Do one final listening pass on your target playback systems before release.",
+      "evidence": {
+        "source_signal": "artist_guidance.technical_overview",
+        "status": "ok",
+        "main_observation": "The available technical checks do not show a major release risk.",
+        "export_focus": "No specific export correction is suggested from the available technical checks."
+      },
+      "wording_note": "Use this as cautious technical listening guidance only. Do not present it as proof of poor mastering, bad mixing, or incorrect artistic decisions."
+    }
+  ],
+  "engine_signals": {
+    "structure_scores": {
+      "segment_count": 3,
+      "repetition_score": null,
+      "contrast_score": null,
+      "transition_score": null
+    },
+    "readable_structure_signals": {},
+    "sections": [
+      {
+        "index": 0,
+        "start_sec": 0.0,
+        "end_sec": 32.0
+      },
+      {
+        "index": 1,
+        "start_sec": 32.0,
+        "end_sec": 64.0
+      },
+      {
+        "index": 2,
+        "start_sec": 64.0,
+        "end_sec": 96.0
+      }
+    ]
+  },
+  "technical_details": {
+    "loudness": {},
+    "dynamics": {},
+    "stereo": {},
+    "low_end": {},
+    "limiter_stress": {},
+    "spectral_rms": {},
+    "transients": {}
+  },
+  "ai_consultant": {
+    "summary_status": "not_generated_by_engine",
+    "local_summary_filename": "ai_consultant_summary.md",
+    "note": "The analysis engine does not generate live AI consultant text. Local markdown summaries may be generated separately for testing."
+  },
+  "meta": {
+    "source": "analysis_engine",
+    "schema": "artist_feedback_payload",
+    "created_at": null,
+    "warnings": []
+  }
+}

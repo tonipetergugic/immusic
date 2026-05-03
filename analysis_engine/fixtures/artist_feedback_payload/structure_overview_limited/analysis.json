@@ -1,0 +1,85 @@
+{
+  "file_info": {
+    "filename": "fixture_structure_overview_limited.wav",
+    "duration_sec": 96.0,
+    "sample_rate": 44100,
+    "channels": 2
+  },
+  "summary": {
+    "tempo_estimate": null
+  },
+  "issues": [],
+  "consultant_input": {
+    "track_context": {
+      "duration_sec": 96.0
+    },
+    "summary": {
+      "tempo_estimate": null
+    },
+    "issues": [],
+    "structure": {
+      "segment_count": 3,
+      "repetition_score": null,
+      "contrast_score": null,
+      "transition_score": null
+    },
+    "structure_summary": {
+      "sections": [
+        {
+          "index": 0,
+          "start_sec": 0.0,
+          "end_sec": 32.0
+        },
+        {
+          "index": 1,
+          "start_sec": 32.0,
+          "end_sec": 64.0
+        },
+        {
+          "index": 2,
+          "start_sec": 64.0,
+          "end_sec": 96.0
+        }
+      ]
+    },
+    "section_character_summary": {
+      "sections": [
+        {
+          "position": "opening",
+          "relative_role": "neutral_area",
+          "duration_character": "medium",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "movement": "steady"
+        },
+        {
+          "position": "middle",
+          "relative_role": "main_area",
+          "duration_character": "medium",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "movement": "steady"
+        },
+        {
+          "position": "closing",
+          "relative_role": "neutral_area",
+          "duration_character": "medium",
+          "energy_level": "medium",
+          "density_level": "medium",
+          "movement": "steady"
+        }
+      ]
+    },
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "technical_metrics": {}
+  },
+  "loudness": {},
+  "dynamics": {},
+  "stereo": {},
+  "low_end": {},
+  "limiter_stress": {},
+  "spectral_rms": {},
+  "transients": {}
+}
