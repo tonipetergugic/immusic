@@ -1,0 +1,42 @@
+{
+  "file_info": {
+    "filename": "fixture_needs_revision.wav"
+  },
+  "product_payload": {},
+  "summary": {},
+  "issues": [
+    {
+      "severity": "warning",
+      "area": "dynamics",
+      "code": "fixture_low_dynamic_range_warning",
+      "title": "Fixture low dynamic range warning",
+      "text": "Fixture warning used to cover the needs revision release-readiness path."
+    },
+    {
+      "severity": "warning",
+      "area": "peaks",
+      "code": "fixture_peak_headroom_warning",
+      "title": "Fixture peak headroom warning",
+      "text": "Fixture warning used to cover the needs revision release-readiness path."
+    }
+  ],
+  "consultant_input": {
+    "track_context": {},
+    "summary": {},
+    "issues": [],
+    "structure": {},
+    "structure_summary": {},
+    "section_character_summary": {},
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "technical_metrics": {}
+  },
+  "loudness": {},
+  "dynamics": {},
+  "stereo": {},
+  "low_end": {},
+  "limiter_stress": {},
+  "spectral_rms": {},
+  "transients": {}
+}
