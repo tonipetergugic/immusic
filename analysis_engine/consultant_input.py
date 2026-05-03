@@ -206,6 +206,33 @@ def _build_loudness_summary(loudness: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_mix_basis_summary(mix_basis: Mapping[str, Any]) -> dict[str, Any]:
+    data = _as_dict(mix_basis)
+
+    checks: list[dict[str, Any]] = []
+    for raw_check in _as_list(data.get("checks")):
+        check = _as_dict(raw_check)
+        checks.append(
+            {
+                "id": _copy_text(check, "id"),
+                "status": _copy_text(check, "status"),
+                "confidence": _copy_text(check, "confidence"),
+                "area": _copy_text(check, "area"),
+                "headline": _copy_text(check, "headline"),
+                "observation": _copy_text(check, "observation"),
+                "listening_check": _copy_text(check, "listening_check"),
+                "evidence": _as_dict(check.get("evidence")),
+            }
+        )
+
+    return {
+        "status": _copy_text(data, "status"),
+        "confidence": _copy_text(data, "confidence"),
+        "available_signal_groups": _as_list(data.get("available_signal_groups")),
+        "checks": checks,
+    }
+
+
 def _build_technical_metrics(technical_metrics: dict[str, Any]) -> dict[str, Any]:
     return {
         "loudness": _build_loudness_summary(_as_dict(technical_metrics.get("loudness"))),
@@ -233,6 +260,9 @@ def _build_technical_metrics(technical_metrics: dict[str, Any]) -> dict[str, Any
         ),
         "transients": _build_transients_summary(
             _as_dict(technical_metrics.get("transients"))
+        ),
+        "mix_basis": _build_mix_basis_summary(
+            _as_dict(technical_metrics.get("mix_basis"))
         ),
     }
 
