@@ -255,6 +255,26 @@ class StereoMetrics:
 
 
 @dataclass
+class MixBasisCheck:
+    id: str
+    status: str
+    confidence: str
+    area: str
+    headline: str
+    observation: str
+    listening_check: str
+    evidence: JsonDict = field(default_factory=dict)
+
+
+@dataclass
+class MixBasisMetrics:
+    status: str = "not_available"
+    confidence: str = "low"
+    available_signal_groups: list[str] = field(default_factory=list)
+    checks: list[MixBasisCheck] = field(default_factory=list)
+
+
+@dataclass
 class SummaryMetrics:
     filename: str | None = None
     duration_sec: float | None = None
@@ -292,6 +312,7 @@ class AnalysisResult:
     limiter_stress: LimiterStressMetrics = field(default_factory=LimiterStressMetrics)
     spectral_rms: SpectralRmsMetrics = field(default_factory=SpectralRmsMetrics)
     transients: TransientsMetrics = field(default_factory=TransientsMetrics)
+    mix_basis: MixBasisMetrics = field(default_factory=MixBasisMetrics)
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
