@@ -1,0 +1,27 @@
+name: Artist feedback payload fixtures
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Contract audit fixtures
+        run: python3 -m analysis_engine.audit_artist_feedback_payload analysis_engine/fixtures/artist_feedback_payload
+
+      - name: Coverage audit fixtures
+        run: python3 -m analysis_engine.audit_artist_feedback_payload_coverage analysis_engine/fixtures/artist_feedback_payload
