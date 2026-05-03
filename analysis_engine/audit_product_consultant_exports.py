@@ -10,6 +10,8 @@ from analysis_engine.schemas import (
     AudioFileInfo,
     LimiterStressMetrics,
     LimiterStressTimelineItem,
+    MixBasisCheck,
+    MixBasisMetrics,
     ShortTermLufsPoint,
     SpectralRmsMetrics,
     StructureSegment,
@@ -22,6 +24,7 @@ EXTENDED_TECHNICAL_METRIC_BLOCKS = (
     "limiter_stress",
     "spectral_rms",
     "transients",
+    "mix_basis",
 )
 
 FORBIDDEN_CONSULTANT_SERIES_FIELDS = (
@@ -122,6 +125,26 @@ def _fixture_result() -> AnalysisResult:
                 density_per_sec=1.8,
                 mean_short_crest_db=8.4,
                 p95_short_crest_db=13.2,
+            )
+        ],
+    )
+    result.mix_basis = MixBasisMetrics(
+        status="available",
+        confidence="medium",
+        available_signal_groups=["stereo", "spectral_rms"],
+        checks=[
+            MixBasisCheck(
+                id="left_right_balance_check",
+                status="watch",
+                confidence="medium",
+                area="stereo_balance",
+                headline="Reference-check the left/right balance.",
+                observation="The measured full-band balance may indicate that one side is stronger than the other.",
+                listening_check="Reference-check whether the mix feels balanced between left and right.",
+                evidence={
+                    "left_right_balance_db": 2.1,
+                    "meaning": "positive means left stronger, negative means right stronger",
+                },
             )
         ],
     )
