@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 from analysis_engine.arrangement_development_summary import build_arrangement_development_summary
 from analysis_engine.schemas import AnalysisResult
@@ -133,6 +133,55 @@ def _pick_metrics(record: dict[str, Any], keys: list[str]) -> dict[str, Any]:
     return {key: _copy_metric(record, key) for key in keys if key in record}
 
 
+def _copy_text(record: dict[str, Any], key: str) -> str | None:
+    value = record.get(key)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            return stripped
+    return None
+
+
+def _build_limiter_stress_summary(limiter_stress: Mapping[str, Any]) -> dict[str, Any]:
+    data = _as_dict(limiter_stress)
+    return {
+        "status": _copy_text(data, "status"),
+        "events_per_min": _copy_metric(data, "events_per_min"),
+        "max_events_per_10s": _copy_metric(data, "max_events_per_10s"),
+        "p95_events_per_10s": _copy_metric(data, "p95_events_per_10s"),
+    }
+
+
+def _build_spectral_rms_summary(spectral_rms: Mapping[str, Any]) -> dict[str, Any]:
+    data = _as_dict(spectral_rms)
+    band_keys = [
+        "sub_rms_dbfs",
+        "low_rms_dbfs",
+        "mid_rms_dbfs",
+        "high_rms_dbfs",
+        "air_rms_dbfs",
+    ]
+
+    return {
+        "status": _copy_text(data, "status"),
+        "band_rms_dbfs": {
+            key: _copy_metric(data, key) for key in band_keys
+        },
+    }
+
+
+def _build_transients_summary(transients: Mapping[str, Any]) -> dict[str, Any]:
+    data = _as_dict(transients)
+    return {
+        "status": _copy_text(data, "status"),
+        "attack_strength": _copy_metric(data, "attack_strength"),
+        "transient_density_per_sec": _copy_metric(data, "transient_density_per_sec"),
+        "mean_short_crest_db": _copy_metric(data, "mean_short_crest_db"),
+        "p95_short_crest_db": _copy_metric(data, "p95_short_crest_db"),
+        "transient_density_cv": _copy_metric(data, "transient_density_cv"),
+    }
+
+
 def _build_loudness_summary(loudness: dict[str, Any]) -> dict[str, Any]:
     short_term = _as_dict(loudness.get("short_term_lufs_series"))
     short_term_summary = _as_dict(short_term.get("summary"))
@@ -175,6 +224,15 @@ def _build_technical_metrics(technical_metrics: dict[str, Any]) -> dict[str, Any
                 "phase_correlation_low_band",
                 "low_band_balance_db",
             ],
+        ),
+        "limiter_stress": _build_limiter_stress_summary(
+            _as_dict(technical_metrics.get("limiter_stress"))
+        ),
+        "spectral_rms": _build_spectral_rms_summary(
+            _as_dict(technical_metrics.get("spectral_rms"))
+        ),
+        "transients": _build_transients_summary(
+            _as_dict(technical_metrics.get("transients"))
         ),
     }
 
