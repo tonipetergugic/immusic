@@ -11,6 +11,8 @@ from analysis_engine.artist_feedback_payload import (
 
 OUTPUT_ROOT = Path(__file__).resolve().parent / "output"
 
+ARTIST_FEEDBACK_PAYLOAD_FILENAME = "artist_feedback_payload.json"
+
 STRUCTURE_GUIDANCE_AREAS = {"arrangement", "musical_flow"}
 SECTION_TIMELINE_GUIDANCE_IDS = {
     "section_timeline_extended_reduced_middle_check",
@@ -54,6 +56,33 @@ def _find_analysis_json_files(root: Path) -> list[Path]:
         return [root]
 
     return sorted(root.glob("*/analysis.json"))
+
+
+def _check_stored_payload_parity(
+    analysis_json_path: Path,
+    expected_payload: Mapping[str, Any],
+    errors: list[str],
+) -> None:
+    stored_payload_path = analysis_json_path.with_name(ARTIST_FEEDBACK_PAYLOAD_FILENAME)
+
+    if not stored_payload_path.exists():
+        errors.append(
+            f"{ARTIST_FEEDBACK_PAYLOAD_FILENAME} missing next to analysis.json"
+        )
+        return
+
+    try:
+        stored_payload = _load_json(stored_payload_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        errors.append(
+            f"{ARTIST_FEEDBACK_PAYLOAD_FILENAME} could not be read: {exc}"
+        )
+        return
+
+    if stored_payload != expected_payload:
+        errors.append(
+            f"{ARTIST_FEEDBACK_PAYLOAD_FILENAME} is out of sync with current builder output"
+        )
 
 
 def _has_structure_guidance_evidence(payload: Mapping[str, Any]) -> bool:
@@ -406,6 +435,7 @@ def main() -> None:
         analysis_payload = _load_json(analysis_json_path)
         payload = build_artist_feedback_payload_from_analysis_dict(analysis_payload)
         errors = _audit_payload(payload)
+        _check_stored_payload_parity(analysis_json_path, payload, errors)
 
         if errors:
             failed = True
