@@ -1,0 +1,3150 @@
+{
+  "track": {
+    "title": "Above & Beyond, Zoe Johnston - Crazy Love feat. Zoë Johnston (Extended Mix).wav",
+    "filename": "Above & Beyond, Zoe Johnston - Crazy Love feat. Zoë Johnston (Extended Mix).wav",
+    "duration_sec": 360.04861678004534,
+    "sample_rate": 44100,
+    "channels": 2
+  },
+  "release": {
+    "track_status": {
+      "label": "Ready",
+      "text": "The track check is complete and no critical release issue was reported."
+    },
+    "release_readiness": {
+      "state": "ready",
+      "label": "READY",
+      "text": "The track is technically release-ready based on the current track check."
+    },
+    "critical_warnings": [],
+    "technical_release_checks": [
+      {
+        "area": "loudness",
+        "check_id": "technical_loudness_check",
+        "label": "Loudness",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      },
+      {
+        "area": "peaks",
+        "check_id": "technical_peaks_check",
+        "label": "Peaks",
+        "state": "warning",
+        "short_text": "True Peak is above 0.0 dBTP at 0.90 dBTP. Check limiter ceiling before release.",
+        "source_issue_code": "source_true_peak_over_zero_dbtp",
+        "source_issue_title": "source_true_peak_over_zero_dbtp",
+        "source_issue_severity": "warning",
+        "source_issue_area": "peaks"
+      },
+      {
+        "area": "dynamics",
+        "check_id": "technical_dynamics_check",
+        "label": "Dynamics",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      },
+      {
+        "area": "stereo",
+        "check_id": "technical_stereo_check",
+        "label": "Stereo",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      },
+      {
+        "area": "low_end",
+        "check_id": "technical_low_end_check",
+        "label": "Low End",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      },
+      {
+        "area": "file",
+        "check_id": "technical_file_check",
+        "label": "File",
+        "state": "ok",
+        "short_text": "Measurement available. No critical issue reported."
+      }
+    ],
+    "next_step": {
+      "title": "Prepare the release",
+      "text": "No critical release issue was reported. You can continue preparing the release.",
+      "button_label": "Prepare release",
+      "action_type": "prepare_release"
+    }
+  },
+  "artist_guidance": {
+    "structure_summary": {
+      "section_count": 9,
+      "sections": [
+        {
+          "index": 0,
+          "start_sec": 0.0,
+          "end_sec": 58.0,
+          "duration_sec": 58.0,
+          "start_bar": 0,
+          "end_bar": 31,
+          "length_bars": 32
+        },
+        {
+          "index": 1,
+          "start_sec": 58.0,
+          "end_sec": 99.81,
+          "duration_sec": 41.81,
+          "start_bar": 32,
+          "end_bar": 54,
+          "length_bars": 23
+        },
+        {
+          "index": 2,
+          "start_sec": 99.81,
+          "end_sec": 130.73,
+          "duration_sec": 30.92,
+          "start_bar": 55,
+          "end_bar": 71,
+          "length_bars": 17
+        },
+        {
+          "index": 3,
+          "start_sec": 130.73,
+          "end_sec": 174.03,
+          "duration_sec": 43.3,
+          "start_bar": 72,
+          "end_bar": 95,
+          "length_bars": 24
+        },
+        {
+          "index": 4,
+          "start_sec": 174.03,
+          "end_sec": 203.23,
+          "duration_sec": 29.2,
+          "start_bar": 96,
+          "end_bar": 111,
+          "length_bars": 16
+        },
+        {
+          "index": 5,
+          "start_sec": 203.23,
+          "end_sec": 263.04,
+          "duration_sec": 59.81,
+          "start_bar": 112,
+          "end_bar": 144,
+          "length_bars": 33
+        },
+        {
+          "index": 6,
+          "start_sec": 263.04,
+          "end_sec": 293.95,
+          "duration_sec": 30.91,
+          "start_bar": 145,
+          "end_bar": 161,
+          "length_bars": 17
+        },
+        {
+          "index": 7,
+          "start_sec": 293.95,
+          "end_sec": 321.18,
+          "duration_sec": 27.23,
+          "start_bar": 162,
+          "end_bar": 176,
+          "length_bars": 15
+        },
+        {
+          "index": 8,
+          "start_sec": 321.18,
+          "end_sec": 360.05,
+          "duration_sec": 38.87,
+          "start_bar": 177,
+          "end_bar": 193,
+          "length_bars": 17
+        }
+      ],
+      "readable_signals": {
+        "material_reuse": "high",
+        "form_contrast": "low",
+        "transition_clarity": "moderate"
+      },
+      "raw_scores": {
+        "repetition_score": 0.738,
+        "contrast_score": 0.303,
+        "transition_score": 0.606
+      },
+      "labeling_note": "Sections are neutral structural parts. Do not force build, drop, break, verse, or intro labels unless strongly supported elsewhere."
+    },
+    "section_character_summary": {
+      "status": "available",
+      "overall": {
+        "energy_profile": "varied",
+        "density_profile": "varied"
+      },
+      "sections": [
+        {
+          "position": "opening",
+          "duration_character": "extended",
+          "energy_level": "low",
+          "density_level": "high",
+          "movement": "stable",
+          "relative_role": "opening_area"
+        },
+        {
+          "position": "early",
+          "duration_character": "medium",
+          "energy_level": "low",
+          "density_level": "low",
+          "movement": "stable",
+          "relative_role": "reduced_area"
+        },
+        {
+          "position": "early",
+          "duration_character": "medium",
+          "energy_level": "high",
+          "density_level": "high",
+          "movement": "falling",
+          "relative_role": "stronger_area"
+        },
+        {
+          "position": "middle",
+          "duration_character": "medium",
+          "energy_level": "low",
+          "density_level": "low",
+          "movement": "rising",
+          "relative_role": "reduced_area"
+        },
+        {
+          "position": "middle",
+          "duration_character": "medium",
+          "energy_level": "moderate",
+          "density_level": "high",
+          "movement": "changing",
+          "relative_role": "main_area"
+        },
+        {
+          "position": "middle",
+          "duration_character": "extended",
+          "energy_level": "high",
+          "density_level": "low",
+          "movement": "falling",
+          "relative_role": "main_area"
+        },
+        {
+          "position": "late",
+          "duration_character": "medium",
+          "energy_level": "high",
+          "density_level": "low",
+          "movement": "rising",
+          "relative_role": "main_area"
+        },
+        {
+          "position": "late",
+          "duration_character": "medium",
+          "energy_level": "high",
+          "density_level": "high",
+          "movement": "rising",
+          "relative_role": "stronger_area"
+        },
+        {
+          "position": "closing",
+          "duration_character": "medium",
+          "energy_level": "low",
+          "density_level": "moderate",
+          "movement": "falling",
+          "relative_role": "closing_area"
+        }
+      ],
+      "wording_note": "Use this only as cautious section-character evidence. Do not expose internal section counts, scores, bar data, or diagnose motifs, loops, samples, drops, builds, breaks, verses, or outros from this alone."
+    },
+    "arrangement_development_summary": {
+      "status": "available",
+      "development_signal": "moderate",
+      "variation_signal": "varied",
+      "journey_shape": "alternating",
+      "possible_low_contrast_arrangement_focus": false,
+      "possible_extended_core_arrangement_span": false,
+      "extended_core_arrangement_span_evidence": null,
+      "listening_check": "Check whether the larger arrangement arc introduces enough new tension, variation, or a memorable lift over time.",
+      "wording_note": "Use this only as cautious arrangement-development evidence. Do not treat it as proof of weak songwriting, repetitive melody, loop repetition, sample reuse, or missing drops/builds."
+    },
+    "musical_flow_summary": {
+      "status": "available",
+      "energy_movement": "moderate",
+      "energy_direction": "stable",
+      "density_movement": "varied",
+      "density_direction": "falling",
+      "movement_signal": "noticeable",
+      "movement_profile": "mixed_motion",
+      "possible_repeated_structure_focus": false,
+      "listening_check": "Use a normal reference listening pass to confirm that the energy and density movement feels natural for the declared genre.",
+      "evidence_summary": {
+        "energy_range_lu": 4.048,
+        "density_cv": 0.61,
+        "energy_point_count": 358,
+        "density_point_count": 37,
+        "energy_direction": {
+          "early_avg_lufs_s": -9.387,
+          "late_avg_lufs_s": -9.428,
+          "delta_lu": -0.041
+        },
+        "density_direction": {
+          "early_avg_density_per_sec": 3.808,
+          "late_avg_density_per_sec": 2.358,
+          "delta_density_per_sec": -1.45
+        }
+      },
+      "wording_note": "Use as cautious arrangement-flow evidence only. Do not diagnose melody, loop, sample, or songwriting repetition from this summary."
+    },
+    "score_context": {
+      "scale": "0.0 = low, 1.0 = high",
+      "repetition_score": "Bar-level arrangement/material reuse. This does not directly measure melodic monotony.",
+      "contrast_score": "Structural form contrast based on section shape. This does not directly measure sound, melody, density, or energy contrast.",
+      "transition_score": "Transition and change clarity based on accepted structural change points."
+    },
+    "section_timeline": [
+      {
+        "index": 0,
+        "position": "opening",
+        "duration_character": "extended",
+        "energy_level": "low",
+        "density_level": "high",
+        "movement": "stable",
+        "relative_role": "opening_area",
+        "role_hint": "intro_like",
+        "time_range": {
+          "start_sec": 0.0,
+          "start_time": "0:00",
+          "end_sec": 58.0,
+          "end_time": "0:58"
+        },
+        "duration_sec": 58.0
+      },
+      {
+        "index": 1,
+        "position": "early",
+        "duration_character": "medium",
+        "energy_level": "low",
+        "density_level": "low",
+        "movement": "stable",
+        "relative_role": "reduced_area",
+        "role_hint": "breakdown_like",
+        "time_range": {
+          "start_sec": 58.0,
+          "start_time": "0:58",
+          "end_sec": 99.81,
+          "end_time": "1:40"
+        },
+        "duration_sec": 41.81
+      },
+      {
+        "index": 2,
+        "position": "early",
+        "duration_character": "medium",
+        "energy_level": "high",
+        "density_level": "high",
+        "movement": "falling",
+        "relative_role": "stronger_area",
+        "role_hint": "peak_like",
+        "time_range": {
+          "start_sec": 99.81,
+          "start_time": "1:40",
+          "end_sec": 130.73,
+          "end_time": "2:11"
+        },
+        "duration_sec": 30.919999999999987
+      },
+      {
+        "index": 3,
+        "position": "middle",
+        "duration_character": "medium",
+        "energy_level": "low",
+        "density_level": "low",
+        "movement": "rising",
+        "relative_role": "reduced_area",
+        "role_hint": "breakdown_or_rebuild_like",
+        "time_range": {
+          "start_sec": 130.73,
+          "start_time": "2:11",
+          "end_sec": 174.03,
+          "end_time": "2:54"
+        },
+        "duration_sec": 43.30000000000001
+      },
+      {
+        "index": 4,
+        "position": "middle",
+        "duration_character": "medium",
+        "energy_level": "moderate",
+        "density_level": "high",
+        "movement": "changing",
+        "relative_role": "main_area",
+        "role_hint": "main_or_drop_like",
+        "time_range": {
+          "start_sec": 174.03,
+          "start_time": "2:54",
+          "end_sec": 203.23,
+          "end_time": "3:23"
+        },
+        "duration_sec": 29.19999999999999
+      },
+      {
+        "index": 5,
+        "position": "middle",
+        "duration_character": "extended",
+        "energy_level": "high",
+        "density_level": "low",
+        "movement": "falling",
+        "relative_role": "main_area",
+        "role_hint": "main_or_drop_like",
+        "time_range": {
+          "start_sec": 203.23,
+          "start_time": "3:23",
+          "end_sec": 263.04,
+          "end_time": "4:23"
+        },
+        "duration_sec": 59.81000000000003
+      },
+      {
+        "index": 6,
+        "position": "late",
+        "duration_character": "medium",
+        "energy_level": "high",
+        "density_level": "low",
+        "movement": "rising",
+        "relative_role": "main_area",
+        "role_hint": "main_or_drop_like",
+        "time_range": {
+          "start_sec": 263.04,
+          "start_time": "4:23",
+          "end_sec": 293.95,
+          "end_time": "4:54"
+        },
+        "duration_sec": 30.909999999999968
+      },
+      {
+        "index": 7,
+        "position": "late",
+        "duration_character": "medium",
+        "energy_level": "high",
+        "density_level": "high",
+        "movement": "rising",
+        "relative_role": "stronger_area",
+        "role_hint": "peak_like",
+        "time_range": {
+          "start_sec": 293.95,
+          "start_time": "4:54",
+          "end_sec": 321.18,
+          "end_time": "5:21"
+        },
+        "duration_sec": 27.230000000000018
+      },
+      {
+        "index": 8,
+        "position": "closing",
+        "duration_character": "medium",
+        "energy_level": "low",
+        "density_level": "moderate",
+        "movement": "falling",
+        "relative_role": "closing_area",
+        "role_hint": "outro_like",
+        "time_range": {
+          "start_sec": 321.18,
+          "start_time": "5:21",
+          "end_sec": 360.05,
+          "end_time": "6:00"
+        },
+        "duration_sec": 38.870000000000005
+      }
+    ],
+    "structure_overview": {
+      "status": "available",
+      "headline": "Structure journey available across 9 sections",
+      "main_observation": "The section timeline suggests 9 broad sections, moving from a intro-like opening through breakdown-like reduced area, peak-like section, breakdown/rebuild-like reduced area, and other section roles toward a outro-like closing.",
+      "listening_focus": "Listen through the section journey and check whether the intro-like, reduced, main/peak-like, and closing areas feel intentional for the declared genre.",
+      "confidence": "low",
+      "evidence": {
+        "source_signals": [
+          "artist_guidance.section_timeline",
+          "artist_guidance.musical_flow_summary",
+          "artist_guidance.arrangement_development_summary",
+          "artist_guidance.section_character_summary"
+        ],
+        "section_count": 9,
+        "role_hint_counts": {
+          "intro_like": 1,
+          "breakdown_like": 1,
+          "peak_like": 2,
+          "breakdown_or_rebuild_like": 1,
+          "main_or_drop_like": 3,
+          "outro_like": 1
+        },
+        "primary_guidance_id": "mixed_motion_density_check",
+        "primary_guidance_area": "musical_flow",
+        "movement_profile": "mixed_motion",
+        "journey_shape": "alternating"
+      },
+      "timeline_summary": "The section timeline suggests 9 broad sections, moving from a intro-like opening through breakdown-like reduced area, peak-like section, breakdown/rebuild-like reduced area, and other section roles toward a outro-like closing.",
+      "role_journey": [
+        {
+          "section_index": 0,
+          "role_hint": "intro_like",
+          "position": "opening",
+          "duration_character": "extended",
+          "relative_role": "opening_area",
+          "movement": "stable",
+          "energy_level": "low",
+          "density_level": "high",
+          "duration_sec": 58.0,
+          "time_range": {
+            "start_sec": 0.0,
+            "start_time": "0:00",
+            "end_sec": 58.0,
+            "end_time": "0:58"
+          },
+          "role_label": "intro-like opening"
+        },
+        {
+          "section_index": 1,
+          "role_hint": "breakdown_like",
+          "position": "early",
+          "duration_character": "medium",
+          "relative_role": "reduced_area",
+          "movement": "stable",
+          "energy_level": "low",
+          "density_level": "low",
+          "duration_sec": 41.81,
+          "time_range": {
+            "start_sec": 58.0,
+            "start_time": "0:58",
+            "end_sec": 99.81,
+            "end_time": "1:40"
+          },
+          "role_label": "breakdown-like reduced area"
+        },
+        {
+          "section_index": 2,
+          "role_hint": "peak_like",
+          "position": "early",
+          "duration_character": "medium",
+          "relative_role": "stronger_area",
+          "movement": "falling",
+          "energy_level": "high",
+          "density_level": "high",
+          "duration_sec": 30.919999999999987,
+          "time_range": {
+            "start_sec": 99.81,
+            "start_time": "1:40",
+            "end_sec": 130.73,
+            "end_time": "2:11"
+          },
+          "role_label": "peak-like section"
+        },
+        {
+          "section_index": 3,
+          "role_hint": "breakdown_or_rebuild_like",
+          "position": "middle",
+          "duration_character": "medium",
+          "relative_role": "reduced_area",
+          "movement": "rising",
+          "energy_level": "low",
+          "density_level": "low",
+          "duration_sec": 43.30000000000001,
+          "time_range": {
+            "start_sec": 130.73,
+            "start_time": "2:11",
+            "end_sec": 174.03,
+            "end_time": "2:54"
+          },
+          "role_label": "breakdown/rebuild-like reduced area"
+        },
+        {
+          "section_index": 4,
+          "role_hint": "main_or_drop_like",
+          "position": "middle",
+          "duration_character": "medium",
+          "relative_role": "main_area",
+          "movement": "changing",
+          "energy_level": "moderate",
+          "density_level": "high",
+          "duration_sec": 29.19999999999999,
+          "time_range": {
+            "start_sec": 174.03,
+            "start_time": "2:54",
+            "end_sec": 203.23,
+            "end_time": "3:23"
+          },
+          "role_label": "main/drop-like section"
+        },
+        {
+          "section_index": 5,
+          "role_hint": "main_or_drop_like",
+          "position": "middle",
+          "duration_character": "extended",
+          "relative_role": "main_area",
+          "movement": "falling",
+          "energy_level": "high",
+          "density_level": "low",
+          "duration_sec": 59.81000000000003,
+          "time_range": {
+            "start_sec": 203.23,
+            "start_time": "3:23",
+            "end_sec": 263.04,
+            "end_time": "4:23"
+          },
+          "role_label": "main/drop-like section"
+        },
+        {
+          "section_index": 6,
+          "role_hint": "main_or_drop_like",
+          "position": "late",
+          "duration_character": "medium",
+          "relative_role": "main_area",
+          "movement": "rising",
+          "energy_level": "high",
+          "density_level": "low",
+          "duration_sec": 30.909999999999968,
+          "time_range": {
+            "start_sec": 263.04,
+            "start_time": "4:23",
+            "end_sec": 293.95,
+            "end_time": "4:54"
+          },
+          "role_label": "main/drop-like section"
+        },
+        {
+          "section_index": 7,
+          "role_hint": "peak_like",
+          "position": "late",
+          "duration_character": "medium",
+          "relative_role": "stronger_area",
+          "movement": "rising",
+          "energy_level": "high",
+          "density_level": "high",
+          "duration_sec": 27.230000000000018,
+          "time_range": {
+            "start_sec": 293.95,
+            "start_time": "4:54",
+            "end_sec": 321.18,
+            "end_time": "5:21"
+          },
+          "role_label": "peak-like section"
+        },
+        {
+          "section_index": 8,
+          "role_hint": "outro_like",
+          "position": "closing",
+          "duration_character": "medium",
+          "relative_role": "closing_area",
+          "movement": "falling",
+          "energy_level": "low",
+          "density_level": "moderate",
+          "duration_sec": 38.870000000000005,
+          "time_range": {
+            "start_sec": 321.18,
+            "start_time": "5:21",
+            "end_sec": 360.05,
+            "end_time": "6:00"
+          },
+          "role_label": "outro-like closing"
+        }
+      ],
+      "key_sections": [
+        {
+          "section_index": 0,
+          "role_hint": "intro_like",
+          "position": "opening",
+          "duration_character": "extended",
+          "relative_role": "opening_area",
+          "movement": "stable",
+          "energy_level": "low",
+          "density_level": "high",
+          "duration_sec": 58.0,
+          "time_range": {
+            "start_sec": 0.0,
+            "start_time": "0:00",
+            "end_sec": 58.0,
+            "end_time": "0:58"
+          },
+          "reason": "opening_orientation"
+        },
+        {
+          "section_index": 2,
+          "role_hint": "peak_like",
+          "position": "early",
+          "duration_character": "medium",
+          "relative_role": "stronger_area",
+          "movement": "falling",
+          "energy_level": "high",
+          "density_level": "high",
+          "duration_sec": 30.919999999999987,
+          "time_range": {
+            "start_sec": 99.81,
+            "start_time": "1:40",
+            "end_sec": 130.73,
+            "end_time": "2:11"
+          },
+          "reason": "main_or_peak_orientation"
+        },
+        {
+          "section_index": 8,
+          "role_hint": "outro_like",
+          "position": "closing",
+          "duration_character": "medium",
+          "relative_role": "closing_area",
+          "movement": "falling",
+          "energy_level": "low",
+          "density_level": "moderate",
+          "duration_sec": 38.870000000000005,
+          "time_range": {
+            "start_sec": 321.18,
+            "start_time": "5:21",
+            "end_sec": 360.05,
+            "end_time": "6:00"
+          },
+          "reason": "closing_orientation"
+        }
+      ],
+      "timeline_hint": "The span from 3:23 to 4:23 may be worth checking for perceived variation, tension, or progression."
+    },
+    "technical_overview": {
+      "status": "warning",
+      "headline": "Peak headroom should be checked before release export.",
+      "main_observation": "True Peak is above 0.0 dBTP at 0.90 dBTP. Check limiter ceiling before release.",
+      "listening_focus": "Listen to the loudest section and check for brittle highs, edge, or brief crackle at peak moments.",
+      "export_focus": "Lower final output level or limiter ceiling slightly and re-check peak safety on export.",
+      "confidence": "high",
+      "selection_reason": "highest_priority_warning_check",
+      "selected_check_id": "technical_peaks_check",
+      "selected_issue_code": "source_true_peak_over_zero_dbtp",
+      "selected_issue_title": "source_true_peak_over_zero_dbtp",
+      "selected_area": "peaks",
+      "selected_severity": "warning"
+    },
+    "mix_overview": {
+      "status": "available",
+      "headline": "Reference-check whether loud sections feel steady under peak pressure",
+      "main_observation": "The limiter-stress and peak-headroom signals suggest a focused listening pass on loudest sections may be useful.",
+      "listening_focus": "Listen to the loudest sections and check whether peaks, punch, and detail still feel stable and clear compared with a trusted reference.",
+      "export_focus": "If anything feels edgy or unstable at peaks, review limiter ceiling, gain staging, and transient-heavy elements before final export.",
+      "confidence": "high",
+      "available_signal_groups": [
+        "dynamics",
+        "limiter_stress",
+        "low_end",
+        "spectral_balance",
+        "stereo",
+        "transients"
+      ],
+      "evidence": {
+        "limiter_stress_status": "available",
+        "limiter_stress_events_per_min": 308.79163206984396,
+        "limiter_stress_max_events_per_10s": 100,
+        "limiter_stress_p95_events_per_10s": 100,
+        "limiter_stress_timeline_max_stress_event_count": 100,
+        "limiter_stress_timeline_risk_values": [
+          "medium",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "medium",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "high",
+          "medium",
+          "low"
+        ],
+        "true_peak_dbtp": 0.8976223559074552,
+        "integrated_lufs": -8.453226396346846,
+        "plr_lu": 9.3508487522543,
+        "crest_factor_db": 9.549594980713088
+      },
+      "selected_guidance_id": "mix_translation_listening_check",
+      "selection_reason": "highest_priority_mix_candidate",
+      "selection_priority": 31,
+      "source_focus_id": "limiter_headroom_stress_check",
+      "selected_area": "limiter_stress",
+      "selected_signal_groups": [
+        "limiter_stress",
+        "loudness",
+        "dynamics"
+      ]
+    }
+  },
+  "listening_guidance": [
+    {
+      "id": "mixed_motion_density_check",
+      "area": "musical_flow",
+      "priority": "low",
+      "confidence": "low",
+      "headline": "Reference-check whether the density movement feels intentional",
+      "what_to_listen_for": "Use a normal reference listening pass to confirm that the changing density feels intentional and natural for the declared genre.",
+      "evidence": {
+        "source_signal": "musical_flow_summary.movement_profile",
+        "movement_profile": "mixed_motion",
+        "movement_signal": "noticeable",
+        "energy_movement": "moderate",
+        "energy_direction": "stable",
+        "density_movement": "varied",
+        "density_direction": "falling",
+        "energy_range_lu": 4.048,
+        "density_cv": 0.61,
+        "energy_delta_lu": -0.041,
+        "density_delta_per_sec": -1.45
+      },
+      "wording_note": "Use this only as a low-priority listening check. Mixed movement can be fully intentional and should not be framed as a problem by itself."
+    },
+    {
+      "id": "section_timeline_contrast_transition_check",
+      "area": "arrangement",
+      "priority": "medium",
+      "confidence": "medium",
+      "headline": "Check whether this section change reads clearly",
+      "what_to_listen_for": "Listen across this section change and check whether the shift in role, energy, or density feels clear and natural for the declared genre.",
+      "evidence": {
+        "source_signal": "artist_guidance.section_timeline",
+        "from_section": {
+          "source_signal": "artist_guidance.section_timeline",
+          "section_index": 1,
+          "position": "early",
+          "duration_character": "medium",
+          "relative_role": "reduced_area",
+          "movement": "stable",
+          "energy_level": "low",
+          "density_level": "low",
+          "role_hint": "breakdown_like",
+          "time_range": {
+            "start_sec": 58.0,
+            "start_time": "0:58",
+            "end_sec": 99.81,
+            "end_time": "1:40"
+          },
+          "duration_sec": 41.81
+        },
+        "to_section": {
+          "source_signal": "artist_guidance.section_timeline",
+          "section_index": 2,
+          "position": "early",
+          "duration_character": "medium",
+          "relative_role": "stronger_area",
+          "movement": "falling",
+          "energy_level": "high",
+          "density_level": "high",
+          "role_hint": "peak_like",
+          "time_range": {
+            "start_sec": 99.81,
+            "start_time": "1:40",
+            "end_sec": 130.73,
+            "end_time": "2:11"
+          },
+          "duration_sec": 30.919999999999987
+        }
+      },
+      "wording_note": "Use this as cautious transition guidance only. Do not describe it as a missing drop, weak build, or fixed arrangement problem."
+    },
+    {
+      "id": "technical_release_listening_check",
+      "area": "technical",
+      "priority": "medium",
+      "confidence": "high",
+      "headline": "Peak headroom should be checked before release export.",
+      "what_to_listen_for": "Listen to the loudest section and check for brittle highs, edge, or brief crackle at peak moments.",
+      "evidence": {
+        "source_signal": "artist_guidance.technical_overview",
+        "status": "warning",
+        "main_observation": "True Peak is above 0.0 dBTP at 0.90 dBTP. Check limiter ceiling before release.",
+        "export_focus": "Lower final output level or limiter ceiling slightly and re-check peak safety on export."
+      },
+      "wording_note": "Use this as cautious technical listening guidance only. Do not present it as proof of poor mastering, bad mixing, or incorrect artistic decisions."
+    },
+    {
+      "id": "mix_translation_listening_check",
+      "area": "mix",
+      "priority": "medium",
+      "confidence": "high",
+      "headline": "Reference-check whether loud sections feel steady under peak pressure",
+      "what_to_listen_for": "Listen to the loudest sections and check whether peaks, punch, and detail still feel stable and clear compared with a trusted reference.",
+      "evidence": {
+        "source_signal": "artist_guidance.mix_overview",
+        "source_focus_id": "limiter_headroom_stress_check",
+        "main_observation": "The limiter-stress and peak-headroom signals suggest a focused listening pass on loudest sections may be useful.",
+        "export_focus": "If anything feels edgy or unstable at peaks, review limiter ceiling, gain staging, and transient-heavy elements before final export.",
+        "technical_evidence": {
+          "limiter_stress_status": "available",
+          "limiter_stress_events_per_min": 308.79163206984396,
+          "limiter_stress_max_events_per_10s": 100,
+          "limiter_stress_p95_events_per_10s": 100,
+          "limiter_stress_timeline_max_stress_event_count": 100,
+          "limiter_stress_timeline_risk_values": [
+            "medium",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "medium",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "high",
+            "medium",
+            "low"
+          ],
+          "true_peak_dbtp": 0.8976223559074552,
+          "integrated_lufs": -8.453226396346846,
+          "plr_lu": 9.3508487522543,
+          "crest_factor_db": 9.549594980713088
+        }
+      },
+      "wording_note": "Use this as cautious mix-translation listening guidance only. Do not present it as proof that the mix is wrong or artistically invalid."
+    }
+  ],
+  "engine_signals": {
+    "structure_scores": {
+      "segment_count": 9,
+      "repetition_score": 0.7379491848330344,
+      "contrast_score": 0.30311732841214756,
+      "transition_score": 0.6064812378376878
+    },
+    "readable_structure_signals": {
+      "material_reuse": "high",
+      "form_contrast": "low",
+      "transition_clarity": "moderate"
+    },
+    "sections": [
+      {
+        "index": 0,
+        "start_sec": 0.0,
+        "end_sec": 58.0,
+        "duration_sec": 58.0,
+        "start_bar": 0,
+        "end_bar": 31,
+        "length_bars": 32
+      },
+      {
+        "index": 1,
+        "start_sec": 58.0,
+        "end_sec": 99.81,
+        "duration_sec": 41.81,
+        "start_bar": 32,
+        "end_bar": 54,
+        "length_bars": 23
+      },
+      {
+        "index": 2,
+        "start_sec": 99.81,
+        "end_sec": 130.73,
+        "duration_sec": 30.92,
+        "start_bar": 55,
+        "end_bar": 71,
+        "length_bars": 17
+      },
+      {
+        "index": 3,
+        "start_sec": 130.73,
+        "end_sec": 174.03,
+        "duration_sec": 43.3,
+        "start_bar": 72,
+        "end_bar": 95,
+        "length_bars": 24
+      },
+      {
+        "index": 4,
+        "start_sec": 174.03,
+        "end_sec": 203.23,
+        "duration_sec": 29.2,
+        "start_bar": 96,
+        "end_bar": 111,
+        "length_bars": 16
+      },
+      {
+        "index": 5,
+        "start_sec": 203.23,
+        "end_sec": 263.04,
+        "duration_sec": 59.81,
+        "start_bar": 112,
+        "end_bar": 144,
+        "length_bars": 33
+      },
+      {
+        "index": 6,
+        "start_sec": 263.04,
+        "end_sec": 293.95,
+        "duration_sec": 30.91,
+        "start_bar": 145,
+        "end_bar": 161,
+        "length_bars": 17
+      },
+      {
+        "index": 7,
+        "start_sec": 293.95,
+        "end_sec": 321.18,
+        "duration_sec": 27.23,
+        "start_bar": 162,
+        "end_bar": 176,
+        "length_bars": 15
+      },
+      {
+        "index": 8,
+        "start_sec": 321.18,
+        "end_sec": 360.05,
+        "duration_sec": 38.87,
+        "start_bar": 177,
+        "end_bar": 193,
+        "length_bars": 17
+      }
+    ]
+  },
+  "technical_details": {
+    "loudness": {
+      "sample_rate": 44100,
+      "integrated_lufs": -8.453226396346846,
+      "loudness_range_lu": 4.541935613371568,
+      "true_peak_dbtp": 0.8976223559074552,
+      "peak_dbfs": -0.19975839211649338,
+      "clipped_sample_count": 0,
+      "short_term_lufs_series": {
+        "status": "available",
+        "window_sec": 3.0,
+        "hop_sec": 1.0,
+        "points": [
+          {
+            "t": 1.5,
+            "lufs_s": -10.317860564006766
+          },
+          {
+            "t": 2.5,
+            "lufs_s": -10.480962074344722
+          },
+          {
+            "t": 3.5,
+            "lufs_s": -10.545871236119266
+          },
+          {
+            "t": 4.5,
+            "lufs_s": -10.578689953898886
+          },
+          {
+            "t": 5.5,
+            "lufs_s": -10.603385196152718
+          },
+          {
+            "t": 6.5,
+            "lufs_s": -10.610906783302012
+          },
+          {
+            "t": 7.5,
+            "lufs_s": -10.63033925153062
+          },
+          {
+            "t": 8.5,
+            "lufs_s": -10.600392840812503
+          },
+          {
+            "t": 9.5,
+            "lufs_s": -10.598657501651955
+          },
+          {
+            "t": 10.5,
+            "lufs_s": -10.60584895228815
+          },
+          {
+            "t": 11.5,
+            "lufs_s": -10.617899229627747
+          },
+          {
+            "t": 12.5,
+            "lufs_s": -10.6226349457746
+          },
+          {
+            "t": 13.5,
+            "lufs_s": -10.59488982989127
+          },
+          {
+            "t": 14.5,
+            "lufs_s": -10.479835437161672
+          },
+          {
+            "t": 15.5,
+            "lufs_s": -10.382080566175304
+          },
+          {
+            "t": 16.5,
+            "lufs_s": -10.349839218151564
+          },
+          {
+            "t": 17.5,
+            "lufs_s": -10.357550295890645
+          },
+          {
+            "t": 18.5,
+            "lufs_s": -10.338823631288696
+          },
+          {
+            "t": 19.5,
+            "lufs_s": -10.327058778320312
+          },
+          {
+            "t": 20.5,
+            "lufs_s": -10.340835560656279
+          },
+          {
+            "t": 21.5,
+            "lufs_s": -10.34818960857262
+          },
+          {
+            "t": 22.5,
+            "lufs_s": -10.358373208207558
+          },
+          {
+            "t": 23.5,
+            "lufs_s": -10.331617397458775
+          },
+          {
+            "t": 24.5,
+            "lufs_s": -10.327703349653452
+          },
+          {
+            "t": 25.5,
+            "lufs_s": -10.341162545769198
+          },
+          {
+            "t": 26.5,
+            "lufs_s": -10.344424728108725
+          },
+          {
+            "t": 27.5,
+            "lufs_s": -10.925340542318589
+          },
+          {
+            "t": 28.5,
+            "lufs_s": -10.819584044426309
+          },
+          {
+            "t": 29.5,
+            "lufs_s": -10.546665829821432
+          },
+          {
+            "t": 30.5,
+            "lufs_s": -10.064208378121576
+          },
+          {
+            "t": 31.5,
+            "lufs_s": -9.961633211383438
+          },
+          {
+            "t": 32.5,
+            "lufs_s": -9.967314154987879
+          },
+          {
+            "t": 33.5,
+            "lufs_s": -9.982233354974998
+          },
+          {
+            "t": 34.5,
+            "lufs_s": -9.986077033455988
+          },
+          {
+            "t": 35.5,
+            "lufs_s": -9.91401706377489
+          },
+          {
+            "t": 36.5,
+            "lufs_s": -9.900617772218384
+          },
+          {
+            "t": 37.5,
+            "lufs_s": -9.986982189147739
+          },
+          {
+            "t": 38.5,
+            "lufs_s": -9.831611150730836
+          },
+          {
+            "t": 39.5,
+            "lufs_s": -9.810834119879678
+          },
+          {
+            "t": 40.5,
+            "lufs_s": -9.791218548115507
+          },
+          {
+            "t": 41.5,
+            "lufs_s": -9.867536193091643
+          },
+          {
+            "t": 42.5,
+            "lufs_s": -9.626103936646448
+          },
+          {
+            "t": 43.5,
+            "lufs_s": -9.087222965267296
+          },
+          {
+            "t": 44.5,
+            "lufs_s": -8.859171022979789
+          },
+          {
+            "t": 45.5,
+            "lufs_s": -8.919950279311996
+          },
+          {
+            "t": 46.5,
+            "lufs_s": -9.148019382489583
+          },
+          {
+            "t": 47.5,
+            "lufs_s": -9.247424790659851
+          },
+          {
+            "t": 48.5,
+            "lufs_s": -9.34762592217349
+          },
+          {
+            "t": 49.5,
+            "lufs_s": -9.247716119934864
+          },
+          {
+            "t": 50.5,
+            "lufs_s": -9.247874976049465
+          },
+          {
+            "t": 51.5,
+            "lufs_s": -9.261887048115291
+          },
+          {
+            "t": 52.5,
+            "lufs_s": -9.351083806883173
+          },
+          {
+            "t": 53.5,
+            "lufs_s": -9.24058008122935
+          },
+          {
+            "t": 54.5,
+            "lufs_s": -9.211657197981554
+          },
+          {
+            "t": 55.5,
+            "lufs_s": -9.887468781256073
+          },
+          {
+            "t": 56.5,
+            "lufs_s": -11.149746264342252
+          },
+          {
+            "t": 57.5,
+            "lufs_s": -11.103592577375073
+          },
+          {
+            "t": 58.5,
+            "lufs_s": -9.981376267484194
+          },
+          {
+            "t": 59.5,
+            "lufs_s": -9.311206125591992
+          },
+          {
+            "t": 60.5,
+            "lufs_s": -9.750848942122264
+          },
+          {
+            "t": 61.5,
+            "lufs_s": -9.584649276387283
+          },
+          {
+            "t": 62.5,
+            "lufs_s": -9.551950070638462
+          },
+          {
+            "t": 63.5,
+            "lufs_s": -9.586668359774167
+          },
+          {
+            "t": 64.5,
+            "lufs_s": -9.736406330177777
+          },
+          {
+            "t": 65.5,
+            "lufs_s": -9.585422754561957
+          },
+          {
+            "t": 66.5,
+            "lufs_s": -9.532997045145267
+          },
+          {
+            "t": 67.5,
+            "lufs_s": -9.701951232354594
+          },
+          {
+            "t": 68.5,
+            "lufs_s": -9.799761004394481
+          },
+          {
+            "t": 69.5,
+            "lufs_s": -9.845390377110805
+          },
+          {
+            "t": 70.5,
+            "lufs_s": -9.807205358258551
+          },
+          {
+            "t": 71.5,
+            "lufs_s": -9.855768261016898
+          },
+          {
+            "t": 72.5,
+            "lufs_s": -9.253704953080257
+          },
+          {
+            "t": 73.5,
+            "lufs_s": -8.701431397433513
+          },
+          {
+            "t": 74.5,
+            "lufs_s": -8.727087429140703
+          },
+          {
+            "t": 75.5,
+            "lufs_s": -9.031378413657663
+          },
+          {
+            "t": 76.5,
+            "lufs_s": -8.997271825358101
+          },
+          {
+            "t": 77.5,
+            "lufs_s": -9.074749585883659
+          },
+          {
+            "t": 78.5,
+            "lufs_s": -9.66195578018492
+          },
+          {
+            "t": 79.5,
+            "lufs_s": -9.667380242888779
+          },
+          {
+            "t": 80.5,
+            "lufs_s": -8.904441757840454
+          },
+          {
+            "t": 81.5,
+            "lufs_s": -8.651017321251311
+          },
+          {
+            "t": 82.5,
+            "lufs_s": -8.992422938037327
+          },
+          {
+            "t": 83.5,
+            "lufs_s": -9.33815942493446
+          },
+          {
+            "t": 84.5,
+            "lufs_s": -9.298853065972782
+          },
+          {
+            "t": 85.5,
+            "lufs_s": -9.409446808260915
+          },
+          {
+            "t": 86.5,
+            "lufs_s": -9.459629379175155
+          },
+          {
+            "t": 87.5,
+            "lufs_s": -8.71565299087341
+          },
+          {
+            "t": 88.5,
+            "lufs_s": -8.151778863191163
+          },
+          {
+            "t": 89.5,
+            "lufs_s": -8.205961288640914
+          },
+          {
+            "t": 90.5,
+            "lufs_s": -8.390521744931158
+          },
+          {
+            "t": 91.5,
+            "lufs_s": -8.716769541844481
+          },
+          {
+            "t": 92.5,
+            "lufs_s": -8.978004306269119
+          },
+          {
+            "t": 93.5,
+            "lufs_s": -9.361735407669576
+          },
+          {
+            "t": 94.5,
+            "lufs_s": -8.850576392269016
+          },
+          {
+            "t": 95.5,
+            "lufs_s": -8.275891720060992
+          },
+          {
+            "t": 96.5,
+            "lufs_s": -8.298979998570598
+          },
+          {
+            "t": 97.5,
+            "lufs_s": -8.56048762878457
+          },
+          {
+            "t": 98.5,
+            "lufs_s": -8.966069974836694
+          },
+          {
+            "t": 99.5,
+            "lufs_s": -9.476440067153554
+          },
+          {
+            "t": 100.5,
+            "lufs_s": -11.064990893940392
+          },
+          {
+            "t": 101.5,
+            "lufs_s": -9.916713833586783
+          },
+          {
+            "t": 102.5,
+            "lufs_s": -7.838781461094574
+          },
+          {
+            "t": 103.5,
+            "lufs_s": -7.327145507151938
+          },
+          {
+            "t": 104.5,
+            "lufs_s": -7.527377409849639
+          },
+          {
+            "t": 105.5,
+            "lufs_s": -7.669526467197663
+          },
+          {
+            "t": 106.5,
+            "lufs_s": -7.757085998367867
+          },
+          {
+            "t": 107.5,
+            "lufs_s": -8.331887756261182
+          },
+          {
+            "t": 108.5,
+            "lufs_s": -8.188843426351621
+          },
+          {
+            "t": 109.5,
+            "lufs_s": -7.2514487118654305
+          },
+          {
+            "t": 110.5,
+            "lufs_s": -6.669987549784673
+          },
+          {
+            "t": 111.5,
+            "lufs_s": -7.007578192467479
+          },
+          {
+            "t": 112.5,
+            "lufs_s": -7.367962800801168
+          },
+          {
+            "t": 113.5,
+            "lufs_s": -7.701991027904241
+          },
+          {
+            "t": 114.5,
+            "lufs_s": -7.9425994462909815
+          },
+          {
+            "t": 115.5,
+            "lufs_s": -8.100926432292107
+          },
+          {
+            "t": 116.5,
+            "lufs_s": -7.393745730818586
+          },
+          {
+            "t": 117.5,
+            "lufs_s": -6.96660184964479
+          },
+          {
+            "t": 118.5,
+            "lufs_s": -6.787605197946051
+          },
+          {
+            "t": 119.5,
+            "lufs_s": -7.123114339295467
+          },
+          {
+            "t": 120.5,
+            "lufs_s": -7.090628137915357
+          },
+          {
+            "t": 121.5,
+            "lufs_s": -7.337046621402898
+          },
+          {
+            "t": 122.5,
+            "lufs_s": -7.7977186686472795
+          },
+          {
+            "t": 123.5,
+            "lufs_s": -7.959707850922972
+          },
+          {
+            "t": 124.5,
+            "lufs_s": -7.137395894148119
+          },
+          {
+            "t": 125.5,
+            "lufs_s": -6.77526568075394
+          },
+          {
+            "t": 126.5,
+            "lufs_s": -7.048898102152301
+          },
+          {
+            "t": 127.5,
+            "lufs_s": -7.111611643500919
+          },
+          {
+            "t": 128.5,
+            "lufs_s": -7.327492681681401
+          },
+          {
+            "t": 129.5,
+            "lufs_s": -7.592946716543569
+          },
+          {
+            "t": 130.5,
+            "lufs_s": -8.57993832309059
+          },
+          {
+            "t": 131.5,
+            "lufs_s": -9.90679157416814
+          },
+          {
+            "t": 132.5,
+            "lufs_s": -12.070085053712477
+          },
+          {
+            "t": 133.5,
+            "lufs_s": -13.467173620160134
+          },
+          {
+            "t": 134.5,
+            "lufs_s": -14.134856233701099
+          },
+          {
+            "t": 135.5,
+            "lufs_s": -14.524418022708636
+          },
+          {
+            "t": 136.5,
+            "lufs_s": -14.833631315966304
+          },
+          {
+            "t": 137.5,
+            "lufs_s": -14.115488293435655
+          },
+          {
+            "t": 138.5,
+            "lufs_s": -14.059929365850033
+          },
+          {
+            "t": 139.5,
+            "lufs_s": -14.306796604294753
+          },
+          {
+            "t": 140.5,
+            "lufs_s": -15.137387556950985
+          },
+          {
+            "t": 141.5,
+            "lufs_s": -14.786407969524733
+          },
+          {
+            "t": 142.5,
+            "lufs_s": -14.256522295616932
+          },
+          {
+            "t": 143.5,
+            "lufs_s": -13.814840366486058
+          },
+          {
+            "t": 144.5,
+            "lufs_s": -12.387556296884169
+          },
+          {
+            "t": 145.5,
+            "lufs_s": -10.802481420150242
+          },
+          {
+            "t": 146.5,
+            "lufs_s": -9.750989412565412
+          },
+          {
+            "t": 147.5,
+            "lufs_s": -10.72214619420369
+          },
+          {
+            "t": 148.5,
+            "lufs_s": -10.053082288322845
+          },
+          {
+            "t": 149.5,
+            "lufs_s": -10.085788586616703
+          },
+          {
+            "t": 150.5,
+            "lufs_s": -9.464669501861515
+          },
+          {
+            "t": 151.5,
+            "lufs_s": -10.665208079604765
+          },
+          {
+            "t": 152.5,
+            "lufs_s": -10.371273917426842
+          },
+          {
+            "t": 153.5,
+            "lufs_s": -9.666278227633509
+          },
+          {
+            "t": 154.5,
+            "lufs_s": -9.850306862647004
+          },
+          {
+            "t": 155.5,
+            "lufs_s": -9.832712107637454
+          },
+          {
+            "t": 156.5,
+            "lufs_s": -10.704532970447149
+          },
+          {
+            "t": 157.5,
+            "lufs_s": -11.164845064931125
+          },
+          {
+            "t": 158.5,
+            "lufs_s": -12.379560963028561
+          },
+          {
+            "t": 159.5,
+            "lufs_s": -10.681537948359876
+          },
+          {
+            "t": 160.5,
+            "lufs_s": -9.607510702306953
+          },
+          {
+            "t": 161.5,
+            "lufs_s": -8.908799073783708
+          },
+          {
+            "t": 162.5,
+            "lufs_s": -9.842640776440815
+          },
+          {
+            "t": 163.5,
+            "lufs_s": -9.544211453394158
+          },
+          {
+            "t": 164.5,
+            "lufs_s": -8.955652001311622
+          },
+          {
+            "t": 165.5,
+            "lufs_s": -8.559112436688604
+          },
+          {
+            "t": 166.5,
+            "lufs_s": -8.679634161491853
+          },
+          {
+            "t": 167.5,
+            "lufs_s": -9.384077572390327
+          },
+          {
+            "t": 168.5,
+            "lufs_s": -8.944139305236158
+          },
+          {
+            "t": 169.5,
+            "lufs_s": -9.123178692363837
+          },
+          {
+            "t": 170.5,
+            "lufs_s": -8.95312659090302
+          },
+          {
+            "t": 171.5,
+            "lufs_s": -9.157147224925165
+          },
+          {
+            "t": 172.5,
+            "lufs_s": -9.214855275382387
+          },
+          {
+            "t": 173.5,
+            "lufs_s": -8.95806402409916
+          },
+          {
+            "t": 174.5,
+            "lufs_s": -8.821896810894723
+          },
+          {
+            "t": 175.5,
+            "lufs_s": -9.184838453126298
+          },
+          {
+            "t": 176.5,
+            "lufs_s": -10.06602318606541
+          },
+          {
+            "t": 177.5,
+            "lufs_s": -10.446939774061882
+          },
+          {
+            "t": 178.5,
+            "lufs_s": -10.433941611309477
+          },
+          {
+            "t": 179.5,
+            "lufs_s": -10.451927359946684
+          },
+          {
+            "t": 180.5,
+            "lufs_s": -10.566807408018553
+          },
+          {
+            "t": 181.5,
+            "lufs_s": -10.552649554606718
+          },
+          {
+            "t": 182.5,
+            "lufs_s": -10.426410076530319
+          },
+          {
+            "t": 183.5,
+            "lufs_s": -10.447802090477118
+          },
+          {
+            "t": 184.5,
+            "lufs_s": -10.538015533745313
+          },
+          {
+            "t": 185.5,
+            "lufs_s": -10.648330099190636
+          },
+          {
+            "t": 186.5,
+            "lufs_s": -10.444851972576737
+          },
+          {
+            "t": 187.5,
+            "lufs_s": -10.115023769809916
+          },
+          {
+            "t": 188.5,
+            "lufs_s": -8.053469912984818
+          },
+          {
+            "t": 189.5,
+            "lufs_s": -7.333741799526918
+          },
+          {
+            "t": 190.5,
+            "lufs_s": -6.8455767075842955
+          },
+          {
+            "t": 191.5,
+            "lufs_s": -7.730684544173043
+          },
+          {
+            "t": 192.5,
+            "lufs_s": -7.412265963380874
+          },
+          {
+            "t": 193.5,
+            "lufs_s": -6.965294642635646
+          },
+          {
+            "t": 194.5,
+            "lufs_s": -6.42798885465096
+          },
+          {
+            "t": 195.5,
+            "lufs_s": -6.575929838954299
+          },
+          {
+            "t": 196.5,
+            "lufs_s": -6.873345547674618
+          },
+          {
+            "t": 197.5,
+            "lufs_s": -6.4531683487128975
+          },
+          {
+            "t": 198.5,
+            "lufs_s": -6.6374512332808004
+          },
+          {
+            "t": 199.5,
+            "lufs_s": -6.831328026721761
+          },
+          {
+            "t": 200.5,
+            "lufs_s": -7.664550846618628
+          },
+          {
+            "t": 201.5,
+            "lufs_s": -8.380181663709479
+          },
+          {
+            "t": 202.5,
+            "lufs_s": -8.728334336067888
+          },
+          {
+            "t": 203.5,
+            "lufs_s": -7.744623105539538
+          },
+          {
+            "t": 204.5,
+            "lufs_s": -6.9636954743452515
+          },
+          {
+            "t": 205.5,
+            "lufs_s": -6.828706591623088
+          },
+          {
+            "t": 206.5,
+            "lufs_s": -7.0095520690250375
+          },
+          {
+            "t": 207.5,
+            "lufs_s": -7.027191105511361
+          },
+          {
+            "t": 208.5,
+            "lufs_s": -7.068187330884247
+          },
+          {
+            "t": 209.5,
+            "lufs_s": -7.014192463281497
+          },
+          {
+            "t": 210.5,
+            "lufs_s": -6.957726845543461
+          },
+          {
+            "t": 211.5,
+            "lufs_s": -6.82332741001129
+          },
+          {
+            "t": 212.5,
+            "lufs_s": -6.768959025341297
+          },
+          {
+            "t": 213.5,
+            "lufs_s": -6.753967388328772
+          },
+          {
+            "t": 214.5,
+            "lufs_s": -6.789248598717593
+          },
+          {
+            "t": 215.5,
+            "lufs_s": -6.947136240402281
+          },
+          {
+            "t": 216.5,
+            "lufs_s": -7.154884812791662
+          },
+          {
+            "t": 217.5,
+            "lufs_s": -7.32234420991552
+          },
+          {
+            "t": 218.5,
+            "lufs_s": -7.277628295153355
+          },
+          {
+            "t": 219.5,
+            "lufs_s": -7.0218435213335155
+          },
+          {
+            "t": 220.5,
+            "lufs_s": -6.947993260068051
+          },
+          {
+            "t": 221.5,
+            "lufs_s": -6.899217981618276
+          },
+          {
+            "t": 222.5,
+            "lufs_s": -6.876612041341538
+          },
+          {
+            "t": 223.5,
+            "lufs_s": -6.82172782952199
+          },
+          {
+            "t": 224.5,
+            "lufs_s": -6.708779172679185
+          },
+          {
+            "t": 225.5,
+            "lufs_s": -6.520612117084122
+          },
+          {
+            "t": 226.5,
+            "lufs_s": -6.517982608442845
+          },
+          {
+            "t": 227.5,
+            "lufs_s": -6.446733525654822
+          },
+          {
+            "t": 228.5,
+            "lufs_s": -6.353740871773998
+          },
+          {
+            "t": 229.5,
+            "lufs_s": -6.107041052688998
+          },
+          {
+            "t": 230.5,
+            "lufs_s": -5.789199382831164
+          },
+          {
+            "t": 231.5,
+            "lufs_s": -5.632285727270165
+          },
+          {
+            "t": 232.5,
+            "lufs_s": -5.172341208786438
+          },
+          {
+            "t": 233.5,
+            "lufs_s": -5.220639677580664
+          },
+          {
+            "t": 234.5,
+            "lufs_s": -5.483134617835658
+          },
+          {
+            "t": 235.5,
+            "lufs_s": -5.656606015733131
+          },
+          {
+            "t": 236.5,
+            "lufs_s": -5.677656311238114
+          },
+          {
+            "t": 237.5,
+            "lufs_s": -5.943305644567505
+          },
+          {
+            "t": 238.5,
+            "lufs_s": -5.969338039560201
+          },
+          {
+            "t": 239.5,
+            "lufs_s": -5.887365991199039
+          },
+          {
+            "t": 240.5,
+            "lufs_s": -5.8888603178770085
+          },
+          {
+            "t": 241.5,
+            "lufs_s": -5.971688106951309
+          },
+          {
+            "t": 242.5,
+            "lufs_s": -5.979924011710061
+          },
+          {
+            "t": 243.5,
+            "lufs_s": -5.942358892241904
+          },
+          {
+            "t": 244.5,
+            "lufs_s": -6.152543246252925
+          },
+          {
+            "t": 245.5,
+            "lufs_s": -6.280213657496787
+          },
+          {
+            "t": 246.5,
+            "lufs_s": -6.349789111737747
+          },
+          {
+            "t": 247.5,
+            "lufs_s": -6.333108491145219
+          },
+          {
+            "t": 248.5,
+            "lufs_s": -6.346587078946436
+          },
+          {
+            "t": 249.5,
+            "lufs_s": -6.143654035547233
+          },
+          {
+            "t": 250.5,
+            "lufs_s": -6.004375114543637
+          },
+          {
+            "t": 251.5,
+            "lufs_s": -6.090666097952375
+          },
+          {
+            "t": 252.5,
+            "lufs_s": -6.249028512967627
+          },
+          {
+            "t": 253.5,
+            "lufs_s": -6.124885773495815
+          },
+          {
+            "t": 254.5,
+            "lufs_s": -5.992956306808316
+          },
+          {
+            "t": 255.5,
+            "lufs_s": -6.0883121882741325
+          },
+          {
+            "t": 256.5,
+            "lufs_s": -6.065877420876243
+          },
+          {
+            "t": 257.5,
+            "lufs_s": -6.050739720536375
+          },
+          {
+            "t": 258.5,
+            "lufs_s": -6.176561786555177
+          },
+          {
+            "t": 259.5,
+            "lufs_s": -7.129175239930169
+          },
+          {
+            "t": 260.5,
+            "lufs_s": -8.197209034229196
+          },
+          {
+            "t": 261.5,
+            "lufs_s": -7.842055487801415
+          },
+          {
+            "t": 262.5,
+            "lufs_s": -7.312009067542736
+          },
+          {
+            "t": 263.5,
+            "lufs_s": -7.546334648782208
+          },
+          {
+            "t": 264.5,
+            "lufs_s": -8.018459617978603
+          },
+          {
+            "t": 265.5,
+            "lufs_s": -7.879836270752036
+          },
+          {
+            "t": 266.5,
+            "lufs_s": -7.6402677989582095
+          },
+          {
+            "t": 267.5,
+            "lufs_s": -8.206570388471953
+          },
+          {
+            "t": 268.5,
+            "lufs_s": -7.780258230323149
+          },
+          {
+            "t": 269.5,
+            "lufs_s": -8.022813078831048
+          },
+          {
+            "t": 270.5,
+            "lufs_s": -7.845191881995101
+          },
+          {
+            "t": 271.5,
+            "lufs_s": -8.198172118140668
+          },
+          {
+            "t": 272.5,
+            "lufs_s": -8.436223684963071
+          },
+          {
+            "t": 273.5,
+            "lufs_s": -8.889454506818987
+          },
+          {
+            "t": 274.5,
+            "lufs_s": -9.15908696939422
+          },
+          {
+            "t": 275.5,
+            "lufs_s": -8.708722427936255
+          },
+          {
+            "t": 276.5,
+            "lufs_s": -8.208167286951236
+          },
+          {
+            "t": 277.5,
+            "lufs_s": -8.040950482936275
+          },
+          {
+            "t": 278.5,
+            "lufs_s": -8.747077952511814
+          },
+          {
+            "t": 279.5,
+            "lufs_s": -8.142696652862885
+          },
+          {
+            "t": 280.5,
+            "lufs_s": -8.01872126682405
+          },
+          {
+            "t": 281.5,
+            "lufs_s": -7.297849439913954
+          },
+          {
+            "t": 282.5,
+            "lufs_s": -7.46785666202255
+          },
+          {
+            "t": 283.5,
+            "lufs_s": -7.568341608489019
+          },
+          {
+            "t": 284.5,
+            "lufs_s": -7.891445713677204
+          },
+          {
+            "t": 285.5,
+            "lufs_s": -7.93310900140894
+          },
+          {
+            "t": 286.5,
+            "lufs_s": -7.580947857168358
+          },
+          {
+            "t": 287.5,
+            "lufs_s": -7.794661754169605
+          },
+          {
+            "t": 288.5,
+            "lufs_s": -7.47218703293451
+          },
+          {
+            "t": 289.5,
+            "lufs_s": -7.287239148462865
+          },
+          {
+            "t": 290.5,
+            "lufs_s": -7.061327670600757
+          },
+          {
+            "t": 291.5,
+            "lufs_s": -8.036646393634857
+          },
+          {
+            "t": 292.5,
+            "lufs_s": -9.226726670972988
+          },
+          {
+            "t": 293.5,
+            "lufs_s": -9.211338281350315
+          },
+          {
+            "t": 294.5,
+            "lufs_s": -7.93559055386027
+          },
+          {
+            "t": 295.5,
+            "lufs_s": -7.192602519872688
+          },
+          {
+            "t": 296.5,
+            "lufs_s": -7.5352190620226525
+          },
+          {
+            "t": 297.5,
+            "lufs_s": -7.897011616013197
+          },
+          {
+            "t": 298.5,
+            "lufs_s": -8.059631437925464
+          },
+          {
+            "t": 299.5,
+            "lufs_s": -8.21201338997459
+          },
+          {
+            "t": 300.5,
+            "lufs_s": -8.184120445038628
+          },
+          {
+            "t": 301.5,
+            "lufs_s": -8.21052464831311
+          },
+          {
+            "t": 302.5,
+            "lufs_s": -8.255902870170315
+          },
+          {
+            "t": 303.5,
+            "lufs_s": -8.311242829868045
+          },
+          {
+            "t": 304.5,
+            "lufs_s": -8.270926980669453
+          },
+          {
+            "t": 305.5,
+            "lufs_s": -8.272230357452292
+          },
+          {
+            "t": 306.5,
+            "lufs_s": -8.337531313318156
+          },
+          {
+            "t": 307.5,
+            "lufs_s": -8.253697391384089
+          },
+          {
+            "t": 308.5,
+            "lufs_s": -8.230712313674474
+          },
+          {
+            "t": 309.5,
+            "lufs_s": -8.269793512086094
+          },
+          {
+            "t": 310.5,
+            "lufs_s": -8.377562862778023
+          },
+          {
+            "t": 311.5,
+            "lufs_s": -8.342857731381857
+          },
+          {
+            "t": 312.5,
+            "lufs_s": -8.37966804064277
+          },
+          {
+            "t": 313.5,
+            "lufs_s": -8.418279303514419
+          },
+          {
+            "t": 314.5,
+            "lufs_s": -8.46280850763558
+          },
+          {
+            "t": 315.5,
+            "lufs_s": -8.464617460459584
+          },
+          {
+            "t": 316.5,
+            "lufs_s": -8.5216151224972
+          },
+          {
+            "t": 317.5,
+            "lufs_s": -8.636782040373358
+          },
+          {
+            "t": 318.5,
+            "lufs_s": -8.593324312304203
+          },
+          {
+            "t": 319.5,
+            "lufs_s": -8.640975812231916
+          },
+          {
+            "t": 320.5,
+            "lufs_s": -8.69234824951873
+          },
+          {
+            "t": 321.5,
+            "lufs_s": -9.699193385415725
+          },
+          {
+            "t": 322.5,
+            "lufs_s": -10.549527813903895
+          },
+          {
+            "t": 323.5,
+            "lufs_s": -10.528853210477187
+          },
+          {
+            "t": 324.5,
+            "lufs_s": -9.299266864185947
+          },
+          {
+            "t": 325.5,
+            "lufs_s": -9.028017188322158
+          },
+          {
+            "t": 326.5,
+            "lufs_s": -9.157470176282855
+          },
+          {
+            "t": 327.5,
+            "lufs_s": -9.263467291561325
+          },
+          {
+            "t": 328.5,
+            "lufs_s": -9.379450530092255
+          },
+          {
+            "t": 329.5,
+            "lufs_s": -9.320007448545985
+          },
+          {
+            "t": 330.5,
+            "lufs_s": -9.358535313648604
+          },
+          {
+            "t": 331.5,
+            "lufs_s": -9.4046434787568
+          },
+          {
+            "t": 332.5,
+            "lufs_s": -9.520530006772614
+          },
+          {
+            "t": 333.5,
+            "lufs_s": -9.427158850395426
+          },
+          {
+            "t": 334.5,
+            "lufs_s": -9.383623080638024
+          },
+          {
+            "t": 335.5,
+            "lufs_s": -9.300270242341087
+          },
+          {
+            "t": 336.5,
+            "lufs_s": -8.993501490681432
+          },
+          {
+            "t": 337.5,
+            "lufs_s": -8.736068475505093
+          },
+          {
+            "t": 338.5,
+            "lufs_s": -8.821185013053269
+          },
+          {
+            "t": 339.5,
+            "lufs_s": -9.226908149483295
+          },
+          {
+            "t": 340.5,
+            "lufs_s": -9.392684632872896
+          },
+          {
+            "t": 341.5,
+            "lufs_s": -9.46644444572877
+          },
+          {
+            "t": 342.5,
+            "lufs_s": -9.515362993525263
+          },
+          {
+            "t": 343.5,
+            "lufs_s": -9.56923696955379
+          },
+          {
+            "t": 344.5,
+            "lufs_s": -9.506019833789816
+          },
+          {
+            "t": 345.5,
+            "lufs_s": -9.519251973217118
+          },
+          {
+            "t": 346.5,
+            "lufs_s": -9.61998718549402
+          },
+          {
+            "t": 347.5,
+            "lufs_s": -9.543740416193353
+          },
+          {
+            "t": 348.5,
+            "lufs_s": -9.526119932917673
+          },
+          {
+            "t": 349.5,
+            "lufs_s": -9.530380039448513
+          },
+          {
+            "t": 350.5,
+            "lufs_s": -9.63004734652723
+          },
+          {
+            "t": 351.5,
+            "lufs_s": -9.71369060836035
+          },
+          {
+            "t": 352.5,
+            "lufs_s": -10.269123198122747
+          },
+          {
+            "t": 353.5,
+            "lufs_s": -14.967895018398165
+          },
+          {
+            "t": 354.5,
+            "lufs_s": -26.35339674753499
+          },
+          {
+            "t": 355.5,
+            "lufs_s": -30.567589294398967
+          },
+          {
+            "t": 356.5,
+            "lufs_s": -35.742908406686624
+          },
+          {
+            "t": 357.5,
+            "lufs_s": -42.14629030078345
+          },
+          {
+            "t": 358.5,
+            "lufs_s": -49.97454945037526
+          }
+        ],
+        "summary": {
+          "min_lufs_s": -49.97454945037526,
+          "max_lufs_s": -5.172341208786438,
+          "avg_lufs_s": -9.191926790668584,
+          "p10_lufs_s": -10.60736630159231,
+          "p90_lufs_s": -6.559334522393246,
+          "dynamic_range_lu": 4.048031779199063
+        }
+      }
+    },
+    "dynamics": {
+      "crest_factor_db": 9.549594980713088,
+      "integrated_rms_dbfs": -9.749353372829582,
+      "plr_lu": 9.3508487522543
+    },
+    "stereo": {
+      "sample_rate": 44100,
+      "side_mid_ratio": 0.31641841011699984,
+      "phase_correlation": 0.8179824948310852,
+      "stereo_width": 0.24036310012473722
+    },
+    "low_end": {
+      "sample_rate": 44100,
+      "mono_loss_low_band_percent": 0.15205253621692805,
+      "phase_correlation_low_band": 0.9939225207820447,
+      "low_band_balance_db": 0.00935926769643558
+    },
+    "limiter_stress": {
+      "status": "available",
+      "events_per_min": 308.79163206984396,
+      "max_events_per_10s": 100,
+      "p95_events_per_10s": 100,
+      "timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 10.0,
+          "stress_event_count": 1,
+          "max_peak_dbtp": -0.9992596859515884,
+          "risk": "medium"
+        },
+        {
+          "start_sec": 10.0,
+          "end_sec": 20.0,
+          "stress_event_count": 6,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 20.0,
+          "end_sec": 30.0,
+          "stress_event_count": 13,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 30.0,
+          "end_sec": 40.0,
+          "stress_event_count": 18,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 40.0,
+          "end_sec": 50.0,
+          "stress_event_count": 35,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 50.0,
+          "end_sec": 60.0,
+          "stress_event_count": 28,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 60.0,
+          "end_sec": 70.0,
+          "stress_event_count": 7,
+          "max_peak_dbtp": -0.6292694048077113,
+          "risk": "medium"
+        },
+        {
+          "start_sec": 70.0,
+          "end_sec": 80.0,
+          "stress_event_count": 22,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 80.0,
+          "end_sec": 90.0,
+          "stress_event_count": 34,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 90.0,
+          "end_sec": 100.0,
+          "stress_event_count": 44,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 100.0,
+          "end_sec": 110.0,
+          "stress_event_count": 66,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 110.0,
+          "end_sec": 120.0,
+          "stress_event_count": 88,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 120.0,
+          "end_sec": 130.0,
+          "stress_event_count": 87,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 130.0,
+          "end_sec": 140.0,
+          "stress_event_count": 12,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 140.0,
+          "end_sec": 150.0,
+          "stress_event_count": 18,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 150.0,
+          "end_sec": 160.0,
+          "stress_event_count": 23,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 160.0,
+          "end_sec": 170.0,
+          "stress_event_count": 53,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 170.0,
+          "end_sec": 180.0,
+          "stress_event_count": 52,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 180.0,
+          "end_sec": 190.0,
+          "stress_event_count": 49,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 190.0,
+          "end_sec": 200.0,
+          "stress_event_count": 91,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 200.0,
+          "end_sec": 210.0,
+          "stress_event_count": 78,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 210.0,
+          "end_sec": 220.0,
+          "stress_event_count": 90,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 220.0,
+          "end_sec": 230.0,
+          "stress_event_count": 99,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 230.0,
+          "end_sec": 240.0,
+          "stress_event_count": 100,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 240.0,
+          "end_sec": 250.0,
+          "stress_event_count": 100,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 250.0,
+          "end_sec": 260.0,
+          "stress_event_count": 100,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 260.0,
+          "end_sec": 270.0,
+          "stress_event_count": 79,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 270.0,
+          "end_sec": 280.0,
+          "stress_event_count": 69,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 280.0,
+          "end_sec": 290.0,
+          "stress_event_count": 91,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 290.0,
+          "end_sec": 300.0,
+          "stress_event_count": 67,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 300.0,
+          "end_sec": 310.0,
+          "stress_event_count": 72,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 310.0,
+          "end_sec": 320.0,
+          "stress_event_count": 69,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 320.0,
+          "end_sec": 330.0,
+          "stress_event_count": 41,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 330.0,
+          "end_sec": 340.0,
+          "stress_event_count": 29,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 340.0,
+          "end_sec": 350.0,
+          "stress_event_count": 19,
+          "max_peak_dbtp": -0.19975839211649338,
+          "risk": "high"
+        },
+        {
+          "start_sec": 350.0,
+          "end_sec": 360.0,
+          "stress_event_count": 3,
+          "max_peak_dbtp": -0.46580865806006544,
+          "risk": "medium"
+        },
+        {
+          "start_sec": 360.0,
+          "end_sec": 360.04861678004534,
+          "stress_event_count": 0,
+          "max_peak_dbtp": -90.30899869919436,
+          "risk": "low"
+        }
+      ],
+      "basis": {
+        "window_sec": 10.0,
+        "event_frame_sec": 0.1,
+        "stress_threshold_dbtp": -1.0,
+        "critical_threshold_dbtp": -0.2,
+        "peak_method": "sample_peak_dbfs_per_100ms_frame"
+      }
+    },
+    "spectral_rms": {
+      "status": "available",
+      "sub_rms_dbfs": -14.110102150182302,
+      "low_rms_dbfs": -15.898747674014269,
+      "mid_rms_dbfs": -17.08144433363621,
+      "high_rms_dbfs": -26.38576983420291,
+      "air_rms_dbfs": -30.184229200452588,
+      "basis": {
+        "method": "bandpass_time_domain_rms_dbfs",
+        "fft_size": 4096,
+        "hop_length": 1024,
+        "bands_hz": {
+          "sub": [
+            20.0,
+            60.0
+          ],
+          "low": [
+            60.0,
+            250.0
+          ],
+          "mid": [
+            250.0,
+            2000.0
+          ],
+          "high": [
+            2000.0,
+            8000.0
+          ],
+          "air": [
+            8000.0,
+            16000.0
+          ]
+        }
+      }
+    },
+    "transients": {
+      "status": "available",
+      "attack_strength": 0.11899700451154599,
+      "transient_density_per_sec": 2.9218276393009157,
+      "mean_short_crest_db": 8.571754932539102,
+      "p95_short_crest_db": 12.78584371848233,
+      "transient_density_cv": 0.610471933847138,
+      "timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 10.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 8.40514880892699,
+          "p95_short_crest_db": 14.455671540684666
+        },
+        {
+          "start_sec": 10.0,
+          "end_sec": 20.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 8.607667600155878,
+          "p95_short_crest_db": 15.255905540280644
+        },
+        {
+          "start_sec": 20.0,
+          "end_sec": 30.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 8.93431073174967,
+          "p95_short_crest_db": 15.238387484842065
+        },
+        {
+          "start_sec": 30.0,
+          "end_sec": 40.0,
+          "transient_count": 46,
+          "density_per_sec": 4.6,
+          "mean_short_crest_db": 8.708216946859975,
+          "p95_short_crest_db": 14.02538272229812
+        },
+        {
+          "start_sec": 40.0,
+          "end_sec": 50.0,
+          "transient_count": 45,
+          "density_per_sec": 4.5,
+          "mean_short_crest_db": 7.930822308619686,
+          "p95_short_crest_db": 12.728917643072757
+        },
+        {
+          "start_sec": 50.0,
+          "end_sec": 60.0,
+          "transient_count": 33,
+          "density_per_sec": 3.3,
+          "mean_short_crest_db": 8.07037220034241,
+          "p95_short_crest_db": 12.956173247865216
+        },
+        {
+          "start_sec": 60.0,
+          "end_sec": 70.0,
+          "transient_count": 22,
+          "density_per_sec": 2.2,
+          "mean_short_crest_db": 6.62415398026412,
+          "p95_short_crest_db": 10.85831668142805
+        },
+        {
+          "start_sec": 70.0,
+          "end_sec": 80.0,
+          "transient_count": 22,
+          "density_per_sec": 2.2,
+          "mean_short_crest_db": 6.68813893578169,
+          "p95_short_crest_db": 10.419238538119133
+        },
+        {
+          "start_sec": 80.0,
+          "end_sec": 90.0,
+          "transient_count": 32,
+          "density_per_sec": 3.2,
+          "mean_short_crest_db": 7.07921873825843,
+          "p95_short_crest_db": 10.645321994457726
+        },
+        {
+          "start_sec": 90.0,
+          "end_sec": 100.0,
+          "transient_count": 34,
+          "density_per_sec": 3.4,
+          "mean_short_crest_db": 7.280605156963636,
+          "p95_short_crest_db": 10.973200200578695
+        },
+        {
+          "start_sec": 100.0,
+          "end_sec": 110.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 7.944030774869224,
+          "p95_short_crest_db": 11.446328407255802
+        },
+        {
+          "start_sec": 110.0,
+          "end_sec": 120.0,
+          "transient_count": 47,
+          "density_per_sec": 4.7,
+          "mean_short_crest_db": 7.630201360658348,
+          "p95_short_crest_db": 11.137096327988141
+        },
+        {
+          "start_sec": 120.0,
+          "end_sec": 130.0,
+          "transient_count": 46,
+          "density_per_sec": 4.6,
+          "mean_short_crest_db": 7.635726403522622,
+          "p95_short_crest_db": 11.01348079821807
+        },
+        {
+          "start_sec": 130.0,
+          "end_sec": 140.0,
+          "transient_count": 6,
+          "density_per_sec": 0.6,
+          "mean_short_crest_db": 9.07976964573573,
+          "p95_short_crest_db": 10.863425787755421
+        },
+        {
+          "start_sec": 140.0,
+          "end_sec": 150.0,
+          "transient_count": 2,
+          "density_per_sec": 0.2,
+          "mean_short_crest_db": 9.022370992578663,
+          "p95_short_crest_db": 10.598933003585863
+        },
+        {
+          "start_sec": 150.0,
+          "end_sec": 160.0,
+          "transient_count": 0,
+          "density_per_sec": 0.0,
+          "mean_short_crest_db": 8.971448634496504,
+          "p95_short_crest_db": 10.738741106128368
+        },
+        {
+          "start_sec": 160.0,
+          "end_sec": 170.0,
+          "transient_count": 2,
+          "density_per_sec": 0.2,
+          "mean_short_crest_db": 9.04947699590394,
+          "p95_short_crest_db": 10.608022480198645
+        },
+        {
+          "start_sec": 170.0,
+          "end_sec": 180.0,
+          "transient_count": 43,
+          "density_per_sec": 4.3,
+          "mean_short_crest_db": 9.727261077756733,
+          "p95_short_crest_db": 12.73363562582411
+        },
+        {
+          "start_sec": 180.0,
+          "end_sec": 190.0,
+          "transient_count": 52,
+          "density_per_sec": 5.2,
+          "mean_short_crest_db": 10.221784008344576,
+          "p95_short_crest_db": 13.070641439838445
+        },
+        {
+          "start_sec": 190.0,
+          "end_sec": 200.0,
+          "transient_count": 26,
+          "density_per_sec": 2.6,
+          "mean_short_crest_db": 9.51996132234826,
+          "p95_short_crest_db": 11.21066317695423
+        },
+        {
+          "start_sec": 200.0,
+          "end_sec": 210.0,
+          "transient_count": 18,
+          "density_per_sec": 1.8,
+          "mean_short_crest_db": 9.141366024948386,
+          "p95_short_crest_db": 12.089080463696655
+        },
+        {
+          "start_sec": 210.0,
+          "end_sec": 220.0,
+          "transient_count": 35,
+          "density_per_sec": 3.5,
+          "mean_short_crest_db": 8.468480783773236,
+          "p95_short_crest_db": 11.664836595618558
+        },
+        {
+          "start_sec": 220.0,
+          "end_sec": 230.0,
+          "transient_count": 41,
+          "density_per_sec": 4.1,
+          "mean_short_crest_db": 8.345048725156524,
+          "p95_short_crest_db": 11.528259285397471
+        },
+        {
+          "start_sec": 230.0,
+          "end_sec": 240.0,
+          "transient_count": 14,
+          "density_per_sec": 1.4,
+          "mean_short_crest_db": 8.2348647689145,
+          "p95_short_crest_db": 11.040089868153824
+        },
+        {
+          "start_sec": 240.0,
+          "end_sec": 250.0,
+          "transient_count": 27,
+          "density_per_sec": 2.7,
+          "mean_short_crest_db": 8.324126535547578,
+          "p95_short_crest_db": 11.240153886976259
+        },
+        {
+          "start_sec": 250.0,
+          "end_sec": 260.0,
+          "transient_count": 27,
+          "density_per_sec": 2.7,
+          "mean_short_crest_db": 8.307686496504942,
+          "p95_short_crest_db": 11.334897595994665
+        },
+        {
+          "start_sec": 260.0,
+          "end_sec": 270.0,
+          "transient_count": 0,
+          "density_per_sec": 0.0,
+          "mean_short_crest_db": 9.410867956530831,
+          "p95_short_crest_db": 11.089259391276599
+        },
+        {
+          "start_sec": 270.0,
+          "end_sec": 280.0,
+          "transient_count": 0,
+          "density_per_sec": 0.0,
+          "mean_short_crest_db": 9.28428116722145,
+          "p95_short_crest_db": 10.84290483860791
+        },
+        {
+          "start_sec": 280.0,
+          "end_sec": 290.0,
+          "transient_count": 0,
+          "density_per_sec": 0.0,
+          "mean_short_crest_db": 9.299016190838993,
+          "p95_short_crest_db": 10.759451877650076
+        },
+        {
+          "start_sec": 290.0,
+          "end_sec": 300.0,
+          "transient_count": 23,
+          "density_per_sec": 2.3,
+          "mean_short_crest_db": 9.153104602438175,
+          "p95_short_crest_db": 12.469797793708473
+        },
+        {
+          "start_sec": 300.0,
+          "end_sec": 310.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 7.9207126882615,
+          "p95_short_crest_db": 12.13264299083661
+        },
+        {
+          "start_sec": 310.0,
+          "end_sec": 320.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 8.422234353536556,
+          "p95_short_crest_db": 12.60878558196304
+        },
+        {
+          "start_sec": 320.0,
+          "end_sec": 330.0,
+          "transient_count": 42,
+          "density_per_sec": 4.2,
+          "mean_short_crest_db": 9.330168279083754,
+          "p95_short_crest_db": 13.77586212177269
+        },
+        {
+          "start_sec": 330.0,
+          "end_sec": 340.0,
+          "transient_count": 44,
+          "density_per_sec": 4.4,
+          "mean_short_crest_db": 8.816568220579681,
+          "p95_short_crest_db": 13.647842173890371
+        },
+        {
+          "start_sec": 340.0,
+          "end_sec": 350.0,
+          "transient_count": 47,
+          "density_per_sec": 4.7,
+          "mean_short_crest_db": 8.79790830468447,
+          "p95_short_crest_db": 13.78516238860323
+        },
+        {
+          "start_sec": 350.0,
+          "end_sec": 360.0,
+          "transient_count": 12,
+          "density_per_sec": 1.2,
+          "mean_short_crest_db": 10.199171905841403,
+          "p95_short_crest_db": 12.719930377407675
+        },
+        {
+          "start_sec": 360.0,
+          "end_sec": 360.04861678004534,
+          "transient_count": 0,
+          "density_per_sec": 0.0,
+          "mean_short_crest_db": 8.29964456029292,
+          "p95_short_crest_db": 8.714186643268485
+        }
+      ],
+      "basis": {
+        "method": "onset_envelope_short_crest",
+        "window_sec": 10.0,
+        "hop_sec": 10.0,
+        "peak_pick_delta": 0.08
+      }
+    }
+  },
+  "ai_consultant": {
+    "summary_status": "not_generated_by_engine",
+    "local_summary_filename": "ai_consultant_summary.md",
+    "note": "The analysis engine does not generate live AI consultant text. Local markdown summaries may be generated separately for testing."
+  },
+  "meta": {
+    "source": "analysis_engine",
+    "schema": "artist_feedback_payload",
+    "created_at": null,
+    "warnings": []
+  }
+}
