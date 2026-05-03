@@ -25,6 +25,23 @@ def _phase_correlation(left: np.ndarray, right: np.ndarray) -> float:
     return float(numerator / denominator)
 
 
+def _left_right_balance_db(left: np.ndarray, right: np.ndarray) -> float:
+    """
+    Full-band left/right RMS balance in dB.
+
+    Positive values mean the left channel is stronger.
+    Negative values mean the right channel is stronger.
+    """
+    left_rms = _safe_rms(left)
+    right_rms = _safe_rms(right)
+
+    if left_rms <= 0.0 and right_rms <= 0.0:
+        return 0.0
+
+    epsilon = 1e-12
+    return float(20.0 * np.log10((left_rms + epsilon) / (right_rms + epsilon)))
+
+
 def analyze_stereo(
     audio_stereo: np.ndarray,
     sample_rate: int,
@@ -48,6 +65,7 @@ def analyze_stereo(
 
     # Phase Correlation
     phase_correlation = _phase_correlation(left, right)
+    left_right_balance_db = _left_right_balance_db(left, right)
 
     # Stereo width proxy based on side vs. total mid+side energy.
     total_energy = mid_rms + side_rms
@@ -61,4 +79,5 @@ def analyze_stereo(
         side_mid_ratio=side_mid_ratio,
         phase_correlation=phase_correlation,
         stereo_width=stereo_width,
+        left_right_balance_db=left_right_balance_db,
     )

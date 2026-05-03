@@ -251,6 +251,7 @@ class StereoMetrics:
     side_mid_ratio: float | None = None
     phase_correlation: float | None = None
     stereo_width: float | None = None
+    left_right_balance_db: float | None = None
 
 
 @dataclass
