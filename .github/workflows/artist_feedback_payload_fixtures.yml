@@ -25,3 +25,6 @@ jobs:
 
       - name: Coverage audit fixtures
         run: python3 -m analysis_engine.audit_artist_feedback_payload_coverage analysis_engine/fixtures/artist_feedback_payload
+
+      - name: Product consultant export audit
+        run: python3 -m analysis_engine.audit_product_consultant_exports
