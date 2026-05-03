@@ -64,6 +64,7 @@ The audit currently verifies:
 - mix_translation_listening_check is backed by artist_guidance.mix_overview.
 - limiter_headroom_stress_check includes limiter_stress in mix_overview.available_signal_groups.
 - section_timeline_* listening guidance includes valid section timeline evidence.
+- `ai_consultant` is validated as a status-only block: it must contain exactly `summary_status`, `local_summary_filename`, and `note`; `summary_status` must be `not_generated_by_engine`; `local_summary_filename` must be `ai_consultant_summary.md`; `note` must be a non-empty string.
 
 ## Read-only guarantee
 

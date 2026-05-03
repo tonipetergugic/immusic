@@ -396,11 +396,48 @@ def _check_listening_guidance_contract(payload: Mapping[str, Any], errors: list[
             )
 
 
+def _check_ai_consultant(payload: Mapping[str, Any], errors: list[str]) -> None:
+    ai_consultant = payload.get("ai_consultant")
+    if not isinstance(ai_consultant, Mapping):
+        errors.append("ai_consultant must be an object")
+        return
+
+    expected_keys = {
+        "summary_status",
+        "local_summary_filename",
+        "note",
+    }
+
+    unexpected_keys = sorted(set(ai_consultant.keys()) - expected_keys)
+    if unexpected_keys:
+        errors.append(f"ai_consultant has unexpected keys: {unexpected_keys}")
+
+    missing_keys = sorted(expected_keys - set(ai_consultant.keys()))
+    if missing_keys:
+        errors.append(f"ai_consultant missing keys: {missing_keys}")
+        return
+
+    if ai_consultant.get("summary_status") != "not_generated_by_engine":
+        errors.append(
+            "ai_consultant.summary_status must be not_generated_by_engine"
+        )
+
+    if ai_consultant.get("local_summary_filename") != "ai_consultant_summary.md":
+        errors.append(
+            "ai_consultant.local_summary_filename must be ai_consultant_summary.md"
+        )
+
+    note = ai_consultant.get("note")
+    if not isinstance(note, str) or not note.strip():
+        errors.append("ai_consultant.note must be a non-empty string")
+
+
 def _audit_payload(payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
 
     _check_payload_structure_contract(payload, errors)
     _check_listening_guidance_contract(payload, errors)
+    _check_ai_consultant(payload, errors)
     _check_structure_overview(payload, errors)
     _check_technical_guidance(payload, errors)
     _check_mix_guidance(payload, errors)
