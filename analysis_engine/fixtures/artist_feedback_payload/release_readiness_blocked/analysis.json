@@ -1,0 +1,35 @@
+{
+  "file_info": {
+    "filename": "fixture_blocked.wav"
+  },
+  "product_payload": {},
+  "summary": {},
+  "issues": [
+    {
+      "severity": "problem",
+      "area": "peaks",
+      "code": "fixture_peak_hard_block",
+      "title": "Fixture peak hard block",
+      "text": "Fixture problem issue used to cover the blocked release-readiness path."
+    }
+  ],
+  "consultant_input": {
+    "track_context": {},
+    "summary": {},
+    "issues": [],
+    "structure": {},
+    "structure_summary": {},
+    "section_character_summary": {},
+    "arrangement_development_summary": {},
+    "musical_flow_summary": {},
+    "score_context": {},
+    "technical_metrics": {}
+  },
+  "loudness": {},
+  "dynamics": {},
+  "stereo": {},
+  "low_end": {},
+  "limiter_stress": {},
+  "spectral_rms": {},
+  "transients": {}
+}
