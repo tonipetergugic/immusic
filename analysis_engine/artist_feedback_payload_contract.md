@@ -1060,12 +1060,82 @@ Typical content:
 - `limiter_stress`
 - `spectral_rms`
 - `transients`
+- `mix_basis`
 
 Rules:
 
 - These fields may be useful for meters.
 - They should not be shown as the primary feedback summary.
 - Artist-facing wording should be generated through `artist_guidance`.
+
+### technical_details.mix_basis
+
+Purpose: compact mix-basis suspicion contract for future detail views and consultant context.
+
+Path:
+
+```python
+payload["technical_details"]["mix_basis"]
+```
+
+Current fields:
+
+```text
+status
+confidence
+available_signal_groups
+checks
+```
+
+Allowed status values:
+
+```text
+available
+partial
+not_available
+```
+
+Each item in checks contains:
+
+```text
+id
+status
+confidence
+area
+headline
+observation
+listening_check
+evidence
+```
+
+Allowed check status values:
+
+```text
+ok
+watch
+suspect
+not_available
+```
+
+Current check IDs:
+
+```text
+left_right_balance_check
+center_focus_tendency
+low_mid_mud_tendency
+upper_harshness_tendency
+```
+
+Rules:
+
+- mix_basis is not a release blocker.
+- mix_basis must not override release.release_readiness.
+- mix_basis must not replace artist_guidance.mix_overview.
+- mix_basis exposes cautious mix-basis suspicion signals only.
+- Do not present check IDs as artist-facing diagnoses.
+- Do not claim masking, washed-out reverb, or kick/bass conflict from this block.
+- Use headline, observation, and listening_check for future artist-facing wording.
+- Use evidence for audit, debugging, and meter/detail views only.
 
 ## 9. AI Consultant
 
