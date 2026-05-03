@@ -80,6 +80,34 @@ It reports coverage for:
 
 Use it to identify missing edge-case fixtures without making the main contract audit fail.
 
+## Versioned fixture path
+
+Generated payloads under `analysis_engine/output/` are local artifacts and are ignored by Git.
+
+Future versioned Artist Feedback Payload fixtures should live outside `analysis_engine/output/`.
+
+Recommended path:
+
+```text
+analysis_engine/fixtures/artist_feedback_payload/<case_name>/
+```
+
+Recommended fixture files per case:
+
+```text
+analysis_engine/fixtures/artist_feedback_payload/<case_name>/analysis.json
+analysis_engine/fixtures/artist_feedback_payload/<case_name>/artist_feedback_payload.json
+```
+
+The same audits can be run against a fixture root:
+
+```bash
+python3 -m analysis_engine.audit_artist_feedback_payload analysis_engine/fixtures/artist_feedback_payload
+python3 -m analysis_engine.audit_artist_feedback_payload_coverage analysis_engine/fixtures/artist_feedback_payload
+```
+
+Use versioned fixtures for future CI/regression coverage, especially for edge cases not covered by local generated outputs.
+
 ## What it checks
 
 The audit currently verifies:
