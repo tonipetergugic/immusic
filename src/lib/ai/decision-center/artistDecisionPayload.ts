@@ -354,6 +354,172 @@ function buildTechnicalChecksFromMetrics(
   return checks;
 }
 
+function mapArtistFeedbackCheckStatus(value: unknown): ArtistDecisionPayloadStatus {
+  const status = asString(value);
+
+  if (status === "ok" || status === "pass") return "pass";
+
+  if (
+    status === "problem" ||
+    status === "error" ||
+    status === "blocked" ||
+    status === "attention"
+  ) {
+    return "attention";
+  }
+
+  return "check";
+}
+
+function normalizeArtistFeedbackTechnicalChecks(
+  value: unknown
+): ArtistDecisionTechnicalCheck[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      const row = asRecord(item);
+      const label = asString(row.label);
+      const message =
+        asString(row.message) ??
+        asString(row.short_text) ??
+        asString(row.text);
+
+      if (!label || !message) return null;
+
+      return {
+        label,
+        status: mapArtistFeedbackCheckStatus(row.state ?? row.status),
+        message,
+      };
+    })
+    .filter((item): item is ArtistDecisionTechnicalCheck => Boolean(item));
+}
+
+function extractArtistFeedbackListeningPoints(
+  value: unknown,
+  maxItems = 3
+): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const points: string[] = [];
+
+  for (const item of value) {
+    const row = asRecord(item);
+    const headline = asString(row.headline);
+    const whatToListenFor = asString(row.what_to_listen_for);
+
+    if (headline && whatToListenFor) {
+      points.push(`${headline}: ${whatToListenFor}`);
+    } else if (whatToListenFor) {
+      points.push(whatToListenFor);
+    } else if (headline) {
+      points.push(headline);
+    }
+
+    if (points.length >= maxItems) break;
+  }
+
+  return points;
+}
+
+function buildFromArtistFeedbackPayload(
+  feedbackPayload: JsonRecord
+): ArtistDecisionPayload | null {
+  const release = asRecord(feedbackPayload.release);
+  const artistGuidance = asRecord(feedbackPayload.artist_guidance);
+  const meta = asRecord(feedbackPayload.meta);
+
+  const hasArtistFeedbackShape =
+    asString(meta.schema) === "artist_feedback_payload" ||
+    (Object.keys(release).length > 0 &&
+      Object.keys(artistGuidance).length > 0 &&
+      (Object.keys(asRecord(artistGuidance.structure_summary)).length > 0 ||
+        Object.keys(asRecord(artistGuidance.structure_overview)).length > 0));
+
+  if (!hasArtistFeedbackShape) return null;
+
+  const structureSummary = asRecord(artistGuidance.structure_summary);
+  const structureOverview = asRecord(artistGuidance.structure_overview);
+  const technicalOverview = asRecord(artistGuidance.technical_overview);
+  const mixOverview = asRecord(artistGuidance.mix_overview);
+  const releaseReadiness = asRecord(release.release_readiness);
+
+  const technicalChecks = normalizeArtistFeedbackTechnicalChecks(
+    release.technical_release_checks
+  );
+
+  const whatWorksWell: string[] = [];
+  const whatMayBeWorthChecking = extractArtistFeedbackListeningPoints(
+    feedbackPayload.listening_guidance
+  );
+
+  if (asString(releaseReadiness.state) === "ready") {
+    whatWorksWell.push(
+      "No critical release issue was reported by the technical checks."
+    );
+  }
+
+  if (asString(structureOverview.status) === "available") {
+    whatWorksWell.push(
+      "The structure overview is available and can guide a focused listening pass."
+    );
+  }
+
+  if (asString(mixOverview.status) === "available") {
+    whatWorksWell.push(
+      "Mix translation guidance is available for focused listening."
+    );
+  }
+
+  if (
+    technicalChecks.some((check) => check.status !== "pass") &&
+    !whatMayBeWorthChecking.includes(
+      "Review the highlighted technical release checks before export."
+    )
+  ) {
+    whatMayBeWorthChecking.push(
+      "Review the highlighted technical release checks before export."
+    );
+  }
+
+  const summary =
+    asString(structureOverview.main_observation) ??
+    asString(structureOverview.headline) ??
+    asString(technicalOverview.main_observation) ??
+    "The engine feedback is available and should be reviewed with your musical intention in mind.";
+
+  const mainMessage =
+    asString(structureOverview.headline) ??
+    "The structure overview is available as cautious listening guidance.";
+
+  const supportingPoints = [
+    asString(structureOverview.timeline_summary),
+    asString(structureOverview.listening_focus),
+    asString(structureOverview.timeline_hint),
+  ].filter((item): item is string => Boolean(item));
+
+  const nextStep =
+    asString(asRecord(release.next_step).text) ??
+    asString(release.next_step) ??
+    "Open the detailed feedback and check the main musical and technical notes.";
+
+  return {
+    summary,
+    what_works_well: whatWorksWell,
+    what_may_be_worth_checking: whatMayBeWorthChecking,
+    score_cards: buildScoreCardsFromStructure(
+      asRecord(structureSummary.raw_scores)
+    ),
+    structure_movement: {
+      main_message: mainMessage,
+      supporting_points: supportingPoints,
+    },
+    technical_release_checks: technicalChecks,
+    next_step: nextStep,
+  };
+}
+
 function buildFromNewEnginePayload(feedbackPayload: JsonRecord): ArtistDecisionPayload | null {
   const consultantInput = asRecord(feedbackPayload.consultant_input);
   const productPayload = asRecord(feedbackPayload.product_payload);
@@ -582,6 +748,11 @@ export function buildArtistDecisionPayload(
 
   if (directPayload) {
     return directPayload;
+  }
+
+  const artistFeedbackPayload = buildFromArtistFeedbackPayload(root);
+  if (artistFeedbackPayload) {
+    return artistFeedbackPayload;
   }
 
   const newEnginePayload = buildFromNewEnginePayload(root);
