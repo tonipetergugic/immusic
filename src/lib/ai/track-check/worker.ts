@@ -37,6 +37,7 @@ import { ensureQueueAudioHash } from "@/lib/ai/track-check/hash";
 import { downloadIngestWavOrFail } from "@/lib/ai/track-check/wav-download";
 import { writeTempWavOrFail } from "@/lib/ai/track-check/temp-wav";
 import { runAnalysisEngineForAudio } from "@/lib/ai/track-check/engine-runner";
+import { writeEngineFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/engine-feedback-payload";
 
 function nowNs() {
   return process.hrtime.bigint();
@@ -441,6 +442,7 @@ async function runApproveAndInsertTrack(params: {
   integratedLufs: number;
   truePeakDb: number;
   clippedSampleCount: number;
+  artistFeedbackPayload: Record<string, unknown> | null;
   logStage: (stage: string, ms: number) => void;
   nowNs: () => bigint;
   elapsedMs: (startNs: bigint) => number;
@@ -467,6 +469,7 @@ async function runApproveAndInsertTrack(params: {
     integratedLufs,
     truePeakDb,
     clippedSampleCount,
+    artistFeedbackPayload,
     logStage,
     nowNs,
     elapsedMs,
@@ -685,6 +688,16 @@ async function runApproveAndInsertTrack(params: {
         clippedSampleCount,
       });
 
+      if (artistFeedbackPayload) {
+        await writeEngineFeedbackPayloadIfUnlocked({
+          admin,
+          userId,
+          queueId,
+          audioHash: finalAudioHash ?? null,
+          artistFeedbackPayload,
+        });
+      }
+
       const response = await respondTerminal({
         supabase,
         userId,
@@ -727,6 +740,16 @@ async function runApproveAndInsertTrack(params: {
     clippedSampleCount,
   });
 
+  if (artistFeedbackPayload) {
+    await writeEngineFeedbackPayloadIfUnlocked({
+      admin,
+      userId,
+      queueId,
+      audioHash: finalAudioHash ?? null,
+      artistFeedbackPayload,
+    });
+  }
+
   const response = await respondTerminal({
     supabase,
     userId,
@@ -754,6 +777,7 @@ async function runDuplicateAndRejectedBranch(params: {
   integratedLufs: number;
   truePeakDb: number;
   clippedSampleCount: number;
+  artistFeedbackPayload: Record<string, unknown> | null;
 }): Promise<DecisionPhaseOk | DecisionPhaseFail> {
   const {
     supabase,
@@ -766,6 +790,7 @@ async function runDuplicateAndRejectedBranch(params: {
     integratedLufs,
     truePeakDb,
     clippedSampleCount,
+    artistFeedbackPayload,
   } = params;
 
   // Global audio dedupe: identical master audio must not enter the system twice
@@ -828,6 +853,16 @@ async function runDuplicateAndRejectedBranch(params: {
       clippedSampleCount,
     });
 
+    if (artistFeedbackPayload) {
+      await writeEngineFeedbackPayloadIfUnlocked({
+        admin,
+        userId,
+        queueId,
+        audioHash: audioHash ?? null,
+        artistFeedbackPayload,
+      });
+    }
+
     const response = await respondTerminal({
       supabase,
       userId,
@@ -881,14 +916,19 @@ export async function runTrackCheckWorker(params: {
     let audioHash = tech.audioHash;
     const { integratedLufs, truePeakDb, clippedSampleCount, analyzerMetrics } = tech.metrics;
     tmpWavPath = tmpWavPathFromTech;
+    let artistFeedbackPayload: Record<string, unknown> | null = null;
 
     if (process.env.IMMUSIC_ANALYSIS_ENGINE_SIDECAR === "1") {
       try {
         const tAnalysisEngine = nowNs();
-        await runAnalysisEngineForAudio({
+        const engineResult = await runAnalysisEngineForAudio({
           audioPath: tmpWavPathFromTech,
           trackId: queueId,
         });
+
+        if (engineResult.ok) {
+          artistFeedbackPayload = engineResult.artistFeedbackPayload;
+        }
         logStage("analysis_engine_sidecar", elapsedMs(tAnalysisEngine));
       } catch {}
     }
@@ -908,6 +948,7 @@ export async function runTrackCheckWorker(params: {
       integratedLufs,
       truePeakDb,
       clippedSampleCount,
+      artistFeedbackPayload,
     });
 
     if (!decisionPhase.ok) {
@@ -971,6 +1012,7 @@ export async function runTrackCheckWorker(params: {
       integratedLufs,
       truePeakDb,
       clippedSampleCount,
+      artistFeedbackPayload,
       logStage,
       nowNs,
       elapsedMs,
