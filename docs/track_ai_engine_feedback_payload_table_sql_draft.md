@@ -62,3 +62,21 @@ exact queue table name and primary key
 exact tracks table name and primary key, if track_id should later receive a foreign key
 desired RLS policy model
 whether service-role-only access is sufficient for this table
+
+## RLS / access model decision
+
+Planned access model:
+
+- service-role-only
+- no direct client access
+- no user-facing RLS access path
+- reads and writes should happen only through trusted server-side code
+
+Reason:
+
+- the payload contains detailed feedback data
+- the existing feedback persistence path is server-controlled
+- the future write adapter should keep the same trust boundary
+- client access can be added later only if a dedicated reader contract requires it
+
+Before SQL execution, the final RLS policy must be written explicitly for Supabase SQL Editor usage.
