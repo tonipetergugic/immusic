@@ -107,3 +107,16 @@ Reason:
 - client access can be added later only if a dedicated reader contract requires it
 
 Before SQL execution, the final RLS policy must be written explicitly for Supabase SQL Editor usage.
+
+## Execution status
+
+Executed manually in Supabase SQL Editor.
+
+Confirmed:
+- `public.track_ai_feedback_payloads_engine` exists.
+- Row Level Security is enabled.
+- Planned columns are present.
+- Primary key, unique `queue_id`, `payload_schema`, and `source` constraints are present.
+- `updated_at` trigger is present.
+
+No write adapter, reader integration, UI integration, upload flow change, or OpenAI flow change has been implemented yet.
