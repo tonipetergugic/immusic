@@ -36,6 +36,7 @@ import { persistCodecSimulationBestEffort } from "@/lib/ai/track-check/codec-sim
 import { ensureQueueAudioHash } from "@/lib/ai/track-check/hash";
 import { downloadIngestWavOrFail } from "@/lib/ai/track-check/wav-download";
 import { writeTempWavOrFail } from "@/lib/ai/track-check/temp-wav";
+import { runAnalysisEngineForAudio } from "@/lib/ai/track-check/engine-runner";
 
 function nowNs() {
   return process.hrtime.bigint();
@@ -880,6 +881,17 @@ export async function runTrackCheckWorker(params: {
     let audioHash = tech.audioHash;
     const { integratedLufs, truePeakDb, clippedSampleCount, analyzerMetrics } = tech.metrics;
     tmpWavPath = tmpWavPathFromTech;
+
+    if (process.env.IMMUSIC_ANALYSIS_ENGINE_SIDECAR === "1") {
+      try {
+        const tAnalysisEngine = nowNs();
+        await runAnalysisEngineForAudio({
+          audioPath: tmpWavPathFromTech,
+          trackId: queueId,
+        });
+        logStage("analysis_engine_sidecar", elapsedMs(tAnalysisEngine));
+      } catch {}
+    }
 
     const tAnalyze = nowNs();
     const decision = await analyzeAudio(analyzerMetrics);
