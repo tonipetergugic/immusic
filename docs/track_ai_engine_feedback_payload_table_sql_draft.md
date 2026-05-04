@@ -33,6 +33,33 @@ create table if not exists public.track_ai_feedback_payloads_engine (
   constraint track_ai_feedback_payloads_engine_source_check
     check (source = 'analysis_engine_sidecar')
 );
+
+alter table public.track_ai_feedback_payloads_engine
+  enable row level security;
+
+revoke all on table public.track_ai_feedback_payloads_engine from anon;
+revoke all on table public.track_ai_feedback_payloads_engine from authenticated;
+
+grant all on table public.track_ai_feedback_payloads_engine to service_role;
+
+create or replace function public.set_track_ai_feedback_payloads_engine_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_track_ai_feedback_payloads_engine_updated_at
+on public.track_ai_feedback_payloads_engine;
+
+create trigger set_track_ai_feedback_payloads_engine_updated_at
+before update on public.track_ai_feedback_payloads_engine
+for each row
+execute function public.set_track_ai_feedback_payloads_engine_updated_at();
+```
 Notes
 
 This draft intentionally does not add foreign keys.
