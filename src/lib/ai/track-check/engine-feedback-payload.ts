@@ -1,6 +1,6 @@
 import { asAdminClient } from "@/lib/ai/track-check/admin";
 
-export async function writeEngineFeedbackPayloadIfUnlocked(params: {
+export async function writeEngineFeedbackPayload(params: {
   admin: any;
   userId: string;
   queueId: string;
@@ -19,30 +19,20 @@ export async function writeEngineFeedbackPayloadIfUnlocked(params: {
 
   const { data: queueRow, error: queueErr } = await adminClient
     .from("tracks_ai_queue")
-    .select("audio_hash")
+    .select("user_id, audio_hash")
     .eq("id", queueId)
     .maybeSingle();
+
+  if (queueErr || !queueRow || (queueRow as { user_id?: string }).user_id !== userId) {
+    return;
+  }
 
   const queueAudioHash =
     typeof queueRow?.audio_hash === "string" && queueRow.audio_hash.trim().length > 0
       ? queueRow.audio_hash.trim()
       : null;
 
-  if (queueErr || !queueAudioHash) {
-    return;
-  }
-
-  const { data: unlock, error: unlockErr } = await adminClient
-    .from("track_ai_feedback_unlocks" as any)
-    .select("id")
-    .eq("queue_id", queueId)
-    .eq("user_id", userId)
-    .eq("audio_hash", queueAudioHash)
-    .maybeSingle();
-
-  const unlockRow = unlock as { id?: string } | null;
-
-  if (unlockErr || !unlockRow?.id) {
+  if (!queueAudioHash) {
     return;
   }
 

@@ -37,7 +37,7 @@ import { ensureQueueAudioHash } from "@/lib/ai/track-check/hash";
 import { downloadIngestWavOrFail } from "@/lib/ai/track-check/wav-download";
 import { writeTempWavOrFail } from "@/lib/ai/track-check/temp-wav";
 import { runAnalysisEngineForAudio } from "@/lib/ai/track-check/engine-runner";
-import { writeEngineFeedbackPayloadIfUnlocked } from "@/lib/ai/track-check/engine-feedback-payload";
+import { writeEngineFeedbackPayload } from "@/lib/ai/track-check/engine-feedback-payload";
 
 function nowNs() {
   return process.hrtime.bigint();
@@ -689,7 +689,7 @@ async function runApproveAndInsertTrack(params: {
       });
 
       if (artistFeedbackPayload) {
-        await writeEngineFeedbackPayloadIfUnlocked({
+        await writeEngineFeedbackPayload({
           admin,
           userId,
           queueId,
@@ -741,7 +741,7 @@ async function runApproveAndInsertTrack(params: {
   });
 
   if (artistFeedbackPayload) {
-    await writeEngineFeedbackPayloadIfUnlocked({
+    await writeEngineFeedbackPayload({
       admin,
       userId,
       queueId,
@@ -854,7 +854,7 @@ async function runDuplicateAndRejectedBranch(params: {
     });
 
     if (artistFeedbackPayload) {
-      await writeEngineFeedbackPayloadIfUnlocked({
+      await writeEngineFeedbackPayload({
         admin,
         userId,
         queueId,
