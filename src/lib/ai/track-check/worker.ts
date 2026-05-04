@@ -930,7 +930,9 @@ export async function runTrackCheckWorker(params: {
           artistFeedbackPayload = engineResult.artistFeedbackPayload;
         }
         logStage("analysis_engine_sidecar", elapsedMs(tAnalysisEngine));
-      } catch {}
+      } catch (err) {
+        console.warn("analysis_engine_sidecar_failed", err);
+      }
     }
 
     const tAnalyze = nowNs();
