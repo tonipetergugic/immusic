@@ -79,8 +79,34 @@ Removed:
 analysis_engine_sidecar_env
 analysis_engine_sidecar_ok
 analysis_engine_sidecar_result_failed
+
+## Reader integration
+
+Implemented commit:
+
+`234996e Read engine feedback payload alongside legacy payload`
+
+Changed file:
+
+`src/lib/ai/track-check/read-feedback-state.ts`
+
+Result:
+
+- `readFeedbackState()` now reads `public.track_ai_feedback_payloads_engine` after a valid unlock.
+- Existing `payload` remains the legacy/V2 payload.
+- New `engine_payload` returns the `artist_feedback_payload` from the engine table when available.
+- New `primary_payload_source` reports `engine`, `legacy`, or `none`.
+- Existing feedback UI and Decision Center remain unchanged.
+
+Runtime verification:
+
+- Test queue: `01d8ea18-f849-4123-b757-259bdb4ae437`
+- API returned `feedback_state = unlocked_ready`
+- API returned `primary_payload_source = engine`
+- API returned `engine_payload.meta.schema = artist_feedback_payload`
+
 Not implemented yet
-No reader integration for the new engine table.
+Reader integration for the new engine table is implemented as an additional unlocked read in `readFeedbackState()`.
 No UI integration.
 No Decision Center integration.
 No new feedback page integration.
