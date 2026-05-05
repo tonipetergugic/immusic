@@ -21,6 +21,14 @@ type FeedbackPayloadRow = {
   payload?: any;
 };
 
+type EngineFeedbackPayloadRow = {
+  audio_hash: string | null;
+  payload_schema: string | null;
+  payload?: any;
+};
+
+export type PrimaryPayloadSource = "engine" | "legacy" | "none";
+
 type PrivateMetricsRow = {
   true_peak_overs: Array<any> | null;
 };
@@ -42,6 +50,8 @@ export type ReadFeedbackStateLocked = {
   unlocked: false;
   access: FeedbackAccess;
   payload: null;
+  engine_payload: null;
+  primary_payload_source: "none";
 };
 
 export type ReadFeedbackStateUnlockedPending = {
@@ -54,6 +64,8 @@ export type ReadFeedbackStateUnlockedPending = {
   unlocked: true;
   access: FeedbackAccess;
   payload: null;
+  engine_payload: any | null;
+  primary_payload_source: PrimaryPayloadSource;
 };
 
 export type ReadFeedbackStateUnlockedReady = {
@@ -67,6 +79,8 @@ export type ReadFeedbackStateUnlockedReady = {
   access: FeedbackAccess;
   payload_version: number;
   payload: any;
+  engine_payload: any | null;
+  primary_payload_source: PrimaryPayloadSource;
 };
 
 export type ReadFeedbackStateOk =
@@ -158,7 +172,39 @@ export async function readFeedbackState(params: {
         analysis_status: analysisStatus,
       },
       payload: null,
+      engine_payload: null,
+      primary_payload_source: "none",
     };
+  }
+
+  let enginePayload: any | null = null;
+  let primaryPayloadSource: PrimaryPayloadSource = "none";
+
+  if (queueHash) {
+    try {
+      const admin = getSupabaseAdmin();
+      const { data: enginePayloadRow, error: enginePayloadErr } = await admin
+        .from("track_ai_feedback_payloads_engine" as any)
+        .select("audio_hash, payload_schema, payload")
+        .eq("queue_id", queueId)
+        .eq("user_id", userId)
+        .eq("payload_schema", "artist_feedback_payload")
+        .maybeSingle();
+
+      if (!enginePayloadErr && enginePayloadRow) {
+        const row = enginePayloadRow as EngineFeedbackPayloadRow;
+        const payloadHash = row.audio_hash ?? null;
+
+        if (payloadHash && payloadHash === queueHash) {
+          enginePayload = row.payload ?? null;
+          if (enginePayload) {
+            primaryPayloadSource = "engine";
+          }
+        }
+      }
+    } catch {
+      // best-effort: never break response
+    }
   }
 
   const terminalStatus = (queueRow as QueueRow).status;
@@ -264,6 +310,8 @@ export async function readFeedbackState(params: {
           },
           payload_version: Number((payloadRow as FeedbackPayloadRow).payload_version ?? 1),
           payload: (payloadRow as FeedbackPayloadRow).payload ?? null,
+          engine_payload: enginePayload,
+          primary_payload_source: primaryPayloadSource === "engine" ? "engine" : "legacy",
         };
       }
     }
@@ -284,5 +332,7 @@ export async function readFeedbackState(params: {
       analysis_status: analysisStatus,
     },
     payload: null,
+    engine_payload: enginePayload,
+    primary_payload_source: primaryPayloadSource,
   };
 }
