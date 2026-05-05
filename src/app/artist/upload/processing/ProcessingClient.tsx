@@ -32,6 +32,10 @@ type ProcessNextResponse =
 
 type Props = { credits: number; queueId: string };
 
+function isDuplicateRejectReason(reason: string | null | undefined): boolean {
+  return reason === "duplicate_audio" || reason === "duplicate";
+}
+
 export default function ProcessingClient({ credits, queueId }: Props) {
   const router = useRouter();
   const [rejectReason, setRejectReason] = useState<string | null>(null);
@@ -119,14 +123,19 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
         if (statusData.processed) {
           if (statusData.decision === "approved") {
-            setApproved(true);
-            setCanFeedback(!!statusData.feedback_available);
+            router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
             return;
           }
 
-          setRejected(true);
-          setRejectReason(statusData.reason ?? null);
+          const reason = statusData.reason ?? null;
 
+          if (isDuplicateRejectReason(reason)) {
+            setRejected(true);
+            setRejectReason(reason);
+            return;
+          }
+
+          router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
           return;
         }
 
@@ -171,13 +180,19 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
               if (data.processed) {
                 if (data.decision === "approved") {
-                  setApproved(true);
-                  setCanFeedback(!!data.feedback_available);
+                  router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
                   return;
                 }
 
-                setRejected(true);
-                setRejectReason(data.reason ?? null);
+                const reason = data.reason ?? null;
+
+                if (isDuplicateRejectReason(reason)) {
+                  setRejected(true);
+                  setRejectReason(reason);
+                  return;
+                }
+
+                router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
                 return;
               }
 
@@ -220,7 +235,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = null;
     };
-  }, [retryKey, queueId]);
+  }, [retryKey, queueId, router]);
 
   useEffect(() => {
     if (runningUiState !== "running" || approved || rejected || timedOut || errorText) {
