@@ -123,7 +123,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
         if (statusData.processed) {
           if (statusData.decision === "approved") {
-            router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
+            router.replace(`/artist/decision?queue_id=${encodeURIComponent(queueId)}`);
             return;
           }
 
@@ -135,7 +135,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
             return;
           }
 
-          router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
+          router.replace(`/artist/decision?queue_id=${encodeURIComponent(queueId)}`);
           return;
         }
 
@@ -180,7 +180,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
 
               if (data.processed) {
                 if (data.decision === "approved") {
-                  router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
+                  router.replace(`/artist/decision?queue_id=${encodeURIComponent(queueId)}`);
                   return;
                 }
 
@@ -192,7 +192,7 @@ export default function ProcessingClient({ credits, queueId }: Props) {
                   return;
                 }
 
-                router.replace(`/decision-center-lab?queue_id=${encodeURIComponent(queueId)}`);
+                router.replace(`/artist/decision?queue_id=${encodeURIComponent(queueId)}`);
                 return;
               }
 

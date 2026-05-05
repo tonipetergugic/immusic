@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   },
   {
     label: "Meters",
-    href: "/decision-center-lab/feedback/meters",
+    href: "/artist/decision/feedback/meters",
     isExternal: true,
   },
 ] as const;

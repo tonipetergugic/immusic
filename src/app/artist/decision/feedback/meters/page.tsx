@@ -48,10 +48,10 @@ type DecisionCenterLabMetersPageProps = {
 
 function buildFeedbackHref(trackFolderName?: string | null) {
   if (!trackFolderName) {
-    return "/decision-center-lab/feedback";
+    return "/artist/decision/feedback";
   }
 
-  return `/decision-center-lab/feedback?track=${encodeURIComponent(
+  return `/artist/decision/feedback?track=${encodeURIComponent(
     trackFolderName,
   )}`;
 }

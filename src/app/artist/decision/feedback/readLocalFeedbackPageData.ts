@@ -40,7 +40,7 @@ function getOutputRoot() {
 }
 
 function buildAssetUrl(folderName: string, fileName: string) {
-  return `/decision-center-lab/assets?track=${encodeURIComponent(
+  return `/artist/decision/assets?track=${encodeURIComponent(
     folderName,
   )}&file=${encodeURIComponent(fileName)}`;
 }

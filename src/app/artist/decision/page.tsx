@@ -213,7 +213,7 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
                         href={
                           isPlatformMode
                             ? `/artist/upload/feedback?queue_id=${encodeURIComponent(queueId)}`
-                            : `/decision-center-lab/feedback?track=${encodeURIComponent(
+                            : `/artist/decision/feedback?track=${encodeURIComponent(
                                 selectedItem.folderName,
                               )}`
                         }

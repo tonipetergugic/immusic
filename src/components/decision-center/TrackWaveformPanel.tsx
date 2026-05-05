@@ -7,7 +7,7 @@ export function TrackWaveformPanel({
   trackFolderName,
   trackTitle,
 }: TrackWaveformPanelProps) {
-  const waveformSrc = `/decision-center-lab/assets?track=${encodeURIComponent(
+  const waveformSrc = `/artist/decision/assets?track=${encodeURIComponent(
     trackFolderName,
   )}&file=waveform.png`;
 

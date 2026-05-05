@@ -97,7 +97,7 @@ export default async function DecisionCenterLabFeedbackPage({
           <div className="relative grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div>
               <Link
-                href="/decision-center-lab"
+                href="/artist/decision"
                 className="text-sm font-medium text-[#00FFC6] transition hover:text-white"
               >
                 ← Back to Decision Center
@@ -126,7 +126,7 @@ export default async function DecisionCenterLabFeedbackPage({
 
                 {selectedTrack ? (
                   <Link
-                    href={`/decision-center-lab/feedback/meters?track=${encodeURIComponent(
+                    href={`/artist/decision/feedback/meters?track=${encodeURIComponent(
                       selectedTrack.folderName,
                     )}`}
                     className="inline-flex items-center justify-center rounded-full border border-[#00FFC6]/35 bg-[#00FFC6]/10 px-5 py-2.5 text-sm font-medium text-[#00FFC6] transition hover:border-[#00FFC6]/70 hover:bg-[#00FFC6]/15"
@@ -175,7 +175,7 @@ export default async function DecisionCenterLabFeedbackPage({
                 {selectedTrack.waveformAvailable ? (
                   <div className="mt-5 overflow-hidden rounded-2xl border border-[#00FFC6]/20 bg-black/40">
                     <img
-                      src={`/decision-center-lab/assets?track=${encodeURIComponent(
+                      src={`/artist/decision/assets?track=${encodeURIComponent(
                         selectedTrack.folderName,
                       )}&file=waveform.png`}
                       alt={`Waveform preview for ${
@@ -251,7 +251,7 @@ export default async function DecisionCenterLabFeedbackPage({
               <LabTrackSelector
                 items={data.items}
                 selectedFolderName={selectedTrack.folderName}
-                pathname="/decision-center-lab/feedback"
+                pathname="/artist/decision/feedback"
               />
             </aside>
           </div>

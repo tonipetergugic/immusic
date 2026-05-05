@@ -10,7 +10,7 @@ type LabTrackSelectorItem = {
 export function LabTrackSelector({
   items,
   selectedFolderName,
-  pathname = "/decision-center-lab",
+  pathname = "/artist/decision",
 }: {
   items: LabTrackSelectorItem[];
   selectedFolderName: string;
