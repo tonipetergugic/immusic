@@ -63,7 +63,7 @@ export default function ArtistSidebar({
     },
     {
       label: "Decision Center",
-      href: "/artist/decision",
+      href: "/decision-center-lab",
       icon: <Brain size={20} />,
       requiresArtist: true,
     },
