@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import path from "node:path";
 import { readdir, readFile } from "node:fs/promises";
@@ -14,6 +14,9 @@ import type {
   AnalysisPayload,
   ArtistDecisionPayload,
 } from "@/components/decision-center/types";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedServerUser } from "@/lib/supabase/getCachedServerUser";
+import { readDecisionCenterState } from "@/lib/ai/decision-center/readDecisionCenterState";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +25,7 @@ export const revalidate = 0;
 type PageProps = {
   searchParams?: Promise<{
     track?: string;
+    queue_id?: string;
   }>;
 };
 
@@ -104,12 +108,59 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
   }
 
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const items = await loadLabItems();
+  const queueId = (resolvedSearchParams.queue_id ?? "").trim();
+  const isPlatformMode = Boolean(queueId);
 
-  const selectedItem =
-    items.find((item) => item.folderName === resolvedSearchParams.track) ||
-    items[0] ||
-    null;
+  let items: LabItem[] = [];
+  let selectedItem: LabItem | null = null;
+
+  if (isPlatformMode) {
+    const supabase = await createSupabaseServerClient();
+    const user = await getCachedServerUser();
+
+    if (!user) redirect("/login");
+
+    const decisionState = await readDecisionCenterState({
+      supabase,
+      userId: user.id,
+      queueId,
+    });
+
+    if (!decisionState.ok) {
+      return (
+        <main className="min-h-screen bg-[#0E0E10] px-4 py-8 text-white md:px-8 lg:px-12">
+          <div className="mx-auto w-full max-w-3xl rounded-3xl border border-red-400/20 bg-red-400/[0.06] p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-red-200/80">
+              Decision Center unavailable
+            </p>
+            <h1 className="mt-4 text-2xl font-semibold text-white">
+              We could not load this track.
+            </h1>
+            <p className="mt-3 text-sm text-zinc-300">
+              Error: {decisionState.error}
+            </p>
+          </div>
+        </main>
+      );
+    }
+
+    if (decisionState.decision_payload) {
+      selectedItem = {
+        folderName: queueId,
+        payloadPath: "engine",
+        payload: decisionState.decision_payload,
+        analysis: null,
+      };
+      items = [selectedItem];
+    }
+  } else {
+    items = await loadLabItems();
+
+    selectedItem =
+      items.find((item) => item.folderName === resolvedSearchParams.track) ||
+      items[0] ||
+      null;
+  }
 
   return (
     <>
@@ -159,9 +210,13 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
                       </div>
 
                       <Link
-                        href={`/decision-center-lab/feedback?track=${encodeURIComponent(
-                          selectedItem.folderName,
-                        )}`}
+                        href={
+                          isPlatformMode
+                            ? `/decision-center-lab/feedback?queue_id=${encodeURIComponent(queueId)}`
+                            : `/decision-center-lab/feedback?track=${encodeURIComponent(
+                                selectedItem.folderName,
+                              )}`
+                        }
                         className="inline-flex w-fit items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/15"
                       >
                         Open detailed feedback
@@ -172,13 +227,36 @@ export default async function DecisionCenterLabPage({ searchParams }: PageProps)
                 </div>
 
                 <aside className="lg:sticky lg:top-8 lg:self-start">
-                  <LabTrackSelector
-                    items={items}
-                    selectedFolderName={selectedItem.folderName}
-                  />
+                  {isPlatformMode ? (
+                    <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                        Selected track
+                      </p>
+                      <p className="mt-3 break-all text-sm text-zinc-300">
+                        queue_id: {queueId}
+                      </p>
+                    </section>
+                  ) : (
+                    <LabTrackSelector
+                      items={items}
+                      selectedFolderName={selectedItem.folderName}
+                    />
+                  )}
                 </aside>
               </div>
             </>
+          ) : isPlatformMode ? (
+            <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-zinc-500">
+                Decision Center pending
+              </p>
+              <h2 className="mt-4 text-2xl font-semibold text-white">
+                No engine decision payload is available yet.
+              </h2>
+              <p className="mt-3 break-all text-sm text-zinc-400">
+                queue_id: {queueId}
+              </p>
+            </section>
           ) : (
             <EmptyLabState />
           )}
